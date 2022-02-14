@@ -9,7 +9,6 @@ import (
 	"github.com/cilium/ebpf/perf"
 	"github.com/keyval-dev/opentelemetry-go-instrumentation/pkg/instrumentors/context"
 	"github.com/keyval-dev/opentelemetry-go-instrumentation/pkg/instrumentors/events"
-	"github.com/keyval-dev/opentelemetry-go-instrumentation/pkg/instrumentors/goroutine/bpffs"
 	"github.com/keyval-dev/opentelemetry-go-instrumentation/pkg/log"
 	"go.opentelemetry.io/otel/attribute"
 	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
@@ -21,9 +20,8 @@ import (
 //go:generate go run github.com/cilium/ebpf/cmd/bpf2go -target bpfel -cc clang bpf ./bpf/probe.bpf.c -- -I/usr/include/bpf -I$BPF_IMPORT
 
 type GrpcEvent struct {
-	GoRoutine uint64
-	Method    [100]byte
-	Target    [100]byte
+	Method [100]byte
+	Target [100]byte
 }
 
 type grpcInstrumentor struct {
@@ -46,11 +44,7 @@ func (g *grpcInstrumentor) FuncNames() []string {
 
 func (g *grpcInstrumentor) Load(ctx *context.InstrumentorContext) error {
 	g.bpfObjects = &bpfObjects{}
-	err := loadBpfObjects(g.bpfObjects, &ebpf.CollectionOptions{
-		Maps: ebpf.MapOptions{
-			PinPath: bpffs.GoRoutinesMapDir,
-		},
-	})
+	err := loadBpfObjects(g.bpfObjects, nil)
 	if err != nil {
 		return err
 	}
@@ -116,10 +110,9 @@ func (g *grpcInstrumentor) convertEvent(e *GrpcEvent) *events.Event {
 	target := unix.ByteSliceToString(e.Target[:])
 
 	return &events.Event{
-		Library:      g.LibraryName(),
-		GoroutineUID: e.GoRoutine,
-		Name:         method,
-		Kind:         trace.SpanKindClient,
+		Library: g.LibraryName(),
+		Name:    method,
+		Kind:    trace.SpanKindClient,
 		Attributes: []attribute.KeyValue{
 			semconv.RPCSystemKey.String("grpc"),
 			semconv.RPCServiceKey.String(method),

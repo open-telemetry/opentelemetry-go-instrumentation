@@ -20,7 +20,6 @@ func (m *instrumentorsManager) Run(target *process.TargetDetails) error {
 		return err
 	}
 
-	go m.goroutineTracker.Run(m.incomingEvents)
 	for _, i := range m.instrumentors {
 		go i.Run(m.incomingEvents)
 	}
@@ -52,12 +51,6 @@ func (m *instrumentorsManager) load(target *process.TargetDetails) error {
 		Executable:    exe,
 	}
 
-	// Load instrumentors
-	if err := m.goroutineTracker.Load(ctx); err != nil {
-		log.Logger.Error(err, "error loading goroutine tracker")
-		return err
-	}
-
 	for name, i := range m.instrumentors {
 		log.Logger.V(0).Info("loading instrumentor", "name", name)
 		err := i.Load(ctx)
@@ -77,7 +70,6 @@ func (m *instrumentorsManager) cleanup() {
 	for _, i := range m.instrumentors {
 		i.Close()
 	}
-	m.goroutineTracker.Close()
 }
 
 func (m *instrumentorsManager) Close() {

@@ -23,7 +23,6 @@ const (
 type Controller struct {
 	tracerProvider trace.TracerProvider
 	tracersMap     map[string]trace.Tracer
-	contextsMap    map[uint64]context.Context // TODO: Use LRU cache
 }
 
 func (c *Controller) getTracer(libName string) trace.Tracer {
@@ -38,29 +37,13 @@ func (c *Controller) getTracer(libName string) trace.Tracer {
 }
 
 func (c *Controller) Trace(event *events.Event) {
-	log.Logger.V(0).Info("got event", "attrs", event.Attributes, "goroutine", event.GoroutineUID)
-	ctx := c.getContext(event.GoroutineUID)
-	newCtx, span := c.getTracer(event.Library).
+	log.Logger.V(0).Info("got event", "attrs", event.Attributes)
+	ctx := context.Background()
+	_, span := c.getTracer(event.Library).
 		Start(ctx, event.Name,
 			trace.WithAttributes(event.Attributes...),
 			trace.WithSpanKind(event.Kind))
-	c.updateContext(event.GoroutineUID, newCtx)
 	span.End()
-}
-
-func (c *Controller) getContext(goroutine uint64) context.Context {
-	ctx, exists := c.contextsMap[goroutine]
-	if exists {
-		return ctx
-	}
-
-	newCtx := context.Background()
-	c.contextsMap[goroutine] = newCtx
-	return newCtx
-}
-
-func (c *Controller) updateContext(goroutine uint64, ctx context.Context) {
-	c.contextsMap[goroutine] = ctx
 }
 
 func NewController() (*Controller, error) {
@@ -111,6 +94,5 @@ func NewController() (*Controller, error) {
 	return &Controller{
 		tracerProvider: tracerProvider,
 		tracersMap:     make(map[string]trace.Tracer),
-		contextsMap:    make(map[uint64]context.Context),
 	}, nil
 }

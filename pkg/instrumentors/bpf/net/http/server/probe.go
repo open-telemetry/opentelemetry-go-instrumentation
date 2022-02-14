@@ -9,7 +9,6 @@ import (
 	"github.com/cilium/ebpf/perf"
 	"github.com/keyval-dev/opentelemetry-go-instrumentation/pkg/instrumentors/context"
 	"github.com/keyval-dev/opentelemetry-go-instrumentation/pkg/instrumentors/events"
-	"github.com/keyval-dev/opentelemetry-go-instrumentation/pkg/instrumentors/goroutine/bpffs"
 	"github.com/keyval-dev/opentelemetry-go-instrumentation/pkg/log"
 	"go.opentelemetry.io/otel/attribute"
 	semconv "go.opentelemetry.io/otel/semconv/v1.7.0"
@@ -21,9 +20,8 @@ import (
 //go:generate go run github.com/cilium/ebpf/cmd/bpf2go -target bpfel -cc clang bpf ./bpf/probe.bpf.c -- -I/usr/include/bpf -I$BPF_IMPORT
 
 type HttpEvent struct {
-	GoRoutine uint64
-	Method    [100]byte
-	Path      [100]byte
+	Method [100]byte
+	Path   [100]byte
 }
 
 type httpServerInstrumentor struct {
@@ -46,11 +44,7 @@ func (h *httpServerInstrumentor) FuncNames() []string {
 
 func (h *httpServerInstrumentor) Load(ctx *context.InstrumentorContext) error {
 	h.bpfObjects = &bpfObjects{}
-	err := loadBpfObjects(h.bpfObjects, &ebpf.CollectionOptions{
-		Maps: ebpf.MapOptions{
-			PinPath: bpffs.GoRoutinesMapDir,
-		},
-	})
+	err := loadBpfObjects(h.bpfObjects, nil)
 	if err != nil {
 		return err
 	}
@@ -116,10 +110,9 @@ func (h *httpServerInstrumentor) convertEvent(e *HttpEvent) *events.Event {
 	path := unix.ByteSliceToString(e.Path[:])
 
 	return &events.Event{
-		Library:      h.LibraryName(),
-		GoroutineUID: e.GoRoutine,
-		Name:         path,
-		Kind:         trace.SpanKindServer,
+		Library: h.LibraryName(),
+		Name:    path,
+		Kind:    trace.SpanKindServer,
 		Attributes: []attribute.KeyValue{
 			semconv.HTTPMethodKey.String(method),
 			semconv.HTTPTargetKey.String(path),

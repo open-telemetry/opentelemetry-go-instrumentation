@@ -5,16 +5,7 @@ char __license[] SEC("license") = "Dual MIT/GPL";
 
 #define MAX_SIZE 100
 
-struct {
-	__uint(type, BPF_MAP_TYPE_HASH);
-	__type(key, u32);
-	__type(value, s64);
-	__uint(max_entries, MAX_OS_THREADS);
-	__uint(pinning, LIBBPF_PIN_BY_NAME);
-} goroutines_map SEC(".maps");
-
 struct http_request_t {
-    u64 goroutine;
     char method[MAX_SIZE];
     char path[MAX_SIZE];
 };
@@ -65,20 +56,6 @@ int uprobe_ServerMux_ServeHTTP(struct pt_regs *ctx) {
     u64 path_size = sizeof(httpReq.path);
     path_size = path_size < path_len ? path_size : path_len;
     bpf_probe_read(&httpReq.path, path_size, path_ptr);
-
-    // Record goroutine
-    u32 current_thread = bpf_get_current_pid_tgid();
-    u64* goid_ptr = bpf_map_lookup_elem(&goroutines_map, &current_thread);
-    bpf_probe_read(&httpReq.goroutine, sizeof(httpReq.goroutine), goid_ptr);
-//    u32 current_thread = bpf_get_current_pid_tgid();
-//    struct task_struct *task;
-//    __u64 task_ptr = bpf_get_current_task();
-//    bpf_probe_read(task, sizeof(struct task_struct), (void*)(task_ptr));
-//    __u64  goid;
-//    size_t g_addr;
-//    bpf_probe_read_user(&g_addr, sizeof(void *), (void*)(task->thread.fsbase - 8));
-//    bpf_probe_read_user(&goid, sizeof(void *), (void*)(g_addr + 152));
-//    bpf_printk("net.http called for thread %d with goid %d \n", current_thread, goid);
 
     // Write event
     bpf_perf_event_output(ctx, &events, BPF_F_CURRENT_CPU, &httpReq, sizeof(httpReq));

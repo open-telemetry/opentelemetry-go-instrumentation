@@ -6,9 +6,8 @@ import (
 )
 
 type Event struct {
-	Library      string
-	Name         string
-	Attributes   []attribute.KeyValue
-	Kind         trace.SpanKind
-	GoroutineUID uint64
+	Library    string
+	Name       string
+	Attributes []attribute.KeyValue
+	Kind       trace.SpanKind
 }

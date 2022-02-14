@@ -5,16 +5,8 @@ char __license[] SEC("license") = "Dual MIT/GPL";
 
 #define MAX_SIZE 100
 
-struct {
-	__uint(type, BPF_MAP_TYPE_HASH);
-	__type(key, u32);
-	__type(value, s64);
-	__uint(max_entries, MAX_OS_THREADS);
-	__uint(pinning, LIBBPF_PIN_BY_NAME);
-} goroutines_map SEC(".maps");
 
 struct grpc_request_t {
-    u64 goroutine;
     char method[MAX_SIZE];
     char target[MAX_SIZE];
 };
@@ -56,12 +48,6 @@ int uprobe_ClientConn_Invoke(struct pt_regs *ctx) {
     u64 target_size = sizeof(grpcReq.target);
     target_size = target_size < target_len ? target_size : target_len;
     bpf_probe_read(&grpcReq.target, target_size, target_ptr);
-
-    // Record goroutine
-    u32 current_thread = bpf_get_current_pid_tgid();
-    u64* goid_ptr = bpf_map_lookup_elem(&goroutines_map, &current_thread);
-    bpf_probe_read(&grpcReq.goroutine, sizeof(grpcReq.goroutine), goid_ptr);
-//    bpf_printk("grpc.invoke called for thread %d \n", current_thread);
 
     // Write event
     bpf_perf_event_output(ctx, &events, BPF_F_CURRENT_CPU, &grpcReq, sizeof(grpcReq));

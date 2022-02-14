@@ -5,27 +5,24 @@ import (
 	"github.com/keyval-dev/opentelemetry-go-instrumentation/pkg/instrumentors/bpf/google/golang/org/grpc"
 	httpServer "github.com/keyval-dev/opentelemetry-go-instrumentation/pkg/instrumentors/bpf/net/http/server"
 	"github.com/keyval-dev/opentelemetry-go-instrumentation/pkg/instrumentors/events"
-	"github.com/keyval-dev/opentelemetry-go-instrumentation/pkg/instrumentors/goroutine"
 	"github.com/keyval-dev/opentelemetry-go-instrumentation/pkg/log"
 	"github.com/keyval-dev/opentelemetry-go-instrumentation/pkg/opentelemetry"
 	"github.com/keyval-dev/opentelemetry-go-instrumentation/pkg/process"
 )
 
 type instrumentorsManager struct {
-	goroutineTracker *goroutine.Tracker
-	instrumentors    map[string]Instrumentor
-	done             chan bool
-	incomingEvents   chan *events.Event
-	otelController   *opentelemetry.Controller
+	instrumentors  map[string]Instrumentor
+	done           chan bool
+	incomingEvents chan *events.Event
+	otelController *opentelemetry.Controller
 }
 
 func NewManager(otelController *opentelemetry.Controller) (*instrumentorsManager, error) {
 	m := &instrumentorsManager{
-		instrumentors:    make(map[string]Instrumentor),
-		done:             make(chan bool, 1),
-		incomingEvents:   make(chan *events.Event),
-		otelController:   otelController,
-		goroutineTracker: goroutine.NewTracker(),
+		instrumentors:  make(map[string]Instrumentor),
+		done:           make(chan bool, 1),
+		incomingEvents: make(chan *events.Event),
+		otelController: otelController,
 	}
 
 	err := registerInstrumentors(m)
@@ -51,11 +48,6 @@ func (m *instrumentorsManager) GetRelevantFuncs() map[string]interface{} {
 		for _, f := range i.FuncNames() {
 			funcsMap[f] = nil
 		}
-	}
-
-	// Add goroutine tracker functions
-	for _, f := range m.goroutineTracker.FuncNames() {
-		funcsMap[f] = nil
 	}
 
 	return funcsMap
