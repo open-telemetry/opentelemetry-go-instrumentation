@@ -32,6 +32,8 @@ func (g *Tracker) FuncNames() []string {
 }
 
 func (g *Tracker) Load(ctx *context.InstrumentorContext) error {
+	log.Logger.Info("calculated offsets", "offsets", ctx.TargetDetails.Functions)
+
 	g.bpfObjects = &bpfObjects{}
 
 	err := g.mountBpfFS()

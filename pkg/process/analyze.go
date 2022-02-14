@@ -70,6 +70,9 @@ func (a *processAnalyzer) Analyze(pid int, relevantFuncs map[string]interface{})
 		return nil, err
 	}
 
+	tempF := symTab.PCToFunc(0x874718)
+	log.Logger.Info("PC counter for grpc", "val", tempF.Value, "etrny", tempF.Entry, "end", tempF.End)
+
 	for _, f := range symTab.Funcs {
 
 		if _, exists := relevantFuncs[f.Name]; exists {
@@ -87,6 +90,7 @@ func (a *processAnalyzer) Analyze(pid int, relevantFuncs map[string]interface{})
 }
 
 func (a *processAnalyzer) findFuncOffset(f *gosym.Func, elfF *elf.File) uint64 {
+	log.Logger.Info("function details", "name", f.Name, "value", f.Value, "entry", f.Entry, "end", f.End)
 	off := f.Value
 	for _, prog := range elfF.Progs {
 		if prog.Type != elf.PT_LOAD || (prog.Flags&elf.PF_X) == 0 {
