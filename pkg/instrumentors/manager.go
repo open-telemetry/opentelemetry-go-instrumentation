@@ -3,6 +3,7 @@ package instrumentors
 import (
 	"fmt"
 	"github.com/keyval-dev/opentelemetry-go-instrumentation/pkg/instrumentors/bpf/google/golang/org/grpc"
+	grpcServer "github.com/keyval-dev/opentelemetry-go-instrumentation/pkg/instrumentors/bpf/google/golang/org/grpc/server"
 	httpServer "github.com/keyval-dev/opentelemetry-go-instrumentation/pkg/instrumentors/bpf/net/http/server"
 	"github.com/keyval-dev/opentelemetry-go-instrumentation/pkg/instrumentors/events"
 	"github.com/keyval-dev/opentelemetry-go-instrumentation/pkg/log"
@@ -78,6 +79,7 @@ func (m *instrumentorsManager) FilterUnusedInstrumentors(target *process.TargetD
 func registerInstrumentors(m *instrumentorsManager) error {
 	insts := []Instrumentor{
 		grpc.New(),
+		grpcServer.New(),
 		httpServer.New(),
 	}
 

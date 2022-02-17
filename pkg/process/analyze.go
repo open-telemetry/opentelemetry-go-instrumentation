@@ -70,9 +70,6 @@ func (a *processAnalyzer) Analyze(pid int, relevantFuncs map[string]interface{})
 		return nil, err
 	}
 
-	tempF := symTab.PCToFunc(0x874718)
-	log.Logger.Info("PC counter for grpc", "val", tempF.Value, "etrny", tempF.Entry, "end", tempF.End)
-
 	for _, f := range symTab.Funcs {
 
 		if _, exists := relevantFuncs[f.Name]; exists {
