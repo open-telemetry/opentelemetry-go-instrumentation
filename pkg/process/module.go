@@ -5,8 +5,8 @@ import (
 	"debug/elf"
 	"encoding/binary"
 	"fmt"
+	"github.com/hashicorp/go-version"
 	"github.com/keyval-dev/opentelemetry-go-instrumentation/pkg/log"
-	"strconv"
 	"strings"
 )
 
@@ -16,46 +16,37 @@ import (
 // and whether the binary is big endian (1 byte).
 var buildInfoMagic = []byte("\xff Go buildinf:")
 
-func (a *processAnalyzer) isRegistersABI(f *elf.File) (bool, error) {
-	goVersion, err := getGoVersion(f)
+func (a *processAnalyzer) getModuleDetails(f *elf.File) (*version.Version, map[string]string, error) {
+	goVersion, modules, err := getGoDetails(f)
 	if err != nil {
-		return false, err
+		return nil, nil, err
+	}
+
+	v, err := parseGoVersion(goVersion)
+	if err != nil {
+		return nil, nil, err
 	}
 
 	log.Logger.V(1).Info("go version detected", "version", goVersion)
-	minor, err := getMinorVersion(goVersion)
-	if err != nil {
-		return false, err
-	}
-
-	// Go is using register based ABI since go 1.17
-	return minor >= 17, nil
+	modsMap := parseModules(modules)
+	return v, modsMap, nil
 }
 
-func getMinorVersion(goVersion string) (int, error) {
-	parts := strings.Split(goVersion, ".")
-	if len(parts) < 2 {
-		return 0, fmt.Errorf("could not parse go version %s", goVersion)
-	}
-
-	num, err := strconv.Atoi(parts[1])
-	if err != nil {
-		return 0, err
-	}
-
-	return num, nil
+func parseGoVersion(vers string) (*version.Version, error) {
+	vers = strings.ReplaceAll(vers, "go", "")
+	return version.NewVersion(vers)
 }
 
-func getGoVersion(f *elf.File) (string, error) {
+func getGoDetails(f *elf.File) (string, string, error) {
 	// Read the first 64kB of text to find the build info blob.
 	text := dataStart(f)
 	data, err := readData(f, text, 64*1024)
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 	for ; !bytes.HasPrefix(data, buildInfoMagic); data = data[32:] {
 		if len(data) < 32 {
-			return "", fmt.Errorf("could not detect go version")
+			return "", "", fmt.Errorf("could not detect go version")
 		}
 	}
 
@@ -77,10 +68,17 @@ func getGoVersion(f *elf.File) (string, error) {
 	}
 	vers := readString(f, ptrSize, readPtr, readPtr(data[16:]))
 	if vers == "" {
-		return "", fmt.Errorf("could not detect go version")
+		return "", "", fmt.Errorf("could not detect go version")
+	}
+	mod := readString(f, ptrSize, readPtr, readPtr(data[16+ptrSize:]))
+	if len(mod) >= 33 && mod[len(mod)-17] == '\n' {
+		// Strip module framing.
+		mod = mod[16 : len(mod)-16]
+	} else {
+		mod = ""
 	}
 
-	return vers, nil
+	return vers, mod, nil
 }
 
 func dataStart(f *elf.File) uint64 {
@@ -128,4 +126,26 @@ func readString(f *elf.File, ptrSize int, readPtr func([]byte) uint64, addr uint
 		return ""
 	}
 	return string(data)
+}
+
+func parseModules(mod string) map[string]string {
+	lines := strings.Split(mod, "\n")
+	result := make(map[string]string)
+	for _, line := range lines {
+		parts := strings.Fields(line)
+		if len(parts) > 1 {
+			modType := parts[0]
+			modPackage := parts[1]
+			if modType == "dep" {
+				v := ""
+				if len(parts) > 2 {
+					v = parts[2]
+				}
+
+				result[modPackage] = v
+			}
+		}
+	}
+
+	return result
 }

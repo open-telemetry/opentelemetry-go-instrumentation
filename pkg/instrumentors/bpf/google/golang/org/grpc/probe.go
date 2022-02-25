@@ -7,8 +7,10 @@ import (
 	"github.com/cilium/ebpf"
 	"github.com/cilium/ebpf/link"
 	"github.com/cilium/ebpf/perf"
+	"github.com/keyval-dev/opentelemetry-go-instrumentation/pkg/inject"
 	"github.com/keyval-dev/opentelemetry-go-instrumentation/pkg/instrumentors/context"
 	"github.com/keyval-dev/opentelemetry-go-instrumentation/pkg/instrumentors/events"
+	"github.com/keyval-dev/opentelemetry-go-instrumentation/pkg/instrumentors/goroutine/bpffs"
 	"github.com/keyval-dev/opentelemetry-go-instrumentation/pkg/log"
 	"go.opentelemetry.io/otel/attribute"
 	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
@@ -20,8 +22,9 @@ import (
 //go:generate go run github.com/cilium/ebpf/cmd/bpf2go -target bpfel -cc clang bpf ./bpf/probe.bpf.c -- -I/usr/include/bpf -I$BPF_IMPORT
 
 type GrpcEvent struct {
-	Method [100]byte
-	Target [100]byte
+	GoRoutine int64
+	Method    [100]byte
+	Target    [100]byte
 }
 
 type grpcInstrumentor struct {
@@ -43,8 +46,28 @@ func (g *grpcInstrumentor) FuncNames() []string {
 }
 
 func (g *grpcInstrumentor) Load(ctx *context.InstrumentorContext) error {
+	libVersion, exists := ctx.TargetDetails.Libraries[g.LibraryName()]
+	if !exists {
+		libVersion = ""
+	}
+	spec, err := ctx.Injector.Inject(loadBpf, g.LibraryName(), libVersion, []*inject.InjectStructField{
+		{
+			VarName:    "clientconn_target_ptr_pos",
+			StructName: "google.golang.org/grpc.ClientConn",
+			Field:      "target",
+		},
+	})
+
+	if err != nil {
+		return err
+	}
+
 	g.bpfObjects = &bpfObjects{}
-	err := loadBpfObjects(g.bpfObjects, nil)
+	err = spec.LoadAndAssign(g.bpfObjects, &ebpf.CollectionOptions{
+		Maps: ebpf.MapOptions{
+			PinPath: bpffs.GoRoutinesMapDir,
+		},
+	})
 	if err != nil {
 		return err
 	}
@@ -55,7 +78,7 @@ func (g *grpcInstrumentor) Load(ctx *context.InstrumentorContext) error {
 	}
 
 	var uprobeObj *ebpf.Program
-	if ctx.TargetDetails.RegistersABI {
+	if ctx.TargetDetails.IsRegistersABI() {
 		uprobeObj = g.bpfObjects.UprobeClientConnInvokeByRegisters
 	} else {
 		uprobeObj = g.bpfObjects.UprobeClientConnInvoke
@@ -110,9 +133,10 @@ func (g *grpcInstrumentor) convertEvent(e *GrpcEvent) *events.Event {
 	target := unix.ByteSliceToString(e.Target[:])
 
 	return &events.Event{
-		Library: g.LibraryName(),
-		Name:    method,
-		Kind:    trace.SpanKindClient,
+		Library:      g.LibraryName(),
+		GoroutineUID: e.GoRoutine,
+		Name:         method,
+		Kind:         trace.SpanKindClient,
 		Attributes: []attribute.KeyValue{
 			semconv.RPCSystemKey.String("grpc"),
 			semconv.RPCServiceKey.String(method),

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/keyval-dev/opentelemetry-go-instrumentation/pkg/instrumentors/events"
 	"github.com/keyval-dev/opentelemetry-go-instrumentation/pkg/log"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
@@ -23,6 +24,7 @@ const (
 type Controller struct {
 	tracerProvider trace.TracerProvider
 	tracersMap     map[string]trace.Tracer
+	contextsMap    map[int64]context.Context // TODO: Use LRU cache
 }
 
 func (c *Controller) getTracer(libName string) trace.Tracer {
@@ -37,13 +39,30 @@ func (c *Controller) getTracer(libName string) trace.Tracer {
 }
 
 func (c *Controller) Trace(event *events.Event) {
-	log.Logger.V(0).Info("got event", "attrs", event.Attributes)
-	ctx := context.Background()
-	_, span := c.getTracer(event.Library).
+	log.Logger.V(0).Info("got event", "attrs", event.Attributes, "goroutine", event.GoroutineUID)
+	ctx := c.getContext(event.GoroutineUID)
+	attrs := append(event.Attributes, attribute.Key("goroutine.id").Int64(event.GoroutineUID))
+	newCtx, span := c.getTracer(event.Library).
 		Start(ctx, event.Name,
-			trace.WithAttributes(event.Attributes...),
+			trace.WithAttributes(attrs...),
 			trace.WithSpanKind(event.Kind))
+	c.updateContext(event.GoroutineUID, newCtx)
 	span.End()
+}
+
+func (c *Controller) getContext(goroutine int64) context.Context {
+	ctx, exists := c.contextsMap[goroutine]
+	if exists {
+		return ctx
+	}
+
+	newCtx := context.Background()
+	c.contextsMap[goroutine] = newCtx
+	return newCtx
+}
+
+func (c *Controller) updateContext(goroutine int64, ctx context.Context) {
+	c.contextsMap[goroutine] = ctx
 }
 
 func NewController() (*Controller, error) {
@@ -94,5 +113,6 @@ func NewController() (*Controller, error) {
 	return &Controller{
 		tracerProvider: tracerProvider,
 		tracersMap:     make(map[string]trace.Tracer),
+		contextsMap:    make(map[int64]context.Context),
 	}, nil
 }

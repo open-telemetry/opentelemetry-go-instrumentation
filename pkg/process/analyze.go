@@ -4,19 +4,26 @@ import (
 	"debug/elf"
 	"debug/gosym"
 	"fmt"
+	"github.com/hashicorp/go-version"
 	"github.com/keyval-dev/opentelemetry-go-instrumentation/pkg/log"
 	"os"
 )
 
 type TargetDetails struct {
-	PID          int
-	RegistersABI bool
-	Functions    []*Func
+	PID       int
+	Functions []*Func
+	GoVersion *version.Version
+	Libraries map[string]string
 }
 
 type Func struct {
 	Name   string
 	Offset uint64
+}
+
+func (t *TargetDetails) IsRegistersABI() bool {
+	regAbiMinVersion, _ := version.NewVersion("1.17")
+	return t.GoVersion.GreaterThanOrEqual(regAbiMinVersion)
 }
 
 func (t *TargetDetails) GetFunctionOffset(name string) (uint64, error) {
@@ -45,11 +52,12 @@ func (a *processAnalyzer) Analyze(pid int, relevantFuncs map[string]interface{})
 		return nil, err
 	}
 
-	regAbi, err := a.isRegistersABI(elfF)
+	goVersion, modules, err := a.getModuleDetails(elfF)
 	if err != nil {
 		return nil, err
 	}
-	result.RegistersABI = regAbi
+	result.GoVersion = goVersion
+	result.Libraries = modules
 
 	var pclndat []byte
 	if sec := elfF.Section(".gopclntab"); sec != nil {
@@ -87,7 +95,6 @@ func (a *processAnalyzer) Analyze(pid int, relevantFuncs map[string]interface{})
 }
 
 func (a *processAnalyzer) findFuncOffset(f *gosym.Func, elfF *elf.File) uint64 {
-	log.Logger.Info("function details", "name", f.Name, "value", f.Value, "entry", f.Entry, "end", f.End)
 	off := f.Value
 	for _, prog := range elfF.Progs {
 		if prog.Type != elf.PT_LOAD || (prog.Flags&elf.PF_X) == 0 {

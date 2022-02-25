@@ -62,7 +62,8 @@ func main() {
 		return
 	}
 	log.Logger.V(0).Info("target process analysis completed", "pid", targetDetails.PID,
-		"is_registers_abi", targetDetails.RegistersABI, "total_functions_found", len(targetDetails.Functions))
+		"go_version", targetDetails.GoVersion, "dependencies", targetDetails.Libraries,
+		"total_functions_found", len(targetDetails.Functions))
 
 	instManager.FilterUnusedInstrumentors(targetDetails)
 

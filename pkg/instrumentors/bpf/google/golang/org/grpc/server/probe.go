@@ -7,8 +7,10 @@ import (
 	"github.com/cilium/ebpf"
 	"github.com/cilium/ebpf/link"
 	"github.com/cilium/ebpf/perf"
+	"github.com/keyval-dev/opentelemetry-go-instrumentation/pkg/inject"
 	"github.com/keyval-dev/opentelemetry-go-instrumentation/pkg/instrumentors/context"
 	"github.com/keyval-dev/opentelemetry-go-instrumentation/pkg/instrumentors/events"
+	"github.com/keyval-dev/opentelemetry-go-instrumentation/pkg/instrumentors/goroutine/bpffs"
 	"github.com/keyval-dev/opentelemetry-go-instrumentation/pkg/log"
 	"go.opentelemetry.io/otel/attribute"
 	semconv "go.opentelemetry.io/otel/semconv/v1.7.0"
@@ -20,7 +22,8 @@ import (
 //go:generate go run github.com/cilium/ebpf/cmd/bpf2go -target bpfel -cc clang bpf ./bpf/probe.bpf.c -- -I/usr/include/bpf -I$BPF_IMPORT
 
 type GrpcEvent struct {
-	Method [100]byte
+	GoRoutine int64
+	Method    [100]byte
 }
 
 type grpcServerInstrumentor struct {
@@ -42,8 +45,29 @@ func (g *grpcServerInstrumentor) FuncNames() []string {
 }
 
 func (g *grpcServerInstrumentor) Load(ctx *context.InstrumentorContext) error {
+	targetLib := "google.golang.org/grpc"
+	libVersion, exists := ctx.TargetDetails.Libraries[targetLib]
+	if !exists {
+		libVersion = ""
+	}
+	spec, err := ctx.Injector.Inject(loadBpf, "google.golang.org/grpc", libVersion, []*inject.InjectStructField{
+		{
+			VarName:    "stream_method_ptr_pos",
+			StructName: "google.golang.org/grpc/internal/transport.Stream",
+			Field:      "method",
+		},
+	})
+
+	if err != nil {
+		return err
+	}
+
 	g.bpfObjects = &bpfObjects{}
-	err := loadBpfObjects(g.bpfObjects, nil)
+	err = spec.LoadAndAssign(g.bpfObjects, &ebpf.CollectionOptions{
+		Maps: ebpf.MapOptions{
+			PinPath: bpffs.GoRoutinesMapDir,
+		},
+	})
 	if err != nil {
 		return err
 	}
@@ -54,10 +78,10 @@ func (g *grpcServerInstrumentor) Load(ctx *context.InstrumentorContext) error {
 	}
 
 	var uprobeObj *ebpf.Program
-	if ctx.TargetDetails.RegistersABI {
+	if ctx.TargetDetails.IsRegistersABI() {
 		uprobeObj = g.bpfObjects.UprobeServerHandleStreamByRegisters
 	} else {
-		// TODO
+		uprobeObj = g.bpfObjects.UprobeServerHandleStream
 	}
 
 	up, err := ctx.Executable.Uprobe("", uprobeObj, &link.UprobeOptions{
@@ -109,9 +133,10 @@ func (g *grpcServerInstrumentor) convertEvent(e *GrpcEvent) *events.Event {
 	method := unix.ByteSliceToString(e.Method[:])
 
 	return &events.Event{
-		Library: g.LibraryName(),
-		Name:    method,
-		Kind:    trace.SpanKindServer,
+		Library:      g.LibraryName(),
+		GoroutineUID: e.GoRoutine,
+		Name:         method,
+		Kind:         trace.SpanKindServer,
 		Attributes: []attribute.KeyValue{
 			semconv.RPCSystemKey.String("grpc"),
 			semconv.RPCServiceKey.String(method),

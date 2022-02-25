@@ -3,13 +3,14 @@ spec:
     spec:
       shareProcessNamespace: true
       containers:
-        - name: emojivoto-web-instrumentation
-          image: keyval/otel-go-agent:v0.1
+        - name: instrumentation
+          image: dev/bpftest
+          imagePullPolicy: IfNotPresent
           env:
             - name: OTEL_TARGET_EXE
               value: /usr/local/bin/emojivoto-web
             - name: OTEL_EXPORTER_OTLP_ENDPOINT
-              value: "collector.keyval-system:4317"
+              value: "jaeger:4317"
             - name: OTEL_SERVICE_NAME
               value: "emojivoto-web"
           securityContext:
@@ -19,9 +20,14 @@ spec:
                 - SYS_PTRACE
             privileged: true
           volumeMounts:
+#            - mountPath: /sys/fs/bpf
+#              name: bpf-fs
             - mountPath: /sys/kernel/debug
               name: kernel-debug
       volumes:
         - name: kernel-debug
           hostPath:
             path: /sys/kernel/debug
+#        - name: bpf-fs
+#          hostPath:
+#            path: /sys/fs/bpf

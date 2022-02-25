@@ -6,6 +6,7 @@ require (
 	github.com/cilium/ebpf v0.8.0
 	github.com/go-logr/logr v1.2.2
 	github.com/go-logr/zapr v1.2.2
+	github.com/hashicorp/go-version v1.4.0
 	go.opentelemetry.io/otel v1.3.0
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc v1.3.0
 	go.opentelemetry.io/otel/sdk v1.3.0
