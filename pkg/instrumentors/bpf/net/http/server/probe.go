@@ -23,6 +23,8 @@ import (
 
 type HttpEvent struct {
 	GoRoutine int64
+	StartTime uint64
+	EndTime   uint64
 	Method    [100]byte
 	Path      [100]byte
 }
@@ -30,6 +32,7 @@ type HttpEvent struct {
 type httpServerInstrumentor struct {
 	bpfObjects   *bpfObjects
 	uprobe       link.Link
+	returnProbs  []link.Link
 	eventsReader *perf.Reader
 }
 
@@ -83,14 +86,7 @@ func (h *httpServerInstrumentor) Load(ctx *context.InstrumentorContext) error {
 		return err
 	}
 
-	var uprobeObj *ebpf.Program
-	if ctx.TargetDetails.IsRegistersABI() {
-		uprobeObj = h.bpfObjects.UprobeServerMuxServeHTTP_ByRegisters
-	} else {
-		uprobeObj = h.bpfObjects.UprobeServerMuxServeHTTP
-	}
-
-	up, err := ctx.Executable.Uprobe("", uprobeObj, &link.UprobeOptions{
+	up, err := ctx.Executable.Uprobe("", h.bpfObjects.UprobeServerMuxServeHTTP, &link.UprobeOptions{
 		Offset: offset,
 	})
 	if err != nil {
@@ -98,6 +94,21 @@ func (h *httpServerInstrumentor) Load(ctx *context.InstrumentorContext) error {
 	}
 
 	h.uprobe = up
+	retOffsets, err := ctx.TargetDetails.GetFunctionReturns(h.FuncNames()[0])
+	if err != nil {
+		return err
+	}
+
+	for _, ret := range retOffsets {
+		retProbe, err := ctx.Executable.Uprobe("", h.bpfObjects.UprobeServerMuxServeHTTP_Returns, &link.UprobeOptions{
+			Offset: ret,
+		})
+		if err != nil {
+			return err
+		}
+		h.returnProbs = append(h.returnProbs, retProbe)
+	}
+
 	rd, err := perf.NewReader(h.bpfObjects.Events, os.Getpagesize())
 	if err != nil {
 		return err
@@ -143,6 +154,8 @@ func (h *httpServerInstrumentor) convertEvent(e *HttpEvent) *events.Event {
 		GoroutineUID: e.GoRoutine,
 		Name:         path,
 		Kind:         trace.SpanKindServer,
+		StartTime:    int64(e.StartTime),
+		EndTime:      int64(e.EndTime),
 		Attributes: []attribute.KeyValue{
 			semconv.HTTPMethodKey.String(method),
 			semconv.HTTPTargetKey.String(path),
@@ -158,6 +171,10 @@ func (h *httpServerInstrumentor) Close() {
 
 	if h.uprobe != nil {
 		h.uprobe.Close()
+	}
+
+	for _, r := range h.returnProbs {
+		r.Close()
 	}
 
 	if h.bpfObjects != nil {

@@ -23,6 +23,8 @@ import (
 
 type GrpcEvent struct {
 	GoRoutine int64
+	StartTime uint64
+	EndTime   uint64
 	Method    [100]byte
 	Target    [100]byte
 }
@@ -30,6 +32,7 @@ type GrpcEvent struct {
 type grpcInstrumentor struct {
 	bpfObjects   *bpfObjects
 	uprobe       link.Link
+	returnProbs  []link.Link
 	eventsReader *perf.Reader
 }
 
@@ -77,13 +80,7 @@ func (g *grpcInstrumentor) Load(ctx *context.InstrumentorContext) error {
 		return err
 	}
 
-	var uprobeObj *ebpf.Program
-	if ctx.TargetDetails.IsRegistersABI() {
-		uprobeObj = g.bpfObjects.UprobeClientConnInvokeByRegisters
-	} else {
-		uprobeObj = g.bpfObjects.UprobeClientConnInvoke
-	}
-	up, err := ctx.Executable.Uprobe("", uprobeObj, &link.UprobeOptions{
+	up, err := ctx.Executable.Uprobe("", g.bpfObjects.UprobeClientConnInvoke, &link.UprobeOptions{
 		Offset: offset,
 	})
 	if err != nil {
@@ -91,6 +88,21 @@ func (g *grpcInstrumentor) Load(ctx *context.InstrumentorContext) error {
 	}
 
 	g.uprobe = up
+	retOffsets, err := ctx.TargetDetails.GetFunctionReturns(g.FuncNames()[0])
+	if err != nil {
+		return err
+	}
+
+	for _, ret := range retOffsets {
+		retProbe, err := ctx.Executable.Uprobe("", g.bpfObjects.UprobeClientConnInvokeReturns, &link.UprobeOptions{
+			Offset: ret,
+		})
+		if err != nil {
+			return err
+		}
+		g.returnProbs = append(g.returnProbs, retProbe)
+	}
+
 	rd, err := perf.NewReader(g.bpfObjects.Events, os.Getpagesize())
 	if err != nil {
 		return err
@@ -137,6 +149,8 @@ func (g *grpcInstrumentor) convertEvent(e *GrpcEvent) *events.Event {
 		GoroutineUID: e.GoRoutine,
 		Name:         method,
 		Kind:         trace.SpanKindClient,
+		StartTime:    int64(e.StartTime),
+		EndTime:      int64(e.EndTime),
 		Attributes: []attribute.KeyValue{
 			semconv.RPCSystemKey.String("grpc"),
 			semconv.RPCServiceKey.String(method),
@@ -154,6 +168,10 @@ func (g *grpcInstrumentor) Close() {
 
 	if g.uprobe != nil {
 		g.uprobe.Close()
+	}
+
+	for _, r := range g.returnProbs {
+		r.Close()
 	}
 
 	if g.bpfObjects != nil {

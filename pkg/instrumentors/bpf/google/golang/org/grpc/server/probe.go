@@ -23,12 +23,15 @@ import (
 
 type GrpcEvent struct {
 	GoRoutine int64
+	StartTime uint64
+	EndTime   uint64
 	Method    [100]byte
 }
 
 type grpcServerInstrumentor struct {
 	bpfObjects   *bpfObjects
 	uprobe       link.Link
+	returnProbs  []link.Link
 	eventsReader *perf.Reader
 }
 
@@ -92,6 +95,21 @@ func (g *grpcServerInstrumentor) Load(ctx *context.InstrumentorContext) error {
 	}
 
 	g.uprobe = up
+	retOffsets, err := ctx.TargetDetails.GetFunctionReturns(g.FuncNames()[0])
+	if err != nil {
+		return err
+	}
+
+	for _, ret := range retOffsets {
+		retProbe, err := ctx.Executable.Uprobe("", g.bpfObjects.UprobeServerHandleStreamReturns, &link.UprobeOptions{
+			Offset: ret,
+		})
+		if err != nil {
+			return err
+		}
+		g.returnProbs = append(g.returnProbs, retProbe)
+	}
+
 	rd, err := perf.NewReader(g.bpfObjects.Events, os.Getpagesize())
 	if err != nil {
 		return err
@@ -124,7 +142,6 @@ func (g *grpcServerInstrumentor) Run(eventsChan chan<- *events.Event) {
 			continue
 		}
 
-		logger.Info("got gRPC server event", "method", unix.ByteSliceToString(event.Method[:]))
 		eventsChan <- g.convertEvent(&event)
 	}
 }
@@ -137,6 +154,8 @@ func (g *grpcServerInstrumentor) convertEvent(e *GrpcEvent) *events.Event {
 		GoroutineUID: e.GoRoutine,
 		Name:         method,
 		Kind:         trace.SpanKindServer,
+		StartTime:    int64(e.StartTime),
+		EndTime:      int64(e.EndTime),
 		Attributes: []attribute.KeyValue{
 			semconv.RPCSystemKey.String("grpc"),
 			semconv.RPCServiceKey.String(method),
@@ -152,6 +171,10 @@ func (g *grpcServerInstrumentor) Close() {
 
 	if g.uprobe != nil {
 		g.uprobe.Close()
+	}
+
+	for _, r := range g.returnProbs {
+		r.Close()
 	}
 
 	if g.bpfObjects != nil {

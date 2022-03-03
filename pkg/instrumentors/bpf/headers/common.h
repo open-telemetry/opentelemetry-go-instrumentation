@@ -1,4 +1,4 @@
-// This is a compact version of `vmlinux.h` to be used in the examples using C code.
+// This is a compact version of `vmlinux.h`
 
 #define MAX_OS_THREADS 20
 

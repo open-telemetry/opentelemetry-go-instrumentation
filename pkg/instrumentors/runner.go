@@ -44,7 +44,7 @@ func (m *instrumentorsManager) load(target *process.TargetDetails) error {
 		return err
 	}
 
-	injector, err := inject.New()
+	injector, err := inject.New(target)
 	if err != nil {
 		return err
 	}

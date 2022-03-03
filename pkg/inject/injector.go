@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"github.com/cilium/ebpf"
 	"github.com/keyval-dev/opentelemetry-go-instrumentation/pkg/log"
+	"github.com/keyval-dev/opentelemetry-go-instrumentation/pkg/process"
 )
 
 var (
@@ -13,10 +14,11 @@ var (
 )
 
 type Injector struct {
-	data *TrackedOffsets
+	data     *TrackedOffsets
+	isRegAbi bool
 }
 
-func New() (*Injector, error) {
+func New(target *process.TargetDetails) (*Injector, error) {
 	var offsets TrackedOffsets
 	err := json.Unmarshal([]byte(offsetsData), &offsets)
 	if err != nil {
@@ -24,7 +26,8 @@ func New() (*Injector, error) {
 	}
 
 	return &Injector{
-		data: &offsets,
+		data:     &offsets,
+		isRegAbi: target.IsRegistersABI(),
 	}, nil
 }
 
@@ -42,26 +45,31 @@ func (i *Injector) Inject(loadBpf loadBpfFunc, library string, libVersion string
 		return nil, err
 	}
 
-	offsets := make(map[string]interface{})
+	injectedVars := make(map[string]interface{})
 
 	for _, dm := range fields {
 		offset, found := i.getFieldOffset(library, libVersion, dm.StructName, dm.Field)
 		if !found {
 			log.Logger.V(0).Info("could not find offset", "lib", library, "version", libVersion, "struct", dm.StructName, "field", dm.Field)
 		} else {
-			offsets[dm.VarName] = offset
+			injectedVars[dm.VarName] = offset
 		}
 	}
 
-	log.Logger.V(0).Info("Injecting offsets", "offsets", offsets)
-	if len(offsets) > 0 {
-		err = spec.RewriteConstants(offsets)
+	i.addCommonInjections(injectedVars)
+	log.Logger.V(0).Info("Injecting variables", "vars", injectedVars)
+	if len(injectedVars) > 0 {
+		err = spec.RewriteConstants(injectedVars)
 		if err != nil {
 			return nil, err
 		}
 	}
 
 	return spec, nil
+}
+
+func (i *Injector) addCommonInjections(varsMap map[string]interface{}) {
+	varsMap["is_registers_abi"] = i.isRegAbi
 }
 
 func (i *Injector) getFieldOffset(libName string, libVersion string, structName string, fieldName string) (uint64, bool) {

@@ -11,6 +11,7 @@ import (
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.7.0"
 	"go.opentelemetry.io/otel/trace"
+	"golang.org/x/sys/unix"
 	"google.golang.org/grpc"
 	"os"
 	"time"
@@ -25,6 +26,7 @@ type Controller struct {
 	tracerProvider trace.TracerProvider
 	tracersMap     map[string]trace.Tracer
 	contextsMap    map[int64]context.Context // TODO: Use LRU cache
+	bootTime       int64
 }
 
 func (c *Controller) getTracer(libName string) trace.Tracer {
@@ -45,9 +47,14 @@ func (c *Controller) Trace(event *events.Event) {
 	newCtx, span := c.getTracer(event.Library).
 		Start(ctx, event.Name,
 			trace.WithAttributes(attrs...),
-			trace.WithSpanKind(event.Kind))
+			trace.WithSpanKind(event.Kind),
+			trace.WithTimestamp(c.convertTime(event.StartTime)))
 	c.updateContext(event.GoroutineUID, newCtx)
-	span.End()
+	span.End(trace.WithTimestamp(c.convertTime(event.EndTime)))
+}
+
+func (c *Controller) convertTime(t int64) time.Time {
+	return time.Unix(0, c.bootTime+t)
 }
 
 func (c *Controller) getContext(goroutine int64) context.Context {
@@ -110,9 +117,29 @@ func NewController() (*Controller, error) {
 		sdktrace.WithSpanProcessor(bsp),
 	)
 
+	nsec, err := getMonotonicTime()
+	if err != nil {
+		return nil, err
+	}
+
+	now := time.Now()
+	bootTime := now.UnixNano() - nsec
+
 	return &Controller{
 		tracerProvider: tracerProvider,
 		tracersMap:     make(map[string]trace.Tracer),
 		contextsMap:    make(map[int64]context.Context),
+		bootTime:       bootTime,
 	}, nil
+}
+
+func getMonotonicTime() (int64, error) {
+	var ts unix.Timespec
+
+	err := unix.ClockGettime(unix.CLOCK_MONOTONIC, &ts)
+	if err != nil {
+		return 0, fmt.Errorf("could not get monotonic time: %s", err)
+	}
+
+	return unix.TimespecToNsec(ts), nil
 }

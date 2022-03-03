@@ -11,4 +11,6 @@ type Event struct {
 	Attributes   []attribute.KeyValue
 	Kind         trace.SpanKind
 	GoroutineUID int64
+	StartTime    int64
+	EndTime      int64
 }
