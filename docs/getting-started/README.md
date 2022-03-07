@@ -108,7 +108,7 @@ After selecting the emojivoto-voting service, you should see the following trace
 
 Each trace should contain data according to the OpenTelemetry specification, for example: gRPC method names, start and end timestamps, and even the goroutine id.
 
-Notice that we did not change the emojivoto-voting application to use OpenTelemetry. This is the exact same container that we usde earlier.
+Notice that we did not change the emojivoto-voting application to use OpenTelemetry. This is the exact same container that we used earlier.
 
 ## Next Steps
 

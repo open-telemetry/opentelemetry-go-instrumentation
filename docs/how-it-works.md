@@ -29,6 +29,8 @@ Notice that one of our design goals is to support stripped Go binaries - meaning
 
 We currently track instrumented structs inside the Go standard library and selected open source packages. This solution does not require DWARF information on the target binary and provides stability to instrumentations. Instrumentation authors can get a field location by name instead of hard coding a field offset.
 
+The offsets-tracker generates the [offset_results.json](https://github.com/keyval-dev/opentelemetry-go-instrumentation/blob/master/pkg/inject/offset_results.json) file. This file contains the offsets of the fields in the instrumented structs.
+
 ### Uretprobes
 
 One of the basic requirments of OpenTelemetry spans is to contain start timestamp and end timestamp. Getting those timestamps is possible by placing an eBPF code at the start and the end of the instrumented function. eBPF supports this requirment via uprobes and uretprobes, Uretprobes are used to invoke eBPF code at the end of the function. Unfortunately, uretprobes and Go [do not play well together](https://github.com/golang/go/issues/22008).
