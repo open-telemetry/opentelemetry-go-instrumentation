@@ -6,7 +6,6 @@ WORKDIR /app
 COPY . .
 RUN make build
 
-# gcr.io/distroless/base-debian11
-FROM fedora:35
+FROM gcr.io/distroless/base-debian11
 COPY --from=builder /app/kv-go-instrumentation /
 CMD ["/kv-go-instrumentation"]
