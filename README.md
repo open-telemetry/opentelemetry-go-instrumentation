@@ -6,7 +6,9 @@ We support a wide range of Go versions (1.12+) and even work on stripped binarie
 
 Our goal is to provide the same level of automatic instrumentation for Go as exists for languages such as Java and Python.
 
-This automatic instrumentation is based on [eBPF](https://ebpf.io/) uprobes. For more information, see our [How it works](docs/how-it-works.md) document.
+This automatic instrumentation is based on [eBPF](https://ebpf.io/) uprobes.
+
+For more information, see our [How it works](docs/how-it-works.md) document.
 
 ## Getting Started
 
