@@ -17,6 +17,7 @@ import (
 	"go.opentelemetry.io/otel/trace"
 	"golang.org/x/sys/unix"
 	"os"
+	"strings"
 )
 
 //go:generate go run github.com/cilium/ebpf/cmd/bpf2go -target bpfel -cc clang bpf ./bpf/probe.bpf.c -- -I/usr/include/bpf -I$BPF_IMPORT
@@ -143,6 +144,18 @@ func (g *grpcInstrumentor) Run(eventsChan chan<- *events.Event) {
 func (g *grpcInstrumentor) convertEvent(e *GrpcEvent) *events.Event {
 	method := unix.ByteSliceToString(e.Method[:])
 	target := unix.ByteSliceToString(e.Target[:])
+	var attrs []attribute.KeyValue
+
+	// remove port
+	if parts := strings.Split(target, ":"); len(parts) > 1 {
+		target = parts[0]
+		attrs = append(attrs, semconv.NetPeerPortKey.String(parts[1]))
+	}
+
+	attrs = append(attrs, semconv.RPCSystemKey.String("grpc"),
+		semconv.RPCServiceKey.String(method),
+		semconv.NetPeerIPKey.String(target),
+		semconv.NetPeerNameKey.String(target))
 
 	return &events.Event{
 		Library:      g.LibraryName(),
@@ -151,12 +164,7 @@ func (g *grpcInstrumentor) convertEvent(e *GrpcEvent) *events.Event {
 		Kind:         trace.SpanKindClient,
 		StartTime:    int64(e.StartTime),
 		EndTime:      int64(e.EndTime),
-		Attributes: []attribute.KeyValue{
-			semconv.RPCSystemKey.String("grpc"),
-			semconv.RPCServiceKey.String(method),
-			semconv.NetPeerIPKey.String(target),
-			semconv.NetPeerNameKey.String(target),
-		},
+		Attributes:   attrs,
 	}
 }
 
