@@ -2,6 +2,7 @@ package instrumentors
 
 import (
 	"fmt"
+	gorillaMux "github.com/keyval-dev/opentelemetry-go-instrumentation/pkg/instrumentors/bpf/github.com/gorilla/mux"
 	"github.com/keyval-dev/opentelemetry-go-instrumentation/pkg/instrumentors/bpf/google/golang/org/grpc"
 	grpcServer "github.com/keyval-dev/opentelemetry-go-instrumentation/pkg/instrumentors/bpf/google/golang/org/grpc/server"
 	httpServer "github.com/keyval-dev/opentelemetry-go-instrumentation/pkg/instrumentors/bpf/net/http/server"
@@ -89,6 +90,7 @@ func registerInstrumentors(m *instrumentorsManager) error {
 		grpc.New(),
 		grpcServer.New(),
 		httpServer.New(),
+		gorillaMux.New(),
 	}
 
 	for _, i := range insts {
