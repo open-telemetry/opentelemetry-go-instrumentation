@@ -1,6 +1,6 @@
 # OpenTelemtry Go Instrumentation - How it works
 
-OpenTelemetry automatic instrumentation exists for several languages such as [Java](https://github.com/open-telemetry/opentelemetry-java-instrumentation), [Python](https://github.com/open-telemetry/opentelemetry-python-contrib) and [JavaScript](https://github.com/open-telemetry/opentelemetry-js-contrib). Our main goal is to bring the same experience of automatic instrumentation to the Go language.
+We aim to bring the automatic instrumentation experience found in languages like [Java](https://github.com/open-telemetry/opentelemetry-java-instrumentation), [Python](https://github.com/open-telemetry/opentelemetry-python-contrib) and [JavaScript](https://github.com/open-telemetry/opentelemetry-js-contrib) to Go applications.
 
 ## Design Goals
 

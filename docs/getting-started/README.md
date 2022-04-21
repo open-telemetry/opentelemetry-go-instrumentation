@@ -38,7 +38,7 @@ kubectl apply -k github.com/BuoyantIO/emojivoto/kustomize/deployment
 Install Jaeger UI by running:
 
 ```shell
-kubectl apply -f https://raw.githubusercontent.com/keyval-dev/opentelemetry-go-instrumentation/master/docs/getting-started/jaeger.yaml
+kubectl apply -f https://raw.githubusercontent.com/keyval-dev/opentelemetry-go-instrumentation/master/docs/getting-started/jaeger.yaml -n emojivoto
 ```
 
 This command installs Jaeger as a new Deployment and an additonal Service that we will use later for accessing the Jaeger UI.
@@ -50,7 +50,7 @@ In a real world application, you would probably want to send the tracing data to
 Download [this patch file](https://raw.githubusercontent.com/keyval-dev/opentelemetry-go-instrumentation/master/docs/getting-started/voting-patch.yaml) and apply it to the voting deployment:
 
 ```shell
-kubectl patch deployment voting --patch-file voting-patch.yaml
+kubectl patch deployment voting --patch-file voting-patch.yaml -n emojivoto
 ```
 
 Looking at the patch file will give us a better idea of how the automatic instrumentation works:
@@ -61,8 +61,8 @@ spec:
     spec:
       shareProcessNamespace: true
       containers:
-        - name: emojivoto-web-instrumentation
-          image: keyval/otel-go-agent:v0.1
+        - name: emojivoto-voting-instrumentation
+          image: keyval/otel-go-agent:v0.5.2
           env:
             - name: OTEL_TARGET_EXE
               value: /usr/local/bin/emojivoto-voting-svc
@@ -98,7 +98,7 @@ The instrumentation is achieved by performing the following steps:
 First, port forward to the Jaeger UI:
 
 ```shell
-kubectl port-forward svc/jaeger 16686:16686
+kubectl port-forward svc/jaeger 16686:16686 -n emojivoto
 ```
 
 Then, open the Jaeger UI in your browser by navigating to http://localhost:16686/

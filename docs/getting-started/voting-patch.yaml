@@ -3,8 +3,8 @@ spec:
     spec:
       shareProcessNamespace: true
       containers:
-        - name: emojivoto-web-instrumentation
-          image: keyval/otel-go-agent:v0.1
+        - name: emojivoto-voting-instrumentation
+          image: keyval/otel-go-agent:v0.5.2
           env:
             - name: OTEL_TARGET_EXE
               value: /usr/local/bin/emojivoto-voting-svc
