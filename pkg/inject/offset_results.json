@@ -9,6 +9,26 @@
           "offsets": [
             {
               "offset": 152,
+              "version": "1.18.2"
+            },
+            {
+              "offset": 152,
+              "version": "1.18.1"
+            },
+            {
+              "offset": 152,
+              "version": "1.18"
+            },
+            {
+              "offset": 152,
+              "version": "1.17.10"
+            },
+            {
+              "offset": 152,
+              "version": "1.17.9"
+            },
+            {
+              "offset": 152,
               "version": "1.17.8"
             },
             {
@@ -377,6 +397,26 @@
           "struct": "net/http.Request",
           "field_name": "Method",
           "offsets": [
+            {
+              "offset": 0,
+              "version": "1.18.2"
+            },
+            {
+              "offset": 0,
+              "version": "1.18.1"
+            },
+            {
+              "offset": 0,
+              "version": "1.18"
+            },
+            {
+              "offset": 0,
+              "version": "1.17.10"
+            },
+            {
+              "offset": 0,
+              "version": "1.17.9"
+            },
             {
               "offset": 0,
               "version": "1.17.8"
@@ -749,6 +789,26 @@
           "offsets": [
             {
               "offset": 16,
+              "version": "1.18.2"
+            },
+            {
+              "offset": 16,
+              "version": "1.18.1"
+            },
+            {
+              "offset": 16,
+              "version": "1.18"
+            },
+            {
+              "offset": 16,
+              "version": "1.17.10"
+            },
+            {
+              "offset": 16,
+              "version": "1.17.9"
+            },
+            {
+              "offset": 16,
               "version": "1.17.8"
             },
             {
@@ -1117,6 +1177,26 @@
           "struct": "net/url.URL",
           "field_name": "Path",
           "offsets": [
+            {
+              "offset": 56,
+              "version": "1.18.2"
+            },
+            {
+              "offset": 56,
+              "version": "1.18.1"
+            },
+            {
+              "offset": 56,
+              "version": "1.18"
+            },
+            {
+              "offset": 56,
+              "version": "1.17.10"
+            },
+            {
+              "offset": 56,
+              "version": "1.17.9"
+            },
             {
               "offset": 56,
               "version": "1.17.8"
@@ -1950,7 +2030,27 @@
             },
             {
               "offset": 80,
+              "version": "v1.45.0"
+            },
+            {
+              "offset": 80,
               "version": "v1.46.0-dev"
+            },
+            {
+              "offset": 80,
+              "version": "v1.46.0"
+            },
+            {
+              "offset": 80,
+              "version": "v1.46.1"
+            },
+            {
+              "offset": 80,
+              "version": "v1.46.2"
+            },
+            {
+              "offset": 80,
+              "version": "v1.47.0-dev"
             }
           ]
         },
@@ -2416,7 +2516,27 @@
             },
             {
               "offset": 24,
+              "version": "v1.45.0"
+            },
+            {
+              "offset": 24,
               "version": "v1.46.0-dev"
+            },
+            {
+              "offset": 24,
+              "version": "v1.46.0"
+            },
+            {
+              "offset": 24,
+              "version": "v1.46.1"
+            },
+            {
+              "offset": 24,
+              "version": "v1.46.2"
+            },
+            {
+              "offset": 24,
+              "version": "v1.47.0-dev"
             }
           ]
         }
