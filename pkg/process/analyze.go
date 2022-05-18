@@ -4,10 +4,11 @@ import (
 	"debug/elf"
 	"debug/gosym"
 	"fmt"
+	"os"
+
 	"github.com/hashicorp/go-version"
 	"github.com/keyval-dev/opentelemetry-go-instrumentation/pkg/log"
 	"golang.org/x/arch/x86/x86asm"
-	"os"
 )
 
 type TargetDetails struct {

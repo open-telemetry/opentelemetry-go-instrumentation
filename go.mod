@@ -1,6 +1,6 @@
 module github.com/keyval-dev/opentelemetry-go-instrumentation
 
-go 1.17
+go 1.18
 
 require (
 	github.com/cilium/ebpf v0.8.0

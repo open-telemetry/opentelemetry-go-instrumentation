@@ -60,9 +60,9 @@ int uprobe_server_handleStream_ByRegisters(struct pt_regs *ctx) {
     grpcReq.start_time = bpf_ktime_get_ns();
     void* stream_ptr = (void *)(ctx->rdi);
     void* method_ptr = 0;
-    bpf_probe_read(&method_ptr, sizeof(method_ptr), (void *)(stream_ptr+stream_method_ptr_pos-8));
+    bpf_probe_read(&method_ptr, sizeof(method_ptr), (void *)(stream_ptr+stream_method_ptr_pos));
     u64 method_len = 0;
-    bpf_probe_read(&method_len, sizeof(method_len), (void *)(stream_ptr+(stream_method_ptr_pos)));
+    bpf_probe_read(&method_len, sizeof(method_len), (void *)(stream_ptr+(stream_method_ptr_pos+8)));
     u64 method_size = sizeof(grpcReq.method);
     method_size = method_size < method_len ? method_size : method_len;
     bpf_probe_read(&grpcReq.method, method_size, method_ptr);

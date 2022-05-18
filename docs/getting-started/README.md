@@ -62,7 +62,7 @@ spec:
       shareProcessNamespace: true
       containers:
         - name: emojivoto-voting-instrumentation
-          image: keyval/otel-go-agent:v0.5.2
+          image: keyval/otel-go-agent:v0.5.3
           env:
             - name: OTEL_TARGET_EXE
               value: /usr/local/bin/emojivoto-voting-svc
