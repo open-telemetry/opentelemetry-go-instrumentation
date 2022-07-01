@@ -17,7 +17,9 @@ The context propagation implementation should support the following:
 - Automatic instrumentation - for spans created by the automatic instrumentation agent.
 - Manual instrumentation - for spans created manually by the user.
 
-6. **Writing headers**: the implementation should get the current span from the eBPF map and propagate it to the next process by adding new headers to the request / response.
+3. **Writing headers**: the implementation should get the current span from the eBPF map and propagate it to the next process by adding new headers to the request / response.
+
+Notice that currently, the automatic instrumentation correlates spans to the same trace if they are being executed by the same goroutine. In the future we plan to implement a more robust tracking of the goroutine tree to support traces from multiple goroutines. As part of this planned change, the current implementation of context propagation will also have to be changed (different key in the current span map).
 
 ## Example walkthrough
 
