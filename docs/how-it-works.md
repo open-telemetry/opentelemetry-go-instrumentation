@@ -33,7 +33,7 @@ The offsets-tracker generates the [offset_results.json](https://github.com/keyva
 
 ### Uretprobes
 
-One of the basic requirments of OpenTelemetry spans is to contain start timestamp and end timestamp. Getting those timestamps is possible by placing an eBPF code at the start and the end of the instrumented function. eBPF supports this requirment via uprobes and uretprobes, Uretprobes are used to invoke eBPF code at the end of the function. Unfortunately, uretprobes and Go [do not play well together](https://github.com/golang/go/issues/22008).
+One of the basic requirments of OpenTelemetry spans is to contain start timestamp and end timestamp. Getting those timestamps is possible by placing an eBPF code at the start and the end of the instrumented function. eBPF supports this requirement via uprobes and uretprobes. Uretprobes are used to invoke eBPF code at the end of the function. Unfortunately, uretprobes and Go [do not play well together](https://github.com/golang/go/issues/22008).
 
 We overcome this issue by analyzing the target binary and detecting all the return statements in the instrumented functions. We then place a uprobe at the end of each return statement. This uprobe invokes the eBPF code that collects the end timestamp.
 
@@ -52,7 +52,7 @@ The current thread ID can be obtained by calling `bpf_get_current_pid_tgid()` in
 
 eBPF programs can access the current timestamp by calling `bpf_ktime_get_ns()`. The value returned by this function is fetched from the `CLOCK_MONOTONIC` clock and represents the number of nanoseconds since the system boot time.
 
-According to OpenTelemetry specification start time and end time sholud be timestamps and represent exact point in time. Converting from monotonic time to epoch timestamp is automaticly handled by this library. Convertion is achieved by disocvering the epoch boot time and adding it to the monotonic time collected by the eBPF program.
+According to OpenTelemetry specification start time and end time should be timestamps and represent exact point in time. Converting from monotonic time to epoch timestamp is automatically handled by this library. Conversion is achieved by discovering the epoch boot time and adding it to the monotonic time collected by the eBPF program.
 
 ### Support Go 1.17 and above
 

@@ -25,7 +25,7 @@ Check out our [Getting Started on Kubernetes](docs/getting-started/README.md) gu
 
 ## Project Status
 
-This project is actively maintained by [keyval](https://keyval.dev) and is currently in it's initial days. We would love to receive your ideas, feedback & contributions.
+This project is actively maintained by [keyval](https://keyval.dev) and is currently in its initial days. We would love to receive your ideas, feedback & contributions.
 
 ## Contributing
 

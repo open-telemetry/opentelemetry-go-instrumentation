@@ -41,7 +41,7 @@ Install Jaeger UI by running:
 kubectl apply -f https://raw.githubusercontent.com/keyval-dev/opentelemetry-go-instrumentation/master/docs/getting-started/jaeger.yaml -n emojivoto
 ```
 
-This command installs Jaeger as a new Deployment and an additonal Service that we will use later for accessing the Jaeger UI.
+This command installs Jaeger as a new Deployment and an additional Service that we will use later for accessing the Jaeger UI.
 
 In a real world application, you would probably want to send the tracing data to [OpenTelemetry collector](https://github.com/open-telemetry/opentelemetry-collector) instead of directly to Jaeger.
 
