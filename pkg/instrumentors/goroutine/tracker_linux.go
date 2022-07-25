@@ -1,6 +1,9 @@
 package goroutine
 
 import (
+	"os"
+	"time"
+
 	"github.com/cilium/ebpf"
 	"github.com/cilium/ebpf/link"
 	"github.com/keyval-dev/opentelemetry-go-instrumentation/pkg/inject"
@@ -9,11 +12,9 @@ import (
 	"github.com/keyval-dev/opentelemetry-go-instrumentation/pkg/instrumentors/goroutine/bpffs"
 	"github.com/keyval-dev/opentelemetry-go-instrumentation/pkg/log"
 	"golang.org/x/sys/unix"
-	"os"
-	"time"
 )
 
-//go:generate go run github.com/cilium/ebpf/cmd/bpf2go -target bpfel -cc clang bpf ./bpf/tracker.bpf.c -- -I/usr/include/bpf -I$BPF_IMPORT
+//go:generate go run github.com/cilium/ebpf/cmd/bpf2go -target bpfel -cc clang -cflags $CFLAGS bpf ./bpf/tracker.bpf.c
 
 type Tracker struct {
 	bpfObjects *bpfObjects
