@@ -95,7 +95,8 @@ func NewController() (*Controller, error) {
 	}
 
 	log.Logger.V(0).Info("Establishing connection to OpenTelemetry collector ...")
-	timeoutContext, _ := context.WithTimeout(ctx, time.Second*10)
+	timeoutContext, cancel := context.WithTimeout(ctx, time.Second*10)
+	defer cancel()
 	conn, err := grpc.DialContext(timeoutContext, endpoint, grpc.WithInsecure(), grpc.WithBlock())
 	if err != nil {
 		log.Logger.Error(err, "unable to connect to OpenTelemetry collector", "addr", endpoint)
