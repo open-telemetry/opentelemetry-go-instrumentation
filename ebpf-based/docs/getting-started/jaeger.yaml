@@ -1,0 +1,36 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: jaeger
+  name: jaeger
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: jaeger
+  template:
+    metadata:
+      labels:
+        app: jaeger
+    spec:
+      containers:
+      - image: jaegertracing/opentelemetry-all-in-one:latest
+        name: opentelemetry-all-in-one
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: jaeger
+  name: jaeger
+spec:
+  ports:
+  - name: grpc
+    port: 4317
+    targetPort: 4317
+  - name: ui
+    port: 16686
+    targetPort: 16686
+  selector:
+    app: jaeger
