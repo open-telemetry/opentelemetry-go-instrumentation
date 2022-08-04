@@ -1,4 +1,5 @@
-// This is a compact version of `vmlinux.h`
+// SPDX-License-Identifier: (GPL-2.0-only OR BSD-2-Clause)
+/* Copyright Authors of OpenTelemetry */
 
 #define MAX_OS_THREADS 20
 

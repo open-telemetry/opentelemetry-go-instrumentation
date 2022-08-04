@@ -1,7 +1,10 @@
+// SPDX-License-Identifier: (GPL-2.0-only OR BSD-2-Clause)
+/* Copyright Authors of OpenTelemetry */
+
 #include "arguments.h"
 #include "goroutines.h"
 
-char __license[] SEC("license") = "Dual MIT/GPL";
+char __license[] SEC("license") = "Dual BSD/GPL";
 
 // Injected in init
 volatile const u64 goid_pos;

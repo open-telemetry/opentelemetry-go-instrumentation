@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: (GPL-2.0-only OR BSD-2-Clause)
+/* Copyright Authors of OpenTelemetry */
+
 #include "common.h"
 #include "bpf_helpers.h"
 #include <stdbool.h>
