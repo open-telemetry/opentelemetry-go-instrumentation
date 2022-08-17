@@ -1,0 +1,259 @@
+{
+	"Name": "recur",
+	"SpanContext": {
+		"TraceID": "898ffa664b45f09ba6de96a592079305",
+		"SpanID": "f7072f1c443491d3",
+		"TraceFlags": "01",
+		"TraceState": "",
+		"Remote": false
+	},
+	"Parent": {
+		"TraceID": "898ffa664b45f09ba6de96a592079305",
+		"SpanID": "4f868529fdeddcfa",
+		"TraceFlags": "01",
+		"TraceState": "",
+		"Remote": false
+	},
+	"SpanKind": 1,
+	"StartTime": "0001-01-01T00:00:00Z",
+	"EndTime": "0001-01-01T00:00:00Z",
+	"Attributes": null,
+	"Events": null,
+	"Links": null,
+	"Status": {
+		"Code": "Unset",
+		"Description": ""
+	},
+	"DroppedAttributes": 0,
+	"DroppedEvents": 0,
+	"DroppedLinks": 0,
+	"ChildSpanCount": 0,
+	"Resource": null,
+	"InstrumentationLibrary": {
+		"Name": "recur",
+		"Version": "",
+		"SchemaURL": ""
+	}
+}
+{
+	"Name": "recur",
+	"SpanContext": {
+		"TraceID": "898ffa664b45f09ba6de96a592079305",
+		"SpanID": "4f868529fdeddcfa",
+		"TraceFlags": "01",
+		"TraceState": "",
+		"Remote": false
+	},
+	"Parent": {
+		"TraceID": "898ffa664b45f09ba6de96a592079305",
+		"SpanID": "9ba267d15a2df848",
+		"TraceFlags": "01",
+		"TraceState": "",
+		"Remote": false
+	},
+	"SpanKind": 1,
+	"StartTime": "0001-01-01T00:00:00Z",
+	"EndTime": "0001-01-01T00:00:00Z",
+	"Attributes": null,
+	"Events": null,
+	"Links": null,
+	"Status": {
+		"Code": "Unset",
+		"Description": ""
+	},
+	"DroppedAttributes": 0,
+	"DroppedEvents": 0,
+	"DroppedLinks": 0,
+	"ChildSpanCount": 1,
+	"Resource": null,
+	"InstrumentationLibrary": {
+		"Name": "recur",
+		"Version": "",
+		"SchemaURL": ""
+	}
+}
+{
+	"Name": "recur",
+	"SpanContext": {
+		"TraceID": "898ffa664b45f09ba6de96a592079305",
+		"SpanID": "9ba267d15a2df848",
+		"TraceFlags": "01",
+		"TraceState": "",
+		"Remote": false
+	},
+	"Parent": {
+		"TraceID": "898ffa664b45f09ba6de96a592079305",
+		"SpanID": "d01b017c4592b65b",
+		"TraceFlags": "01",
+		"TraceState": "",
+		"Remote": false
+	},
+	"SpanKind": 1,
+	"StartTime": "0001-01-01T00:00:00Z",
+	"EndTime": "0001-01-01T00:00:00Z",
+	"Attributes": null,
+	"Events": null,
+	"Links": null,
+	"Status": {
+		"Code": "Unset",
+		"Description": ""
+	},
+	"DroppedAttributes": 0,
+	"DroppedEvents": 0,
+	"DroppedLinks": 0,
+	"ChildSpanCount": 1,
+	"Resource": null,
+	"InstrumentationLibrary": {
+		"Name": "recur",
+		"Version": "",
+		"SchemaURL": ""
+	}
+}
+{
+	"Name": "recur",
+	"SpanContext": {
+		"TraceID": "898ffa664b45f09ba6de96a592079305",
+		"SpanID": "d01b017c4592b65b",
+		"TraceFlags": "01",
+		"TraceState": "",
+		"Remote": false
+	},
+	"Parent": {
+		"TraceID": "898ffa664b45f09ba6de96a592079305",
+		"SpanID": "1b22106503e01007",
+		"TraceFlags": "01",
+		"TraceState": "",
+		"Remote": false
+	},
+	"SpanKind": 1,
+	"StartTime": "0001-01-01T00:00:00Z",
+	"EndTime": "0001-01-01T00:00:00Z",
+	"Attributes": null,
+	"Events": null,
+	"Links": null,
+	"Status": {
+		"Code": "Unset",
+		"Description": ""
+	},
+	"DroppedAttributes": 0,
+	"DroppedEvents": 0,
+	"DroppedLinks": 0,
+	"ChildSpanCount": 1,
+	"Resource": null,
+	"InstrumentationLibrary": {
+		"Name": "recur",
+		"Version": "",
+		"SchemaURL": ""
+	}
+}
+{
+	"Name": "recur",
+	"SpanContext": {
+		"TraceID": "898ffa664b45f09ba6de96a592079305",
+		"SpanID": "1b22106503e01007",
+		"TraceFlags": "01",
+		"TraceState": "",
+		"Remote": false
+	},
+	"Parent": {
+		"TraceID": "898ffa664b45f09ba6de96a592079305",
+		"SpanID": "673c5c2f4a18d412",
+		"TraceFlags": "01",
+		"TraceState": "",
+		"Remote": false
+	},
+	"SpanKind": 1,
+	"StartTime": "0001-01-01T00:00:00Z",
+	"EndTime": "0001-01-01T00:00:00Z",
+	"Attributes": null,
+	"Events": null,
+	"Links": null,
+	"Status": {
+		"Code": "Unset",
+		"Description": ""
+	},
+	"DroppedAttributes": 0,
+	"DroppedEvents": 0,
+	"DroppedLinks": 0,
+	"ChildSpanCount": 1,
+	"Resource": null,
+	"InstrumentationLibrary": {
+		"Name": "recur",
+		"Version": "",
+		"SchemaURL": ""
+	}
+}
+{
+	"Name": "recur",
+	"SpanContext": {
+		"TraceID": "898ffa664b45f09ba6de96a592079305",
+		"SpanID": "673c5c2f4a18d412",
+		"TraceFlags": "01",
+		"TraceState": "",
+		"Remote": false
+	},
+	"Parent": {
+		"TraceID": "898ffa664b45f09ba6de96a592079305",
+		"SpanID": "8cf8d618faf53859",
+		"TraceFlags": "01",
+		"TraceState": "",
+		"Remote": false
+	},
+	"SpanKind": 1,
+	"StartTime": "0001-01-01T00:00:00Z",
+	"EndTime": "0001-01-01T00:00:00Z",
+	"Attributes": null,
+	"Events": null,
+	"Links": null,
+	"Status": {
+		"Code": "Unset",
+		"Description": ""
+	},
+	"DroppedAttributes": 0,
+	"DroppedEvents": 0,
+	"DroppedLinks": 0,
+	"ChildSpanCount": 1,
+	"Resource": null,
+	"InstrumentationLibrary": {
+		"Name": "recur",
+		"Version": "",
+		"SchemaURL": ""
+	}
+}
+{
+	"Name": "main",
+	"SpanContext": {
+		"TraceID": "898ffa664b45f09ba6de96a592079305",
+		"SpanID": "8cf8d618faf53859",
+		"TraceFlags": "01",
+		"TraceState": "",
+		"Remote": false
+	},
+	"Parent": {
+		"TraceID": "00000000000000000000000000000000",
+		"SpanID": "0000000000000000",
+		"TraceFlags": "00",
+		"TraceState": "",
+		"Remote": false
+	},
+	"SpanKind": 1,
+	"StartTime": "0001-01-01T00:00:00Z",
+	"EndTime": "0001-01-01T00:00:00Z",
+	"Attributes": null,
+	"Events": null,
+	"Links": null,
+	"Status": {
+		"Code": "Unset",
+		"Description": ""
+	},
+	"DroppedAttributes": 0,
+	"DroppedEvents": 0,
+	"DroppedLinks": 0,
+	"ChildSpanCount": 1,
+	"Resource": null,
+	"InstrumentationLibrary": {
+		"Name": "main",
+		"Version": "",
+		"SchemaURL": ""
+	}
+}

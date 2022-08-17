@@ -1,0 +1,111 @@
+{
+	"Name": "foo",
+	"SpanContext": {
+		"TraceID": "ed39b601dfc653a1af2d201580524e04",
+		"SpanID": "46beedbba3f44afd",
+		"TraceFlags": "01",
+		"TraceState": "",
+		"Remote": false
+	},
+	"Parent": {
+		"TraceID": "ed39b601dfc653a1af2d201580524e04",
+		"SpanID": "4667d6ee96cebbd3",
+		"TraceFlags": "01",
+		"TraceState": "",
+		"Remote": false
+	},
+	"SpanKind": 1,
+	"StartTime": "0001-01-01T00:00:00Z",
+	"EndTime": "0001-01-01T00:00:00Z",
+	"Attributes": null,
+	"Events": null,
+	"Links": null,
+	"Status": {
+		"Code": "Unset",
+		"Description": ""
+	},
+	"DroppedAttributes": 0,
+	"DroppedEvents": 0,
+	"DroppedLinks": 0,
+	"ChildSpanCount": 0,
+	"Resource": null,
+	"InstrumentationLibrary": {
+		"Name": "foo",
+		"Version": "",
+		"SchemaURL": ""
+	}
+}
+{
+	"Name": "anonymous",
+	"SpanContext": {
+		"TraceID": "ed39b601dfc653a1af2d201580524e04",
+		"SpanID": "761d4271fbd42829",
+		"TraceFlags": "01",
+		"TraceState": "",
+		"Remote": false
+	},
+	"Parent": {
+		"TraceID": "ed39b601dfc653a1af2d201580524e04",
+		"SpanID": "4667d6ee96cebbd3",
+		"TraceFlags": "01",
+		"TraceState": "",
+		"Remote": false
+	},
+	"SpanKind": 1,
+	"StartTime": "0001-01-01T00:00:00Z",
+	"EndTime": "0001-01-01T00:00:00Z",
+	"Attributes": null,
+	"Events": null,
+	"Links": null,
+	"Status": {
+		"Code": "Unset",
+		"Description": ""
+	},
+	"DroppedAttributes": 0,
+	"DroppedEvents": 0,
+	"DroppedLinks": 0,
+	"ChildSpanCount": 0,
+	"Resource": null,
+	"InstrumentationLibrary": {
+		"Name": "anonymous",
+		"Version": "",
+		"SchemaURL": ""
+	}
+}
+{
+	"Name": "main",
+	"SpanContext": {
+		"TraceID": "ed39b601dfc653a1af2d201580524e04",
+		"SpanID": "4667d6ee96cebbd3",
+		"TraceFlags": "01",
+		"TraceState": "",
+		"Remote": false
+	},
+	"Parent": {
+		"TraceID": "00000000000000000000000000000000",
+		"SpanID": "0000000000000000",
+		"TraceFlags": "00",
+		"TraceState": "",
+		"Remote": false
+	},
+	"SpanKind": 1,
+	"StartTime": "0001-01-01T00:00:00Z",
+	"EndTime": "0001-01-01T00:00:00Z",
+	"Attributes": null,
+	"Events": null,
+	"Links": null,
+	"Status": {
+		"Code": "Unset",
+		"Description": ""
+	},
+	"DroppedAttributes": 0,
+	"DroppedEvents": 0,
+	"DroppedLinks": 0,
+	"ChildSpanCount": 2,
+	"Resource": null,
+	"InstrumentationLibrary": {
+		"Name": "main",
+		"Version": "",
+		"SchemaURL": ""
+	}
+}

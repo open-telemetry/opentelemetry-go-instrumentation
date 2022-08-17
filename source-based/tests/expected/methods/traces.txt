@@ -1,0 +1,148 @@
+{
+	"Name": "process",
+	"SpanContext": {
+		"TraceID": "89e24b204157ed68a6374f050991d378",
+		"SpanID": "b89f206f686a8a63",
+		"TraceFlags": "01",
+		"TraceState": "",
+		"Remote": false
+	},
+	"Parent": {
+		"TraceID": "89e24b204157ed68a6374f050991d378",
+		"SpanID": "196142f06e386892",
+		"TraceFlags": "01",
+		"TraceState": "",
+		"Remote": false
+	},
+	"SpanKind": 1,
+	"StartTime": "0001-01-01T00:00:00Z",
+	"EndTime": "0001-01-01T00:00:00Z",
+	"Attributes": null,
+	"Events": null,
+	"Links": null,
+	"Status": {
+		"Code": "Unset",
+		"Description": ""
+	},
+	"DroppedAttributes": 0,
+	"DroppedEvents": 0,
+	"DroppedLinks": 0,
+	"ChildSpanCount": 0,
+	"Resource": null,
+	"InstrumentationLibrary": {
+		"Name": "process",
+		"Version": "",
+		"SchemaURL": ""
+	}
+}
+{
+	"Name": "get",
+	"SpanContext": {
+		"TraceID": "89e24b204157ed68a6374f050991d378",
+		"SpanID": "6215269b7e32fe21",
+		"TraceFlags": "01",
+		"TraceState": "",
+		"Remote": false
+	},
+	"Parent": {
+		"TraceID": "89e24b204157ed68a6374f050991d378",
+		"SpanID": "196142f06e386892",
+		"TraceFlags": "01",
+		"TraceState": "",
+		"Remote": false
+	},
+	"SpanKind": 1,
+	"StartTime": "0001-01-01T00:00:00Z",
+	"EndTime": "0001-01-01T00:00:00Z",
+	"Attributes": null,
+	"Events": null,
+	"Links": null,
+	"Status": {
+		"Code": "Unset",
+		"Description": ""
+	},
+	"DroppedAttributes": 0,
+	"DroppedEvents": 0,
+	"DroppedLinks": 0,
+	"ChildSpanCount": 0,
+	"Resource": null,
+	"InstrumentationLibrary": {
+		"Name": "get",
+		"Version": "",
+		"SchemaURL": ""
+	}
+}
+{
+	"Name": "foo",
+	"SpanContext": {
+		"TraceID": "89e24b204157ed68a6374f050991d378",
+		"SpanID": "152c58c026034105",
+		"TraceFlags": "01",
+		"TraceState": "",
+		"Remote": false
+	},
+	"Parent": {
+		"TraceID": "89e24b204157ed68a6374f050991d378",
+		"SpanID": "196142f06e386892",
+		"TraceFlags": "01",
+		"TraceState": "",
+		"Remote": false
+	},
+	"SpanKind": 1,
+	"StartTime": "0001-01-01T00:00:00Z",
+	"EndTime": "0001-01-01T00:00:00Z",
+	"Attributes": null,
+	"Events": null,
+	"Links": null,
+	"Status": {
+		"Code": "Unset",
+		"Description": ""
+	},
+	"DroppedAttributes": 0,
+	"DroppedEvents": 0,
+	"DroppedLinks": 0,
+	"ChildSpanCount": 0,
+	"Resource": null,
+	"InstrumentationLibrary": {
+		"Name": "foo",
+		"Version": "",
+		"SchemaURL": ""
+	}
+}
+{
+	"Name": "main",
+	"SpanContext": {
+		"TraceID": "89e24b204157ed68a6374f050991d378",
+		"SpanID": "196142f06e386892",
+		"TraceFlags": "01",
+		"TraceState": "",
+		"Remote": false
+	},
+	"Parent": {
+		"TraceID": "00000000000000000000000000000000",
+		"SpanID": "0000000000000000",
+		"TraceFlags": "00",
+		"TraceState": "",
+		"Remote": false
+	},
+	"SpanKind": 1,
+	"StartTime": "0001-01-01T00:00:00Z",
+	"EndTime": "0001-01-01T00:00:00Z",
+	"Attributes": null,
+	"Events": null,
+	"Links": null,
+	"Status": {
+		"Code": "Unset",
+		"Description": ""
+	},
+	"DroppedAttributes": 0,
+	"DroppedEvents": 0,
+	"DroppedLinks": 0,
+	"ChildSpanCount": 3,
+	"Resource": null,
+	"InstrumentationLibrary": {
+		"Name": "main",
+		"Version": "",
+		"SchemaURL": ""
+	}
+}
