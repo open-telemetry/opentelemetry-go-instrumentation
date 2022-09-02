@@ -140,7 +140,47 @@ func GetPackagePathHashFromFunc(pkg *packages.Package, pkgs []*packages.Package,
 	return pkgPath
 }
 
-func BuildCallGraph(projectPath string, packagePattern string, funcDecls map[FuncDescriptor]bool) map[FuncDescriptor][]FuncDescriptor {
+func GetSelectorPkgPath(sel *ast.SelectorExpr, pkg *packages.Package, pkgPath string) string {
+	caller := GetMostInnerAstIdent(sel)
+	if caller != nil {
+		if pkg.TypesInfo.Uses[caller] != nil {
+			if !strings.Contains(pkg.TypesInfo.Uses[caller].Type().String(), "invalid") {
+				pkgPath = pkg.TypesInfo.Uses[caller].Type().String()
+				// We don't care if that's pointer, remove it from
+				// type id
+				if _, ok := pkg.TypesInfo.Uses[caller].Type().(*types.Pointer); ok {
+					pkgPath = strings.TrimPrefix(pkgPath, "*")
+				}
+				// We don't care if called via index, remove it from
+				// type id
+				if _, ok := pkg.TypesInfo.Uses[caller].Type().(*types.Slice); ok {
+					pkgPath = strings.TrimPrefix(pkgPath, "[]")
+				}
+			}
+		}
+	}
+	return pkgPath
+}
+
+func GetPkgNameFromUsesTable(pkg *packages.Package, ident *ast.Ident) string {
+	if pkg.TypesInfo.Uses[ident].Pkg() != nil {
+		return pkg.TypesInfo.Uses[ident].Pkg().Path()
+	}
+	return ""
+}
+
+func GetPkgNameFromDefsTable(pkg *packages.Package, ident *ast.Ident) string {
+	if pkg.TypesInfo.Defs[ident].Pkg() != nil {
+		return pkg.TypesInfo.Defs[ident].Pkg().Path()
+	}
+	return ""
+}
+
+func BuildCallGraph(
+	projectPath string,
+	packagePattern string,
+	funcDecls map[FuncDescriptor]bool) map[FuncDescriptor][]FuncDescriptor {
+
 	fset := token.NewFileSet()
 	cfg := &packages.Config{Fset: fset, Mode: mode, Dir: projectPath}
 	pkgs, err := packages.Load(cfg, packagePattern)
@@ -158,14 +198,12 @@ func BuildCallGraph(projectPath string, packagePattern string, funcDecls map[Fun
 			ast.Inspect(node, func(n ast.Node) bool {
 				switch x := n.(type) {
 				case *ast.CallExpr:
-					id, ok := x.Fun.(*ast.Ident)
-					if ok {
-						pkgPath := ""
-						if pkg.TypesInfo.Uses[id].Pkg() != nil {
-							pkgPath = pkg.TypesInfo.Uses[id].Pkg().Path()
-						}
+					if id, ok := x.Fun.(*ast.Ident); ok {
+						pkgPath := GetPkgNameFromUsesTable(pkg, id)
 						funId := pkgPath + "." + pkg.TypesInfo.Uses[id].Name()
-						fmt.Println("\t\t\tFuncCall:", funId, pkg.TypesInfo.Uses[id].Type().String(), " @called : ", fset.File(node.Pos()).Name())
+						fmt.Println("\t\t\tFuncCall:", funId, pkg.TypesInfo.Uses[id].Type().String(),
+							" @called : ",
+							fset.File(node.Pos()).Name())
 						fun := FuncDescriptor{funId, pkg.TypesInfo.Uses[id].Type().String()}
 						if !Contains(backwardCallGraph[fun], currentFun) {
 							if funcDecls[fun] == true {
@@ -173,36 +211,16 @@ func BuildCallGraph(projectPath string, packagePattern string, funcDecls map[Fun
 							}
 						}
 					}
-					sel, ok := x.Fun.(*ast.SelectorExpr)
-					if ok {
+					if sel, ok := x.Fun.(*ast.SelectorExpr); ok {
 						if pkg.TypesInfo.Uses[sel.Sel] != nil {
-							pkgPath := ""
-							if pkg.TypesInfo.Uses[sel.Sel].Pkg() != nil {
-								pkgPath = pkg.TypesInfo.Uses[sel.Sel].Pkg().Path()
-							}
+							pkgPath := GetPkgNameFromUsesTable(pkg, sel.Sel)
 							if sel.X != nil {
-								caller := GetMostInnerAstIdent(sel)
-								if caller != nil {
-									if pkg.TypesInfo.Uses[caller] != nil {
-										if !strings.Contains(pkg.TypesInfo.Uses[caller].Type().String(), "invalid") {
-											pkgPath = pkg.TypesInfo.Uses[caller].Type().String()
-											// We don't care if that's pointer, remove it from
-											// type id
-											if _, ok := pkg.TypesInfo.Uses[caller].Type().(*types.Pointer); ok {
-												pkgPath = strings.TrimPrefix(pkgPath, "*")
-											}
-											// We don't care if called via index, remove it from
-											// type id
-											if _, ok := pkg.TypesInfo.Uses[caller].Type().(*types.Slice); ok {
-												pkgPath = strings.TrimPrefix(pkgPath, "[]")
-											}
-										}
-									}
-								}
+								pkgPath = GetSelectorPkgPath(sel, pkg, pkgPath)
 							}
 							funId := pkgPath + "." + pkg.TypesInfo.Uses[sel.Sel].Name()
-
-							fmt.Println("\t\t\tFuncCall via selector:", funId, pkg.TypesInfo.Uses[sel.Sel].Type().String(), " @called : ", fset.File(node.Pos()).Name())
+							fmt.Println("\t\t\tFuncCall via selector:", funId, pkg.TypesInfo.Uses[sel.Sel].Type().String(),
+								" @called : ",
+								fset.File(node.Pos()).Name())
 							fun := FuncDescriptor{funId, pkg.TypesInfo.Uses[sel.Sel].Type().String()}
 							if !Contains(backwardCallGraph[fun], currentFun) {
 								if funcDecls[fun] == true {
@@ -216,9 +234,7 @@ func BuildCallGraph(projectPath string, packagePattern string, funcDecls map[Fun
 					if x.Recv != nil {
 						pkgPath = GetPackagePathHashFromFunc(pkg, pkgs, x)
 					} else {
-						if pkg.TypesInfo.Defs[x.Name].Pkg() != nil {
-							pkgPath = pkg.TypesInfo.Defs[x.Name].Pkg().Path()
-						}
+						pkgPath = GetPkgNameFromDefsTable(pkg, x.Name)
 					}
 					funId := pkgPath + "." + pkg.TypesInfo.Defs[x.Name].Name()
 					funcDecls[FuncDescriptor{funId, pkg.TypesInfo.Defs[x.Name].Type().String()}] = true
@@ -252,9 +268,7 @@ func FindFuncDecls(projectPath string, packagePattern string) map[FuncDescriptor
 					if x.Recv != nil {
 						pkgPath = GetPackagePathHashFromFunc(pkg, pkgs, x)
 					} else {
-						if pkg.TypesInfo.Defs[x.Name].Pkg() != nil {
-							pkgPath = pkg.TypesInfo.Defs[x.Name].Pkg().Path()
-						}
+						pkgPath = GetPkgNameFromDefsTable(pkg, x.Name)
 					}
 					funId := pkgPath + "." + pkg.TypesInfo.Defs[x.Name].Name()
 					fmt.Println("\t\t\tFuncDecl:", funId, pkg.TypesInfo.Defs[x.Name].Type().String())

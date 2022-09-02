@@ -104,9 +104,7 @@ func Instrument(projectPath string,
 					if x.Recv != nil {
 						pkgPath = GetPackagePathHashFromFunc(pkg, pkgs, x)
 					} else {
-						if pkg.TypesInfo.Defs[x.Name].Pkg() != nil {
-							pkgPath = pkg.TypesInfo.Defs[x.Name].Pkg().Path()
-						}
+						pkgPath = GetPkgNameFromDefsTable(pkg, x.Name)
 					}
 					fundId := pkgPath + "." + pkg.TypesInfo.Defs[x.Name].Name()
 					fun := FuncDescriptor{fundId, pkg.TypesInfo.Defs[x.Name].Type().String()}

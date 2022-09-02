@@ -33,7 +33,12 @@ func SearchFiles(root string, ext string) []string {
 	return files
 }
 
-func isPath(callGraph map[FuncDescriptor][]FuncDescriptor, current FuncDescriptor, goal FuncDescriptor, visited map[FuncDescriptor]bool) bool {
+func isPath(
+	callGraph map[FuncDescriptor][]FuncDescriptor,
+	current FuncDescriptor,
+	goal FuncDescriptor,
+	visited map[FuncDescriptor]bool) bool {
+
 	if current == goal {
 		return true
 	}
