@@ -6,6 +6,7 @@ import (
 	"github.com/cilium/ebpf"
 	"github.com/keyval-dev/opentelemetry-go-instrumentation/pkg/log"
 	"github.com/keyval-dev/opentelemetry-go-instrumentation/pkg/process"
+	"runtime"
 )
 
 var (
@@ -14,8 +15,11 @@ var (
 )
 
 type Injector struct {
-	data     *TrackedOffsets
-	isRegAbi bool
+	data      *TrackedOffsets
+	isRegAbi  bool
+	TotalCPUs uint32
+	StartAddr uint64
+	EndAddr   uint64
 }
 
 func New(target *process.TargetDetails) (*Injector, error) {
@@ -26,8 +30,11 @@ func New(target *process.TargetDetails) (*Injector, error) {
 	}
 
 	return &Injector{
-		data:     &offsets,
-		isRegAbi: target.IsRegistersABI(),
+		data:      &offsets,
+		isRegAbi:  target.IsRegistersABI(),
+		TotalCPUs: uint32(runtime.NumCPU()),
+		StartAddr: target.AllocationDetails.Addr,
+		EndAddr:   target.AllocationDetails.EndAddr,
 	}, nil
 }
 
@@ -39,7 +46,7 @@ type InjectStructField struct {
 	Field      string
 }
 
-func (i *Injector) Inject(loadBpf loadBpfFunc, library string, libVersion string, fields []*InjectStructField) (*ebpf.CollectionSpec, error) {
+func (i *Injector) Inject(loadBpf loadBpfFunc, library string, libVersion string, fields []*InjectStructField, initAlloc bool) (*ebpf.CollectionSpec, error) {
 	spec, err := loadBpf()
 	if err != nil {
 		return nil, err
@@ -56,7 +63,7 @@ func (i *Injector) Inject(loadBpf loadBpfFunc, library string, libVersion string
 		}
 	}
 
-	i.addCommonInjections(injectedVars)
+	i.addCommonInjections(injectedVars, initAlloc)
 	log.Logger.V(0).Info("Injecting variables", "vars", injectedVars)
 	if len(injectedVars) > 0 {
 		err = spec.RewriteConstants(injectedVars)
@@ -68,8 +75,13 @@ func (i *Injector) Inject(loadBpf loadBpfFunc, library string, libVersion string
 	return spec, nil
 }
 
-func (i *Injector) addCommonInjections(varsMap map[string]interface{}) {
+func (i *Injector) addCommonInjections(varsMap map[string]interface{}, initAlloc bool) {
 	varsMap["is_registers_abi"] = i.isRegAbi
+	if initAlloc {
+		varsMap["total_cpus"] = i.TotalCPUs
+		varsMap["start_addr"] = i.StartAddr
+		varsMap["end_addr"] = i.EndAddr
+	}
 }
 
 func (i *Injector) getFieldOffset(libName string, libVersion string, structName string, fieldName string) (uint64, bool) {

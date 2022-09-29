@@ -6,11 +6,12 @@ import (
 )
 
 type Event struct {
-	Library      string
-	Name         string
-	Attributes   []attribute.KeyValue
-	Kind         trace.SpanKind
-	GoroutineUID int64
-	StartTime    int64
-	EndTime      int64
+	Library           string
+	Name              string
+	Attributes        []attribute.KeyValue
+	Kind              trace.SpanKind
+	StartTime         int64
+	EndTime           int64
+	SpanContext       *trace.SpanContext
+	ParentSpanContext *trace.SpanContext
 }

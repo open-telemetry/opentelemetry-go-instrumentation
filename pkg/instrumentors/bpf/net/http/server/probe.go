@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"errors"
+	"github.com/keyval-dev/opentelemetry-go-instrumentation/pkg/instrumentors/bpffs"
 	"os"
 
 	"github.com/cilium/ebpf"
@@ -12,7 +13,6 @@ import (
 	"github.com/keyval-dev/opentelemetry-go-instrumentation/pkg/inject"
 	"github.com/keyval-dev/opentelemetry-go-instrumentation/pkg/instrumentors/context"
 	"github.com/keyval-dev/opentelemetry-go-instrumentation/pkg/instrumentors/events"
-	"github.com/keyval-dev/opentelemetry-go-instrumentation/pkg/instrumentors/goroutine/bpffs"
 	"github.com/keyval-dev/opentelemetry-go-instrumentation/pkg/log"
 	"go.opentelemetry.io/otel/attribute"
 	semconv "go.opentelemetry.io/otel/semconv/v1.7.0"
@@ -23,11 +23,11 @@ import (
 //go:generate go run github.com/cilium/ebpf/cmd/bpf2go -target bpfel -cc clang -cflags $CFLAGS bpf ./bpf/probe.bpf.c
 
 type HttpEvent struct {
-	GoRoutine int64
-	StartTime uint64
-	EndTime   uint64
-	Method    [100]byte
-	Path      [100]byte
+	StartTime   uint64
+	EndTime     uint64
+	Method      [100]byte
+	Path        [100]byte
+	SpanContext context.EbpfSpanContext
 }
 
 type httpServerInstrumentor struct {
@@ -62,11 +62,16 @@ func (h *httpServerInstrumentor) Load(ctx *context.InstrumentorContext) error {
 			Field:      "URL",
 		},
 		{
+			VarName:    "ctx_ptr_pos",
+			StructName: "net/http.Request",
+			Field:      "ctx",
+		},
+		{
 			VarName:    "path_ptr_pos",
 			StructName: "net/url.URL",
 			Field:      "Path",
 		},
-	})
+	}, false)
 
 	if err != nil {
 		return err
@@ -75,7 +80,7 @@ func (h *httpServerInstrumentor) Load(ctx *context.InstrumentorContext) error {
 	h.bpfObjects = &bpfObjects{}
 	err = spec.LoadAndAssign(h.bpfObjects, &ebpf.CollectionOptions{
 		Maps: ebpf.MapOptions{
-			PinPath: bpffs.GoRoutinesMapDir,
+			PinPath: bpffs.BpfFsPath,
 		},
 	})
 	if err != nil {
@@ -150,13 +155,19 @@ func (h *httpServerInstrumentor) convertEvent(e *HttpEvent) *events.Event {
 	method := unix.ByteSliceToString(e.Method[:])
 	path := unix.ByteSliceToString(e.Path[:])
 
+	sc := trace.NewSpanContext(trace.SpanContextConfig{
+		TraceID:    e.SpanContext.TraceID,
+		SpanID:     e.SpanContext.SpanID,
+		TraceFlags: trace.FlagsSampled,
+	})
+
 	return &events.Event{
-		Library:      h.LibraryName(),
-		GoroutineUID: e.GoRoutine,
-		Name:         path,
-		Kind:         trace.SpanKindServer,
-		StartTime:    int64(e.StartTime),
-		EndTime:      int64(e.EndTime),
+		Library:     h.LibraryName(),
+		Name:        path,
+		Kind:        trace.SpanKindServer,
+		StartTime:   int64(e.StartTime),
+		EndTime:     int64(e.EndTime),
+		SpanContext: &sc,
 		Attributes: []attribute.KeyValue{
 			semconv.HTTPMethodKey.String(method),
 			semconv.HTTPTargetKey.String(path),

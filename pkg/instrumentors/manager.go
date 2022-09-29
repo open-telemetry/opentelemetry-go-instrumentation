@@ -2,32 +2,32 @@ package instrumentors
 
 import (
 	"fmt"
+	"github.com/keyval-dev/opentelemetry-go-instrumentation/pkg/instrumentors/allocator"
 	gorillaMux "github.com/keyval-dev/opentelemetry-go-instrumentation/pkg/instrumentors/bpf/github.com/gorilla/mux"
 	"github.com/keyval-dev/opentelemetry-go-instrumentation/pkg/instrumentors/bpf/google/golang/org/grpc"
 	grpcServer "github.com/keyval-dev/opentelemetry-go-instrumentation/pkg/instrumentors/bpf/google/golang/org/grpc/server"
 	httpServer "github.com/keyval-dev/opentelemetry-go-instrumentation/pkg/instrumentors/bpf/net/http/server"
 	"github.com/keyval-dev/opentelemetry-go-instrumentation/pkg/instrumentors/events"
-	"github.com/keyval-dev/opentelemetry-go-instrumentation/pkg/instrumentors/goroutine"
 	"github.com/keyval-dev/opentelemetry-go-instrumentation/pkg/log"
 	"github.com/keyval-dev/opentelemetry-go-instrumentation/pkg/opentelemetry"
 	"github.com/keyval-dev/opentelemetry-go-instrumentation/pkg/process"
 )
 
 type instrumentorsManager struct {
-	goroutineTracker *goroutine.Tracker
-	instrumentors    map[string]Instrumentor
-	done             chan bool
-	incomingEvents   chan *events.Event
-	otelController   *opentelemetry.Controller
+	instrumentors  map[string]Instrumentor
+	done           chan bool
+	incomingEvents chan *events.Event
+	otelController *opentelemetry.Controller
+	allocator      *allocator.Allocator
 }
 
 func NewManager(otelController *opentelemetry.Controller) (*instrumentorsManager, error) {
 	m := &instrumentorsManager{
-		instrumentors:    make(map[string]Instrumentor),
-		done:             make(chan bool, 1),
-		incomingEvents:   make(chan *events.Event),
-		otelController:   otelController,
-		goroutineTracker: goroutine.NewTracker(),
+		instrumentors:  make(map[string]Instrumentor),
+		done:           make(chan bool, 1),
+		incomingEvents: make(chan *events.Event),
+		otelController: otelController,
+		allocator:      allocator.New(),
 	}
 
 	err := registerInstrumentors(m)
@@ -55,11 +55,6 @@ func (m *instrumentorsManager) GetRelevantFuncs() map[string]interface{} {
 		}
 	}
 
-	// Add goroutine tracker functions
-	for _, f := range m.goroutineTracker.FuncNames() {
-		funcsMap[f] = nil
-	}
-
 	return funcsMap
 }
 
@@ -70,15 +65,15 @@ func (m *instrumentorsManager) FilterUnusedInstrumentors(target *process.TargetD
 	}
 
 	for name, inst := range m.instrumentors {
-		someFuncExists := false
+		allFuncExists := true
 		for _, instF := range inst.FuncNames() {
-			if _, exists := existingFuncMap[instF]; exists {
-				someFuncExists = true
+			if _, exists := existingFuncMap[instF]; !exists {
+				allFuncExists = false
 				break
 			}
 		}
 
-		if !someFuncExists {
+		if !allFuncExists {
 			log.Logger.V(1).Info("filtering unused instrumentation", "name", name)
 			delete(m.instrumentors, name)
 		}

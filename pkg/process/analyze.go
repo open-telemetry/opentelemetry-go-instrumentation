@@ -3,7 +3,9 @@ package process
 import (
 	"debug/elf"
 	"debug/gosym"
+	"errors"
 	"fmt"
+	"github.com/prometheus/procfs"
 	"os"
 
 	"github.com/hashicorp/go-version"
@@ -12,10 +14,16 @@ import (
 )
 
 type TargetDetails struct {
-	PID       int
-	Functions []*Func
-	GoVersion *version.Version
-	Libraries map[string]string
+	PID               int
+	Functions         []*Func
+	GoVersion         *version.Version
+	Libraries         map[string]string
+	AllocationDetails *AllocationDetails
+}
+
+type AllocationDetails struct {
+	Addr    uint64
+	EndAddr uint64
 }
 
 type Func struct {
@@ -49,6 +57,26 @@ func (t *TargetDetails) GetFunctionReturns(name string) ([]uint64, error) {
 	return nil, fmt.Errorf("could not find returns for function %s", name)
 }
 
+func (a *processAnalyzer) findKeyvalMmap(pid int) (uintptr, uintptr) {
+	fs, err := procfs.NewProc(pid)
+	if err != nil {
+		panic(err)
+	}
+
+	maps, err := fs.ProcMaps()
+	if err != nil {
+		panic(err)
+	}
+
+	for _, m := range maps {
+		if m.Perms != nil && m.Perms.Read && m.Perms.Write && m.Perms.Execute {
+			log.Logger.Info("found addr of keyval map", "addr", m.StartAddr)
+			return m.StartAddr, m.EndAddr
+		}
+	}
+	panic(errors.New("cant find keyval map"))
+}
+
 func (a *processAnalyzer) Analyze(pid int, relevantFuncs map[string]interface{}) (*TargetDetails, error) {
 	result := &TargetDetails{
 		PID: pid,
@@ -71,6 +99,12 @@ func (a *processAnalyzer) Analyze(pid int, relevantFuncs map[string]interface{})
 	}
 	result.GoVersion = goVersion
 	result.Libraries = modules
+
+	start, end := a.findKeyvalMmap(pid)
+	result.AllocationDetails = &AllocationDetails{
+		Addr:    uint64(start),
+		EndAddr: uint64(end),
+	}
 
 	var pclndat []byte
 	if sec := elfF.Section(".gopclntab"); sec != nil {

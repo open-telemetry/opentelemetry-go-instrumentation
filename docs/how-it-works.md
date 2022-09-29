@@ -37,17 +37,6 @@ One of the basic requirments of OpenTelemetry spans is to contain start timestam
 
 We overcome this issue by analyzing the target binary and detecting all the return statements in the instrumented functions. We then place a uprobe at the end of each return statement. This uprobe invokes the eBPF code that collects the end timestamp.
 
-### Goroutine tracking
-
-In order to combine spans of different instrumented libraries into a single trace, we need to track the goroutine ID every time our eBPF code is invoked.
-
-Goroutine tracking is also needed in order to correlate the end timestamp (collected via eBPF code at the end of function) with the data collected at the start of the function.
-
-In order to track goroutine IDs, there is a special eBPF instrumentation for the Go scheduler. This instrumentation is called goroutine-tracker. The goroutine-tracker maintains an eBPF map from thread ID to goroutine ID.
-
-Other instrumentations can get the current goroutine ID by reading an item from this map with key of the current thread ID.
-The current thread ID can be obtained by calling `bpf_get_current_pid_tgid()` in the eBPF program.
-
 ### Timestamp tracking
 
 eBPF programs can access the current timestamp by calling `bpf_ktime_get_ns()`. The value returned by this function is fetched from the `CLOCK_MONOTONIC` clock and represents the number of nanoseconds since the system boot time.

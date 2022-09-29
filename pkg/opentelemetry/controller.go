@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"github.com/keyval-dev/opentelemetry-go-instrumentation/pkg/instrumentors/events"
 	"github.com/keyval-dev/opentelemetry-go-instrumentation/pkg/log"
-	"go.opentelemetry.io/otel/attribute"
+	"github.com/prometheus/procfs"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
@@ -14,6 +14,7 @@ import (
 	"golang.org/x/sys/unix"
 	"google.golang.org/grpc"
 	"os"
+	"runtime"
 	"time"
 )
 
@@ -25,7 +26,6 @@ const (
 type Controller struct {
 	tracerProvider trace.TracerProvider
 	tracersMap     map[string]trace.Tracer
-	contextsMap    map[int64]context.Context // TODO: Use LRU cache
 	bootTime       int64
 }
 
@@ -41,35 +41,30 @@ func (c *Controller) getTracer(libName string) trace.Tracer {
 }
 
 func (c *Controller) Trace(event *events.Event) {
-	log.Logger.V(0).Info("got event", "attrs", event.Attributes, "goroutine", event.GoroutineUID)
-	ctx := c.getContext(event.GoroutineUID)
-	attrs := append(event.Attributes, attribute.Key("goroutine.id").Int64(event.GoroutineUID))
-	newCtx, span := c.getTracer(event.Library).
+	log.Logger.V(0).Info("got event", "attrs", event.Attributes)
+	ctx := context.Background()
+
+	if event.SpanContext == nil {
+		log.Logger.V(0).Info("got event without context - dropping")
+		return
+	}
+
+	// TODO: handle remote parent
+	if event.ParentSpanContext != nil {
+		ctx = trace.ContextWithSpanContext(ctx, *event.ParentSpanContext)
+	}
+
+	ctx = ContextWithEbpfEvent(ctx, *event)
+	_, span := c.getTracer(event.Library).
 		Start(ctx, event.Name,
-			trace.WithAttributes(attrs...),
+			trace.WithAttributes(event.Attributes...),
 			trace.WithSpanKind(event.Kind),
 			trace.WithTimestamp(c.convertTime(event.StartTime)))
-	c.updateContext(event.GoroutineUID, newCtx)
 	span.End(trace.WithTimestamp(c.convertTime(event.EndTime)))
 }
 
 func (c *Controller) convertTime(t int64) time.Time {
 	return time.Unix(0, c.bootTime+t)
-}
-
-func (c *Controller) getContext(goroutine int64) context.Context {
-	ctx, exists := c.contextsMap[goroutine]
-	if exists {
-		return ctx
-	}
-
-	newCtx := context.Background()
-	c.contextsMap[goroutine] = newCtx
-	return newCtx
-}
-
-func (c *Controller) updateContext(goroutine int64, ctx context.Context) {
-	c.contextsMap[goroutine] = ctx
 }
 
 func NewController() (*Controller, error) {
@@ -116,31 +111,88 @@ func NewController() (*Controller, error) {
 		sdktrace.WithSampler(sdktrace.AlwaysSample()),
 		sdktrace.WithResource(res),
 		sdktrace.WithSpanProcessor(bsp),
+		sdktrace.WithIDGenerator(NewEbpfSourceIDGenerator()),
 	)
 
-	nsec, err := getMonotonicTime()
+	bt, err := estimateBootTimeOffset()
 	if err != nil {
 		return nil, err
 	}
 
-	now := time.Now()
-	bootTime := now.UnixNano() - nsec
-
 	return &Controller{
 		tracerProvider: tracerProvider,
 		tracersMap:     make(map[string]trace.Tracer),
-		contextsMap:    make(map[int64]context.Context),
-		bootTime:       bootTime,
+		bootTime:       bt,
 	}, nil
 }
 
-func getMonotonicTime() (int64, error) {
-	var ts unix.Timespec
-
-	err := unix.ClockGettime(unix.CLOCK_MONOTONIC, &ts)
+func getBootTime() (*time.Time, error) {
+	fs, err := procfs.NewDefaultFS()
 	if err != nil {
-		return 0, fmt.Errorf("could not get monotonic time: %s", err)
+		return nil, err
 	}
 
-	return unix.TimespecToNsec(ts), nil
+	stat, err := fs.Stat()
+	if err != nil {
+		return nil, err
+	}
+
+	boot := time.Unix(int64(stat.BootTime), 0)
+	return &boot, nil
+}
+
+func getBootTimeSyscall() (int64, error) {
+	var ts unix.Timespec
+	err := unix.ClockGettime(unix.CLOCK_MONOTONIC, &ts)
+	now := time.Now().UnixNano()
+	if err != nil {
+		return 0, fmt.Errorf("could not get boot time: %s", err)
+	}
+
+	return now - unix.TimespecToNsec(ts), nil
+}
+
+func estimateBootTimeOffset() (bootTimeOffset int64, err error) {
+	// The datapath is currently using ktime_get_boot_ns for the pcap timestamp,
+	// which corresponds to CLOCK_BOOTTIME. To be able to convert the the
+	// CLOCK_BOOTTIME to CLOCK_REALTIME (i.e. a unix timestamp).
+
+	// There can be an arbitrary amount of time between the execution of
+	// time.Now() and unix.ClockGettime() below, especially under scheduler
+	// pressure during program startup. To reduce the error introduced by these
+	// delays, we pin the current Go routine to its OS thread and measure the
+	// clocks multiple times, taking only the smallest observed difference
+	// between the two values (which implies the smallest possible delay
+	// between the two snapshots).
+	var minDiff int64 = 1<<63 - 1
+	estimationRounds := 25
+	runtime.LockOSThread()
+	defer runtime.UnlockOSThread()
+	for round := 0; round < estimationRounds; round++ {
+		var bootTimespec unix.Timespec
+
+		// Ideally we would use __vdso_clock_gettime for both clocks here,
+		// to have as little overhead as possible.
+		// time.Now() will actually use VDSO on Go 1.9+, but calling
+		// unix.ClockGettime to obtain CLOCK_BOOTTIME is a regular system call
+		// for now.
+		unixTime := time.Now()
+		err = unix.ClockGettime(unix.CLOCK_BOOTTIME, &bootTimespec)
+		if err != nil {
+			return 0, err
+		}
+
+		offset := unixTime.UnixNano() - bootTimespec.Nano()
+		diff := offset
+		if diff < 0 {
+			diff = -diff
+		}
+
+		if diff < minDiff {
+			minDiff = diff
+			bootTimeOffset = offset
+		}
+	}
+
+	return bootTimeOffset, nil
 }

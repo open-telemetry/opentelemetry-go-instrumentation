@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"errors"
+	"github.com/keyval-dev/opentelemetry-go-instrumentation/pkg/instrumentors/bpffs"
 	"os"
 
 	"github.com/cilium/ebpf"
@@ -12,7 +13,6 @@ import (
 	"github.com/keyval-dev/opentelemetry-go-instrumentation/pkg/inject"
 	"github.com/keyval-dev/opentelemetry-go-instrumentation/pkg/instrumentors/context"
 	"github.com/keyval-dev/opentelemetry-go-instrumentation/pkg/instrumentors/events"
-	"github.com/keyval-dev/opentelemetry-go-instrumentation/pkg/instrumentors/goroutine/bpffs"
 	"github.com/keyval-dev/opentelemetry-go-instrumentation/pkg/log"
 	"go.opentelemetry.io/otel/attribute"
 	semconv "go.opentelemetry.io/otel/semconv/v1.7.0"
@@ -23,16 +23,18 @@ import (
 //go:generate go run github.com/cilium/ebpf/cmd/bpf2go -target bpfel -cc clang -cflags $CFLAGS bpf ./bpf/probe.bpf.c
 
 type GrpcEvent struct {
-	GoRoutine int64
-	StartTime uint64
-	EndTime   uint64
-	Method    [100]byte
+	StartTime         uint64
+	EndTime           uint64
+	Method            [100]byte
+	SpanContext       context.EbpfSpanContext
+	ParentSpanContext context.EbpfSpanContext
 }
 
 type grpcServerInstrumentor struct {
 	bpfObjects   *bpfObjects
 	uprobe       link.Link
 	returnProbs  []link.Link
+	headersProbe link.Link
 	eventsReader *perf.Reader
 }
 
@@ -45,7 +47,8 @@ func (g *grpcServerInstrumentor) LibraryName() string {
 }
 
 func (g *grpcServerInstrumentor) FuncNames() []string {
-	return []string{"google.golang.org/grpc.(*Server).handleStream"}
+	return []string{"google.golang.org/grpc.(*Server).handleStream",
+		"google.golang.org/grpc/internal/transport.(*decodeState).decodeHeader"}
 }
 
 func (g *grpcServerInstrumentor) Load(ctx *context.InstrumentorContext) error {
@@ -60,7 +63,27 @@ func (g *grpcServerInstrumentor) Load(ctx *context.InstrumentorContext) error {
 			StructName: "google.golang.org/grpc/internal/transport.Stream",
 			Field:      "method",
 		},
-	})
+		{
+			VarName:    "stream_id_pos",
+			StructName: "google.golang.org/grpc/internal/transport.Stream",
+			Field:      "id",
+		},
+		{
+			VarName:    "stream_ctx_pos",
+			StructName: "google.golang.org/grpc/internal/transport.Stream",
+			Field:      "ctx",
+		},
+		{
+			VarName:    "frame_fields_pos",
+			StructName: "golang.org/x/net/http2.MetaHeadersFrame",
+			Field:      "Fields",
+		},
+		{
+			VarName:    "frame_stream_id_pod",
+			StructName: "golang.org/x/net/http2.FrameHeader",
+			Field:      "StreamID",
+		},
+	}, true)
 
 	if err != nil {
 		return err
@@ -69,7 +92,7 @@ func (g *grpcServerInstrumentor) Load(ctx *context.InstrumentorContext) error {
 	g.bpfObjects = &bpfObjects{}
 	err = spec.LoadAndAssign(g.bpfObjects, &ebpf.CollectionOptions{
 		Maps: ebpf.MapOptions{
-			PinPath: bpffs.GoRoutinesMapDir,
+			PinPath: bpffs.BpfFsPath,
 		},
 	})
 	if err != nil {
@@ -111,6 +134,18 @@ func (g *grpcServerInstrumentor) Load(ctx *context.InstrumentorContext) error {
 		g.returnProbs = append(g.returnProbs, retProbe)
 	}
 
+	headerOffset, err := ctx.TargetDetails.GetFunctionOffset(g.FuncNames()[1])
+	if err != nil {
+		return err
+	}
+	hProbe, err := ctx.Executable.Uprobe("", g.bpfObjects.UprobeDecodeStateDecodeHeader, &link.UprobeOptions{
+		Offset: headerOffset,
+	})
+	if err != nil {
+		return err
+	}
+	g.headersProbe = hProbe
+
 	rd, err := perf.NewReader(g.bpfObjects.Events, os.Getpagesize())
 	if err != nil {
 		return err
@@ -150,17 +185,37 @@ func (g *grpcServerInstrumentor) Run(eventsChan chan<- *events.Event) {
 func (g *grpcServerInstrumentor) convertEvent(e *GrpcEvent) *events.Event {
 	method := unix.ByteSliceToString(e.Method[:])
 
+	sc := trace.NewSpanContext(trace.SpanContextConfig{
+		TraceID:    e.SpanContext.TraceID,
+		SpanID:     e.SpanContext.SpanID,
+		TraceFlags: trace.FlagsSampled,
+	})
+
+	var pscPtr *trace.SpanContext
+	if e.ParentSpanContext.TraceID.IsValid() {
+		psc := trace.NewSpanContext(trace.SpanContextConfig{
+			TraceID:    e.ParentSpanContext.TraceID,
+			SpanID:     e.ParentSpanContext.SpanID,
+			TraceFlags: trace.FlagsSampled,
+			Remote:     true,
+		})
+		pscPtr = &psc
+	} else {
+		pscPtr = nil
+	}
+
 	return &events.Event{
-		Library:      g.LibraryName(),
-		GoroutineUID: e.GoRoutine,
-		Name:         method,
-		Kind:         trace.SpanKindServer,
-		StartTime:    int64(e.StartTime),
-		EndTime:      int64(e.EndTime),
+		Library:   g.LibraryName(),
+		Name:      method,
+		Kind:      trace.SpanKindServer,
+		StartTime: int64(e.StartTime),
+		EndTime:   int64(e.EndTime),
 		Attributes: []attribute.KeyValue{
 			semconv.RPCSystemKey.String("grpc"),
 			semconv.RPCServiceKey.String(method),
 		},
+		ParentSpanContext: pscPtr,
+		SpanContext:       &sc,
 	}
 }
 
@@ -176,6 +231,10 @@ func (g *grpcServerInstrumentor) Close() {
 
 	for _, r := range g.returnProbs {
 		r.Close()
+	}
+
+	if g.headersProbe != nil {
+		g.headersProbe.Close()
 	}
 
 	if g.bpfObjects != nil {

@@ -30,7 +30,7 @@ The different emojivoto applications are communicating via gRPC. Instrumenting t
 Run the following command:
 
 ```shell
-kubectl apply -k github.com/BuoyantIO/emojivoto/kustomize/deployment
+kubectl apply -k github.com/keyval-dev/opentelemetry-go-instrumentation/docs/getting-started/emojivoto
 ```
 
 ### Deploying Jaeger UI
@@ -47,51 +47,23 @@ In a real world application, you would probably want to send the tracing data to
 
 ## Instrumentation
 
-Download [this patch file](https://raw.githubusercontent.com/keyval-dev/opentelemetry-go-instrumentation/master/docs/getting-started/voting-patch.yaml) and apply it to the voting deployment:
+Apply the automatic instrumentation to the `emoji`, `voting`, and `web` applications by executing the following command:
 
 ```shell
-kubectl patch deployment voting --patch-file voting-patch.yaml -n emojivoto
+kubectl apply -f https://raw.githubusercontent.com/keyval-dev/opentelemetry-go-instrumentation/master/docs/getting-started/emojivoto-instrumented.yaml -n emojivoto
 ```
 
-Looking at the patch file will give us a better idea of how the automatic instrumentation works:
+## Perform actions on the target Application
 
-```yaml
-spec:
-  template:
-    spec:
-      shareProcessNamespace: true
-      containers:
-        - name: emojivoto-voting-instrumentation
-          image: keyval/otel-go-agent:v0.5.3
-          env:
-            - name: OTEL_TARGET_EXE
-              value: /usr/local/bin/emojivoto-voting-svc
-            - name: OTEL_EXPORTER_OTLP_ENDPOINT
-              value: "jaeger:4317"
-            - name: OTEL_SERVICE_NAME
-              value: "emojivoto-voting"
-          securityContext:
-            runAsUser: 0
-            capabilities:
-              add:
-                - SYS_PTRACE
-            privileged: true
-          volumeMounts:
-            - mountPath: /sys/kernel/debug
-              name: kernel-debug
-      volumes:
-        - name: kernel-debug
-          hostPath:
-            path: /sys/kernel/debug
+Now all that left to do is to perform some actions on the target application that will cause the creation of detailed distributed traces.
+
+Port forward to the frontend service:
+
+```shell
+kubectl port-forward svc/web-svc 8080:80 -n emojivoto
 ```
 
-The instrumentation is achieved by performing the following steps:
-
-- Adding a sidecar container that runs the OpenTelemetry Go Instrumentation agent.
-- Configuring the target executable to instrument, this is done via the `OTEL_TARGET_EXE` environment variable.
-- Configuring the Jaeger exporter endpoint, this is done via the `OTEL_EXPORTER_OTLP_ENDPOINT` environment variable.
-- Configuring the service name, this is done via the `OTEL_SERVICE_NAME` environment variable.
-- Configuring the required permissions and security context for the instrumentation agent. Including sharing the process namespace, and mounting the kernel debugfs.
+Go to `http://localhost:8080`, and click the **view the leaderboard** button.
 
 ## Viewing the traces
 
@@ -103,23 +75,33 @@ kubectl port-forward svc/jaeger 16686:16686 -n emojivoto
 
 Then, open the Jaeger UI in your browser by navigating to http://localhost:16686/
 
-After selecting the emojivoto-voting service, you should see the following traces:
+After selecting the `emojivoto-web` service, you should see the following traces:
 ![Traces](jaeger_traces.png)
 
-Each trace should contain data according to the OpenTelemetry specification, for example: gRPC method names, start and end timestamps, and even the goroutine id.
+Let's start with a simple trace, click on one of the `/api/vote` traces, you should see something like the following:
+![vote_trace](vote_trace.png)
 
-Notice that we did not change the emojivoto-voting application to use OpenTelemetry. This is the exact same container that we used earlier.
+A few things worth noticing in this trace:
+- **In process context-propagation**: We can see that the `web` application got an HTTP request (the root span) which caused two sequential gRPC requests to the `emoji` and `voting` services.
+- **Cross process context-propagation**: The automatic instrumentation adds the relevant headers to gRPC / HTTP requests in order to make traces distributed across processes. In Jaeger, different applications are marked in different colors.
+- **Extremely low overhead**: The entire trace took 3.1 milliseconds to complete. This show that using eBPF for instrumentation adds extremely low overhead.
+- **Following OpenTelemetry Specifications**: You can click on any span in the trace to view the different attributes. All the spans produced by the automatic instrumentation follows the OpenTelemetry specification and therefore will work with any OpenTelemetry compatible backend.
+
+Now we will view a more complex trace, search for traces for the `/api/leaderboard` endpoint.
+You can quickly find them by clicking on the points with the highest duration in Jaeger's main screen.
+![leaderboard_trace](leaderboard_trace.png)
+We can get a pretty good understanding of how the leaderboard feature works by looking at this trace:
+- First, the web service will perform a gRPC request to the `voting` service to get a list of the available emojis.
+- Second, The web service will loop over the received list of emojis and for every item on the list it will perform a gRPC request to the `emoji` service to get the amount of votes for the current item.
+- As you can see this happens sequentially, which is one of the reason the leaderboard endpoint takes about 150ms to complete.
+
+### Notice that we did not change any application code to get those traces, we are using the exact same containers from the emojivoto project.
 
 ## Next Steps
 
-Instrumenting other applications is easy:
+The easiest way to apply this automatic instrumentation for any application is by using a control plane such as [Odigos](https://github.com/keyval-dev/odigos).
 
-- Modify the patch file to match your application by setting the `OTEL_TARGET_EXE`,`OTEL_EXPORTER_OTLP_ENDPOINT` and `OTEL_SERVICE_NAME` environment variables.
-- Apply the modified patched file:
-
-```shell
-kubectl patch deployment <deployment-name> --patch-file <modified-patch-file>
-```
+For more details visit the [Odigos website](https://odigos.io).
 
 ## Cleanup
 

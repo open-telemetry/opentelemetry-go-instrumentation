@@ -4,16 +4,16 @@ import (
 	"bytes"
 	"encoding/binary"
 	"errors"
+	"github.com/cilium/ebpf"
+	"github.com/keyval-dev/opentelemetry-go-instrumentation/pkg/instrumentors/bpffs"
 	"os"
 	"strings"
 
-	"github.com/cilium/ebpf"
 	"github.com/cilium/ebpf/link"
 	"github.com/cilium/ebpf/perf"
 	"github.com/keyval-dev/opentelemetry-go-instrumentation/pkg/inject"
 	"github.com/keyval-dev/opentelemetry-go-instrumentation/pkg/instrumentors/context"
 	"github.com/keyval-dev/opentelemetry-go-instrumentation/pkg/instrumentors/events"
-	"github.com/keyval-dev/opentelemetry-go-instrumentation/pkg/instrumentors/goroutine/bpffs"
 	"github.com/keyval-dev/opentelemetry-go-instrumentation/pkg/log"
 	"go.opentelemetry.io/otel/attribute"
 	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
@@ -24,18 +24,20 @@ import (
 //go:generate go run github.com/cilium/ebpf/cmd/bpf2go -target bpfel -cc clang -cflags $CFLAGS bpf ./bpf/probe.bpf.c
 
 type GrpcEvent struct {
-	GoRoutine int64
-	StartTime uint64
-	EndTime   uint64
-	Method    [100]byte
-	Target    [100]byte
+	StartTime         uint64
+	EndTime           uint64
+	Method            [50]byte
+	Target            [50]byte
+	SpanContext       context.EbpfSpanContext
+	ParentSpanContext context.EbpfSpanContext
 }
 
 type grpcInstrumentor struct {
-	bpfObjects   *bpfObjects
-	uprobe       link.Link
-	returnProbs  []link.Link
-	eventsReader *perf.Reader
+	bpfObjects        *bpfObjects
+	uprobe            link.Link
+	returnProbs       []link.Link
+	writeHeadersProbe []link.Link
+	eventsReader      *perf.Reader
 }
 
 func New() *grpcInstrumentor {
@@ -47,7 +49,8 @@ func (g *grpcInstrumentor) LibraryName() string {
 }
 
 func (g *grpcInstrumentor) FuncNames() []string {
-	return []string{"google.golang.org/grpc.(*ClientConn).Invoke"}
+	return []string{"google.golang.org/grpc.(*ClientConn).Invoke",
+		"google.golang.org/grpc/internal/transport.(*http2Client).createHeaderFields"}
 }
 
 func (g *grpcInstrumentor) Load(ctx *context.InstrumentorContext) error {
@@ -61,7 +64,7 @@ func (g *grpcInstrumentor) Load(ctx *context.InstrumentorContext) error {
 			StructName: "google.golang.org/grpc.ClientConn",
 			Field:      "target",
 		},
-	})
+	}, true)
 
 	if err != nil {
 		return err
@@ -70,7 +73,7 @@ func (g *grpcInstrumentor) Load(ctx *context.InstrumentorContext) error {
 	g.bpfObjects = &bpfObjects{}
 	err = spec.LoadAndAssign(g.bpfObjects, &ebpf.CollectionOptions{
 		Maps: ebpf.MapOptions{
-			PinPath: bpffs.GoRoutinesMapDir,
+			PinPath: bpffs.BpfFsPath,
 		},
 	})
 	if err != nil {
@@ -110,6 +113,22 @@ func (g *grpcInstrumentor) Load(ctx *context.InstrumentorContext) error {
 		return err
 	}
 	g.eventsReader = rd
+
+	// Write headers probe
+	whOffsets, err := ctx.TargetDetails.GetFunctionReturns(g.FuncNames()[1])
+	if err != nil {
+		return err
+	}
+	for _, whOffset := range whOffsets {
+		whProbe, err := ctx.Executable.Uprobe("", g.bpfObjects.UprobeHttp2ClientCreateHeaderFields, &link.UprobeOptions{
+			Offset: whOffset,
+		})
+		if err != nil {
+			return err
+		}
+
+		g.writeHeadersProbe = append(g.writeHeadersProbe, whProbe)
+	}
 
 	return nil
 }
@@ -158,14 +177,35 @@ func (g *grpcInstrumentor) convertEvent(e *GrpcEvent) *events.Event {
 		semconv.NetPeerIPKey.String(target),
 		semconv.NetPeerNameKey.String(target))
 
+	sc := trace.NewSpanContext(trace.SpanContextConfig{
+		TraceID:    e.SpanContext.TraceID,
+		SpanID:     e.SpanContext.SpanID,
+		TraceFlags: trace.FlagsSampled,
+	})
+
+	var pscPtr *trace.SpanContext
+	if e.ParentSpanContext.TraceID.IsValid() {
+		psc := trace.NewSpanContext(trace.SpanContextConfig{
+			TraceID:    e.ParentSpanContext.TraceID,
+			SpanID:     e.ParentSpanContext.SpanID,
+			TraceFlags: trace.FlagsSampled,
+			Remote:     true,
+		})
+		pscPtr = &psc
+	} else {
+		pscPtr = nil
+	}
+
+	log.Logger.V(0).Info("got spancontext", "trace_id", e.SpanContext.TraceID.String(), "span_id", e.SpanContext.SpanID.String())
 	return &events.Event{
-		Library:      g.LibraryName(),
-		GoroutineUID: e.GoRoutine,
-		Name:         method,
-		Kind:         trace.SpanKindClient,
-		StartTime:    int64(e.StartTime),
-		EndTime:      int64(e.EndTime),
-		Attributes:   attrs,
+		Library:           g.LibraryName(),
+		Name:              method,
+		Kind:              trace.SpanKindClient,
+		StartTime:         int64(e.StartTime),
+		EndTime:           int64(e.EndTime),
+		Attributes:        attrs,
+		SpanContext:       &sc,
+		ParentSpanContext: pscPtr,
 	}
 }
 
@@ -180,6 +220,10 @@ func (g *grpcInstrumentor) Close() {
 	}
 
 	for _, r := range g.returnProbs {
+		r.Close()
+	}
+
+	for _, r := range g.writeHeadersProbe {
 		r.Close()
 	}
 
