@@ -8,7 +8,7 @@ This repository provides [OpenTelemetry] instrumentation for [Go] libraries usin
 
 ### Compatibility
 
-This project ensures compatibility with the current supported versions of the [Go language](https://golang.org/doc/devel/release#policy):
+OpenTelemetry Go Automatic Instrumentation is compatible with all current supported versions of the [Go language](https://golang.org/doc/devel/release#policy).
 
 > Each major Go release is supported until there are two newer major releases.
 > For example, Go 1.5 was supported until the Go 1.7 release, and Go 1.6 was supported until the Go 1.8 release.
