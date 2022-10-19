@@ -19,7 +19,7 @@ For versions of Go that are no longer supported upstream, this project will stop
 - The following minor release will remove compatibility testing for the oldest (now archived upstream) version of Go.
    This, and future, releases may include features only supported by the currently supported versions of Go.
 
-Currently, this project is tested for the following environments.
+Currently, OpenTelemetry Go Automatic Instrumentation is tested for the following environments.
 
 | OS      | Go Version | Architecture |
 | ------- | ---------- | ------------ |
