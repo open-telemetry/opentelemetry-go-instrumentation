@@ -4,7 +4,7 @@ This project provides [OpenTelemetry] instrumentation for [Go] libraries using [
 
 ## Project Status
 
-:construction: This project currently a work in progress.
+:construction: This project is currently work in progress.
 
 ### Compatibility
 
