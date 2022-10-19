@@ -13,7 +13,7 @@ OpenTelemetry Go Automatic Instrumentation is compatible with all current suppor
 > Each major Go release is supported until there are two newer major releases.
 > For example, Go 1.5 was supported until the Go 1.7 release, and Go 1.6 was supported until the Go 1.8 release.
 
-For versions of Go that are no longer supported upstream, this project will stop ensuring compatibility with these versions in the following manner:
+For versions of Go that are no longer supported upstream, this repository will stop ensuring compatibility with these versions in the following manner:
 
 - A minor release will be made to add support for the new supported release of Go.
 - The following minor release will remove compatibility testing for the oldest (now archived upstream) version of Go.
