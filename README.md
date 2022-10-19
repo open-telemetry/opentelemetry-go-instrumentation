@@ -34,7 +34,7 @@ See the contributing documentation.
 
 ## License
 
-This project is released under the terms of the [Apache Software License version 2.0].
+OpenTelemetry Go Automatic Instrumentation is licensed under the terms of the [Apache Software License version 2.0].
 See the [license file](./LICENSE] for more details.
 
 [OpenTelemetry]: https://opentelemetry.io/
