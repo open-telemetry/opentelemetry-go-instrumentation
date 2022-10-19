@@ -19,7 +19,7 @@ Questions, bug reports, and feature requests can all be submitted as [issues](ht
 
 ### Pull Requests
 
-Development of this project is done using the [forking model](https://docs.github.com/en/get-started/quickstart/fork-a-repo).
+Development of this repository is done using the [forking model](https://docs.github.com/en/get-started/quickstart/fork-a-repo).
 
 Once you have changes on a branch of your fork that you would like to proposed to this project [create a pull request (PR)](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/creating-a-pull-request-from-a-fork).
 If you are still working to finalize your PR, but would like to publish something publicly, create the PR as a draft.
@@ -29,7 +29,7 @@ It will be ready to merge when:
 
 * It has received two approvals from project approvers (at different companies).
 * All feedback has been addressed.
-  All open comments should be resolved.
+* All open comments should be resolved.
 
 A [project maintainer](https://github.com/orgs/open-telemetry/teams/go-instrumentaiton-maintainers) can merge the PR once these conditions are satisfied.
 It is up to project maintains to ensure enough time has been allowed for review of PRs.
