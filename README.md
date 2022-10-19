@@ -26,7 +26,8 @@ Currently, this project is tested for the following environments.
 | Ubuntu  | 1.19       | amd64        |
 | Ubuntu  | 1.18       | amd64        |
 
-This project is known to not work in Windows environments.
+Automatic instrumentation should work on any Linux kernel above 4.4.
+Windows/Mac users should currently use Docker/VM to compile and run this repository.
 
 ## Contributing
 
