@@ -6,7 +6,7 @@ This project provides [OpenTelemetry] instrumentation for [Go] libraries using [
 
 :construction: This project currently a work in progress.
 
-### Compatability
+### Compatibility
 
 This project ensures compatibility with the current supported versions of the [Go language](https://golang.org/doc/devel/release#policy):
 
