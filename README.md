@@ -1,4 +1,4 @@
-# OpenTelemetry Auto Instrumentation
+# OpenTelemetry Go Automatic Instrumentation
 
 This project provides [OpenTelemetry] instrumentation for [Go] libraries using [eBPF].
 
