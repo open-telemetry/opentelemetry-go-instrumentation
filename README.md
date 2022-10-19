@@ -31,7 +31,7 @@ Windows/Mac users should currently use Docker/VM to compile and run this reposit
 
 ## Contributing
 
-See the contributing documentation.
+See the [contributing documentation](./CONTRIBUTING.md)).
 
 ## License
 
