@@ -31,12 +31,12 @@ Windows/Mac users should currently use Docker/VM to compile and run this reposit
 
 ## Contributing
 
-See the [contributing documentation](./CONTRIBUTING.md)).
+See the [contributing documentation](./CONTRIBUTING.md).
 
 ## License
 
 OpenTelemetry Go Automatic Instrumentation is licensed under the terms of the [Apache Software License version 2.0].
-See the [license file](./LICENSE] for more details.
+See the [license file](./LICENSE) for more details.
 
 [opentelemetry]: https://opentelemetry.io/
 [go]: https://go.dev/
