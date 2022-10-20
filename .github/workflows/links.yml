@@ -17,5 +17,4 @@ jobs:
         args: >-
           -v -n "*.md" "**/*.md"
           --exclude "http://localhost*"
-    - name: fail for link errors
-      run: exit ${{ steps.lychee.outputs.exit_code }}
+        fail: true
