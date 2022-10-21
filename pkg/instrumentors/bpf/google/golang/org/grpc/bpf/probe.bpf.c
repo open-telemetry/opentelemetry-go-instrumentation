@@ -129,7 +129,8 @@ int uprobe_Http2Client_CreateHeaderFields(struct pt_regs *ctx) {
     struct go_string key_str = write_user_go_string(key, sizeof(key));
 
     // Get grpc request struct
-    void *context_ptr = get_argument(ctx, context_pointer_pos);
+    void *context_ptr = 0;
+    bpf_probe_read(&context_ptr, sizeof(context_ptr), (void *)(ctx->rsp+(context_pointer_pos*8)));
     void *parent_ctx = find_context_in_map(context_ptr, &context_to_grpc_events);
     void* grpcReq_ptr = bpf_map_lookup_elem(&context_to_grpc_events, &parent_ctx);
     struct grpc_request_t grpcReq = {};
