@@ -1,0 +1,61 @@
+kind: ServiceAccount
+apiVersion: v1
+metadata:
+  name: voting
+  namespace: emojivoto
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: voting
+  namespace: emojivoto
+  labels:
+    app.kubernetes.io/name: voting
+    app.kubernetes.io/part-of: emojivoto
+    app.kubernetes.io/version: v11
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: voting-svc
+      version: v11
+  template:
+    metadata:
+      labels:
+        app: voting-svc
+        version: v11
+    spec:
+      serviceAccountName: voting
+      terminationGracePeriodSeconds: 0
+      containers:
+      - env:
+        - name: GRPC_PORT
+          value: "8080"
+        - name: PROM_PORT
+          value: "8801"
+        image: docker.l5d.io/buoyantio/emojivoto-voting-svc:v11
+        name: voting-svc
+        ports:
+        - containerPort: 8080
+          name: grpc
+        - containerPort: 8801
+          name: prom
+        resources:
+          requests:
+            cpu: 100m
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: voting-svc
+  namespace: emojivoto
+spec:
+  selector:
+    app: voting-svc
+  ports:
+  - name: grpc
+    port: 8080
+    targetPort: 8080
+  - name: prom
+    port: 8801
+    targetPort: 8801
