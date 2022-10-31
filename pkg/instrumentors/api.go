@@ -15,8 +15,8 @@
 package instrumentors
 
 import (
-	"github.com/keyval-dev/opentelemetry-go-instrumentation/pkg/instrumentors/context"
-	"github.com/keyval-dev/opentelemetry-go-instrumentation/pkg/instrumentors/events"
+	"github.com/open-telemetry/opentelemetry-go-instrumentation/pkg/instrumentors/context"
+	"github.com/open-telemetry/opentelemetry-go-instrumentation/pkg/instrumentors/events"
 )
 
 type Instrumentor interface {

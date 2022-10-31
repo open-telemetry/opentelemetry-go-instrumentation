@@ -21,8 +21,8 @@ import (
 	"runtime"
 	"time"
 
-	"github.com/keyval-dev/opentelemetry-go-instrumentation/pkg/instrumentors/events"
-	"github.com/keyval-dev/opentelemetry-go-instrumentation/pkg/log"
+	"github.com/open-telemetry/opentelemetry-go-instrumentation/pkg/instrumentors/events"
+	"github.com/open-telemetry/opentelemetry-go-instrumentation/pkg/log"
 	"github.com/prometheus/procfs"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
 	"go.opentelemetry.io/otel/sdk/resource"

@@ -23,8 +23,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/keyval-dev/opentelemetry-go-instrumentation/pkg/errors"
-	"github.com/keyval-dev/opentelemetry-go-instrumentation/pkg/log"
+	"github.com/open-telemetry/opentelemetry-go-instrumentation/pkg/errors"
+	"github.com/open-telemetry/opentelemetry-go-instrumentation/pkg/log"
 )
 
 type processAnalyzer struct {

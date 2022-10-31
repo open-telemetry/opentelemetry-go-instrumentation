@@ -17,15 +17,15 @@ package instrumentors
 import (
 	"fmt"
 
-	"github.com/keyval-dev/opentelemetry-go-instrumentation/pkg/instrumentors/allocator"
-	gorillaMux "github.com/keyval-dev/opentelemetry-go-instrumentation/pkg/instrumentors/bpf/github.com/gorilla/mux"
-	"github.com/keyval-dev/opentelemetry-go-instrumentation/pkg/instrumentors/bpf/google/golang/org/grpc"
-	grpcServer "github.com/keyval-dev/opentelemetry-go-instrumentation/pkg/instrumentors/bpf/google/golang/org/grpc/server"
-	httpServer "github.com/keyval-dev/opentelemetry-go-instrumentation/pkg/instrumentors/bpf/net/http/server"
-	"github.com/keyval-dev/opentelemetry-go-instrumentation/pkg/instrumentors/events"
-	"github.com/keyval-dev/opentelemetry-go-instrumentation/pkg/log"
-	"github.com/keyval-dev/opentelemetry-go-instrumentation/pkg/opentelemetry"
-	"github.com/keyval-dev/opentelemetry-go-instrumentation/pkg/process"
+	"github.com/open-telemetry/opentelemetry-go-instrumentation/pkg/instrumentors/allocator"
+	gorillaMux "github.com/open-telemetry/opentelemetry-go-instrumentation/pkg/instrumentors/bpf/github.com/gorilla/mux"
+	"github.com/open-telemetry/opentelemetry-go-instrumentation/pkg/instrumentors/bpf/google/golang/org/grpc"
+	grpcServer "github.com/open-telemetry/opentelemetry-go-instrumentation/pkg/instrumentors/bpf/google/golang/org/grpc/server"
+	httpServer "github.com/open-telemetry/opentelemetry-go-instrumentation/pkg/instrumentors/bpf/net/http/server"
+	"github.com/open-telemetry/opentelemetry-go-instrumentation/pkg/instrumentors/events"
+	"github.com/open-telemetry/opentelemetry-go-instrumentation/pkg/log"
+	"github.com/open-telemetry/opentelemetry-go-instrumentation/pkg/opentelemetry"
+	"github.com/open-telemetry/opentelemetry-go-instrumentation/pkg/process"
 )
 
 type instrumentorsManager struct {

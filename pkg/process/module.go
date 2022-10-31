@@ -23,7 +23,7 @@ import (
 	"strings"
 
 	"github.com/hashicorp/go-version"
-	"github.com/keyval-dev/opentelemetry-go-instrumentation/pkg/log"
+	"github.com/open-telemetry/opentelemetry-go-instrumentation/pkg/log"
 )
 
 // The build info blob left by the linker is identified by

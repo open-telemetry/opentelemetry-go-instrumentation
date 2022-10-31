@@ -7,5 +7,5 @@ COPY . .
 RUN make build
 
 FROM gcr.io/distroless/base-debian11
-COPY --from=builder /app/kv-go-instrumentation /
-CMD ["/kv-go-instrumentation"]
+COPY --from=builder /app/otel-go-instrumentation /
+CMD ["/otel-go-instrumentation"]

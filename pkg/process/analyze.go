@@ -24,7 +24,7 @@ import (
 	"github.com/prometheus/procfs"
 
 	"github.com/hashicorp/go-version"
-	"github.com/keyval-dev/opentelemetry-go-instrumentation/pkg/log"
+	"github.com/open-telemetry/opentelemetry-go-instrumentation/pkg/log"
 	"golang.org/x/arch/x86/x86asm"
 )
 

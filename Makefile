@@ -14,7 +14,7 @@ generate:
 
 .PHONY: build
 build: generate
-	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o kv-go-instrumentation cli/main.go
+	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o otel-go-instrumentation cli/main.go
 
 .PHONY: docker-build
 docker-build:

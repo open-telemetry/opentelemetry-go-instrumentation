@@ -1,4 +1,4 @@
-module github.com/keyval-dev/opentelemetry-go-instrumentation
+module github.com/open-telemetry/opentelemetry-go-instrumentation
 
 go 1.18
 

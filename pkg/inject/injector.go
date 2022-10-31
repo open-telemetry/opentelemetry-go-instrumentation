@@ -20,8 +20,8 @@ import (
 	"runtime"
 
 	"github.com/cilium/ebpf"
-	"github.com/keyval-dev/opentelemetry-go-instrumentation/pkg/log"
-	"github.com/keyval-dev/opentelemetry-go-instrumentation/pkg/process"
+	"github.com/open-telemetry/opentelemetry-go-instrumentation/pkg/log"
+	"github.com/open-telemetry/opentelemetry-go-instrumentation/pkg/process"
 )
 
 var (
