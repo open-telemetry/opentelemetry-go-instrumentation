@@ -1,4 +1,16 @@
-// This is a compact version of `vmlinux.h`
+// Copyright The OpenTelemetry Authors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 #define MAX_OS_THREADS 20
 
@@ -25,7 +37,8 @@ typedef __u32 __be32;
 typedef __u64 __be64;
 typedef __u32 __wsum;
 
-enum bpf_map_type {
+enum bpf_map_type
+{
 	BPF_MAP_TYPE_UNSPEC = 0,
 	BPF_MAP_TYPE_HASH = 1,
 	BPF_MAP_TYPE_ARRAY = 2,
@@ -57,7 +70,8 @@ enum bpf_map_type {
 	BPF_MAP_TYPE_INODE_STORAGE = 28,
 };
 
-enum {
+enum
+{
 	BPF_ANY = 0,
 	BPF_NOEXIST = 1,
 	BPF_EXIST = 2,
@@ -71,18 +85,19 @@ enum {
 #define BPF_F_CURRENT_CPU BPF_F_INDEX_MASK
 
 #define PT_REGS_RC(x) ((x)->rax)
-struct pt_regs {
-/*
- * C ABI says these regs are callee-preserved. They aren't saved on kernel entry
- * unless syscall needs a complete, fully filled "struct pt_regs".
- */
+struct pt_regs
+{
+	/*
+	 * C ABI says these regs are callee-preserved. They aren't saved on kernel entry
+	 * unless syscall needs a complete, fully filled "struct pt_regs".
+	 */
 	unsigned long r15;
 	unsigned long r14;
 	unsigned long r13;
 	unsigned long r12;
 	unsigned long rbp;
 	unsigned long rbx;
-/* These regs are callee-clobbered. Always saved on kernel entry. */
+	/* These regs are callee-clobbered. Always saved on kernel entry. */
 	unsigned long r11;
 	unsigned long r10;
 	unsigned long r9;
@@ -92,18 +107,18 @@ struct pt_regs {
 	unsigned long rdx;
 	unsigned long rsi;
 	unsigned long rdi;
-/*
- * On syscall entry, this is syscall#. On CPU exception, this is error code.
- * On hw interrupt, it's IRQ number:
- */
+	/*
+	 * On syscall entry, this is syscall#. On CPU exception, this is error code.
+	 * On hw interrupt, it's IRQ number:
+	 */
 	unsigned long orig_rax;
-/* Return frame for iretq */
+	/* Return frame for iretq */
 	unsigned long rip;
 	unsigned long cs;
 	unsigned long eflags;
 	unsigned long rsp;
 	unsigned long ss;
-/* top of stack page */
+	/* top of stack page */
 };
 
 #endif /* __VMLINUX_H__ */
