@@ -13,6 +13,14 @@ Comments and questions about the project can be posted in our [slack channel](ht
 
 ## Development
 
+### Compiling the project
+
+Linux users can build this repository by running:
+`make build`
+
+Windows/Mac users will need to compile this project inside a docker container by running:
+`make docker-build IMG=otel-go-agent:v0.1`
+
 ### Issues
 
 Questions, bug reports, and feature requests can all be submitted as [issues](https://github.com/open-telemetry/opentelemetry-go-instrumentation/issues/new) to this repository.
@@ -27,9 +35,9 @@ If you are still working to finalize your PR, but would like to publish somethin
 Next, your PR needs to be reviewed and approved by the [project approvers](https://github.com/orgs/open-telemetry/teams/go-instrumentation-approvers).
 It will be ready to merge when:
 
-* It has received two approvals from project approvers (at different companies).
-* All feedback has been addressed.
-* All open comments should be resolved.
+- It has received two approvals from project approvers (at different companies).
+- All feedback has been addressed.
+- All open comments should be resolved.
 
 A [project maintainer](https://github.com/orgs/open-telemetry/teams/go-instrumentaiton-maintainers) can merge the PR once these conditions are satisfied.
 It is up to project maintains to ensure enough time has been allowed for review of PRs.

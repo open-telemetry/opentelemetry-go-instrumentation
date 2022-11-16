@@ -1,0 +1,61 @@
+kind: ServiceAccount
+apiVersion: v1
+metadata:
+  name: web
+  namespace: emojivoto
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: web
+  namespace: emojivoto
+  labels:
+    app.kubernetes.io/name: web
+    app.kubernetes.io/part-of: emojivoto
+    app.kubernetes.io/version: v11
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: web-svc
+      version: v11
+  template:
+    metadata:
+      labels:
+        app: web-svc
+        version: v11
+    spec:
+      serviceAccountName: web
+      terminationGracePeriodSeconds: 0
+      containers:
+      - env:
+        - name: WEB_PORT
+          value: "8080"
+        - name: EMOJISVC_HOST
+          value: emoji-svc.emojivoto:8080
+        - name: VOTINGSVC_HOST
+          value: voting-svc.emojivoto:8080
+        - name: INDEX_BUNDLE
+          value: dist/index_bundle.js
+        image: docker.l5d.io/buoyantio/emojivoto-web:v11
+        name: web-svc
+        ports:
+        - containerPort: 8080
+          name: http
+        resources:
+          requests:
+            cpu: 100m
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: web-svc
+  namespace: emojivoto
+spec:
+  type: ClusterIP
+  selector:
+    app: web-svc
+  ports:
+  - name: http
+    port: 80
+    targetPort: 8080
