@@ -1,0 +1,6 @@
+resources:
+- ns.yml
+- web.yml
+- emoji.yml
+- voting.yml
+- vote-bot.yml
