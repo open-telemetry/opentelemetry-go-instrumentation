@@ -1,0 +1,247 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: emoji
+  namespace: emojivoto
+  labels:
+    app.kubernetes.io/name: emoji
+    app.kubernetes.io/part-of: emojivoto
+    app.kubernetes.io/version: v11
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: emoji-svc
+      version: v11
+  template:
+    metadata:
+      labels:
+        app: emoji-svc
+        version: v11
+    spec:
+      serviceAccountName: emoji
+      shareProcessNamespace: true
+      terminationGracePeriodSeconds: 0
+      initContainers:
+        - name: copy-launcher
+          image: keyval/launcher:v0.1
+          command:
+            - cp
+            - -a
+            - /kv-launcher/.
+            - /odigos-launcher/
+          volumeMounts:
+            - name: launcherdir
+              mountPath: /odigos-launcher
+      containers:
+        - env:
+            - name: GRPC_PORT
+              value: "8080"
+            - name: PROM_PORT
+              value: "8801"
+          image: docker.l5d.io/buoyantio/emojivoto-emoji-svc:v11
+          name: emoji-svc
+          command:
+            - /odigos-launcher/launch
+            - /usr/local/bin/emojivoto-emoji-svc
+          volumeMounts:
+            - mountPath: /odigos-launcher
+              name: launcherdir
+          ports:
+            - containerPort: 8080
+              name: grpc
+            - containerPort: 8801
+              name: prom
+          resources:
+            requests:
+              cpu: 100m
+        - name: emojivoto-emoji-instrumentation
+          image: keyval/otel-go-agent:v0.6.0
+          env:
+            - name: OTEL_TARGET_EXE
+              value: /usr/local/bin/emojivoto-emoji-svc
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: "jaeger:4317"
+            - name: OTEL_SERVICE_NAME
+              value: "emojivoto-emoji"
+          securityContext:
+            runAsUser: 0
+            capabilities:
+              add:
+                - SYS_PTRACE
+            privileged: true
+          volumeMounts:
+            - mountPath: /sys/kernel/debug
+              name: kernel-debug
+      volumes:
+        - name: launcherdir
+          emptyDir: {}
+        - name: kernel-debug
+          hostPath:
+            path: /sys/kernel/debug
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: voting
+  namespace: emojivoto
+  labels:
+    app.kubernetes.io/name: voting
+    app.kubernetes.io/part-of: emojivoto
+    app.kubernetes.io/version: v11
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: voting-svc
+      version: v11
+  template:
+    metadata:
+      labels:
+        app: voting-svc
+        version: v11
+    spec:
+      serviceAccountName: voting
+      shareProcessNamespace: true
+      terminationGracePeriodSeconds: 0
+      initContainers:
+        - name: copy-launcher
+          image: keyval/launcher:v0.1
+          command:
+            - cp
+            - -a
+            - /kv-launcher/.
+            - /odigos-launcher/
+          volumeMounts:
+            - name: launcherdir
+              mountPath: /odigos-launcher
+      containers:
+        - env:
+            - name: GRPC_PORT
+              value: "8080"
+            - name: PROM_PORT
+              value: "8801"
+          image: docker.l5d.io/buoyantio/emojivoto-voting-svc:v11
+          name: voting-svc
+          command:
+            - /odigos-launcher/launch
+            - /usr/local/bin/emojivoto-voting-svc
+          volumeMounts:
+            - mountPath: /odigos-launcher
+              name: launcherdir
+          ports:
+            - containerPort: 8080
+              name: grpc
+            - containerPort: 8801
+              name: prom
+          resources:
+            requests:
+              cpu: 100m
+        - name: emojivoto-voting-instrumentation
+          image: keyval/otel-go-agent:v0.6.0
+          env:
+            - name: OTEL_TARGET_EXE
+              value: /usr/local/bin/emojivoto-voting-svc
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: "jaeger:4317"
+            - name: OTEL_SERVICE_NAME
+              value: "emojivoto-voting"
+          securityContext:
+            runAsUser: 0
+            capabilities:
+              add:
+                - SYS_PTRACE
+            privileged: true
+          volumeMounts:
+            - mountPath: /sys/kernel/debug
+              name: kernel-debug
+      volumes:
+        - name: launcherdir
+          emptyDir: {}
+        - name: kernel-debug
+          hostPath:
+            path: /sys/kernel/debug
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: web
+  namespace: emojivoto
+  labels:
+    app.kubernetes.io/name: web
+    app.kubernetes.io/part-of: emojivoto
+    app.kubernetes.io/version: v11
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: web-svc
+      version: v11
+  template:
+    metadata:
+      labels:
+        app: web-svc
+        version: v11
+    spec:
+      serviceAccountName: web
+      shareProcessNamespace: true
+      terminationGracePeriodSeconds: 0
+      initContainers:
+        - name: copy-launcher
+          image: keyval/launcher:v0.1
+          command:
+            - cp
+            - -a
+            - /kv-launcher/.
+            - /odigos-launcher/
+          volumeMounts:
+            - name: launcherdir
+              mountPath: /odigos-launcher
+      containers:
+        - env:
+            - name: WEB_PORT
+              value: "8080"
+            - name: EMOJISVC_HOST
+              value: emoji-svc.emojivoto:8080
+            - name: VOTINGSVC_HOST
+              value: voting-svc.emojivoto:8080
+            - name: INDEX_BUNDLE
+              value: dist/index_bundle.js
+          image: docker.l5d.io/buoyantio/emojivoto-web:v11
+          name: web-svc
+          command:
+            - /odigos-launcher/launch
+            - /usr/local/bin/emojivoto-web
+          volumeMounts:
+            - mountPath: /odigos-launcher
+              name: launcherdir
+          ports:
+            - containerPort: 8080
+              name: http
+          resources:
+            requests:
+              cpu: 100m
+        - name: emojivoto-web-instrumentation
+          image: keyval/otel-go-agent:v0.6.0
+          env:
+            - name: OTEL_TARGET_EXE
+              value: /usr/local/bin/emojivoto-web
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: "jaeger:4317"
+            - name: OTEL_SERVICE_NAME
+              value: "emojivoto-web"
+          securityContext:
+            runAsUser: 0
+            capabilities:
+              add:
+                - SYS_PTRACE
+            privileged: true
+          volumeMounts:
+            - mountPath: /sys/kernel/debug
+              name: kernel-debug
+      volumes:
+        - name: launcherdir
+          emptyDir: {}
+        - name: kernel-debug
+          hostPath:
+            path: /sys/kernel/debug
