@@ -5,8 +5,9 @@ import (
 	"debug/gosym"
 	"errors"
 	"fmt"
-	"github.com/prometheus/procfs"
 	"os"
+
+	"github.com/prometheus/procfs"
 
 	"github.com/hashicorp/go-version"
 	"github.com/keyval-dev/opentelemetry-go-instrumentation/pkg/log"

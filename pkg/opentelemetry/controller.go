@@ -3,19 +3,21 @@ package opentelemetry
 import (
 	"context"
 	"fmt"
+	"os"
+	"runtime"
+	"time"
+
 	"github.com/keyval-dev/opentelemetry-go-instrumentation/pkg/instrumentors/events"
 	"github.com/keyval-dev/opentelemetry-go-instrumentation/pkg/log"
 	"github.com/prometheus/procfs"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
+	"go.opentelemetry.io/otel/exporters/stdout/stdouttrace"
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.7.0"
 	"go.opentelemetry.io/otel/trace"
 	"golang.org/x/sys/unix"
 	"google.golang.org/grpc"
-	"os"
-	"runtime"
-	"time"
 )
 
 const (
@@ -65,6 +67,32 @@ func (c *Controller) Trace(event *events.Event) {
 
 func (c *Controller) convertTime(t int64) time.Time {
 	return time.Unix(0, c.bootTime+t)
+}
+
+func NewStdoutController() (*Controller, error) {
+	traceExporter, err := stdouttrace.New()
+
+	if err != nil {
+		return nil, err
+	}
+
+	bsp := sdktrace.NewBatchSpanProcessor(traceExporter)
+	tracerProvider := sdktrace.NewTracerProvider(
+		sdktrace.WithSampler(sdktrace.AlwaysSample()),
+		sdktrace.WithSpanProcessor(bsp),
+		sdktrace.WithIDGenerator(NewEbpfSourceIDGenerator()),
+	)
+
+	bt, err := estimateBootTimeOffset()
+	if err != nil {
+		return nil, err
+	}
+
+	return &Controller{
+		tracerProvider: tracerProvider,
+		tracersMap:     make(map[string]trace.Tracer),
+		bootTime:       bt,
+	}, nil
 }
 
 func NewController() (*Controller, error) {

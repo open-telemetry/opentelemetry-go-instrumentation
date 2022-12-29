@@ -2,14 +2,15 @@ package main
 
 import (
 	"fmt"
+	"os"
+	"os/signal"
+	"syscall"
+
 	"github.com/keyval-dev/opentelemetry-go-instrumentation/pkg/errors"
 	"github.com/keyval-dev/opentelemetry-go-instrumentation/pkg/instrumentors"
 	"github.com/keyval-dev/opentelemetry-go-instrumentation/pkg/log"
 	"github.com/keyval-dev/opentelemetry-go-instrumentation/pkg/opentelemetry"
 	"github.com/keyval-dev/opentelemetry-go-instrumentation/pkg/process"
-	"os"
-	"os/signal"
-	"syscall"
 )
 
 func main() {
@@ -18,16 +19,21 @@ func main() {
 		fmt.Printf("could not init logger: %s\n", err)
 		os.Exit(1)
 	}
-
-	log.Logger.V(0).Info("starting Go OpenTelemetry Agent ...")
 	target := process.ParseTargetArgs()
 	if err = target.Validate(); err != nil {
 		log.Logger.Error(err, "invalid target args")
 		return
 	}
+	log.Logger.V(0).Info("starting Go OpenTelemetry Agent ...")
 
 	processAnalyzer := process.NewAnalyzer()
-	otelController, err := opentelemetry.NewController()
+	var otelController *opentelemetry.Controller
+
+	if target.Stdout {
+		otelController, err = opentelemetry.NewStdoutController()
+	} else {
+		otelController, err = opentelemetry.NewController()
+	}
 	if err != nil {
 		log.Logger.Error(err, "unable to create OpenTelemetry controller")
 		return

@@ -2,6 +2,7 @@ package process
 
 import (
 	"errors"
+	"flag"
 	"os"
 )
 
@@ -11,6 +12,7 @@ const (
 
 type TargetArgs struct {
 	ExePath string
+	Stdout  bool
 }
 
 func (t *TargetArgs) Validate() error {
@@ -24,6 +26,18 @@ func (t *TargetArgs) Validate() error {
 func ParseTargetArgs() *TargetArgs {
 	result := &TargetArgs{}
 
+	printHelp := flag.Bool("help", false, "")
+	otelStdout := flag.Bool("stdout", false, "if true, print otel telemetry to stdout (use for local development or debugging)")
+
+	flag.Parse()
+
+	if *printHelp {
+		flag.PrintDefaults()
+		os.Exit(0)
+	}
+
+	result.Stdout = *otelStdout
+
 	val, exists := os.LookupEnv(ExePathEnvVar)
 	if exists {
 		result.ExePath = val
@@ -31,4 +45,3 @@ func ParseTargetArgs() *TargetArgs {
 
 	return result
 }
-
