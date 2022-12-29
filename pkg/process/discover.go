@@ -12,6 +12,10 @@ import (
 	"time"
 )
 
+const (
+	initExeName = "/odigos/init"
+)
+
 type processAnalyzer struct {
 	done          chan bool
 	pidTickerChan <-chan time.Time
@@ -84,7 +88,7 @@ func (a *processAnalyzer) findProcessID(target *TargetArgs) (int, error) {
 					return 0, err
 				}
 
-				if strings.Contains(string(cmdLine), target.ExePath) {
+				if !strings.Contains(string(cmdLine), initExeName) && strings.Contains(string(cmdLine), target.ExePath) {
 					return pid, nil
 				}
 			} else if exeName == target.ExePath {
