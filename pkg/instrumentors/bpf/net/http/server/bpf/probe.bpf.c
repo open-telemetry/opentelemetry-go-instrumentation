@@ -77,7 +77,7 @@ int uprobe_ServerMux_ServeHTTP(struct pt_regs *ctx) {
 SEC("uprobe/ServerMux_ServeHTTP")
 int uprobe_ServerMux_ServeHTTP_Returns(struct pt_regs *ctx) {
     u64 request_pos = 4;
-    void* req_ptr = get_argument(ctx, request_pos);
+    void* req_ptr = get_argument_by_stack(ctx, request_pos);
     void *ctx_iface = 0;
     bpf_probe_read(&ctx_iface, sizeof(ctx_iface), (void *)(req_ptr+ctx_ptr_pos+8));
 
