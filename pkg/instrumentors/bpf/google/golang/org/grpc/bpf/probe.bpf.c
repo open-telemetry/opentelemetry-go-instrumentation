@@ -60,7 +60,7 @@ int uprobe_ClientConn_Invoke(struct pt_regs *ctx) {
     u64 method_len_pos = 5;
 
     struct grpc_request_t grpcReq = {};
-    grpcReq.start_time = bpf_ktime_get_boot_ns();
+    grpcReq.start_time = bpf_ktime_get_ns();
 
     // Read Method
     void* method_ptr = get_argument(ctx, method_ptr_pos);
@@ -93,7 +93,7 @@ int uprobe_ClientConn_Invoke_Returns(struct pt_regs *ctx) {
     struct grpc_request_t grpcReq = {};
     bpf_probe_read(&grpcReq, sizeof(grpcReq), grpcReq_ptr);
 
-    grpcReq.end_time = bpf_ktime_get_boot_ns();
+    grpcReq.end_time = bpf_ktime_get_ns();
     bpf_perf_event_output(ctx, &events, BPF_F_CURRENT_CPU, &grpcReq, sizeof(grpcReq));
     bpf_map_delete_elem(&context_to_grpc_events, &context_ptr);
 

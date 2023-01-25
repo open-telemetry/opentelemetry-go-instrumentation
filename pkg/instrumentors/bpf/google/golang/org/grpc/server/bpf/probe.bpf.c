@@ -72,7 +72,7 @@ int uprobe_server_handleStream(struct pt_regs *ctx) {
     }
 
     // Set attributes
-    grpcReq.start_time = bpf_ktime_get_boot_ns();
+    grpcReq.start_time = bpf_ktime_get_ns();
     void* method_ptr = 0;
     bpf_probe_read(&method_ptr, sizeof(method_ptr), (void *)(stream_ptr+stream_method_ptr_pos));
     u64 method_len = 0;
@@ -110,7 +110,7 @@ int uprobe_server_handleStream_ByRegisters(struct pt_regs *ctx) {
     }
 
     // Set attributes
-    grpcReq.start_time = bpf_ktime_get_boot_ns();
+    grpcReq.start_time = bpf_ktime_get_ns();
     void* method_ptr = 0;
     bpf_probe_read(&method_ptr, sizeof(method_ptr), (void *)(stream_ptr+stream_method_ptr_pos));
     u64 method_len = 0;
@@ -142,7 +142,7 @@ int uprobe_server_handleStream_Returns(struct pt_regs *ctx) {
     struct grpc_request_t grpcReq = {};
     bpf_probe_read(&grpcReq, sizeof(grpcReq), grpcReq_ptr);
 
-    grpcReq.end_time = bpf_ktime_get_boot_ns();
+    grpcReq.end_time = bpf_ktime_get_ns();
     bpf_perf_event_output(ctx, &events, BPF_F_CURRENT_CPU, &grpcReq, sizeof(grpcReq));
     bpf_map_delete_elem(&context_to_grpc_events, &ctx_instance);
     bpf_map_delete_elem(&spans_in_progress, &ctx_instance);

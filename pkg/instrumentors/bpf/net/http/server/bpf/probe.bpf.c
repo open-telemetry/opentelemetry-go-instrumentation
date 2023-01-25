@@ -38,7 +38,7 @@ SEC("uprobe/ServerMux_ServeHTTP")
 int uprobe_ServerMux_ServeHTTP(struct pt_regs *ctx) {
     u64 request_pos = 4;
     struct http_request_t httpReq = {};
-    httpReq.start_time = bpf_ktime_get_boot_ns();
+    httpReq.start_time = bpf_ktime_get_ns();
 
     // Get request struct
     void* req_ptr = get_argument(ctx, request_pos);
@@ -84,7 +84,7 @@ int uprobe_ServerMux_ServeHTTP_Returns(struct pt_regs *ctx) {
     void* httpReq_ptr = bpf_map_lookup_elem(&context_to_http_events, &ctx_iface);
     struct http_request_t httpReq = {};
     bpf_probe_read(&httpReq, sizeof(httpReq), httpReq_ptr);
-    httpReq.end_time = bpf_ktime_get_boot_ns();
+    httpReq.end_time = bpf_ktime_get_ns();
     bpf_perf_event_output(ctx, &events, BPF_F_CURRENT_CPU, &httpReq, sizeof(httpReq));
     bpf_map_delete_elem(&context_to_http_events, &ctx_iface);
     bpf_map_delete_elem(&spans_in_progress, &ctx_iface);
