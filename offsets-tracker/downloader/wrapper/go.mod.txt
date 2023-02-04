@@ -1,0 +1,5 @@
+module testapp
+
+go 1.17
+
+require %s %s
