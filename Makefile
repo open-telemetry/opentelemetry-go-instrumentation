@@ -4,7 +4,7 @@ REPODIR := $(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
 
 # Build the list of include directories to compile the bpf program
 BPF_INCLUDE += -I${REPODIR}/include/libbpf
-BPF_INCLUDE+= -I${REPODIR}/include
+BPF_INCLUDE += -I${REPODIR}/include
 
 # Tools
 TOOLS_MOD_DIR := ./internal/tools
@@ -30,7 +30,7 @@ generate:
 
 .PHONY: build
 build: generate
-	GOOS=linux GOARCH=amd64 go build -o otel-go-instrumentation cli/main.go
+	GOOS=linux go build -o otel-go-instrumentation cli/main.go
 
 .PHONY: docker-build
 docker-build:

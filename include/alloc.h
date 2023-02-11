@@ -52,7 +52,7 @@ static __always_inline u64 get_area_end(u64 start)
 {
     s64 partition_size = (end_addr - start_addr) / total_cpus;
     s32 end_index = 1;
-    u64 *end = (u64 *)bpf_map_lookup_elem(&alloc_map, &end_index);
+    u64* end = (u64*)bpf_map_lookup_elem(&alloc_map, &end_index);
     if (end == NULL || *end == 0)
     {
         u64 current_end_addr = start + partition_size;
@@ -88,6 +88,12 @@ static __always_inline void *write_target_data(void *data, s32 size)
     {
         s32 start_index = 0;
         u64 updated_start = start + size;
+
+        // align updated_start to 8 bytes
+        if (updated_start % 8 != 0) {
+            updated_start += 8 - (updated_start % 8);
+        }
+
         bpf_map_update_elem(&alloc_map, &start_index, &updated_start, BPF_ANY);
         return target;
     }
