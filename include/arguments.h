@@ -1,4 +1,5 @@
 #include "common.h"
+#include "bpf_tracing.h"
 #include "bpf_helpers.h"
 #include <stdbool.h>
 
@@ -8,23 +9,23 @@ volatile const bool is_registers_abi;
 void* get_argument_by_reg(struct pt_regs *ctx, int index) {
     switch (index) {
         case 1:
-            return (void *)(ctx->rax);
+            return (void*)GO_PARAM1(ctx);
         case 2:
-            return (void *)(ctx->rbx);
+            return (void*)GO_PARAM2(ctx);
         case 3:
-            return (void *)(ctx->rcx);
+            return (void*)GO_PARAM3(ctx);
         case 4:
-            return (void *)(ctx->rdi);
+            return (void*)GO_PARAM4(ctx);
         case 5:
-            return (void *)(ctx->rsi);
+            return (void*)GO_PARAM5(ctx);
         case 6:
-            return (void *)(ctx->r8);
+            return (void*)GO_PARAM6(ctx);
         case 7:
-            return (void *)(ctx->r9);
+            return (void*)GO_PARAM7(ctx);
         case 8:
-            return (void *)(ctx->r10);
+            return (void*)GO_PARAM8(ctx);
         case 9:
-            return (void *)(ctx->r11);
+            return (void*)GO_PARAM9(ctx);
         default:
             return NULL;
     }
@@ -32,7 +33,7 @@ void* get_argument_by_reg(struct pt_regs *ctx, int index) {
 
 void* get_argument_by_stack(struct pt_regs *ctx, int index) {
     void* ptr = 0;
-    bpf_probe_read(&ptr, sizeof(ptr), (void *)(ctx->rsp+(index*8)));
+    bpf_probe_read(&ptr, sizeof(ptr), (void *)(PT_REGS_SP(ctx)+(index*8)));
     return ptr;
 }
 

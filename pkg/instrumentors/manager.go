@@ -13,6 +13,10 @@ import (
 	"github.com/keyval-dev/opentelemetry-go-instrumentation/pkg/process"
 )
 
+var (
+	ErrNotAllFuncsFound = fmt.Errorf("not all functions found for instrumentation")
+)
+
 type instrumentorsManager struct {
 	instrumentors  map[string]Instrumentor
 	done           chan bool
@@ -65,16 +69,17 @@ func (m *instrumentorsManager) FilterUnusedInstrumentors(target *process.TargetD
 	}
 
 	for name, inst := range m.instrumentors {
-		allFuncExists := true
+		funcsFound := 0
 		for _, instF := range inst.FuncNames() {
-			if _, exists := existingFuncMap[instF]; !exists {
-				allFuncExists = false
-				break
+			if _, exists := existingFuncMap[instF]; exists {
+				funcsFound++
 			}
 		}
 
-		if !allFuncExists {
-			log.Logger.V(1).Info("filtering unused instrumentation", "name", name)
+		if funcsFound != len(inst.FuncNames()) {
+			if funcsFound > 0 {
+				log.Logger.Error(ErrNotAllFuncsFound, "some of expected functions not found - check instrumented functions", "instrumentation_name", name, "funcs_found", funcsFound, "funcs_expected", len(inst.FuncNames()))
+			}
 			delete(m.instrumentors, name)
 		}
 	}

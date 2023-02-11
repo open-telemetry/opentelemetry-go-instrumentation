@@ -20,7 +20,7 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-//go:generate go run github.com/cilium/ebpf/cmd/bpf2go -target bpfel -cc clang -cflags $CFLAGS bpf ./bpf/probe.bpf.c
+//go:generate go run github.com/cilium/ebpf/cmd/bpf2go -target $TARGET -cc clang -cflags $CFLAGS bpf ./bpf/probe.bpf.c
 
 type GrpcEvent struct {
 	StartTime         uint64
@@ -48,7 +48,7 @@ func (g *grpcServerInstrumentor) LibraryName() string {
 
 func (g *grpcServerInstrumentor) FuncNames() []string {
 	return []string{"google.golang.org/grpc.(*Server).handleStream",
-		"google.golang.org/grpc/internal/transport.(*decodeState).decodeHeader"}
+		"google.golang.org/grpc/internal/transport.(*http2Server).operateHeaders"}
 }
 
 func (g *grpcServerInstrumentor) Load(ctx *context.InstrumentorContext) error {
@@ -104,14 +104,7 @@ func (g *grpcServerInstrumentor) Load(ctx *context.InstrumentorContext) error {
 		return err
 	}
 
-	var uprobeObj *ebpf.Program
-	if ctx.TargetDetails.IsRegistersABI() {
-		uprobeObj = g.bpfObjects.UprobeServerHandleStreamByRegisters
-	} else {
-		uprobeObj = g.bpfObjects.UprobeServerHandleStream
-	}
-
-	up, err := ctx.Executable.Uprobe("", uprobeObj, &link.UprobeOptions{
+	up, err := ctx.Executable.Uprobe("", g.bpfObjects.UprobeServerHandleStream, &link.UprobeOptions{
 		Offset: offset,
 	})
 	if err != nil {
