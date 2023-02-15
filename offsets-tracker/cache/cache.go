@@ -14,8 +14,8 @@ type Cache struct {
 	data *schema.TrackedOffsets
 }
 
-func NewCache() *Cache {
-	f, err := os.Open(schema.FileName)
+func NewCache(prevOffsetFile string) *Cache {
+	f, err := os.Open(prevOffsetFile)
 	if err != nil {
 		fmt.Println("could not find existing offset file, cache will be empty")
 		return nil
@@ -24,13 +24,15 @@ func NewCache() *Cache {
 	defer f.Close()
 	data, err := ioutil.ReadAll(f)
 	if err != nil {
-		log.Fatalf("error parsing existing offsets file: %v\n", err)
+		log.Printf("error reading existing offsets file: %v. Ignoring existing file.\n", err)
+		return nil
 	}
 
 	var offsets schema.TrackedOffsets
 	err = json.Unmarshal(data, &offsets)
 	if err != nil {
-		log.Fatalf("error parsing existing offsets file: %v\n", err)
+		log.Printf("error parsing existing offsets file: %v Ignoring existing file.\n", err)
+		return nil
 	}
 
 	return &Cache{

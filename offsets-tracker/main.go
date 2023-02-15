@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"github.com/hashicorp/go-version"
 	"github.com/keyval-dev/offsets-tracker/binary"
@@ -9,13 +10,20 @@ import (
 	"log"
 )
 
+const (
+	defaultOutputFile = "/tmp/offset_results.json"
+)
+
 func main() {
+	outputFile := flag.String("output", defaultOutputFile, "output file")
+	flag.Parse()
+
 	minimunGoVersion, err := version.NewConstraint(">= 1.12")
 	if err != nil {
 		log.Fatalf("error in parsing version constraint: %v\n", err)
 	}
 
-	stdLibOffsets, err := target.New("go").
+	stdLibOffsets, err := target.New("go", *outputFile).
 		FindVersionsBy(target.GoDevFileVersionsStrategy).
 		DownloadBinaryBy(target.DownloadPreCompiledBinaryFetchStrategy).
 		VersionConstraint(&minimunGoVersion).
@@ -50,7 +58,7 @@ func main() {
 		log.Fatalf("error while fetching offsets: %v\n", err)
 	}
 
-	grpcOffsets, err := target.New("google.golang.org/grpc").
+	grpcOffsets, err := target.New("google.golang.org/grpc", *outputFile).
 		FindOffsets([]*binary.DataMember{
 			{
 				StructName: "google.golang.org/grpc/internal/transport.Stream",
@@ -83,7 +91,7 @@ func main() {
 	}
 
 	fmt.Println("Done collecting offsets, writing results to file ...")
-	err = writer.WriteResults(stdLibOffsets, grpcOffsets)
+	err = writer.WriteResults(*outputFile, stdLibOffsets, grpcOffsets)
 	if err != nil {
 		log.Fatalf("error while writing results to file: %v\n", err)
 	}

@@ -1,7 +1,5 @@
 package schema
 
-const FileName = "/tmp/offset_results.json"
-
 type TrackedOffsets struct {
 	Data []TrackedLibrary `json:"data"`
 }

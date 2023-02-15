@@ -39,12 +39,12 @@ type targetData struct {
 	Cache               *cache.Cache
 }
 
-func New(name string) *targetData {
+func New(name string, fileName string) *targetData {
 	return &targetData{
 		name:                name,
 		VersionsStrategy:    GoListVersionsStrategy,
 		BinaryFetchStrategy: WrapAsGoAppBinaryFetchStrategy,
-		Cache:               cache.NewCache(),
+		Cache:               cache.NewCache(fileName),
 	}
 }
 
@@ -95,18 +95,11 @@ func (t *targetData) FindOffsets(dm []*binary.DataMember) (*Result, error) {
 		}
 
 		fmt.Printf("%s: Analyzing binary for version %s\n", t.name, v)
-		f, err := os.Open(exePath)
-		if err != nil {
-			return nil, err
-		}
-		res, err := binary.FindOffsets(f, dm)
-		if err != nil && err != binary.ErrOffsetsNotFound {
-			f.Close()
-			return nil, err
-		}
-
+		res, err := t.analyzeFile(exePath, dm)
 		if err == binary.ErrOffsetsNotFound {
 			fmt.Printf("%s: could not find offsets for version %s\n", t.name, v)
+		} else if err != nil {
+			return nil, err
 		} else {
 			result.ResultsByVersion = append(result.ResultsByVersion, &VersionedResult{
 				Version:    v,
@@ -114,11 +107,25 @@ func (t *targetData) FindOffsets(dm []*binary.DataMember) (*Result, error) {
 			})
 		}
 
-		f.Close()
 		os.RemoveAll(dir)
 	}
 
 	return result, nil
+}
+
+func (t *targetData) analyzeFile(exePath string, dm []*binary.DataMember) (*binary.Result, error) {
+	f, err := os.Open(exePath)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+
+	res, err := binary.FindOffsets(f, dm)
+	if err != nil {
+		return nil, err
+	}
+
+	return res, nil
 }
 
 func (t *targetData) findVersions() ([]string, error) {

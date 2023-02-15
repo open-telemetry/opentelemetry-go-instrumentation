@@ -9,7 +9,7 @@ import (
 	"path"
 )
 
-const appName = "testApp"
+const appName = "testapp"
 
 var (
 	//go:embed wrapper/go.mod.txt

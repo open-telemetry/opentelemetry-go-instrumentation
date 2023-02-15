@@ -7,11 +7,11 @@ import (
 	"github.com/keyval-dev/offsets-tracker/schema"
 	"github.com/keyval-dev/offsets-tracker/target"
 	"io/fs"
-	"io/ioutil"
+	"os"
 	"strings"
 )
 
-func WriteResults(results ...*target.Result) error {
+func WriteResults(fileName string, results ...*target.Result) error {
 	var offsets schema.TrackedOffsets
 	for _, r := range results {
 		offsets.Data = append(offsets.Data, convertResult(r))
@@ -28,7 +28,7 @@ func WriteResults(results ...*target.Result) error {
 		return err
 	}
 
-	return ioutil.WriteFile(schema.FileName, prettyJson.Bytes(), fs.ModePerm)
+	return os.WriteFile(fileName, prettyJson.Bytes(), fs.ModePerm)
 }
 
 func convertResult(r *target.Result) schema.TrackedLibrary {
