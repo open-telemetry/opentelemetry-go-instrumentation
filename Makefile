@@ -19,3 +19,7 @@ build: generate
 .PHONY: docker-build
 docker-build:
 	docker build -t $(IMG) .
+
+.PHONY: offsets
+offsets:
+	cd offsets-tracker; go run main.go
