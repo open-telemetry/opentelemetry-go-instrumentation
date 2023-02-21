@@ -22,4 +22,4 @@ docker-build:
 
 .PHONY: offsets
 offsets:
-	cd offsets-tracker; go run main.go
+	cd offsets-tracker; OFFSETS_OUTPUT_FILE="../pkg/inject/offset_results.json" go run main.go
