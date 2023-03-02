@@ -121,93 +121,26 @@ func (a *processAnalyzer) Analyze(pid int, relevantFuncs map[string]interface{})
 	if err != nil {
 		return nil, err
 	}
-	symbols, err := elfF.Symbols()
+
+	funcs, err := findFunctions(elfF, relevantFuncs)
 	if err != nil {
+		log.Logger.Error(err, "Failed to find functions")
 		return nil, err
 	}
 
-	for _, f := range symbols {
-		if _, exists := relevantFuncs[f.Name]; exists {
-			offset, err := getFuncOffset(elfF, f)
-			if err != nil {
-				return nil, err
-			}
-
-			returns, err := findFuncReturns(elfF, f, offset)
-			if err != nil {
-				return nil, err
-			}
-
-			log.Logger.V(0).Info("found relevant function for instrumentation", "function", f.Name, "returns", len(returns))
-			function := &Func{
-				Name:          f.Name,
-				Offset:        offset,
-				ReturnOffsets: returns,
-			}
-
-			result.Functions = append(result.Functions, function)
-		}
-	}
-
+	result.Functions = funcs
 	return result, nil
 }
 
-func getFuncOffset(f *elf.File, symbol elf.Symbol) (uint64, error) {
-	var sections []*elf.Section
-
-	for i := range f.Sections {
-		if f.Sections[i].Flags == elf.SHF_ALLOC+elf.SHF_EXECINSTR {
-			sections = append(sections, f.Sections[i])
-		}
-	}
-
-	if len(sections) == 0 {
-		return 0, fmt.Errorf("function %q not found in file", symbol)
-	}
-
-	var execSection *elf.Section
-	for m := range sections {
-		sectionStart := sections[m].Addr
-		sectionEnd := sectionStart + sections[m].Size
-		if symbol.Value >= sectionStart && symbol.Value < sectionEnd {
-			execSection = sections[m]
-			break
-		}
-	}
-
-	if execSection == nil {
-		return 0, errors.New("could not find symbol in executable sections of binary")
-	}
-
-	return uint64(symbol.Value - execSection.Addr + execSection.Offset), nil
-}
-
-func findFuncReturns(elfFile *elf.File, sym elf.Symbol, functionOffset uint64) ([]uint64, error) {
-	textSection := elfFile.Section(".text")
-	if textSection == nil {
-		return nil, errors.New("could not find .text section in binary")
-	}
-
-	lowPC := sym.Value
-	highPC := lowPC + sym.Size
-	offset := lowPC - textSection.Addr
-	buf := make([]byte, int(highPC-lowPC))
-
-	readBytes, err := textSection.ReadAt(buf, int64(offset))
+func findFunctions(elfF *elf.File, relevantFuncs map[string]interface{}) ([]*Func, error) {
+	result, err := FindFunctionsUnStripped(elfF, relevantFuncs)
 	if err != nil {
-		return nil, fmt.Errorf("could not read text section: %w", err)
-	}
-	data := buf[:readBytes]
-	instructionIndices, err := findRetInstructions(data)
-	if err != nil {
-		return nil, fmt.Errorf("error while scanning instructions: %w", err)
-	}
-
-	// Add the function lowPC to each index to obtain the actual locations
-	newLocations := make([]uint64, len(instructionIndices))
-	for i, instructionIndex := range instructionIndices {
-		newLocations[i] = instructionIndex + functionOffset
+		if errors.Is(err, elf.ErrNoSymbols) {
+			log.Logger.V(0).Info("No symbols found in binary, trying to find functions using .gosymtab")
+			return FindFunctionsStripped(elfF, relevantFuncs)
+		}
+		return nil, err
 	}
 
-	return newLocations, nil
+	return result, nil
 }
