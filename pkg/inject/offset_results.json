@@ -13,6 +13,10 @@
             },
             {
               "offset": 0,
+              "version": "1.19.6"
+            },
+            {
+              "offset": 0,
               "version": "1.19.5"
             },
             {
@@ -472,6 +476,10 @@
             {
               "offset": 16,
               "version": "1.20"
+            },
+            {
+              "offset": 16,
+              "version": "1.19.6"
             },
             {
               "offset": 16,
@@ -937,6 +945,10 @@
             },
             {
               "offset": 176,
+              "version": "1.19.6"
+            },
+            {
+              "offset": 176,
               "version": "1.19.5"
             },
             {
@@ -1396,6 +1408,10 @@
             {
               "offset": 232,
               "version": "1.20"
+            },
+            {
+              "offset": 232,
+              "version": "1.19.6"
             },
             {
               "offset": 232,
@@ -1861,6 +1877,10 @@
             },
             {
               "offset": 56,
+              "version": "1.19.6"
+            },
+            {
+              "offset": 56,
               "version": "1.19.5"
             },
             {
@@ -2320,6 +2340,10 @@
             {
               "offset": 152,
               "version": "1.20"
+            },
+            {
+              "offset": 152,
+              "version": "1.19.6"
             },
             {
               "offset": 152,

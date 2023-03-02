@@ -40,14 +40,14 @@ import (
 type HttpEvent struct {
 	StartTime   uint64
 	EndTime     uint64
-	Method      [100]byte
+	Method      [6]byte
 	Path        [100]byte
 	SpanContext context.EbpfSpanContext
 }
 
 type httpServerInstrumentor struct {
 	bpfObjects   *bpfObjects
-	uprobe       link.Link
+	uprobes      []link.Link
 	returnProbs  []link.Link
 	eventsReader *perf.Reader
 }
@@ -61,7 +61,7 @@ func (h *httpServerInstrumentor) LibraryName() string {
 }
 
 func (h *httpServerInstrumentor) FuncNames() []string {
-	return []string{"net/http.(*ServeMux).ServeHTTP"}
+	return []string{"net/http.(*ServeMux).ServeHTTP", "net/http.HandlerFunc.ServeHTTP"}
 }
 
 func (h *httpServerInstrumentor) Load(ctx *context.InstrumentorContext) error {
@@ -75,11 +75,6 @@ func (h *httpServerInstrumentor) Load(ctx *context.InstrumentorContext) error {
 			VarName:    "url_ptr_pos",
 			StructName: "net/http.Request",
 			Field:      "URL",
-		},
-		{
-			VarName:    "ctx_ptr_pos",
-			StructName: "net/http.Request",
-			Field:      "ctx",
 		},
 		{
 			VarName:    "path_ptr_pos",
@@ -102,32 +97,8 @@ func (h *httpServerInstrumentor) Load(ctx *context.InstrumentorContext) error {
 		return err
 	}
 
-	offset, err := ctx.TargetDetails.GetFunctionOffset(h.FuncNames()[0])
-	if err != nil {
-		return err
-	}
-
-	up, err := ctx.Executable.Uprobe("", h.bpfObjects.UprobeServerMuxServeHTTP, &link.UprobeOptions{
-		Offset: offset,
-	})
-	if err != nil {
-		return err
-	}
-
-	h.uprobe = up
-	retOffsets, err := ctx.TargetDetails.GetFunctionReturns(h.FuncNames()[0])
-	if err != nil {
-		return err
-	}
-
-	for _, ret := range retOffsets {
-		retProbe, err := ctx.Executable.Uprobe("", h.bpfObjects.UprobeServerMuxServeHTTP_Returns, &link.UprobeOptions{
-			Offset: ret,
-		})
-		if err != nil {
-			return err
-		}
-		h.returnProbs = append(h.returnProbs, retProbe)
+	for _, funcName := range h.FuncNames() {
+		h.registerProbes(ctx, funcName)
 	}
 
 	rd, err := perf.NewReader(h.bpfObjects.Events, os.Getpagesize())
@@ -137,6 +108,45 @@ func (h *httpServerInstrumentor) Load(ctx *context.InstrumentorContext) error {
 	h.eventsReader = rd
 
 	return nil
+}
+
+func (h *httpServerInstrumentor) registerProbes(ctx *context.InstrumentorContext, funcName string) {
+	logger := log.Logger.WithName("net/http-instrumentor").WithValues("function", funcName)
+	offset, err := ctx.TargetDetails.GetFunctionOffset(funcName)
+	if err != nil {
+		logger.V(1).Info("could not find function start offset. Skipping",
+			"error", err.Error())
+		return
+	}
+	retOffsets, err := ctx.TargetDetails.GetFunctionReturns(funcName)
+	if err != nil {
+		logger.V(1).Info("could not find function end offsets. Skipping",
+			"error", err.Error())
+		return
+	}
+
+	up, err := ctx.Executable.Uprobe("", h.bpfObjects.UprobeServerMuxServeHTTP, &link.UprobeOptions{
+		Offset: offset,
+	})
+	if err != nil {
+		logger.V(1).Info("could not insert start uprobe. Skipping",
+			"error", err.Error())
+		return
+	}
+
+	h.uprobes = append(h.uprobes, up)
+
+	for _, ret := range retOffsets {
+		retProbe, err := ctx.Executable.Uprobe("", h.bpfObjects.UprobeServerMuxServeHTTP_Returns, &link.UprobeOptions{
+			Offset: ret,
+		})
+		if err != nil {
+			logger.V(1).Info("could not insert return uprobe. Skipping",
+				"error", err.Error())
+			return
+		}
+		h.returnProbs = append(h.returnProbs, retProbe)
+	}
 }
 
 func (h *httpServerInstrumentor) Run(eventsChan chan<- *events.Event) {
@@ -196,8 +206,8 @@ func (h *httpServerInstrumentor) Close() {
 		h.eventsReader.Close()
 	}
 
-	if h.uprobe != nil {
-		h.uprobe.Close()
+	for _, r := range h.uprobes {
+		r.Close()
 	}
 
 	for _, r := range h.returnProbs {
