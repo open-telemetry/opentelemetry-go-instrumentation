@@ -3,11 +3,13 @@ package main
 import (
 	"flag"
 	"fmt"
+	"log"
+	"os"
+
 	"github.com/hashicorp/go-version"
 	"github.com/keyval-dev/offsets-tracker/binary"
 	"github.com/keyval-dev/offsets-tracker/target"
 	"github.com/keyval-dev/offsets-tracker/writer"
-	"log"
 )
 
 const (
@@ -15,7 +17,11 @@ const (
 )
 
 func main() {
-	outputFile := flag.String("output", defaultOutputFile, "output file")
+	outputFilename := defaultOutputFile
+	if len(os.Getenv("OFFSETS_OUTPUT_FILE")) > 0 {
+		outputFilename = os.Getenv("OFFSETS_OUTPUT_FILE")
+	}
+	outputFile := flag.String("output", outputFilename, "output file")
 	flag.Parse()
 
 	minimunGoVersion, err := version.NewConstraint(">= 1.12")
