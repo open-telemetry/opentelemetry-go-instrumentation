@@ -19,3 +19,7 @@ build: generate
 .PHONY: docker-build
 docker-build:
 	docker build -t $(IMG) .
+
+.PHONY: offsets
+offsets:
+	cd offsets-tracker; OFFSETS_OUTPUT_FILE="../pkg/inject/offset_results.json" go run main.go
