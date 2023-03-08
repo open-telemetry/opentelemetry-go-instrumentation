@@ -144,10 +144,8 @@ func (a *processAnalyzer) Analyze(pid int, relevantFuncs map[string]interface{})
 	for _, f := range symTab.Funcs {
 		fName := f.Name
 		// fetch short path of function for vendor scene
-		if strings.Contains(fName, "/vendor/") {
-			if paths := strings.Split(fName, "/vendor/"); len(paths) > 1 {
-				fName = paths[1]
-			}
+		if paths := strings.Split(fName, "/vendor/"); len(paths) > 1 {
+			fName = paths[1]
 		}
 
 		if _, exists := relevantFuncs[fName]; exists {
