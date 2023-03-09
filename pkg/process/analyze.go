@@ -19,6 +19,7 @@ import (
 	"debug/gosym"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/prometheus/procfs"
 
@@ -140,8 +141,13 @@ func (a *processAnalyzer) Analyze(pid int, relevantFuncs map[string]interface{})
 	}
 
 	for _, f := range symTab.Funcs {
+		fName := f.Name
+		// fetch short path of function for vendor scene
+		if paths := strings.Split(fName, "/vendor/"); len(paths) > 1 {
+			fName = paths[1]
+		}
 
-		if _, exists := relevantFuncs[f.Name]; exists {
+		if _, exists := relevantFuncs[fName]; exists {
 			start, returns, err := a.findFuncOffset(&f, elfF)
 			if err != nil {
 				return nil, err
@@ -149,7 +155,7 @@ func (a *processAnalyzer) Analyze(pid int, relevantFuncs map[string]interface{})
 
 			log.Logger.V(0).Info("found relevant function for instrumentation", "function", f.Name, "returns", len(returns))
 			function := &Func{
-				Name:          f.Name,
+				Name:          fName,
 				Offset:        start,
 				ReturnOffsets: returns,
 			}
