@@ -17,12 +17,9 @@ package process
 import (
 	"debug/elf"
 	"debug/gosym"
-	"errors"
 	"fmt"
 	"os"
 	"strings"
-
-	"github.com/prometheus/procfs"
 
 	"github.com/hashicorp/go-version"
 	"github.com/open-telemetry/opentelemetry-go-instrumentation/pkg/log"
@@ -76,26 +73,6 @@ func (t *TargetDetails) GetFunctionReturns(name string) ([]uint64, error) {
 	}
 
 	return nil, fmt.Errorf("could not find returns for function %s", name)
-}
-
-func (a *processAnalyzer) findKeyvalMmap(pid int) (uintptr, uintptr) {
-	fs, err := procfs.NewProc(pid)
-	if err != nil {
-		panic(err)
-	}
-
-	maps, err := fs.ProcMaps()
-	if err != nil {
-		panic(err)
-	}
-
-	for _, m := range maps {
-		if m.Perms != nil && m.Perms.Read && m.Perms.Write && m.Perms.Execute {
-			log.Logger.Info("found addr of keyval map", "addr", m.StartAddr)
-			return m.StartAddr, m.EndAddr
-		}
-	}
-	panic(errors.New("cant find keyval map"))
 }
 
 func (a *processAnalyzer) remoteMmap(pid int, mapSize uint64) (uint64, error) {
