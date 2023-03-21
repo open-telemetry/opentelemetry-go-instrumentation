@@ -23,3 +23,26 @@ docker-build:
 .PHONY: offsets
 offsets:
 	cd offsets-tracker; OFFSETS_OUTPUT_FILE="../pkg/inject/offset_results.json" go run main.go
+
+.PHONY: install-tools
+install-tools:
+	go install github.com/google/go-licenses@latest
+
+.PHONY: update-licenses
+update-licenses: install-tools
+	rm -rf LICENSES; \
+	go-licenses save ./cli/ --save_path LICENSES; \
+	cp -R ./include/libbpf ./LICENSES
+
+.PHONY: verify-licenses
+verify-licenses: install-tools
+	go-licenses save ./cli --save_path temp; \
+	cp -R ./include/libbpf ./temp; \
+    if diff temp LICENSES > /dev/null; then \
+      echo "Passed"; \
+      rm -rf temp; \
+    else \
+      echo "LICENSES directory must be updated. Run make update-licenses"; \
+      rm -rf temp; \
+      exit 1; \
+    fi; \
