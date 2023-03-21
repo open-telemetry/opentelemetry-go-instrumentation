@@ -17,9 +17,9 @@ package process
 import (
 	"debug/elf"
 	"debug/gosym"
-	"errors"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/prometheus/procfs"
 
@@ -37,8 +37,8 @@ type TargetDetails struct {
 }
 
 type AllocationDetails struct {
-	Addr    uint64
-	EndAddr uint64
+	StartAddr uint64
+	EndAddr   uint64
 }
 
 type Func struct {
@@ -72,7 +72,7 @@ func (t *TargetDetails) GetFunctionReturns(name string) ([]uint64, error) {
 	return nil, fmt.Errorf("could not find returns for function %s", name)
 }
 
-func (a *processAnalyzer) findKeyvalMmap(pid int) (uintptr, uintptr) {
+func findKeyvalMmap(pid int) *AllocationDetails {
 	fs, err := procfs.NewProc(pid)
 	if err != nil {
 		panic(err)
@@ -86,10 +86,14 @@ func (a *processAnalyzer) findKeyvalMmap(pid int) (uintptr, uintptr) {
 	for _, m := range maps {
 		if m.Perms != nil && m.Perms.Read && m.Perms.Write && m.Perms.Execute {
 			log.Logger.Info("found addr of keyval map", "addr", m.StartAddr)
-			return m.StartAddr, m.EndAddr
+			return &AllocationDetails{
+				StartAddr: uint64(m.StartAddr),
+				EndAddr:   uint64(m.EndAddr),
+			}
 		}
 	}
-	panic(errors.New("cant find keyval map"))
+	log.Logger.V(1).Info("could not allocate remote memory, automatic context propagation will be disabled")
+	return nil
 }
 
 func (a *processAnalyzer) Analyze(pid int, relevantFuncs map[string]interface{}) (*TargetDetails, error) {
@@ -115,11 +119,7 @@ func (a *processAnalyzer) Analyze(pid int, relevantFuncs map[string]interface{})
 	result.GoVersion = goVersion
 	result.Libraries = modules
 
-	start, end := a.findKeyvalMmap(pid)
-	result.AllocationDetails = &AllocationDetails{
-		Addr:    uint64(start),
-		EndAddr: uint64(end),
-	}
+	result.AllocationDetails = findKeyvalMmap(pid)
 
 	var pclndat []byte
 	if sec := elfF.Section(".gopclntab"); sec != nil {
@@ -141,8 +141,13 @@ func (a *processAnalyzer) Analyze(pid int, relevantFuncs map[string]interface{})
 	}
 
 	for _, f := range symTab.Funcs {
+		fName := f.Name
+		// fetch short path of function for vendor scene
+		if paths := strings.Split(fName, "/vendor/"); len(paths) > 1 {
+			fName = paths[1]
+		}
 
-		if _, exists := relevantFuncs[f.Name]; exists {
+		if _, exists := relevantFuncs[fName]; exists {
 			start, returns, err := a.findFuncOffset(&f, elfF)
 			if err != nil {
 				return nil, err
@@ -150,7 +155,7 @@ func (a *processAnalyzer) Analyze(pid int, relevantFuncs map[string]interface{})
 
 			log.Logger.V(0).Info("found relevant function for instrumentation", "function", f.Name, "returns", len(returns))
 			function := &Func{
-				Name:          f.Name,
+				Name:          fName,
 				Offset:        start,
 				ReturnOffsets: returns,
 			}

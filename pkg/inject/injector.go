@@ -17,6 +17,7 @@ package inject
 import (
 	_ "embed"
 	"encoding/json"
+	"fmt"
 	"runtime"
 
 	"github.com/cilium/ebpf"
@@ -30,11 +31,10 @@ var (
 )
 
 type Injector struct {
-	data      *TrackedOffsets
-	isRegAbi  bool
-	TotalCPUs uint32
-	StartAddr uint64
-	EndAddr   uint64
+	data              *TrackedOffsets
+	isRegAbi          bool
+	TotalCPUs         uint32
+	AllocationDetails *process.AllocationDetails
 }
 
 func New(target *process.TargetDetails) (*Injector, error) {
@@ -45,11 +45,10 @@ func New(target *process.TargetDetails) (*Injector, error) {
 	}
 
 	return &Injector{
-		data:      &offsets,
-		isRegAbi:  target.IsRegistersABI(),
-		TotalCPUs: uint32(runtime.NumCPU()),
-		StartAddr: target.AllocationDetails.Addr,
-		EndAddr:   target.AllocationDetails.EndAddr,
+		data:              &offsets,
+		isRegAbi:          target.IsRegistersABI(),
+		TotalCPUs:         uint32(runtime.NumCPU()),
+		AllocationDetails: target.AllocationDetails,
 	}, nil
 }
 
@@ -78,7 +77,9 @@ func (i *Injector) Inject(loadBpf loadBpfFunc, library string, libVersion string
 		}
 	}
 
-	i.addCommonInjections(injectedVars, initAlloc)
+	if err := i.addCommonInjections(injectedVars, initAlloc); err != nil {
+		return nil, fmt.Errorf("adding instrumenter injections: %w", err)
+	}
 	log.Logger.V(0).Info("Injecting variables", "vars", injectedVars)
 	if len(injectedVars) > 0 {
 		err = spec.RewriteConstants(injectedVars)
@@ -90,13 +91,17 @@ func (i *Injector) Inject(loadBpf loadBpfFunc, library string, libVersion string
 	return spec, nil
 }
 
-func (i *Injector) addCommonInjections(varsMap map[string]interface{}, initAlloc bool) {
+func (i *Injector) addCommonInjections(varsMap map[string]interface{}, initAlloc bool) error {
 	varsMap["is_registers_abi"] = i.isRegAbi
 	if initAlloc {
+		if i.AllocationDetails == nil {
+			return fmt.Errorf("couldn't get process allocation details. Try running it from the KeyVal Launcher")
+		}
 		varsMap["total_cpus"] = i.TotalCPUs
-		varsMap["start_addr"] = i.StartAddr
-		varsMap["end_addr"] = i.EndAddr
+		varsMap["start_addr"] = i.AllocationDetails.StartAddr
+		varsMap["end_addr"] = i.AllocationDetails.EndAddr
 	}
+	return nil
 }
 
 func (i *Injector) getFieldOffset(libName string, libVersion string, structName string, fieldName string) (uint64, bool) {
