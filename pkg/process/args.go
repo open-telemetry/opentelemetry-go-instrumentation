@@ -29,7 +29,7 @@ type TargetArgs struct {
 
 func (t *TargetArgs) Validate() error {
 	if t.ExePath == "" {
-		return errors.New("target binary path not specified")
+		return errors.New("target binary path not specified, please specify " + ExePathEnvVar + " env variable")
 	}
 
 	return nil
