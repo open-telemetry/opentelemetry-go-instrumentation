@@ -1,4 +1,4 @@
-module github.com/keyval-dev/offsets-tracker
+module github.com/open-telemetry/offsets-tracker
 
 go 1.17
 

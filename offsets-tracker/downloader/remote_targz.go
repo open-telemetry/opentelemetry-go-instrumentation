@@ -2,12 +2,13 @@ package downloader
 
 import (
 	"fmt"
-	"github.com/keyval-dev/offsets-tracker/utils"
 	"io"
 	"io/ioutil"
 	"net/http"
 	"os"
 	"path"
+
+	"github.com/open-telemetry/offsets-tracker/utils"
 )
 
 const (

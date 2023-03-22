@@ -2,12 +2,13 @@ package target
 
 import (
 	"fmt"
-	"github.com/hashicorp/go-version"
-	"github.com/keyval-dev/offsets-tracker/binary"
-	"github.com/keyval-dev/offsets-tracker/cache"
-	"github.com/keyval-dev/offsets-tracker/downloader"
-	"github.com/keyval-dev/offsets-tracker/versions"
 	"os"
+
+	"github.com/hashicorp/go-version"
+	"github.com/open-telemetry/offsets-tracker/binary"
+	"github.com/open-telemetry/offsets-tracker/cache"
+	"github.com/open-telemetry/offsets-tracker/downloader"
+	"github.com/open-telemetry/offsets-tracker/versions"
 )
 
 type VersionsStrategy int
@@ -75,7 +76,7 @@ func (t *targetData) FindOffsets(dm []*binary.DataMember) (*Result, error) {
 	}
 	for _, v := range vers {
 		if t.Cache != nil {
-			cachedResults, found := t.Cache.IsAllInCache(t.name, v, dm)
+			cachedResults, found := t.Cache.IsAllInCache(v, dm)
 			if found {
 				fmt.Printf("%s: Found all requested offsets in cache for version %s\n", t.name, v)
 				result.ResultsByVersion = append(result.ResultsByVersion, &VersionedResult{

@@ -15,21 +15,26 @@
 package inject
 
 type TrackedOffsets struct {
-	Data []TrackedLibrary `json:"data"`
+	// Data key: struct name, which includes the library name in external libraries
+	Data map[string]TrackedStruct `json:"data"`
 }
 
-type TrackedLibrary struct {
-	Name        string              `json:"name"`
-	DataMembers []TrackedDataMember `json:"data_members"`
+// TrackedStruct key: field name
+type TrackedStruct map[string]TrackedField
+
+// TrackedField offests must be sorted from higher to lower semantic version
+type TrackedField struct {
+	// Versions range that are tracked for this given field
+	Versions VersionInfo       `json:"versions"`
+	Offsets  []VersionedOffset `json:"offsets"`
 }
 
-type TrackedDataMember struct {
-	Struct  string            `json:"struct"`
-	Field   string            `json:"field_name"`
-	Offsets []VersionedOffset `json:"offsets"`
+type VersionInfo struct {
+	Oldest string `json:"oldest"`
+	Newest string `json:"newest"`
 }
 
 type VersionedOffset struct {
-	Offset  uint64 `json:"offset"`
-	Version string `json:"version"`
+	Offset uint64 `json:"offset"`
+	Since  string `json:"since"`
 }

@@ -3,7 +3,7 @@ package versions
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/keyval-dev/offsets-tracker/utils"
+	"github.com/open-telemetry/offsets-tracker/utils"
 )
 
 type goListResponse struct {

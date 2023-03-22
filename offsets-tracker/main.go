@@ -7,9 +7,9 @@ import (
 	"os"
 
 	"github.com/hashicorp/go-version"
-	"github.com/keyval-dev/offsets-tracker/binary"
-	"github.com/keyval-dev/offsets-tracker/target"
-	"github.com/keyval-dev/offsets-tracker/writer"
+	"github.com/open-telemetry/offsets-tracker/binary"
+	"github.com/open-telemetry/offsets-tracker/target"
+	"github.com/open-telemetry/offsets-tracker/writer"
 )
 
 const (
@@ -64,7 +64,13 @@ func main() {
 		log.Fatalf("error while fetching offsets: %v\n", err)
 	}
 
+	minimunGRPCVersion, err := version.NewConstraint(">= 1.3")
+	if err != nil {
+		log.Fatalf("error in parsing version constraint: %v\n", err)
+	}
+
 	grpcOffsets, err := target.New("google.golang.org/grpc", *outputFile).
+		VersionConstraint(&minimunGRPCVersion).
 		FindOffsets([]*binary.DataMember{
 			{
 				StructName: "google.golang.org/grpc/internal/transport.Stream",
