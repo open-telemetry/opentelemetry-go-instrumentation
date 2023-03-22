@@ -5,3 +5,8 @@ updates:
   schedule:
     day: sunday
     interval: weekly
+- package-ecosystem: gomod
+  directory: /internal/tools
+  schedule:
+    day: sunday
+    interval: weekly
