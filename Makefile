@@ -58,3 +58,34 @@ verify-licenses: | $(GOLICENSES)
       rm -rf temp; \
       exit 1; \
     fi; \
+
+.PHONY: fixture-gorillamux
+fixture-gorillamux:
+	LIBRARY=gorillamux $(MAKE) fixture
+
+.PHONY: fixture-nethttp
+fixture-nethttp:
+	LIBRARY=nethttp $(MAKE) fixture
+
+.PHONY: fixture
+fixture:
+	IMG=otel-go-instrumentation $(MAKE) docker-build
+	if [ ! -d "launcher" ]; then \
+		git clone https://github.com/keyval-dev/launcher.git; \
+	fi
+	cd launcher && docker build -t kv-launcher .
+	cd test/e2e/$(LIBRARY) && docker build -t sample-app .
+	kind create cluster
+	kind load docker-image otel-go-instrumentation sample-app kv-launcher
+	helm repo add open-telemetry https://open-telemetry.github.io/opentelemetry-helm-charts
+	if [ ! -d "opentelemetry-helm-charts" ]; then \
+		git clone https://open-telemetry/opentelemetry-helm-charts; \
+	fi
+	helm install test -f .github/workflows/e2e/k8s/collector-helm-values.yml opentelemetry-helm-charts/charts/opentelemetry-collector
+	kubectl wait --for=condition=Ready --timeout=60s pod/test-opentelemetry-collector-0
+	kubectl -n default create -f .github/workflows/e2e/k8s/sample-job.yml
+	kubectl wait --for=condition=Complete --timeout=60s job/sample-job
+	kubectl cp -c filecp default/test-opentelemetry-collector-0:tmp/trace.json ./test/e2e/$(LIBRARY)/traces.json.tmp
+	jq --sort-keys 'del(.resourceSpans[].scopeSpans[].spans[].endTimeUnixNano, .resourceSpans[].scopeSpans[].spans[].startTimeUnixNano)' ./test/e2e/$(LIBRARY)/traces.json.tmp > ./test/e2e/$(LIBRARY)/traces.json
+	rm ./test/e2e/$(LIBRARY)/traces.json.tmp
+	kind delete cluster
