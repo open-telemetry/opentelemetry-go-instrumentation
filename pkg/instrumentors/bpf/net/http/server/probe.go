@@ -139,8 +139,7 @@ func (h *httpServerInstrumentor) registerProbes(ctx *context.InstrumentorContext
 			Offset: ret,
 		})
 		if err != nil {
-			logger.V(1).Info("could not insert return uprobe. Skipping",
-				"error", err.Error())
+			logger.Error(err, "could not insert return uprobe. Skipping")
 			return
 		}
 		h.returnProbs = append(h.returnProbs, retProbe)
