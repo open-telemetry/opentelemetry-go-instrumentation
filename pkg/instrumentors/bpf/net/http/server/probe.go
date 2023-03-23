@@ -114,8 +114,7 @@ func (h *httpServerInstrumentor) registerProbes(ctx *context.InstrumentorContext
 	logger := log.Logger.WithName("net/http-instrumentor").WithValues("function", funcName)
 	offset, err := ctx.TargetDetails.GetFunctionOffset(funcName)
 	if err != nil {
-		logger.V(1).Info("could not find function start offset. Skipping",
-			"error", err.Error())
+		logger.Error(err, "could not find function start offset. Skipping")
 		return
 	}
 	retOffsets, err := ctx.TargetDetails.GetFunctionReturns(funcName)
