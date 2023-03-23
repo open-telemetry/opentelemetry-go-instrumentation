@@ -120,8 +120,7 @@ func (h *httpServerInstrumentor) registerProbes(ctx *context.InstrumentorContext
 	}
 	retOffsets, err := ctx.TargetDetails.GetFunctionReturns(funcName)
 	if err != nil {
-		logger.V(1).Info("could not find function end offsets. Skipping",
-			"error", err.Error())
+		logger.Error(err, "could not find function end offsets. Skipping")
 		return
 	}
 
