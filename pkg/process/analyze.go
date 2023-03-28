@@ -17,6 +17,7 @@ package process
 import (
 	"debug/elf"
 	"debug/gosym"
+	"errors"
 	"fmt"
 	"os"
 	"strings"
