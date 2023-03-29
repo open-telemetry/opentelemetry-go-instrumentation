@@ -62,8 +62,8 @@ verify-licenses: | $(GOLICENSES)
 .PHONY: fixture-nethttp fixture-gorillamux
 fixture-nethttp: fixtures/nethttp
 fixture-gorillamux: fixtures/gorillamux
-fixture/%: LIBRARY=$*
-fixture/%:
+fixtures/%: LIBRARY=$*
+fixtures/%:
 	IMG=otel-go-instrumentation $(MAKE) docker-build
 	if [ ! -d "launcher" ]; then \
 		git clone https://github.com/keyval-dev/launcher.git; \
@@ -74,7 +74,7 @@ fixture/%:
 	kind load docker-image otel-go-instrumentation sample-app kv-launcher
 	helm repo add open-telemetry https://open-telemetry.github.io/opentelemetry-helm-charts
 	if [ ! -d "opentelemetry-helm-charts" ]; then \
-		git clone https://open-telemetry/opentelemetry-helm-charts; \
+		git clone https://github.com/open-telemetry/opentelemetry-helm-charts.git; \
 	fi
 	helm install test -f .github/workflows/e2e/k8s/collector-helm-values.yml opentelemetry-helm-charts/charts/opentelemetry-collector
 	kubectl wait --for=condition=Ready --timeout=60s pod/test-opentelemetry-collector-0

@@ -28,6 +28,27 @@
                 {
                   "key": "http.method",
                   "value": {
+                    "stringValue": "GET"
+                  }
+                },
+                {
+                  "key": "http.target",
+                  "value": {
+                    "stringValue": ""
+                  }
+                }
+              ],
+              "kind": 2,
+              "parentSpanId": "",
+              "spanId": "a12c8ff240d71c9b",
+              "status": {},
+              "traceId": "ff04ebd7ec9ae28959ceb0e26efde31d"
+            },
+            {
+              "attributes": [
+                {
+                  "key": "http.method",
+                  "value": {
                     "stringValue": ""
                   }
                 },
