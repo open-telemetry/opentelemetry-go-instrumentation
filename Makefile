@@ -59,16 +59,11 @@ verify-licenses: | $(GOLICENSES)
       exit 1; \
     fi; \
 
-.PHONY: fixture-gorillamux
-fixture-gorillamux:
-	LIBRARY=gorillamux $(MAKE) fixture
-
-.PHONY: fixture-nethttp
-fixture-nethttp:
-	LIBRARY=nethttp $(MAKE) fixture
-
-.PHONY: fixture
-fixture:
+.PHONY: fixture-nethttp fixture-gorillamux
+fixture-nethttp: fixtures/nethttp
+fixture-gorillamux: fixtures/gorillamux
+fixture/%: LIBRARY=$*
+fixture/%:
 	IMG=otel-go-instrumentation $(MAKE) docker-build
 	if [ ! -d "launcher" ]; then \
 		git clone https://github.com/keyval-dev/launcher.git; \
