@@ -3,7 +3,7 @@ module github.com/open-telemetry/opentelemetry-go-instrumentation
 go 1.18
 
 require (
-	github.com/cilium/ebpf v0.8.0
+	github.com/cilium/ebpf v0.10.0
 	github.com/go-logr/logr v1.2.3
 	github.com/go-logr/zapr v1.2.2
 	github.com/hashicorp/go-version v1.6.0
