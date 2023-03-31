@@ -20,34 +20,6 @@
       "scopeSpans": [
         {
           "scope": {
-            "name": "net/http"
-          },
-          "spans": [
-            {
-              "attributes": [
-                {
-                  "key": "http.method",
-                  "value": {
-                    "stringValue": "GET"
-                  }
-                },
-                {
-                  "key": "http.target",
-                  "value": {
-                    "stringValue": ""
-                  }
-                }
-              ],
-              "kind": 2,
-              "parentSpanId": "",
-              "spanId": "cc1a651bfd03c2ae",
-              "status": {},
-              "traceId": "c7f2eb84d6cf61c076e95b0a7d5eb406"
-            }
-          ]
-        },
-        {
-          "scope": {
             "name": "github.com/gorilla/mux"
           },
           "spans": [
@@ -71,6 +43,35 @@
               "spanId": "",
               "status": {},
               "traceId": ""
+            }
+          ]
+        },
+        {
+          "scope": {
+            "name": "net/http"
+          },
+          "spans": [
+            {
+              "attributes": [
+                {
+                  "key": "http.method",
+                  "value": {
+                    "stringValue": "GET"
+                  }
+                },
+                {
+                  "key": "http.target",
+                  "value": {
+                    "stringValue": "/users/foo"
+                  }
+                }
+              ],
+              "kind": 2,
+              "name": "/users/foo",
+              "parentSpanId": "",
+              "spanId": "f16618fb345a863b",
+              "status": {},
+              "traceId": "115a7a7255825337b37a9f979beb8ee1"
             }
           ]
         }

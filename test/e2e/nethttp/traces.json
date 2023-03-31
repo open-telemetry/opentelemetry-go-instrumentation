@@ -34,15 +34,16 @@
                 {
                   "key": "http.target",
                   "value": {
-                    "stringValue": ""
+                    "stringValue": "/hello"
                   }
                 }
               ],
               "kind": 2,
+              "name": "/hello",
               "parentSpanId": "",
-              "spanId": "a12c8ff240d71c9b",
+              "spanId": "c204b0297fca1912",
               "status": {},
-              "traceId": "ff04ebd7ec9ae28959ceb0e26efde31d"
+              "traceId": "875ab5241c9db2ea5286a6643f01cf8c"
             },
             {
               "attributes": [
