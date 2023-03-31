@@ -80,4 +80,4 @@ jobs:
           rm ./test/e2e/${{ matrix.library }}/traces.json.tmp
       - name: verify output
         run: |
-          git diff --exit-code || (echo 'output fixture diff detected')
+          git diff --exit-code || (echo 'output fixture diff detected' && exit 1)
