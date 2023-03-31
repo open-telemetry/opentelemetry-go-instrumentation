@@ -101,7 +101,7 @@ func (g *grpcInstrumentor) Load(ctx *context.InstrumentorContext) error {
 	}
 
 	up, err := ctx.Executable.Uprobe("", g.bpfObjects.UprobeClientConnInvoke, &link.UprobeOptions{
-		Offset: offset,
+		Address: offset,
 	})
 	if err != nil {
 		return err
@@ -115,7 +115,7 @@ func (g *grpcInstrumentor) Load(ctx *context.InstrumentorContext) error {
 
 	for _, ret := range retOffsets {
 		retProbe, err := ctx.Executable.Uprobe("", g.bpfObjects.UprobeClientConnInvokeReturns, &link.UprobeOptions{
-			Offset: ret,
+			Address: ret,
 		})
 		if err != nil {
 			return err
@@ -136,7 +136,7 @@ func (g *grpcInstrumentor) Load(ctx *context.InstrumentorContext) error {
 	}
 	for _, whOffset := range whOffsets {
 		whProbe, err := ctx.Executable.Uprobe("", g.bpfObjects.UprobeHttp2ClientCreateHeaderFields, &link.UprobeOptions{
-			Offset: whOffset,
+			Address: whOffset,
 		})
 		if err != nil {
 			return err

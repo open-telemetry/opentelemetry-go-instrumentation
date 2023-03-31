@@ -108,7 +108,7 @@ func (g *gorillaMuxInstrumentor) Load(ctx *context.InstrumentorContext) error {
 	}
 
 	up, err := ctx.Executable.Uprobe("", g.bpfObjects.UprobeGorillaMuxServeHTTP, &link.UprobeOptions{
-		Offset: offset,
+		Address: offset,
 	})
 	if err != nil {
 		return err
@@ -122,7 +122,7 @@ func (g *gorillaMuxInstrumentor) Load(ctx *context.InstrumentorContext) error {
 
 	for _, ret := range retOffsets {
 		retProbe, err := ctx.Executable.Uprobe("", g.bpfObjects.UprobeGorillaMuxServeHTTP_Returns, &link.UprobeOptions{
-			Offset: ret,
+			Address: ret,
 		})
 		if err != nil {
 			return err
