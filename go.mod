@@ -5,7 +5,7 @@ go 1.18
 require (
 	github.com/cilium/ebpf v0.10.0
 	github.com/go-logr/logr v1.2.4
-	github.com/go-logr/zapr v1.2.2
+	github.com/go-logr/zapr v1.2.3
 	github.com/hashicorp/go-version v1.6.0
 	github.com/prometheus/procfs v0.9.0
 	go.opentelemetry.io/otel v1.14.0
