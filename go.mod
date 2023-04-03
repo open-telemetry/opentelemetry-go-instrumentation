@@ -13,7 +13,7 @@ require (
 	go.opentelemetry.io/otel/sdk v1.14.0
 	go.opentelemetry.io/otel/trace v1.14.0
 	go.uber.org/zap v1.24.0
-	golang.org/x/arch v0.0.0-20210923205945-b76863e36670
+	golang.org/x/arch v0.3.0
 	golang.org/x/sys v0.6.0
 	google.golang.org/grpc v1.54.0
 )
