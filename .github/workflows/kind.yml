@@ -1,0 +1,83 @@
+name: e2e-tests
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - 'v[0-9]+.[0-9]+.[0-9]+*'
+  pull_request:
+
+jobs:
+  kubernetes-test:
+    strategy: 
+      matrix:
+        k8s-version: ["v1.26.0"]
+        library: ["gorillamux", "nethttp"]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v3
+      - name: Setup Go
+        uses: actions/setup-go@v3
+        with:
+          go-version: "1.20"
+      - name: Build auto-instrumentation
+        timeout-minutes: 5
+        run: |
+          IMG=otel-go-instrumentation:latest make docker-build
+      - name: Build launcher #TODO: Remove launcher steps once pr/40 merges
+        run: |
+          git clone https://github.com/keyval-dev/launcher.git
+          cd launcher
+          docker build -t kv-launcher:latest .
+      - name: Build sample app
+        run: |
+          cd test/e2e/${{ matrix.library }}
+          docker build -t sample-app:latest .
+      - name: Set up Helm
+        uses: azure/setup-helm@v3.5
+        with:
+          version: v3.9.0
+      - name: Create kind cluster
+        uses: helm/kind-action@v1.5.0
+        with:
+          node_image: kindest/node:${{ matrix.k8s-version }}
+          kubectl_version: ${{ matrix.k8s-version }}
+      - name: Check kind
+        run: |
+          kubectl cluster-info --context kind-chart-testing
+          kubectl get node
+          docker ps -a --filter label=io.x-k8s.kind.cluster=chart-testing
+      - name: Kind load images
+        run: |
+          kind load docker-image otel-go-instrumentation --name chart-testing
+          kind load docker-image kv-launcher --name chart-testing
+          kind load docker-image sample-app --name chart-testing
+      - name: Add Dependencies
+        shell: bash
+        run: |
+            helm repo add open-telemetry https://open-telemetry.github.io/opentelemetry-helm-charts
+      - uses: actions/checkout@v3
+        with:
+          repository: 'open-telemetry/opentelemetry-helm-charts'
+          path: opentelemetry-helm-charts
+      - name: Helm install collector
+        run: helm install test -f .github/workflows/e2e/k8s/collector-helm-values.yml opentelemetry-helm-charts/charts/opentelemetry-collector
+      - name: check collector status
+        run: |
+          kubectl wait --for=condition=Ready --timeout=60s pod/test-opentelemetry-collector-0
+      - name: start sample job
+        run: |
+          kubectl -n default create -f .github/workflows/e2e/k8s/sample-job.yml
+      - name: check job status
+        run: |
+          kubectl wait --for=condition=Complete --timeout=60s job/sample-job
+      - name: copy telemetry trace output
+        run: |
+          kubectl cp -c filecp default/test-opentelemetry-collector-0:tmp/trace.json ./test/e2e/${{ matrix.library }}/traces.json.tmp
+          jq 'del(.resourceSpans[].scopeSpans[].spans[].endTimeUnixNano, .resourceSpans[].scopeSpans[].spans[].startTimeUnixNano) | .resourceSpans[].scopeSpans[].spans[].spanId|= (if . != "" then "xxxxx" else . end) | .resourceSpans[].scopeSpans[].spans[].traceId|= (if . != "" then "xxxxx" else . end) | .resourceSpans[].scopeSpans|=sort_by(.scope.name)' ./test/e2e/${{ matrix.library }}/traces.json.tmp | jq --sort-keys . > ./test/e2e/${{ matrix.library }}/traces.json
+          rm ./test/e2e/${{ matrix.library }}/traces.json.tmp
+      - name: verify output
+        run: |
+          git diff --exit-code || (echo 'output fixture diff detected' && exit 1)

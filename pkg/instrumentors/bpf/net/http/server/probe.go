@@ -124,7 +124,7 @@ func (h *httpServerInstrumentor) registerProbes(ctx *context.InstrumentorContext
 	}
 
 	up, err := ctx.Executable.Uprobe("", h.bpfObjects.UprobeServerMuxServeHTTP, &link.UprobeOptions{
-		Offset: offset,
+		Address: offset,
 	})
 	if err != nil {
 		logger.V(1).Info("could not insert start uprobe. Skipping",
@@ -136,7 +136,7 @@ func (h *httpServerInstrumentor) registerProbes(ctx *context.InstrumentorContext
 
 	for _, ret := range retOffsets {
 		retProbe, err := ctx.Executable.Uprobe("", h.bpfObjects.UprobeServerMuxServeHTTP_Returns, &link.UprobeOptions{
-			Offset: ret,
+			Address: ret,
 		})
 		if err != nil {
 			logger.Error(err, "could not insert return uprobe. Skipping")

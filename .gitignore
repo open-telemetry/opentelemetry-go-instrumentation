@@ -19,3 +19,7 @@
 # GoLand IDEA
 /.idea/
 *.iml
+
+otel-go-instrumentation
+launcher/
+opentelemetry-helm-charts/
