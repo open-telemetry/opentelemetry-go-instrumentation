@@ -81,6 +81,6 @@ fixtures/%:
 	kubectl -n default create -f .github/workflows/e2e/k8s/sample-job.yml
 	kubectl wait --for=condition=Complete --timeout=60s job/sample-job
 	kubectl cp -c filecp default/test-opentelemetry-collector-0:tmp/trace.json ./test/e2e/$(LIBRARY)/traces.json.tmp
-	jq --sort-keys 'del(.resourceSpans[].scopeSpans[].spans[].endTimeUnixNano, .resourceSpans[].scopeSpans[].spans[].startTimeUnixNano)' ./test/e2e/$(LIBRARY)/traces.json.tmp > ./test/e2e/$(LIBRARY)/traces.json
+	jq 'del(.resourceSpans[].scopeSpans[].spans[].endTimeUnixNano, .resourceSpans[].scopeSpans[].spans[].startTimeUnixNano)' ./test/e2e/$(LIBRARY)/traces.json.tmp | jq --sort-keys . > ./test/e2e/$(LIBRARY)/traces.json
 	rm ./test/e2e/$(LIBRARY)/traces.json.tmp
 	kind delete cluster
