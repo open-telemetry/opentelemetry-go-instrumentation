@@ -69,9 +69,9 @@
               "kind": 2,
               "name": "/users/foo",
               "parentSpanId": "",
-              "spanId": "f16618fb345a863b",
+              "spanId": "xxxxx",
               "status": {},
-              "traceId": "115a7a7255825337b37a9f979beb8ee1"
+              "traceId": "xxxxx"
             }
           ]
         }

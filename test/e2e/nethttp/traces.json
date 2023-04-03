@@ -41,9 +41,9 @@
               "kind": 2,
               "name": "/hello",
               "parentSpanId": "",
-              "spanId": "c204b0297fca1912",
+              "spanId": "xxxxx",
               "status": {},
-              "traceId": "875ab5241c9db2ea5286a6643f01cf8c"
+              "traceId": "xxxxx"
             },
             {
               "attributes": [
