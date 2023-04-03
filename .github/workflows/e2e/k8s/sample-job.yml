@@ -1,0 +1,71 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: sample-job
+  namespace: default
+spec:
+  template:
+    metadata:
+      annotations:
+        workload: job
+      labels:
+        app: sample
+    spec:
+      shareProcessNamespace: true
+      restartPolicy: Never
+      schedulerName: default-scheduler
+      securityContext: {}
+      terminationGracePeriodSeconds: 30
+      initContainers:
+      - name: copy-launcher
+        image: kv-launcher
+        imagePullPolicy: IfNotPresent
+        command:
+          - cp
+          - -a
+          - /kv-launcher/.
+          - /launcher/
+        volumeMounts:
+          - name: launcherdir
+            mountPath: /launcher
+
+      containers:
+      - name: sample-app
+        image: sample-app
+        imagePullPolicy: IfNotPresent
+        command: ["/bin/sh", "-c"]
+        # send SIGTERM to otel-go-instrumentation once the sample app has generated data so the job completes.
+        args: ["/launcher/launch /sample-app/main && kill -TERM $(pidof otel-go-instrumentation)"]
+        volumeMounts:
+        - mountPath: /launcher
+          name: launcherdir
+
+      - name: auto-instrumentation
+        image: otel-go-instrumentation
+        imagePullPolicy: IfNotPresent
+        env:
+        - name: OTEL_TARGET_EXE
+          value: /sample-app/main
+        - name: OTEL_EXPORTER_OTLP_ENDPOINT
+          value: "test-opentelemetry-collector:4317"
+        - name: OTEL_SERVICE_NAME
+          value: "sample-app"
+        - name: OTEL_PROPAGATORS
+          value: "tracecontext,baggage"
+        resources: {}
+        securityContext:
+          runAsUser: 0
+          capabilities:
+            add:
+            - SYS_PTRACE
+          privileged: true
+        volumeMounts:
+        - mountPath: /sys/kernel/debug
+          name: kernel-debug
+
+      volumes:
+      - name: launcherdir
+        emptyDir: {}
+      - name: kernel-debug
+        hostPath:
+          path: /sys/kernel/debug

@@ -17,6 +17,7 @@ package process
 import (
 	"debug/elf"
 	"debug/gosym"
+	"errors"
 	"fmt"
 	"os"
 	"strings"
@@ -164,10 +165,14 @@ func (a *processAnalyzer) Analyze(pid int, relevantFuncs map[string]interface{})
 		if _, exists := relevantFuncs[fName]; exists {
 			start, returns, err := a.findFuncOffset(&f, elfF)
 			if err != nil {
-				return nil, err
+				log.Logger.V(1).Info("can't find function offset. Skipping", "function", f.Name)
+				continue
 			}
 
-			log.Logger.V(0).Info("found relevant function for instrumentation", "function", f.Name, "returns", len(returns))
+			log.Logger.V(0).Info("found relevant function for instrumentation",
+				"function", f.Name,
+				"start", start,
+				"returns", returns)
 			function := &Func{
 				Name:          fName,
 				Offset:        start,
@@ -176,6 +181,9 @@ func (a *processAnalyzer) Analyze(pid int, relevantFuncs map[string]interface{})
 
 			result.Functions = append(result.Functions, function)
 		}
+	}
+	if len(result.Functions) == 0 {
+		return nil, errors.New("could not find function offsets for instrumenter")
 	}
 
 	return result, nil
