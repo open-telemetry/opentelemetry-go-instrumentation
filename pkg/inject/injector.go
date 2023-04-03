@@ -98,7 +98,7 @@ func (i *Injector) addCommonInjections(varsMap map[string]interface{}, initAlloc
 			return fmt.Errorf("couldn't get process allocation details. Try running it from the KeyVal Launcher")
 		}
 		varsMap["total_cpus"] = i.TotalCPUs
-		varsMap["start_addr"] = i.AllocationDetails.StartAddr
+		varsMap["start_addr"] = i.AllocationDetails.Addr
 		varsMap["end_addr"] = i.AllocationDetails.EndAddr
 	}
 	return nil
