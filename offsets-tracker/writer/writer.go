@@ -4,11 +4,13 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/keyval-dev/offsets-tracker/schema"
-	"github.com/keyval-dev/offsets-tracker/target"
 	"io/fs"
 	"os"
+	"sort"
 	"strings"
+
+	"github.com/keyval-dev/offsets-tracker/schema"
+	"github.com/keyval-dev/offsets-tracker/target"
 )
 
 func WriteResults(fileName string, results ...*target.Result) error {
@@ -16,6 +18,24 @@ func WriteResults(fileName string, results ...*target.Result) error {
 	for _, r := range results {
 		offsets.Data = append(offsets.Data, convertResult(r))
 	}
+
+	// sort data for consistent output
+	for i := 0; i < len(offsets.Data); i++ {
+		trackedLibrary := offsets.Data[i]
+		sort.Slice(trackedLibrary.DataMembers, func(i, j int) bool {
+			dataMemberi := trackedLibrary.DataMembers[i]
+			dataMemberj := trackedLibrary.DataMembers[j]
+			if dataMemberi.Struct != dataMemberj.Struct {
+				return dataMemberi.Struct < dataMemberj.Struct
+			}
+			return dataMemberi.Field < dataMemberj.Field
+		})
+	}
+	sort.Slice(offsets.Data, func(i, j int) bool {
+		trackedLibraryi := offsets.Data[i]
+		trackedLibraryj := offsets.Data[j]
+		return trackedLibraryi.Name < trackedLibraryj.Name
+	})
 
 	jsonData, err := json.Marshal(&offsets)
 	if err != nil {
