@@ -40,6 +40,10 @@ docker-build:
 offsets:
 	cd offsets-tracker; OFFSETS_OUTPUT_FILE="../pkg/inject/offset_results.json" go run main.go
 
+.PHONY: docker-offsets
+docker-offsets:
+	docker run --rm -v $(shell pwd):/app golang:1.20 /bin/sh -c "cd ../app && make offsets"
+
 .PHONY: update-licenses
 update-licenses: | $(GOLICENSES)
 	rm -rf LICENSES
