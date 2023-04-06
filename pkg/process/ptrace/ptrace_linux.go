@@ -58,8 +58,8 @@ func waitPid(pid int) error {
 	return errors.Errorf(waitPidErrorMessage, ret)
 }
 
-// Trace ptrace all threads of a process
-func Trace(pid int, logger logr.Logger) (*TracedProgram, error) {
+// NewTracedProgram ptrace all threads of a process
+func NewTracedProgram(pid int, logger logr.Logger) (*TracedProgram, error) {
 	traceSuccess := false
 
 	tidMap := make(map[int]bool)
@@ -117,10 +117,8 @@ func Trace(pid int, logger logr.Logger) (*TracedProgram, error) {
 			defer func() {
 				if !traceSuccess {
 					err = syscall.PtraceDetach(tid)
-					if err != nil {
-						if !strings.Contains(err.Error(), "no such process") {
-							logger.Error(err, "detach failed", "tid", tid)
-						}
+					if err != nil && !strings.Contains(err.Error(), "no such process") {
+						logger.Error(err, "detach failed", "tid", tid)
 					}
 				}
 			}()

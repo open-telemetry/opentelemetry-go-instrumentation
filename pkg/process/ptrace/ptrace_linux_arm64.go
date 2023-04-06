@@ -51,6 +51,10 @@ func setRegs(pid int, regs *syscall.PtraceRegs) error {
 
 // Syscall runs a syscall at main thread of process
 func (p *TracedProgram) Syscall(number uint64, args ...uint64) (uint64, error) {
+	if len(args) > 7 {
+		return 0, errors.New("too many arguments for a syscall")
+	}
+
 	// save the original registers and the current instructions
 	err := p.Protect()
 	if err != nil {
@@ -69,11 +73,7 @@ func (p *TracedProgram) Syscall(number uint64, args ...uint64) (uint64, error) {
 	regs.Regs[8] = number
 	for index, arg := range args {
 		// All these registers are hard coded for x86 platform
-		if index > 6 {
-			return 0, errors.New("too many arguments for a syscall")
-		} else {
-			regs.Regs[index] = arg
-		}
+		regs.Regs[index] = arg
 	}
 	err = setRegs(p.pid, &regs)
 	if err != nil {

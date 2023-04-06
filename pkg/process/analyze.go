@@ -77,7 +77,7 @@ func (t *TargetDetails) GetFunctionReturns(name string) ([]uint64, error) {
 }
 
 func (a *processAnalyzer) remoteMmap(pid int, mapSize uint64) (uint64, error) {
-	program, err := ptrace.Trace(pid, log.Logger)
+	program, err := ptrace.NewTracedProgram(pid, log.Logger)
 	if err != nil {
 		log.Logger.Error(err, "Failed to attach ptrace", "pid", pid)
 		return 0, err
