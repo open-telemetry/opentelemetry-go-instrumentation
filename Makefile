@@ -65,13 +65,9 @@ fixture-gorillamux: fixtures/gorillamux
 fixtures/%: LIBRARY=$*
 fixtures/%:
 	IMG=otel-go-instrumentation $(MAKE) docker-build
-	if [ ! -d "launcher" ]; then \
-		git clone https://github.com/keyval-dev/launcher.git; \
-	fi
-	cd launcher && docker build -t kv-launcher .
 	cd test/e2e/$(LIBRARY) && docker build -t sample-app .
 	kind create cluster
-	kind load docker-image otel-go-instrumentation sample-app kv-launcher
+	kind load docker-image otel-go-instrumentation sample-app
 	helm repo add open-telemetry https://open-telemetry.github.io/opentelemetry-helm-charts
 	if [ ! -d "opentelemetry-helm-charts" ]; then \
 		git clone https://github.com/open-telemetry/opentelemetry-helm-charts.git; \
