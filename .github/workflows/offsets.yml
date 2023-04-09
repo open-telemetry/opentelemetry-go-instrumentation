@@ -16,7 +16,7 @@ jobs:
           make docker-offsets
 
       - name: Create pull request
-        uses: peter-evans/create-pull-request@v4
+        uses: peter-evans/create-pull-request@v5
         with:
           commit-message: Update generated offsets
           branch: automated/generated-offsets
