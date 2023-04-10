@@ -23,7 +23,7 @@ jobs:
           make generate
       - name: verify output
         run: |
-          git diff --exit-code || (echo 'generated diff, please run "make generate"')
+          git diff --exit-code || (echo 'generated diff, please run "make generate"' && exit 1)
   docker-build:
     runs-on: ubuntu-latest
     steps:
