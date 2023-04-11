@@ -41,8 +41,8 @@ type TargetDetails struct {
 }
 
 type AllocationDetails struct {
-	Addr    uint64
-	EndAddr uint64
+	StartAddr uint64
+	EndAddr   uint64
 }
 
 type Func struct {
@@ -132,8 +132,8 @@ func (a *processAnalyzer) Analyze(pid int, relevantFuncs map[string]interface{})
 		"end_addr", fmt.Sprintf("%X", addr+mapSize))
 
 	result.AllocationDetails = &AllocationDetails{
-		Addr:    addr,
-		EndAddr: addr + mapSize,
+		StartAddr: addr,
+		EndAddr:   addr + mapSize,
 	}
 
 	var pclndat []byte

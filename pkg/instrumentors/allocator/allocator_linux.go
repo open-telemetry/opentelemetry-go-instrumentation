@@ -33,7 +33,7 @@ func (a *Allocator) Load(ctx *context.InstrumentorContext) error {
 	logger := log.Logger.WithName("allocator")
 	if ctx.TargetDetails.AllocationDetails != nil {
 		logger = logger.WithValues(
-			"start_addr", ctx.TargetDetails.AllocationDetails.Addr,
+			"start_addr", ctx.TargetDetails.AllocationDetails.StartAddr,
 			"end_addr", ctx.TargetDetails.AllocationDetails.EndAddr)
 	}
 	logger.V(0).Info("Loading allocator")
