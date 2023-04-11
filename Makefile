@@ -30,7 +30,7 @@ generate:
 
 .PHONY: build
 build: generate
-	GOOS=linux GOARCH=$(uname -m) go build -o otel-go-instrumentation cli/main.go
+	GOOS=linux GOARCH=amd64 go build -o otel-go-instrumentation cli/main.go
 
 .PHONY: docker-build
 docker-build:
@@ -39,10 +39,6 @@ docker-build:
 .PHONY: offsets
 offsets:
 	cd offsets-tracker; OFFSETS_OUTPUT_FILE="../pkg/inject/offset_results.json" go run main.go
-
-.PHONY: docker-offsets
-docker-offsets:
-	docker run --rm -v $(shell pwd):/app golang:1.20 /bin/sh -c "cd ../app && make offsets"
 
 .PHONY: update-licenses
 update-licenses: | $(GOLICENSES)
