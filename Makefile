@@ -30,7 +30,7 @@ generate:
 
 .PHONY: build
 build: generate
-	GOOS=linux GOARCH=amd64 go build -o otel-go-instrumentation cli/main.go
+	GOOS=linux GOARCH=$(uname -m) go build -o otel-go-instrumentation cli/main.go
 
 .PHONY: docker-build
 docker-build:
