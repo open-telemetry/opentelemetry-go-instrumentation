@@ -8,9 +8,9 @@ on:
 
 jobs:
   check-links:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
-    - uses: actions/checkout@v3.3.0
+    - uses: actions/checkout@v3.5.0
       with:
         fetch-depth: 0
     - uses: lycheeverse/lychee-action@v1.6.1
@@ -20,15 +20,14 @@ jobs:
           --exclude "http://localhost*"
         fail: true
   verify-licenses:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
       - name: Checkout Repo
-        uses: actions/checkout@v3
+        uses: actions/checkout@v3.5.0
       - name: Setup Go
-        uses: actions/setup-go@v4
+        uses: actions/setup-go@v4.0.0
         with:
           go-version: "1.20"
       - name: Install build dependencies
-        run: |
-          sudo apt-get update && sudo apt-get install -y clang llvm libbpf-dev
+        run: sudo apt-get update && sudo apt-get install -y clang llvm libbpf-dev
       - run: make verify-licenses
