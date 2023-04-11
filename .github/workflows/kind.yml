@@ -25,11 +25,6 @@ jobs:
       - name: Build auto-instrumentation
         run: |
           IMG=otel-go-instrumentation:latest make docker-build
-      - name: Build launcher #TODO: Remove launcher steps once pr/40 merges
-        run: |
-          git clone https://github.com/keyval-dev/launcher.git
-          cd launcher
-          docker build -t kv-launcher:latest .
       - name: Build sample app
         run: |
           cd test/e2e/${{ matrix.library }}
@@ -51,7 +46,6 @@ jobs:
       - name: Kind load images
         run: |
           kind load docker-image otel-go-instrumentation --name chart-testing
-          kind load docker-image kv-launcher --name chart-testing
           kind load docker-image sample-app --name chart-testing
       - name: Add Dependencies
         shell: bash
