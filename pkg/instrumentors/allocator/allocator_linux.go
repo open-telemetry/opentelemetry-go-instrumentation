@@ -17,9 +17,9 @@ package allocator
 import (
 	"os"
 
-	"github.com/open-telemetry/opentelemetry-go-instrumentation/pkg/instrumentors/bpffs"
-	"github.com/open-telemetry/opentelemetry-go-instrumentation/pkg/instrumentors/context"
-	"github.com/open-telemetry/opentelemetry-go-instrumentation/pkg/log"
+	"go.opentelemetry.io/auto/pkg/instrumentors/bpffs"
+	"go.opentelemetry.io/auto/pkg/instrumentors/context"
+	"go.opentelemetry.io/auto/pkg/log"
 	"golang.org/x/sys/unix"
 )
 
