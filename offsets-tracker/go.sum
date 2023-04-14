@@ -1,2 +1,4 @@
 github.com/hashicorp/go-version v1.6.0 h1:feTTfFNnjP967rlCxM/I9g701jU+RN74YKx2mOkIeek=
 github.com/hashicorp/go-version v1.6.0/go.mod h1:fltr4n8CU8Ke44wwGCBoEymUuxUHl09ZGVZPK5anwXA=
+github.com/keyval-dev/offsets-tracker v0.0.0-20230204190443-44ea935c31d7 h1:B4iffC3ifqTHB50bTFn2mTU9WgDFpGhfCpflahdsuK8=
+github.com/keyval-dev/offsets-tracker v0.0.0-20230204190443-44ea935c31d7/go.mod h1:Uxcx8Mg1L5t9YKwATElLqvoM/jHxJE+3nu2cEHZ3LHc=
