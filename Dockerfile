@@ -6,6 +6,6 @@ WORKDIR /app
 COPY . .
 RUN make build
 
-FROM registry.fedoraproject.org/fedora-minimal:35
+FROM registry.fedoraproject.org/fedora-minimal:37
 COPY --from=builder /app/otel-go-instrumentation /
 CMD ["/otel-go-instrumentation"]
