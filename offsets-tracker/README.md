@@ -66,7 +66,7 @@ Fetching `go.dev` for discovering versions can be enabled by setting`.FindVersio
 ## Download Strategy
 
 offsets-tracker wraps every Go module version as a Go application that depends on that module.
-Those applications are the result of [generating template files](https://github.com/open-telemetry/opentelemetry-go-instrumentation/tree/859307debe421533dcf2e0192b5f89c021458e53/offsets-tracker/downloader/wrapper) with the appropriate version.
+Those applications are the result of [generating template files](./downloader/wrapper) with the appropriate version.
 
 In the case of the Go standard library, offsets-tracker downloads the published binary for the specified version. 
 
