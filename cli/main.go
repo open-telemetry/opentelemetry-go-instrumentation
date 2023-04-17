@@ -20,11 +20,11 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/open-telemetry/opentelemetry-go-instrumentation/pkg/errors"
-	"github.com/open-telemetry/opentelemetry-go-instrumentation/pkg/instrumentors"
-	"github.com/open-telemetry/opentelemetry-go-instrumentation/pkg/log"
-	"github.com/open-telemetry/opentelemetry-go-instrumentation/pkg/opentelemetry"
-	"github.com/open-telemetry/opentelemetry-go-instrumentation/pkg/process"
+	"go.opentelemetry.io/auto/pkg/errors"
+	"go.opentelemetry.io/auto/pkg/instrumentors"
+	"go.opentelemetry.io/auto/pkg/log"
+	"go.opentelemetry.io/auto/pkg/opentelemetry"
+	"go.opentelemetry.io/auto/pkg/process"
 )
 
 func main() {

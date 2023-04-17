@@ -23,8 +23,8 @@ import (
 	"strings"
 
 	"github.com/hashicorp/go-version"
-	"github.com/open-telemetry/opentelemetry-go-instrumentation/pkg/log"
-	"github.com/open-telemetry/opentelemetry-go-instrumentation/pkg/process/ptrace"
+	"go.opentelemetry.io/auto/pkg/log"
+	"go.opentelemetry.io/auto/pkg/process/ptrace"
 	"golang.org/x/arch/x86/x86asm"
 )
 

@@ -66,7 +66,7 @@ Fetching `go.dev` for discovering versions can be enabled by setting`.FindVersio
 ## Download Strategy
 
 offsets-tracker wraps every Go module version as a Go application that depends on that module.
-Those applications are the result of [generating template files](https://github.com/keyval-dev/offsets-tracker/tree/master/downloader/wrapper) with the appropriate version.
+Those applications are the result of [generating template files](./downloader/wrapper) with the appropriate version.
 
 In the case of the Go standard library, offsets-tracker downloads the published binary for the specified version. 
 
@@ -85,7 +85,7 @@ VersionConstraint(&minimunGoVersion)
 ## Project Status
 
 This project is currently in Alpha.
-Check out our [issues section](https://github.com/keyval-dev/offsets-tracker/issues) to learn more about improvements we're working on.
+Check out our [issues section](https://github.com/open-telemetry/opentelemetry-go-instrumentation/issues) to learn more about improvements we're working on.
 
 ## License
 
