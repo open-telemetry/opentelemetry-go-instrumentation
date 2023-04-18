@@ -1,4 +1,4 @@
-module github.com/open-telemetry/opentelemetry-go-instrumentation/internal/tools
+module go.opentelemetry.io/auto/internal/tools
 
 go 1.18
 

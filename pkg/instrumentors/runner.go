@@ -19,10 +19,10 @@ import (
 
 	"github.com/cilium/ebpf/link"
 	"github.com/cilium/ebpf/rlimit"
-	"github.com/open-telemetry/opentelemetry-go-instrumentation/pkg/inject"
-	"github.com/open-telemetry/opentelemetry-go-instrumentation/pkg/instrumentors/context"
-	"github.com/open-telemetry/opentelemetry-go-instrumentation/pkg/log"
-	"github.com/open-telemetry/opentelemetry-go-instrumentation/pkg/process"
+	"go.opentelemetry.io/auto/pkg/inject"
+	"go.opentelemetry.io/auto/pkg/instrumentors/context"
+	"go.opentelemetry.io/auto/pkg/log"
+	"go.opentelemetry.io/auto/pkg/process"
 )
 
 func (m *instrumentorsManager) Run(target *process.TargetDetails) error {

@@ -9,8 +9,8 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/keyval-dev/offsets-tracker/schema"
-	"github.com/keyval-dev/offsets-tracker/target"
+	"go.opentelemetry.io/auto/offsets-tracker/schema"
+	"go.opentelemetry.io/auto/offsets-tracker/target"
 )
 
 func WriteResults(fileName string, results ...*target.Result) error {
