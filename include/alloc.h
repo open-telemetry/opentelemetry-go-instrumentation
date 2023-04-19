@@ -52,7 +52,7 @@ static __always_inline u64 get_area_end(u64 start)
 {
     s64 partition_size = (end_addr - start_addr) / total_cpus;
     s32 end_index = 1;
-    u64* end = (u64*)bpf_map_lookup_elem(&alloc_map, &end_index);
+    u64 *end = (u64 *)bpf_map_lookup_elem(&alloc_map, &end_index);
     if (end == NULL || *end == 0)
     {
         u64 current_end_addr = start + partition_size;

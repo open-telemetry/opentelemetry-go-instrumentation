@@ -132,12 +132,12 @@ int uprobe_Http2Client_CreateHeaderFields(struct pt_regs *ctx)
     struct go_slice_user_ptr slice_user_ptr = {};
     if (is_registers_abi)
     {
-        slice.array = (void*) GO_PARAM1(ctx);
+        slice.array = (void *)GO_PARAM1(ctx);
         slice.len = (s32) GO_PARAM2(ctx);
         slice.cap = (s32) GO_PARAM3(ctx);
-        slice_user_ptr.array = (void*) &GO_PARAM1(ctx);
-        slice_user_ptr.len = (void*) &GO_PARAM2(ctx);
-        slice_user_ptr.cap = (void*) &GO_PARAM3(ctx);
+        slice_user_ptr.array = (void *)&GO_PARAM1(ctx);
+        slice_user_ptr.len = (void *)&GO_PARAM2(ctx);
+        slice_user_ptr.cap = (void *)&GO_PARAM3(ctx);
     }
     else
     {
@@ -147,9 +147,9 @@ int uprobe_Http2Client_CreateHeaderFields(struct pt_regs *ctx)
         slice.array = get_argument(ctx, slice_pointer_pos);
         slice.len = (long)get_argument(ctx, slice_len_pos);
         slice.cap = (long)get_argument(ctx, slice_cap_pos);
-        slice_user_ptr.array = (void *)(PT_REGS_SP(ctx)+(slice_pointer_pos*8));
-        slice_user_ptr.len = (void *)(PT_REGS_SP(ctx)+(slice_len_pos*8));
-        slice_user_ptr.cap = (void *)(PT_REGS_SP(ctx)+(slice_cap_pos*8));
+        slice_user_ptr.array = (void *)(PT_REGS_SP(ctx) + (slice_pointer_pos * 8));
+        slice_user_ptr.len = (void *)(PT_REGS_SP(ctx) + (slice_len_pos * 8));
+        slice_user_ptr.cap = (void *)(PT_REGS_SP(ctx) + (slice_cap_pos * 8));
     }
     char key[11] = "traceparent";
     struct go_string key_str = write_user_go_string(key, sizeof(key));
@@ -160,7 +160,7 @@ int uprobe_Http2Client_CreateHeaderFields(struct pt_regs *ctx)
 
     // Get grpc request struct
     void *context_ptr = 0;
-    bpf_probe_read(&context_ptr, sizeof(context_ptr), (void *)(PT_REGS_SP(ctx)+(context_pointer_pos*8)));
+    bpf_probe_read(&context_ptr, sizeof(context_ptr), (void *)(PT_REGS_SP(ctx) + (context_pointer_pos * 8)));
     void *parent_ctx = find_context_in_map(context_ptr, &context_to_grpc_events);
     void *grpcReq_ptr = bpf_map_lookup_elem(&context_to_grpc_events, &parent_ctx);
     struct grpc_request_t grpcReq = {};
