@@ -133,8 +133,8 @@ int uprobe_Http2Client_CreateHeaderFields(struct pt_regs *ctx)
     if (is_registers_abi)
     {
         slice.array = (void *)GO_PARAM1(ctx);
-        slice.len = (s32) GO_PARAM2(ctx);
-        slice.cap = (s32) GO_PARAM3(ctx);
+        slice.len = (s32)GO_PARAM2(ctx);
+        slice.cap = (s32)GO_PARAM3(ctx);
         slice_user_ptr.array = (void *)&GO_PARAM1(ctx);
         slice_user_ptr.len = (void *)&GO_PARAM2(ctx);
         slice_user_ptr.cap = (void *)&GO_PARAM3(ctx);
