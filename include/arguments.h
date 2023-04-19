@@ -63,9 +63,3 @@ void *get_argument(struct pt_regs *ctx, int index)
 
     return get_argument_by_stack(ctx, index);
 }
-
-// In x86, current goroutine is pointed by r14, according to
-// https://go.googlesource.com/go/+/refs/heads/dev.regabi/src/cmd/compile/internal-abi.md#amd64-architecture
-inline void *get_goroutine_address(struct pt_regs *ctx) {
-    return (void *)(ctx->r14);
-}
