@@ -20,15 +20,15 @@ import (
 	"errors"
 	"os"
 
-	"github.com/open-telemetry/opentelemetry-go-instrumentation/pkg/instrumentors/bpffs"
+	"go.opentelemetry.io/auto/pkg/instrumentors/bpffs"
 
 	"github.com/cilium/ebpf"
 	"github.com/cilium/ebpf/link"
 	"github.com/cilium/ebpf/perf"
-	"github.com/open-telemetry/opentelemetry-go-instrumentation/pkg/inject"
-	"github.com/open-telemetry/opentelemetry-go-instrumentation/pkg/instrumentors/context"
-	"github.com/open-telemetry/opentelemetry-go-instrumentation/pkg/instrumentors/events"
-	"github.com/open-telemetry/opentelemetry-go-instrumentation/pkg/log"
+	"go.opentelemetry.io/auto/pkg/inject"
+	"go.opentelemetry.io/auto/pkg/instrumentors/context"
+	"go.opentelemetry.io/auto/pkg/instrumentors/events"
+	"go.opentelemetry.io/auto/pkg/log"
 	"go.opentelemetry.io/otel/attribute"
 	semconv "go.opentelemetry.io/otel/semconv/v1.7.0"
 	"go.opentelemetry.io/otel/trace"
@@ -127,7 +127,7 @@ func (g *grpcServerInstrumentor) Load(ctx *context.InstrumentorContext) error {
 	}
 
 	up, err := ctx.Executable.Uprobe("", uprobeObj, &link.UprobeOptions{
-		Offset: offset,
+		Address: offset,
 	})
 	if err != nil {
 		return err
@@ -141,7 +141,7 @@ func (g *grpcServerInstrumentor) Load(ctx *context.InstrumentorContext) error {
 
 	for _, ret := range retOffsets {
 		retProbe, err := ctx.Executable.Uprobe("", g.bpfObjects.UprobeServerHandleStreamReturns, &link.UprobeOptions{
-			Offset: ret,
+			Address: ret,
 		})
 		if err != nil {
 			return err
@@ -154,7 +154,7 @@ func (g *grpcServerInstrumentor) Load(ctx *context.InstrumentorContext) error {
 		return err
 	}
 	hProbe, err := ctx.Executable.Uprobe("", g.bpfObjects.UprobeDecodeStateDecodeHeader, &link.UprobeOptions{
-		Offset: headerOffset,
+		Address: headerOffset,
 	})
 	if err != nil {
 		return err

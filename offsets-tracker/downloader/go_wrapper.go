@@ -7,7 +7,7 @@ import (
 	"io/ioutil"
 	"path"
 
-	"github.com/open-telemetry/offsets-tracker/utils"
+	"go.opentelemetry.io/auto/offsets-tracker/utils"
 )
 
 const appName = "testapp"

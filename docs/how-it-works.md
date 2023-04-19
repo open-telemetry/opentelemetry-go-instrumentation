@@ -1,4 +1,4 @@
-# OpenTelemtry Go Instrumentation - How it works
+# OpenTelemetry Go Instrumentation - How it works
 
 We aim to bring the automatic instrumentation experience found in languages like [Java](https://github.com/open-telemetry/opentelemetry-java-instrumentation), [Python](https://github.com/open-telemetry/opentelemetry-python-contrib) and [JavaScript](https://github.com/open-telemetry/opentelemetry-js-contrib) to Go applications.
 
@@ -30,7 +30,7 @@ Notice that one of our design goals is to support stripped Go binaries - meaning
 
 We currently track instrumented structs inside the Go standard library and selected open source packages. This solution does not require DWARF information on the target binary and provides stability to instrumentations. Instrumentation authors can get a field location by name instead of hard coding a field offset.
 
-The offsets-tracker generates the [offset_results.json](https://github.com/open-telemetry/opentelemetry-go-instrumentation/blob/master/pkg/inject/offset_results.json) file. This file contains the offsets of the fields in the instrumented structs.
+The offsets-tracker generates the [offset_results.json](https://github.com/open-telemetry/opentelemetry-go-instrumentation/blob/main/pkg/inject/offset_results.json) file. This file contains the offsets of the fields in the instrumented structs.
 
 ### Uretprobes
 

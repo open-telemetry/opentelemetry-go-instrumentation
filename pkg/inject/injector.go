@@ -23,8 +23,8 @@ import (
 	"github.com/hashicorp/go-version"
 
 	"github.com/cilium/ebpf"
-	"github.com/open-telemetry/opentelemetry-go-instrumentation/pkg/log"
-	"github.com/open-telemetry/opentelemetry-go-instrumentation/pkg/process"
+	"go.opentelemetry.io/auto/pkg/log"
+	"go.opentelemetry.io/auto/pkg/process"
 )
 
 var (

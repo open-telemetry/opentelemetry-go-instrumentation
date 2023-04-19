@@ -5,10 +5,10 @@ import (
 	"os"
 
 	"github.com/hashicorp/go-version"
-	"github.com/open-telemetry/offsets-tracker/binary"
-	"github.com/open-telemetry/offsets-tracker/cache"
-	"github.com/open-telemetry/offsets-tracker/downloader"
-	"github.com/open-telemetry/offsets-tracker/versions"
+	"go.opentelemetry.io/auto/offsets-tracker/binary"
+	"go.opentelemetry.io/auto/offsets-tracker/cache"
+	"go.opentelemetry.io/auto/offsets-tracker/downloader"
+	"go.opentelemetry.io/auto/offsets-tracker/versions"
 )
 
 type VersionsStrategy int

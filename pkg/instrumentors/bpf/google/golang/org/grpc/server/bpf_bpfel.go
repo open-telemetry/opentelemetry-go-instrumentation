@@ -13,6 +13,20 @@ import (
 	"github.com/cilium/ebpf"
 )
 
+type bpfGrpcRequestT struct {
+	StartTime uint64
+	EndTime   uint64
+	Method    [100]int8
+	Sc        bpfSpanContext
+	Psc       bpfSpanContext
+	_         [4]byte
+}
+
+type bpfSpanContext struct {
+	TraceID [16]uint8
+	SpanID  [8]uint8
+}
+
 // loadBpf returns the embedded CollectionSpec for bpf.
 func loadBpf() (*ebpf.CollectionSpec, error) {
 	reader := bytes.NewReader(_BpfBytes)

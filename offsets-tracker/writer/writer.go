@@ -9,12 +9,10 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/open-telemetry/offsets-tracker/versions"
-
 	"github.com/hashicorp/go-version"
-
-	"github.com/open-telemetry/offsets-tracker/schema"
-	"github.com/open-telemetry/offsets-tracker/target"
+	"go.opentelemetry.io/auto/offsets-tracker/schema"
+	"go.opentelemetry.io/auto/offsets-tracker/target"
+	"go.opentelemetry.io/auto/offsets-tracker/versions"
 )
 
 func WriteResults(fileName string, results ...*target.Result) error {
