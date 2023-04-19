@@ -77,6 +77,11 @@ func (h *httpServerInstrumentor) Load(ctx *context.InstrumentorContext) error {
 			Field:      "URL",
 		},
 		{
+			VarName:    "ctx_ptr_pos",
+			StructName: "net/http.Request",
+			Field:      "ctx",
+		},
+		{
 			VarName:    "path_ptr_pos",
 			StructName: "net/url.URL",
 			Field:      "Path",
