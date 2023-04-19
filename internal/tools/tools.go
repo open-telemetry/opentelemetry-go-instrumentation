@@ -15,7 +15,7 @@
 //go:build tools
 // +build tools
 
-package tools // import "github.com/open-telemetry/opentelemetry-go-instrumentation/internal/tools"
+package tools // import "go.opentelemetry.io/auto/internal/tools"
 
 import (
 	_ "github.com/google/go-licenses"

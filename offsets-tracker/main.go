@@ -7,9 +7,9 @@ import (
 	"os"
 
 	"github.com/hashicorp/go-version"
-	"github.com/keyval-dev/offsets-tracker/binary"
-	"github.com/keyval-dev/offsets-tracker/target"
-	"github.com/keyval-dev/offsets-tracker/writer"
+	"go.opentelemetry.io/auto/offsets-tracker/binary"
+	"go.opentelemetry.io/auto/offsets-tracker/target"
+	"go.opentelemetry.io/auto/offsets-tracker/writer"
 )
 
 const (

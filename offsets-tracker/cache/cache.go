@@ -3,11 +3,12 @@ package cache
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/keyval-dev/offsets-tracker/binary"
-	"github.com/keyval-dev/offsets-tracker/schema"
 	"io/ioutil"
 	"log"
 	"os"
+
+	"go.opentelemetry.io/auto/offsets-tracker/binary"
+	"go.opentelemetry.io/auto/offsets-tracker/schema"
 )
 
 type Cache struct {

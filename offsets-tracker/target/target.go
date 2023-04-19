@@ -2,12 +2,13 @@ package target
 
 import (
 	"fmt"
-	"github.com/hashicorp/go-version"
-	"github.com/keyval-dev/offsets-tracker/binary"
-	"github.com/keyval-dev/offsets-tracker/cache"
-	"github.com/keyval-dev/offsets-tracker/downloader"
-	"github.com/keyval-dev/offsets-tracker/versions"
 	"os"
+
+	"github.com/hashicorp/go-version"
+	"go.opentelemetry.io/auto/offsets-tracker/binary"
+	"go.opentelemetry.io/auto/offsets-tracker/cache"
+	"go.opentelemetry.io/auto/offsets-tracker/downloader"
+	"go.opentelemetry.io/auto/offsets-tracker/versions"
 )
 
 type VersionsStrategy int

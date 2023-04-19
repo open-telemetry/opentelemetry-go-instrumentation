@@ -3,10 +3,11 @@ package downloader
 import (
 	_ "embed"
 	"fmt"
-	"github.com/keyval-dev/offsets-tracker/utils"
 	"io/fs"
 	"io/ioutil"
 	"path"
+
+	"go.opentelemetry.io/auto/offsets-tracker/utils"
 )
 
 const appName = "testapp"
