@@ -63,3 +63,8 @@ void *get_argument(struct pt_regs *ctx, int index)
 
     return get_argument_by_stack(ctx, index);
 }
+
+inline void *get_goroutine_address(struct pt_regs *ctx)
+{
+    return (void *)GOROUTINE(ctx);
+}

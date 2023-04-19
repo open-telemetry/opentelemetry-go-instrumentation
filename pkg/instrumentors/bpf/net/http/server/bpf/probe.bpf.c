@@ -49,7 +49,6 @@ struct
 volatile const u64 method_ptr_pos;
 volatile const u64 url_ptr_pos;
 volatile const u64 path_ptr_pos;
-volatile const u64 ctx_ptr_pos;
 
 // This instrumentation attaches uprobe to the following function:
 // func (mux *ServeMux) ServeHTTP(w ResponseWriter, r *Request)
@@ -83,31 +82,26 @@ int uprobe_ServerMux_ServeHTTP(struct pt_regs *ctx)
     path_size = path_size < path_len ? path_size : path_len;
     bpf_probe_read(&httpReq.path, path_size, path_ptr);
 
-    // Get Request.ctx
-    void *ctx_iface = 0;
-    bpf_probe_read(&ctx_iface, sizeof(ctx_iface), (void *)(req_ptr + ctx_ptr_pos + 8));
+    // Get goroutine pointer
+    void *goroutine = get_goroutine_address(ctx);
 
     // Write event
     httpReq.sc = generate_span_context();
-    bpf_map_update_elem(&context_to_http_events, &ctx_iface, &httpReq, 0);
-    long res = bpf_map_update_elem(&spans_in_progress, &ctx_iface, &httpReq.sc, 0);
+    bpf_map_update_elem(&context_to_http_events, &goroutine, &httpReq, 0);
+    bpf_map_update_elem(&spans_in_progress, &goroutine, &httpReq.sc, 0);
     return 0;
 }
 
 SEC("uprobe/ServerMux_ServeHTTP")
 int uprobe_ServerMux_ServeHTTP_Returns(struct pt_regs *ctx)
 {
-    u64 request_pos = 4;
-    void *req_ptr = get_argument_by_stack(ctx, request_pos);
-    void *ctx_iface = 0;
-    bpf_probe_read(&ctx_iface, sizeof(ctx_iface), (void *)(req_ptr + ctx_ptr_pos + 8));
-
-    void *httpReq_ptr = bpf_map_lookup_elem(&context_to_http_events, &ctx_iface);
+    void *goroutine = get_goroutine_address(ctx);
+    void *httpReq_ptr = bpf_map_lookup_elem(&context_to_http_events, &goroutine);
     struct http_request_t httpReq = {};
     bpf_probe_read(&httpReq, sizeof(httpReq), httpReq_ptr);
     httpReq.end_time = bpf_ktime_get_ns();
     bpf_perf_event_output(ctx, &events, BPF_F_CURRENT_CPU, &httpReq, sizeof(httpReq));
-    bpf_map_delete_elem(&context_to_http_events, &ctx_iface);
-    bpf_map_delete_elem(&spans_in_progress, &ctx_iface);
+    bpf_map_delete_elem(&context_to_http_events, &goroutine);
+    bpf_map_delete_elem(&spans_in_progress, &goroutine);
     return 0;
 }
