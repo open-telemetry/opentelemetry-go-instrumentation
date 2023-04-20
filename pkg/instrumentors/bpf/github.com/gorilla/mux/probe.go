@@ -40,14 +40,14 @@ import (
 type HttpEvent struct {
 	StartTime   uint64
 	EndTime     uint64
-	Method      [100]byte
+	Method      [6]byte
 	Path        [100]byte
 	SpanContext context.EbpfSpanContext
 }
 
 type gorillaMuxInstrumentor struct {
 	bpfObjects   *bpfObjects
-	uprobe       link.Link
+	uprobes      []link.Link
 	returnProbs  []link.Link
 	eventsReader *perf.Reader
 }
@@ -77,11 +77,6 @@ func (g *gorillaMuxInstrumentor) Load(ctx *context.InstrumentorContext) error {
 			Field:      "URL",
 		},
 		{
-			VarName:    "ctx_ptr_pos",
-			StructName: "net/http.Request",
-			Field:      "ctx",
-		},
-		{
 			VarName:    "path_ptr_pos",
 			StructName: "net/url.URL",
 			Field:      "Path",
@@ -102,34 +97,9 @@ func (g *gorillaMuxInstrumentor) Load(ctx *context.InstrumentorContext) error {
 		return err
 	}
 
-	offset, err := ctx.TargetDetails.GetFunctionOffset(g.FuncNames()[0])
-	if err != nil {
-		return err
+	for _, funcName := range g.FuncNames() {
+		g.registerProbes(ctx, funcName)
 	}
-
-	up, err := ctx.Executable.Uprobe("", g.bpfObjects.UprobeGorillaMuxServeHTTP, &link.UprobeOptions{
-		Address: offset,
-	})
-	if err != nil {
-		return err
-	}
-
-	g.uprobe = up
-	retOffsets, err := ctx.TargetDetails.GetFunctionReturns(g.FuncNames()[0])
-	if err != nil {
-		return err
-	}
-
-	for _, ret := range retOffsets {
-		retProbe, err := ctx.Executable.Uprobe("", g.bpfObjects.UprobeGorillaMuxServeHTTP_Returns, &link.UprobeOptions{
-			Address: ret,
-		})
-		if err != nil {
-			return err
-		}
-		g.returnProbs = append(g.returnProbs, retProbe)
-	}
-
 	rd, err := perf.NewReader(g.bpfObjects.Events, os.Getpagesize())
 	if err != nil {
 		return err
@@ -137,6 +107,42 @@ func (g *gorillaMuxInstrumentor) Load(ctx *context.InstrumentorContext) error {
 	g.eventsReader = rd
 
 	return nil
+}
+
+func (g *gorillaMuxInstrumentor) registerProbes(ctx *context.InstrumentorContext, funcName string) {
+	logger := log.Logger.WithName("gorilla/mux-instrumentor").WithValues("function", funcName)
+	offset, err := ctx.TargetDetails.GetFunctionOffset(funcName)
+	if err != nil {
+		logger.Error(err, "could not find function start offset. Skipping")
+		return
+	}
+	retOffsets, err := ctx.TargetDetails.GetFunctionReturns(funcName)
+	if err != nil {
+		logger.Error(err, "could not find function end offset. Skipping")
+		return
+	}
+
+	up, err := ctx.Executable.Uprobe("", g.bpfObjects.UprobeGorillaMuxServeHTTP, &link.UprobeOptions{
+		Address: offset,
+	})
+	if err != nil {
+		logger.V(1).Info("could not insert start uprobe. Skipping",
+			"error", err.Error())
+		return
+	}
+
+	g.uprobes = append(g.uprobes, up)
+
+	for _, ret := range retOffsets {
+		retProbe, err := ctx.Executable.Uprobe("", g.bpfObjects.UprobeGorillaMuxServeHTTP_Returns, &link.UprobeOptions{
+			Address: ret,
+		})
+		if err != nil {
+			logger.Error(err, "could not insert return uprobe. Skipping")
+			return
+		}
+		g.returnProbs = append(g.returnProbs, retProbe)
+	}
 }
 
 func (g *gorillaMuxInstrumentor) Run(eventsChan chan<- *events.Event) {
@@ -196,8 +202,8 @@ func (g *gorillaMuxInstrumentor) Close() {
 		g.eventsReader.Close()
 	}
 
-	if g.uprobe != nil {
-		g.uprobe.Close()
+	for _, r := range g.uprobes {
+		r.Close()
 	}
 
 	for _, r := range g.returnProbs {

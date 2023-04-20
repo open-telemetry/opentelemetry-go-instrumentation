@@ -18,25 +18,29 @@
 
 char __license[] SEC("license") = "Dual MIT/GPL";
 
-#define MAX_SIZE 100
+#define PATH_MAX_LEN 100
+#define METHOD_MAX_LEN 6 // Longer method: DELETE
 #define MAX_CONCURRENT 50
 
 struct http_request_t {
     u64 start_time;
     u64 end_time;
-    char method[MAX_SIZE];
-    char path[MAX_SIZE];
+    char method[METHOD_MAX_LEN];
+    char path[PATH_MAX_LEN];
     struct span_context sc;
 };
 
-struct {
+// map key: pointer to the goroutine that handles the request
+struct
+{
 	__uint(type, BPF_MAP_TYPE_HASH);
-	__type(key, void*);
+	__type(key, void *);
 	__type(value, struct http_request_t);
 	__uint(max_entries, MAX_CONCURRENT);
 } context_to_http_events SEC(".maps");
 
-struct {
+struct
+{
 	__uint(type, BPF_MAP_TYPE_PERF_EVENT_ARRAY);
 } events SEC(".maps");
 
@@ -44,7 +48,6 @@ struct {
 volatile const u64 method_ptr_pos;
 volatile const u64 url_ptr_pos;
 volatile const u64 path_ptr_pos;
-volatile const u64 ctx_ptr_pos;
 
 // This instrumentation attaches uprobe to the following function:
 // func (mux *ServeMux) ServeHTTP(w ResponseWriter, r *Request)
@@ -77,14 +80,13 @@ int uprobe_GorillaMux_ServeHTTP(struct pt_regs *ctx) {
     path_size = path_size < path_len ? path_size : path_len;
     bpf_probe_read(&httpReq.path, path_size, path_ptr);
 
-    // Get Request.ctx
-    void *ctx_iface = 0;
-    bpf_probe_read(&ctx_iface, sizeof(ctx_iface), (void *)(req_ptr+ctx_ptr_pos+8));
+    // Get goroutine pointer
+    void *goroutine = get_goroutine_address(ctx);
 
     // Write event
     httpReq.sc = generate_span_context();
-    bpf_map_update_elem(&context_to_http_events, &ctx_iface, &httpReq, 0);
-    long res = bpf_map_update_elem(&spans_in_progress, &ctx_iface, &httpReq.sc, 0);
+    bpf_map_update_elem(&context_to_http_events, &goroutine, &httpReq, 0);
+    long res = bpf_map_update_elem(&spans_in_progress, &goroutine, &httpReq.sc, 0);
     return 0;
 }
 
@@ -92,15 +94,14 @@ SEC("uprobe/GorillaMux_ServeHTTP")
 int uprobe_GorillaMux_ServeHTTP_Returns(struct pt_regs *ctx) {
     u64 request_pos = 4;
     void* req_ptr = get_argument(ctx, request_pos);
-    void *ctx_iface = 0;
-    bpf_probe_read(&ctx_iface, sizeof(ctx_iface), (void *)(req_ptr+ctx_ptr_pos+8));
+    void *goroutine = get_goroutine_address(ctx);
 
-    void* httpReq_ptr = bpf_map_lookup_elem(&context_to_http_events, &ctx_iface);
+    void* httpReq_ptr = bpf_map_lookup_elem(&context_to_http_events, &goroutine);
     struct http_request_t httpReq = {};
     bpf_probe_read(&httpReq, sizeof(httpReq), httpReq_ptr);
     httpReq.end_time = bpf_ktime_get_ns();
     bpf_perf_event_output(ctx, &events, BPF_F_CURRENT_CPU, &httpReq, sizeof(httpReq));
-    bpf_map_delete_elem(&context_to_http_events, &ctx_iface);
-    bpf_map_delete_elem(&spans_in_progress, &ctx_iface);
+    bpf_map_delete_elem(&context_to_http_events, &goroutine);
+    bpf_map_delete_elem(&spans_in_progress, &goroutine);
     return 0;
 }
