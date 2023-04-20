@@ -28,21 +28,22 @@
                 {
                   "key": "http.method",
                   "value": {
-                    "stringValue": ""
+                    "stringValue": "GET"
                   }
                 },
                 {
                   "key": "http.target",
                   "value": {
-                    "stringValue": ""
+                    "stringValue": "/users/foo"
                   }
                 }
               ],
               "kind": 2,
+              "name": "/users/foo",
               "parentSpanId": "",
-              "spanId": "",
+              "spanId": "xxxxx",
               "status": {},
-              "traceId": ""
+              "traceId": "xxxxx"
             }
           ]
         },
