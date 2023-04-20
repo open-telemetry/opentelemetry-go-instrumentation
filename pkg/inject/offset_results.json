@@ -3459,6 +3459,10 @@
             {
               "offset": 8,
               "version": "v1.55.0-dev"
+            },
+            {
+              "offset": 8,
+              "version": "v1.56.0-dev"
             }
           ]
         },
@@ -3997,6 +4001,10 @@
             {
               "offset": 8,
               "version": "v1.55.0-dev"
+            },
+            {
+              "offset": 8,
+              "version": "v1.56.0-dev"
             }
           ]
         },
@@ -4535,6 +4543,10 @@
             {
               "offset": 24,
               "version": "v1.55.0-dev"
+            },
+            {
+              "offset": 24,
+              "version": "v1.56.0-dev"
             }
           ]
         },
@@ -5073,6 +5085,10 @@
             {
               "offset": 32,
               "version": "v1.55.0-dev"
+            },
+            {
+              "offset": 32,
+              "version": "v1.56.0-dev"
             }
           ]
         },
@@ -5611,6 +5627,10 @@
             {
               "offset": 0,
               "version": "v1.55.0-dev"
+            },
+            {
+              "offset": 0,
+              "version": "v1.56.0-dev"
             }
           ]
         },
@@ -6149,6 +6169,10 @@
             {
               "offset": 80,
               "version": "v1.55.0-dev"
+            },
+            {
+              "offset": 80,
+              "version": "v1.56.0-dev"
             }
           ]
         }
