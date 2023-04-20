@@ -61,7 +61,7 @@ func (h *httpServerInstrumentor) LibraryName() string {
 }
 
 func (h *httpServerInstrumentor) FuncNames() []string {
-	return []string{"net/http.HandlerFunc.ServeHTTP"}
+	return []string{"net/http.(*ServeMux).ServeHTTP","net/http.HandlerFunc.ServeHTTP"}
 }
 
 func (h *httpServerInstrumentor) Load(ctx *context.InstrumentorContext) error {
@@ -97,9 +97,9 @@ func (h *httpServerInstrumentor) Load(ctx *context.InstrumentorContext) error {
 		return err
 	}
 
-	for _, funcName := range h.FuncNames() {
-		h.registerProbes(ctx, funcName)
-	}
+	// since both ServeMux.ServeHttp and HandlerFunc.ServeHttp functions are the same
+	// only one probe needs to be registered
+	h.registerProbes(ctx, (h.FuncNames()[0]))
 
 	rd, err := perf.NewReader(h.bpfObjects.Events, os.Getpagesize())
 	if err != nil {
