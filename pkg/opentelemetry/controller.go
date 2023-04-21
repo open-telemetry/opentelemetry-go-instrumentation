@@ -19,11 +19,13 @@ import (
 	"fmt"
 	"os"
 	"runtime"
+	"strings"
 	"time"
 
 	"github.com/prometheus/procfs"
 	"go.opentelemetry.io/auto/pkg/instrumentors/events"
 	"go.opentelemetry.io/auto/pkg/log"
+	"go.opentelemetry.io/otel/exporters/otlp/otlptrace"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
@@ -34,8 +36,17 @@ import (
 )
 
 const (
-	otelEndpointEnvVar    = "OTEL_EXPORTER_OTLP_ENDPOINT"
 	otelServiceNameEnvVar = "OTEL_SERVICE_NAME"
+)
+
+var (
+	// releaseVersion = ??? // TODO: reference version of the build to include in outward comms
+	// start of this autoinstrumentation's exporter User-Agent header, e.g. ""OTel-Go-Auto-Instrumentation/1.2.3"
+	baseUserAgent = fmt.Sprintf("OTel-Go-Auto-Instrumentation") // TODO: include the releaseVersion
+	// Information about the runtime environment for inclusion in User-Agent
+	runtimeInfo = fmt.Sprintf("%s (%s/%s)", strings.Replace(runtime.Version(), "go", "go/", 1), runtime.GOOS, runtime.GOARCH)
+	// The default User-Agent when no additions have been given
+	autoinstUserAgent = fmt.Sprintf("%s %s", baseUserAgent, runtimeInfo)
 )
 
 type Controller struct {
@@ -83,11 +94,6 @@ func (c *Controller) convertTime(t int64) time.Time {
 }
 
 func NewController() (*Controller, error) {
-	endpoint, exists := os.LookupEnv(otelEndpointEnvVar)
-	if !exists {
-		return nil, fmt.Errorf("%s env var must be set", otelEndpointEnvVar)
-	}
-
 	serviceName, exists := os.LookupEnv(otelServiceNameEnvVar)
 	if !exists {
 		return nil, fmt.Errorf("%s env var must be set", otelServiceNameEnvVar)
@@ -98,26 +104,20 @@ func NewController() (*Controller, error) {
 		resource.WithAttributes(
 			semconv.ServiceNameKey.String(serviceName),
 			semconv.TelemetrySDKLanguageGo,
+			// TODO: semconv.TelemetryAutoVersionKey.String(releaseVersion),
 		),
 	)
 	if err != nil {
 		return nil, err
 	}
 
-	log.Logger.V(0).Info("Establishing connection to OpenTelemetry collector ...")
-	timeoutContext, cancel := context.WithTimeout(ctx, time.Second*10)
-	defer cancel()
-	conn, err := grpc.DialContext(timeoutContext, endpoint, grpc.WithInsecure(), grpc.WithBlock())
-	if err != nil {
-		log.Logger.Error(err, "unable to connect to OpenTelemetry collector", "addr", endpoint)
-		return nil, err
-	}
-
-	traceExporter, err := otlptracegrpc.New(ctx,
-		otlptracegrpc.WithGRPCConn(conn),
+	log.Logger.V(0).Info("Establishing connection to OTLP receiver ...")
+	otlpTraceClient := otlptracegrpc.NewClient(
+		otlptracegrpc.WithDialOption(grpc.WithUserAgent(autoinstUserAgent)),
 	)
-
+	traceExporter, err := otlptrace.New(ctx, otlpTraceClient)
 	if err != nil {
+		log.Logger.Error(err, "unable to connect to OTLP endpoint")
 		return nil, err
 	}
 
