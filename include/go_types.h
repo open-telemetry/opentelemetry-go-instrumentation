@@ -20,14 +20,14 @@
 struct go_string
 {
     char *str;
-    s32 len;
+    s64 len;
 };
 
 struct go_slice
 {
     void *array;
-    s32 len;
-    s32 cap;
+    s64 len;
+    s64 cap;
 };
 
 struct go_slice_user_ptr
@@ -41,6 +41,13 @@ struct go_iface
 {
     void *tab;
     void *data;
+};
+
+struct map_bucket {
+    char tophash[8];
+    struct go_string keys[8];
+    struct go_slice values[8];
+    void *overflow;
 };
 
 static __always_inline struct go_string write_user_go_string(char *str, u32 len)
