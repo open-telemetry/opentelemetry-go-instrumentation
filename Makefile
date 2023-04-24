@@ -36,7 +36,7 @@ build: generate
 
 .PHONY: docker-build
 docker-build:
-	docker build -t $(IMG) .
+	docker build --no-cache -t $(IMG) .
 
 .PHONY: offsets
 offsets:
