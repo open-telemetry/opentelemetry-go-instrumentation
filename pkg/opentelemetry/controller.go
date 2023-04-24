@@ -40,9 +40,9 @@ const (
 )
 
 var (
-	// releaseVersion = ??? // TODO: reference version of the build to include in outward comms
+	releaseVersion = "v0.1.0-alpha" // TODO: reference something instead of hard-coding
 	// start of this autoinstrumentation's exporter User-Agent header, e.g. ""OTel-Go-Auto-Instrumentation/1.2.3"
-	baseUserAgent = fmt.Sprintf("OTel-Go-Auto-Instrumentation") // TODO: include the releaseVersion
+	baseUserAgent = fmt.Sprintf("OTel-Go-Auto-Instrumentation/%s", releaseVersion)
 	// Information about the runtime environment for inclusion in User-Agent
 	runtimeInfo = fmt.Sprintf("%s (%s/%s)", strings.Replace(runtime.Version(), "go", "go/", 1), runtime.GOOS, runtime.GOARCH)
 	// The default User-Agent when no additions have been given
@@ -104,7 +104,7 @@ func NewController() (*Controller, error) {
 		resource.WithAttributes(
 			semconv.ServiceNameKey.String(serviceName),
 			semconv.TelemetrySDKLanguageGo,
-			// TODO: semconv.TelemetryAutoVersionKey.String(releaseVersion),
+			semconv.TelemetryAutoVersionKey.String(releaseVersion),
 		),
 	)
 	if err != nil {
