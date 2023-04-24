@@ -19,6 +19,8 @@ $(TOOLS)/%: | $(TOOLS)
 GOLICENSES = $(TOOLS)/go-licenses
 $(TOOLS)/go-licenses: PACKAGE=github.com/google/go-licenses
 
+IMG?=otel-go-instrumentation
+
 .PHONY: tools
 tools: $(GOLICENSES)
 
