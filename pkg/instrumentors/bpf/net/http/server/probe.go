@@ -42,11 +42,12 @@ import (
 // Event represents an event in an HTTP server during an HTTP
 // request-response.
 type Event struct {
-	StartTime   uint64
-	EndTime     uint64
-	Method      [6]byte
-	Path        [100]byte
-	SpanContext context.EBPFSpanContext
+	StartTime         uint64
+	EndTime           uint64
+	Method            [6]byte
+	Path              [100]byte
+	SpanContext       context.EBPFSpanContext
+	ParentSpanContext context.EBPFSpanContext
 }
 
 // Instrumentor is the net/http instrumentor.
@@ -94,6 +95,11 @@ func (h *Instrumentor) Load(ctx *context.InstrumentorContext) error {
 			VarName:    "path_ptr_pos",
 			StructName: "net/url.URL",
 			Field:      "Path",
+		},
+		{
+			VarName:    "headers_ptr_pos",
+			StructName: "net/http.Request",
+			Field:      "Header",
 		},
 	}, false)
 
@@ -198,13 +204,27 @@ func (h *Instrumentor) convertEvent(e *Event) *events.Event {
 		TraceFlags: trace.FlagsSampled,
 	})
 
+	var pscPtr *trace.SpanContext
+	if e.ParentSpanContext.TraceID.IsValid() {
+		psc := trace.NewSpanContext(trace.SpanContextConfig{
+			TraceID:    e.ParentSpanContext.TraceID,
+			SpanID:     e.ParentSpanContext.SpanID,
+			TraceFlags: trace.FlagsSampled,
+			Remote:     true,
+		})
+		pscPtr = &psc
+	} else {
+		pscPtr = nil
+	}
+
 	return &events.Event{
-		Library:     h.LibraryName(),
-		Name:        path,
-		Kind:        trace.SpanKindServer,
-		StartTime:   int64(e.StartTime),
-		EndTime:     int64(e.EndTime),
-		SpanContext: &sc,
+		Library:           h.LibraryName(),
+		Name:              path,
+		Kind:              trace.SpanKindServer,
+		StartTime:         int64(e.StartTime),
+		EndTime:           int64(e.EndTime),
+		SpanContext:       &sc,
+		ParentSpanContext: pscPtr,
 		Attributes: []attribute.KeyValue{
 			semconv.HTTPMethodKey.String(method),
 			semconv.HTTPTargetKey.String(path),
