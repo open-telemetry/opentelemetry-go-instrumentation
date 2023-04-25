@@ -19,7 +19,7 @@ $(TOOLS)/%: | $(TOOLS)
 GOLICENSES = $(TOOLS)/go-licenses
 $(TOOLS)/go-licenses: PACKAGE=github.com/google/go-licenses
 
-IMG_NAME ?= otel-go-instrumentation:local
+IMG_NAME ?= otel-go-instrumentation
 TARGET ?= amd64
 
 .PHONY: tools
