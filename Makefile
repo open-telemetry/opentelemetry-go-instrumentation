@@ -20,6 +20,7 @@ GOLICENSES = $(TOOLS)/go-licenses
 $(TOOLS)/go-licenses: PACKAGE=github.com/google/go-licenses
 
 IMG_NAME ?= otel-go-instrumentation:local
+TARGET ?= amd64
 
 .PHONY: tools
 tools: $(GOLICENSES)
@@ -28,7 +29,7 @@ tools: $(GOLICENSES)
 generate: export CFLAGS := $(BPF_INCLUDE)
 generate:
 	go mod tidy
-	go generate ./...
+	TARGET=$(TARGET) go generate ./...
 
 .PHONY: build
 build: generate
