@@ -19,7 +19,7 @@ $(TOOLS)/%: | $(TOOLS)
 GOLICENSES = $(TOOLS)/go-licenses
 $(TOOLS)/go-licenses: PACKAGE=github.com/google/go-licenses
 
-IMG?=otel-go-instrumentation
+IMG_NAME ?= otel-go-instrumentation:local
 
 .PHONY: tools
 tools: $(GOLICENSES)
@@ -36,7 +36,7 @@ build: generate
 
 .PHONY: docker-build
 docker-build:
-	docker buildx build -t $(IMG) .
+	docker build -t $(IMG_NAME) .
 
 .PHONY: offsets
 offsets:
@@ -70,7 +70,7 @@ fixture-nethttp: fixtures/nethttp
 fixture-gorillamux: fixtures/gorillamux
 fixtures/%: LIBRARY=$*
 fixtures/%:
-	IMG=otel-go-instrumentation $(MAKE) docker-build
+	$(MAKE) docker-build
 	cd test/e2e/$(LIBRARY) && docker build -t sample-app .
 	kind create cluster
 	kind load docker-image otel-go-instrumentation sample-app
