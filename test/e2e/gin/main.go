@@ -6,6 +6,8 @@ import (
 	"log"
 	"net/http"
 	"time"
+
+	"github.com/gin-gonic/gin"
 )
 
 func hello(w http.ResponseWriter, req *http.Request) {
@@ -13,8 +15,9 @@ func hello(w http.ResponseWriter, req *http.Request) {
 }
 
 func main() {
-	http.HandleFunc("/hello", hello)
-	go http.ListenAndServe(":8080", nil)
+	r := gin.Default()
+	r.Get("/hello", hello)
+	go r.run();
 
 	// give time for auto-instrumentation to start up
 	time.Sleep(5 * time.Second)
