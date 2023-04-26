@@ -66,6 +66,8 @@ It is critical you make sure the version you push upstream is correct.
     git push upstream <new tag>
     ```
 
+    The release workflow builds and publishes the docker image using the new `<new tag>` as the version.
+
 ## Release
 
 Finally create a Release for the new `<new tag>` on GitHub.
