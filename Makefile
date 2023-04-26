@@ -6,6 +6,11 @@ REPODIR := $(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
 BPF_INCLUDE += -I${REPODIR}/include/libbpf
 BPF_INCLUDE+= -I${REPODIR}/include
 
+.DEFAULT_GOAL := precommit
+
+.PHONY: precommit ci
+precommit: dependabot-generate
+
 # Tools
 TOOLS_MOD_DIR := ./internal/tools
 TOOLS = $(CURDIR)/.tools
@@ -19,8 +24,11 @@ $(TOOLS)/%: | $(TOOLS)
 GOLICENSES = $(TOOLS)/go-licenses
 $(TOOLS)/go-licenses: PACKAGE=github.com/google/go-licenses
 
+DBOTCONF = $(TOOLS)/dbotconf
+$(TOOLS)/dbotconf: PACKAGE=go.opentelemetry.io/build-tools/dbotconf
+
 .PHONY: tools
-tools: $(GOLICENSES)
+tools: $(GOLICENSES) $(DBOTCONF)
 
 .PHONY: generate
 generate: export CFLAGS := $(BPF_INCLUDE)
@@ -62,6 +70,15 @@ verify-licenses: generate $(GOLICENSES)
       rm -rf temp; \
       exit 1; \
     fi; \
+
+DEPENDABOT_CONFIG = .github/dependabot.yml
+.PHONY: dependabot-check
+dependabot-check: | $(DBOTCONF)
+	@$(DBOTCONF) verify $(DEPENDABOT_CONFIG) || echo "(run: make dependabot-generate)"
+
+.PHONY: dependabot-generate
+dependabot-generate: | $(DBOTCONF)
+	@$(DBOTCONF) generate > $(DEPENDABOT_CONFIG)
 
 .PHONY: fixture-nethttp fixture-gorillamux
 fixture-nethttp: fixtures/nethttp
