@@ -15,7 +15,7 @@ BPF_INCLUDE+= -I${REPODIR}/include
 .DEFAULT_GOAL := precommit
 
 .PHONY: precommit
-precommit: golangci-lint-fix
+precommit: license-header-check golangci-lint-fix
 
 # Tools
 $(TOOLS):
@@ -83,6 +83,16 @@ verify-licenses: generate $(GOLICENSES)
       rm -rf temp; \
       exit 1; \
     fi; \
+
+.PHONY: license-header-check
+license-header-check:
+	@licRes=$$(for f in $$(find . -type f \( -iname '*.go' -o -iname '*.sh' \) ! -path '**/third_party/*' ! -path './.git/*' ! -path './LICENSES/*' ) ; do \
+	           awk '/Copyright The OpenTelemetry Authors|generated|GENERATED/ && NR<=3 { found=1; next } END { if (!found) print FILENAME }' $$f; \
+	   done); \
+	   if [ -n "$${licRes}" ]; then \
+	           echo "license header checking failed:"; echo "$${licRes}"; \
+	           exit 1; \
+	   fi
 
 .PHONY: fixture-nethttp fixture-gorillamux
 fixture-nethttp: fixtures/nethttp
