@@ -63,9 +63,10 @@ verify-licenses: | $(GOLICENSES)
       exit 1; \
     fi; \
 
-.PHONY: fixture-nethttp fixture-gorillamux
+.PHONY: fixture-nethttp fixture-gorillamux fixtures/grpc
 fixture-nethttp: fixtures/nethttp
 fixture-gorillamux: fixtures/gorillamux
+fixture-grpc: fixtures/grpc
 fixtures/%: LIBRARY=$*
 fixtures/%:
 	IMG=otel-go-instrumentation $(MAKE) docker-build
