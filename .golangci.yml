@@ -215,7 +215,7 @@ linters-settings:
         disabled: false
         arguments:
           - ["ID"] # AllowList
-          - ["Otel", "Aws", "Gcp"] # DenyList
+          - ["Otel", "Aws", "Gcp", "Ebpf"] # DenyList
       # https://github.com/mgechev/revive/blob/master/RULES_DESCRIPTIONS.md#var-declaration
       - name: var-declaration
         disabled: false
