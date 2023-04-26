@@ -21,7 +21,7 @@ func (s server) SayHello(context.Context, *helloworld.HelloRequest) (*helloworld
 }
 
 func main() {
-	address := "0.0.0.0:50051"
+	address := "0.0.0.0:8090"
 	lis, err := net.Listen("tcp", address)
 	if err != nil {
 		log.Fatalf("Error %e", err)
@@ -34,14 +34,14 @@ func main() {
 	time.Sleep(5 * time.Second)
 
 	opts := grpc.WithInsecure()
-	cc, err := grpc.Dial("localhost:50051", opts)
+	conn, err := grpc.Dial("localhost:8090", opts)
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer cc.Close()
+	defer conn.Close()
 
-	client := helloworld.NewGreeterClient(cc)
-	request := &helloworld.HelloRequest{Name: "Jeremy"}
+	client := helloworld.NewGreeterClient(conn)
+	request := &helloworld.HelloRequest{}
 
 	resp, _ := client.SayHello(context.Background(), request)
 	log.Printf("Body: %s", resp.Message)
