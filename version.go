@@ -12,16 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package opentelemetry
+package auto
 
-import (
-	"fmt"
-	"testing"
-
-	"github.com/stretchr/testify/assert"
-	"go.opentelemetry.io/auto"
-)
-
-func TestUserAgent(t *testing.T) {
-	assert.Contains(t, autoinstUserAgent, fmt.Sprintf("OTel-Go-Auto-Instrumentation/%s", auto.Version()))
+// Go autoinstrumentation release version
+func Version() string {
+	return "v0.1.0-alpha"
 }

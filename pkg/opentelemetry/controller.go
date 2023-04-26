@@ -23,6 +23,7 @@ import (
 	"time"
 
 	"github.com/prometheus/procfs"
+	"go.opentelemetry.io/auto"
 	"go.opentelemetry.io/auto/pkg/instrumentors/events"
 	"go.opentelemetry.io/auto/pkg/log"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace"
@@ -40,12 +41,13 @@ const (
 )
 
 var (
-	releaseVersion = "v0.1.0-alpha" // TODO: reference something instead of hard-coding
-	// start of this autoinstrumentation's exporter User-Agent header, e.g. ""OTel-Go-Auto-Instrumentation/1.2.3"
+	// Controller-local reference to the auto-instrumentation release version.
+	releaseVersion = auto.Version()
+	// Start of this auto-instrumentation's exporter User-Agent header, e.g. ""OTel-Go-Auto-Instrumentation/1.2.3"
 	baseUserAgent = fmt.Sprintf("OTel-Go-Auto-Instrumentation/%s", releaseVersion)
-	// Information about the runtime environment for inclusion in User-Agent
+	// Information about the runtime environment for inclusion in User-Agent, e.g. "go/1.18.2 (linux/amd64)"
 	runtimeInfo = fmt.Sprintf("%s (%s/%s)", strings.Replace(runtime.Version(), "go", "go/", 1), runtime.GOOS, runtime.GOARCH)
-	// The default User-Agent when no additions have been given
+	// Combined User-Agent identifying this auto-instrumentation and its runtime environment, see RFC7231 for format considerations.
 	autoinstUserAgent = fmt.Sprintf("%s %s", baseUserAgent, runtimeInfo)
 )
 
