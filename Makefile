@@ -63,7 +63,7 @@ verify-licenses: generate $(GOLICENSES)
       exit 1; \
     fi; \
 
-.PHONY: fixture-nethttp fixture-gorillamux fixtures/grpc
+.PHONY: fixture-nethttp fixture-gorillamux fixture-grpc
 fixture-nethttp: fixtures/nethttp
 fixture-gorillamux: fixtures/gorillamux
 fixture-grpc: fixtures/grpc
