@@ -20,8 +20,10 @@ import (
 	"go.uber.org/zap"
 )
 
+// Logger is an interface to an abstract logging implementation.
 var Logger logr.Logger
 
+// Init initializes [Logger] to be a production Zap logger.
 func Init() error {
 	zapLog, err := zap.NewProduction()
 	if err != nil {
