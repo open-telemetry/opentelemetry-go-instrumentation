@@ -58,7 +58,7 @@ spec:
         - name: emojivoto-emoji-instrumentation
           image: keyval/otel-go-agent:v0.6.0
           env:
-            - name: OTEL_TARGET_EXE
+            - name: OTEL_GO_AUTO_TARGET_EXE
               value: /usr/local/bin/emojivoto-emoji-svc
             - name: OTEL_EXPORTER_OTLP_ENDPOINT
               value: "jaeger:4317"
@@ -140,7 +140,7 @@ spec:
         - name: emojivoto-voting-instrumentation
           image: keyval/otel-go-agent:v0.6.0
           env:
-            - name: OTEL_TARGET_EXE
+            - name: OTEL_GO_AUTO_TARGET_EXE
               value: /usr/local/bin/emojivoto-voting-svc
             - name: OTEL_EXPORTER_OTLP_ENDPOINT
               value: "jaeger:4317"
@@ -224,7 +224,7 @@ spec:
         - name: emojivoto-web-instrumentation
           image: keyval/otel-go-agent:v0.6.0
           env:
-            - name: OTEL_TARGET_EXE
+            - name: OTEL_GO_AUTO_TARGET_EXE
               value: /usr/local/bin/emojivoto-web
             - name: OTEL_EXPORTER_OTLP_ENDPOINT
               value: "jaeger:4317"
