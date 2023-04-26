@@ -21,7 +21,10 @@ import (
 	"runtime"
 	"time"
 
-	"github.com/prometheus/procfs"
+	"golang.org/x/sys/unix"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
+
 	"go.opentelemetry.io/auto/pkg/instrumentors/events"
 	"go.opentelemetry.io/auto/pkg/log"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
@@ -29,8 +32,6 @@ import (
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.7.0"
 	"go.opentelemetry.io/otel/trace"
-	"golang.org/x/sys/unix"
-	"google.golang.org/grpc"
 )
 
 const (
@@ -38,6 +39,7 @@ const (
 	otelServiceNameEnvVar = "OTEL_SERVICE_NAME"
 )
 
+// Controller handles OpenTelemetry telemetry generation for events.
 type Controller struct {
 	tracerProvider trace.TracerProvider
 	tracersMap     map[string]trace.Tracer
@@ -55,6 +57,7 @@ func (c *Controller) getTracer(libName string) trace.Tracer {
 	return newTracer
 }
 
+// Trace creates a trace span for event.
 func (c *Controller) Trace(event *events.Event) {
 	log.Logger.V(0).Info("got event", "attrs", event.Attributes)
 	ctx := context.Background()
@@ -82,6 +85,7 @@ func (c *Controller) convertTime(t int64) time.Time {
 	return time.Unix(0, c.bootTime+t)
 }
 
+// NewController returns a new initialized [Controller].
 func NewController() (*Controller, error) {
 	endpoint, exists := os.LookupEnv(otelEndpointEnvVar)
 	if !exists {
@@ -107,7 +111,8 @@ func NewController() (*Controller, error) {
 	log.Logger.V(0).Info("Establishing connection to OpenTelemetry collector ...")
 	timeoutContext, cancel := context.WithTimeout(ctx, time.Second*10)
 	defer cancel()
-	conn, err := grpc.DialContext(timeoutContext, endpoint, grpc.WithInsecure(), grpc.WithBlock())
+	insecureOpt := grpc.WithTransportCredentials(insecure.NewCredentials())
+	conn, err := grpc.DialContext(timeoutContext, endpoint, insecureOpt, grpc.WithBlock())
 	if err != nil {
 		log.Logger.Error(err, "unable to connect to OpenTelemetry collector", "addr", endpoint)
 		return nil, err
@@ -126,7 +131,7 @@ func NewController() (*Controller, error) {
 		sdktrace.WithSampler(sdktrace.AlwaysSample()),
 		sdktrace.WithResource(res),
 		sdktrace.WithSpanProcessor(bsp),
-		sdktrace.WithIDGenerator(NewEbpfSourceIDGenerator()),
+		sdktrace.WithIDGenerator(newEbpfSourceIDGenerator()),
 	)
 
 	bt, err := estimateBootTimeOffset()
@@ -139,32 +144,6 @@ func NewController() (*Controller, error) {
 		tracersMap:     make(map[string]trace.Tracer),
 		bootTime:       bt,
 	}, nil
-}
-
-func getBootTime() (*time.Time, error) {
-	fs, err := procfs.NewDefaultFS()
-	if err != nil {
-		return nil, err
-	}
-
-	stat, err := fs.Stat()
-	if err != nil {
-		return nil, err
-	}
-
-	boot := time.Unix(int64(stat.BootTime), 0)
-	return &boot, nil
-}
-
-func getBootTimeSyscall() (int64, error) {
-	var ts unix.Timespec
-	err := unix.ClockGettime(unix.CLOCK_MONOTONIC, &ts)
-	now := time.Now().UnixNano()
-	if err != nil {
-		return 0, fmt.Errorf("could not get boot time: %s", err)
-	}
-
-	return now - unix.TimespecToNsec(ts), nil
 }
 
 func estimateBootTimeOffset() (bootTimeOffset int64, err error) {
