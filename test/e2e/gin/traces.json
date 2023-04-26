@@ -34,12 +34,12 @@
                 {
                   "key": "http.target",
                   "value": {
-                    "stringValue": "/hello"
+                    "stringValue": "/hello-gin"
                   }
                 }
               ],
               "kind": 2,
-              "name": "/hello",
+              "name": "/hello-gin",
               "parentSpanId": "",
               "spanId": "xxxxx",
               "status": {},

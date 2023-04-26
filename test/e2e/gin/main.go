@@ -11,7 +11,7 @@ import (
 
 func main() {
 	r := gin.Default()
-	r.GET("/hello", func(c *gin.Context) {
+	r.GET("/hello-gin", func(c *gin.Context) {
 		c.String(http.StatusOK, "hello\n")
 	})
 	go r.Run();
