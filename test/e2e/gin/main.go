@@ -19,7 +19,7 @@ func main() {
 	// give time for auto-instrumentation to start up
 	time.Sleep(5 * time.Second)
 
-	resp, err := http.Get("http://localhost:8080/hello")
+	resp, err := http.Get("http://localhost:8080/hello-gin")
 	if err != nil {
 		log.Fatal(err)
 	}
