@@ -72,7 +72,7 @@ func (c *Controller) Trace(event *events.Event) {
 		ctx = trace.ContextWithSpanContext(ctx, *event.ParentSpanContext)
 	}
 
-	ctx = ContextWithEbpfEvent(ctx, *event)
+	ctx = ContextWithEBPFEvent(ctx, *event)
 	_, span := c.getTracer(event.Library).
 		Start(ctx, event.Name,
 			trace.WithAttributes(event.Attributes...),
@@ -131,7 +131,7 @@ func NewController() (*Controller, error) {
 		sdktrace.WithSampler(sdktrace.AlwaysSample()),
 		sdktrace.WithResource(res),
 		sdktrace.WithSpanProcessor(bsp),
-		sdktrace.WithIDGenerator(newEbpfSourceIDGenerator()),
+		sdktrace.WithIDGenerator(newEBPFSourceIDGenerator()),
 	)
 
 	bt, err := estimateBootTimeOffset()

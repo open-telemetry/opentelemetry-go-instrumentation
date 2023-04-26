@@ -23,20 +23,20 @@ import (
 
 type eBPFSourceIDGenerator struct{}
 
-type ebpfEventKey struct{}
+type eBPFEventKey struct{}
 
-func newEbpfSourceIDGenerator() *eBPFSourceIDGenerator {
+func newEBPFSourceIDGenerator() *eBPFSourceIDGenerator {
 	return &eBPFSourceIDGenerator{}
 }
 
-// ContextWithEbpfEvent returns a copy of parent in which event is stored.
-func ContextWithEbpfEvent(parent context.Context, event events.Event) context.Context {
-	return context.WithValue(parent, ebpfEventKey{}, event)
+// ContextWithEBPFEvent returns a copy of parent in which event is stored.
+func ContextWithEBPFEvent(parent context.Context, event events.Event) context.Context {
+	return context.WithValue(parent, eBPFEventKey{}, event)
 }
 
 // EventFromContext returns the event within ctx if one exists.
 func EventFromContext(ctx context.Context) *events.Event {
-	val := ctx.Value(ebpfEventKey{})
+	val := ctx.Value(eBPFEventKey{})
 	if val == nil {
 		return nil
 	}
