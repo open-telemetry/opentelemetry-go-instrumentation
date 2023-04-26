@@ -20,7 +20,7 @@ import (
 )
 
 const (
-	ExePathEnvVar = "OTEL_TARGET_EXE"
+	ExePathEnvVar = "OTEL_GO_AUTO_TARGET_EXE"
 )
 
 type TargetArgs struct {

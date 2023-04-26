@@ -8,6 +8,11 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 
 ## [Unreleased]
 
+### Changed
+
+- Change `OTEL_TARGET_EXE` environment variable to `OTEL_GO_AUTO_TARGET_EXE`.
+  ([#97](https://github.com/open-telemetry/opentelemetry-go-instrumentation/issues/97))
+
 ## [v0.1.0-alpha] - 2023-04-17
 
 This is the first release of OpenTelemetry Go Automatic Instrumentation.

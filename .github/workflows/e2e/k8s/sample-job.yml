@@ -27,7 +27,7 @@ spec:
         image: otel-go-instrumentation
         imagePullPolicy: IfNotPresent
         env:
-        - name: OTEL_TARGET_EXE
+        - name: OTEL_GO_AUTO_TARGET_EXE
           value: /sample-app/main
         - name: OTEL_EXPORTER_OTLP_ENDPOINT
           value: "test-opentelemetry-collector:4317"
