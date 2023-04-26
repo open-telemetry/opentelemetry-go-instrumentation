@@ -6,6 +6,9 @@ on:
   pull_request:
   workflow_dispatch:
 
+env:
+  GO_VERSION: "1.20"
+
 jobs:
   check-links:
     runs-on: ubuntu-22.04
@@ -19,6 +22,31 @@ jobs:
           -v -n "*.md" "**/*.md"
           --exclude "http://localhost*"
         fail: true
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: ${{ env.DEFAULT_GO_VERSION }}
+      - name: Checkout Repo
+        uses: actions/checkout@v3
+      - name: Module cache
+        uses: actions/cache@v3
+        env:
+          cache-name: go-mod-cache
+        with:
+          path: ~/go/pkg/mod
+          key: ${{ runner.os }}-${{ env.cache-name }}-${{ hashFiles('**/go.sum') }}
+      - name: Tools cache
+        uses: actions/cache@v3
+        env:
+          cache-name: go-tools-cache
+        with:
+          path: ~/.tools
+          key: ${{ runner.os }}-${{ env.cache-name }}-${{ hashFiles('./internal/tools/**') }}
+      - name: Run linters
+        run: make license-header-check
   verify-licenses:
     runs-on: ubuntu-22.04
     steps:
@@ -27,7 +55,7 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v4.0.0
         with:
-          go-version: "1.20"
+          go-version: ${{ env.DEFAULT_GO_VERSION }}
       - name: Install build dependencies
         run: sudo apt-get update && sudo apt-get install -y clang llvm libbpf-dev
       - run: make verify-licenses
