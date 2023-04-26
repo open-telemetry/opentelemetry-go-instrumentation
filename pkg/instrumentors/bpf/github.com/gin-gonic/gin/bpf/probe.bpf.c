@@ -22,8 +22,7 @@ char __license[] SEC("license") = "Dual MIT/GPL";
 #define METHOD_MAX_LEN 6 // Longer method: DELETE
 #define MAX_CONCURRENT 50
 
-struct http_request_t
-{
+struct http_request_t {
     u64 start_time;
     u64 end_time;
     char method[METHOD_MAX_LEN];
@@ -32,16 +31,14 @@ struct http_request_t
 };
 
 // map key: pointer to the goroutine that handles the request
-struct
-{
+struct {
     __uint(type, BPF_MAP_TYPE_HASH);
     __type(key, void *);
     __type(value, struct http_request_t);
     __uint(max_entries, MAX_CONCURRENT);
 } context_to_http_events SEC(".maps");
 
-struct
-{
+struct {
     __uint(type, BPF_MAP_TYPE_PERF_EVENT_ARRAY);
 } events SEC(".maps");
 
@@ -53,8 +50,7 @@ volatile const u64 path_ptr_pos;
 // This instrumentation attaches uprobe to the following function:
 // func (engine *Engine) ServeHTTP(w http.ResponseWriter, r *http.Request)
 SEC("uprobe/GinEngine_ServeHTTP")
-int uprobe_GinEngine_ServeHTTP(struct pt_regs *ctx)
-{
+int uprobe_GinEngine_ServeHTTP(struct pt_regs *ctx) {
     u64 request_pos = 4;
     struct http_request_t httpReq = {};
     httpReq.start_time = bpf_ktime_get_ns();
@@ -93,8 +89,7 @@ int uprobe_GinEngine_ServeHTTP(struct pt_regs *ctx)
 }
 
 SEC("uprobe/GinEngine_ServeHTTP")
-int uprobe_GinEngine_ServeHTTP_Returns(struct pt_regs *ctx)
-{
+int uprobe_GinEngine_ServeHTTP_Returns(struct pt_regs *ctx) {
     u64 request_pos = 4;
     void *req_ptr = get_argument(ctx, request_pos);
     void *goroutine = get_goroutine_address(ctx);
