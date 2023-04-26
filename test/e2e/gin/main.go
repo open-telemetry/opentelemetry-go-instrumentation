@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -10,14 +9,12 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func hello(w http.ResponseWriter, req *http.Request) {
-	fmt.Fprintf(w, "hello\n")
-}
-
 func main() {
 	r := gin.Default()
-	r.Get("/hello", hello)
-	go r.run();
+	r.GET("/hello", func(c *gin.Context) {
+		c.String(http.StatusOK, "hello\n")
+	})
+	go r.Run();
 
 	// give time for auto-instrumentation to start up
 	time.Sleep(5 * time.Second)
