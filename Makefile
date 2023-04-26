@@ -45,13 +45,13 @@ docker-offsets:
 	docker run --rm -v $(shell pwd):/app golang:1.20 /bin/sh -c "cd ../app && make offsets"
 
 .PHONY: update-licenses
-update-licenses: | $(GOLICENSES)
+update-licenses: generate $(GOLICENSES)
 	rm -rf LICENSES
 	$(GOLICENSES) save ./cli/ --save_path LICENSES
 	cp -R ./include/libbpf ./LICENSES
 
 .PHONY: verify-licenses
-verify-licenses: | $(GOLICENSES)
+verify-licenses: generate $(GOLICENSES)
 	$(GOLICENSES) save ./cli --save_path temp
 	cp -R ./include/libbpf ./temp; \
     if diff temp LICENSES > /dev/null; then \
