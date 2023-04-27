@@ -27,6 +27,7 @@ import (
 	"go.opentelemetry.io/auto/offsets-tracker/target"
 )
 
+// WriteResults writes results to fileName.
 func WriteResults(fileName string, results ...*target.Result) error {
 	var offsets schema.TrackedOffsets
 	for _, r := range results {
@@ -56,13 +57,13 @@ func WriteResults(fileName string, results ...*target.Result) error {
 		return err
 	}
 
-	var prettyJson bytes.Buffer
-	err = json.Indent(&prettyJson, jsonData, "", "  ")
+	var prettyJSON bytes.Buffer
+	err = json.Indent(&prettyJSON, jsonData, "", "  ")
 	if err != nil {
 		return err
 	}
 
-	return os.WriteFile(fileName, prettyJson.Bytes(), fs.ModePerm)
+	return os.WriteFile(fileName, prettyJSON.Bytes(), fs.ModePerm)
 }
 
 func convertResult(r *target.Result) schema.TrackedLibrary {
