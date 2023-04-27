@@ -30,6 +30,7 @@ tools: $(GOLICENSES)
 ALL_GO_MODS := $(shell find . -type f -name 'go.mod' ! -path '$(TOOLS_MOD_DIR)/*' ! -path './LICENSES/*' | sort)
 GO_MODS_TO_TEST := $(ALL_GO_MODS:%=test/%)
 
+.PHONY: test
 test: $(GO_MODS_TO_TEST)
 test/%: GO_MOD=$*
 test/%:
