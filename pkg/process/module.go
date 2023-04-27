@@ -23,6 +23,7 @@ import (
 	"strings"
 
 	"github.com/hashicorp/go-version"
+
 	"go.opentelemetry.io/auto/pkg/log"
 )
 
@@ -33,7 +34,7 @@ import (
 var buildInfoMagic = []byte("\xff Go buildinf:")
 var errNotGoExe = errors.New("not a Go executable")
 
-func (a *processAnalyzer) getModuleDetails(f *elf.File) (*version.Version, map[string]string, error) {
+func (a *Analyzer) getModuleDetails(f *elf.File) (*version.Version, map[string]string, error) {
 	goVersion, modules, err := getGoDetails(f)
 	if err != nil {
 		return nil, nil, err
@@ -91,7 +92,7 @@ func getGoDetails(f *elf.File) (string, string, error) {
 	var vers, mod string
 	if data[15]&2 != 0 {
 		vers, data = decodeString(data[32:])
-		mod, data = decodeString(data)
+		mod, _ = decodeString(data)
 	} else {
 		bigEndian := data[15] != 0
 		var bo binary.ByteOrder
