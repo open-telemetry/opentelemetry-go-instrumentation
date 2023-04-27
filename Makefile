@@ -2,6 +2,8 @@
 # Assume the Makefile is in the root of the repository.
 REPODIR := $(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
 
+ALL_GO_MOD_DIRS := $(shell find . -type f -name 'go.mod' ! -path './LICENSES/*' -exec dirname {} \; | sort)
+
 # Build the list of include directories to compile the bpf program
 BPF_INCLUDE += -I${REPODIR}/include/libbpf
 BPF_INCLUDE+= -I${REPODIR}/include
@@ -9,7 +11,7 @@ BPF_INCLUDE+= -I${REPODIR}/include
 .DEFAULT_GOAL := precommit
 
 .PHONY: precommit
-precommit: license-header-check
+precommit: license-header-check go-mod-tidy
 
 # Tools
 TOOLS_MOD_DIR := ./internal/tools
@@ -27,11 +29,25 @@ $(TOOLS)/go-licenses: PACKAGE=github.com/google/go-licenses
 .PHONY: tools
 tools: $(GOLICENSES)
 
+ALL_GO_MODS := $(shell find . -type f -name 'go.mod' ! -path '$(TOOLS_MOD_DIR)/*' ! -path './LICENSES/*' | sort)
+GO_MODS_TO_TEST := $(ALL_GO_MODS:%=test/%)
+
+.PHONY: test
+test: $(GO_MODS_TO_TEST)
+test/%: GO_MOD=$*
+test/%:
+	cd $(shell dirname $(GO_MOD)) && go test -v ./...
+
 .PHONY: generate
 generate: export CFLAGS := $(BPF_INCLUDE)
-generate:
-	go mod tidy
+generate: go-mod-tidy
 	go generate ./...
+
+.PHONY: go-mod-tidy
+go-mod-tidy: $(ALL_GO_MOD_DIRS:%=go-mod-tidy/%)
+go-mod-tidy/%: DIR=$*
+go-mod-tidy/%:
+	@cd $(DIR) && go mod tidy -compat=1.20
 
 .PHONY: build
 build: generate
@@ -99,3 +115,13 @@ fixtures/%:
 	jq 'del(.resourceSpans[].scopeSpans[].spans[].endTimeUnixNano, .resourceSpans[].scopeSpans[].spans[].startTimeUnixNano) | .resourceSpans[].scopeSpans[].spans[].spanId|= (if . != "" then "xxxxx" else . end) | .resourceSpans[].scopeSpans[].spans[].traceId|= (if . != "" then "xxxxx" else . end) | .resourceSpans[].scopeSpans|=sort_by(.scope.name)' ./test/e2e/$(LIBRARY)/traces.json.tmp | jq --sort-keys . > ./test/e2e/$(LIBRARY)/traces.json
 	rm ./test/e2e/$(LIBRARY)/traces.json.tmp
 	kind delete cluster
+
+.PHONY: check-clean-work-tree
+check-clean-work-tree:
+	@if ! git diff --quiet; then \
+	  echo; \
+	  echo 'Working tree is not clean, did you forget to run "make precommit"?'; \
+	  echo; \
+	  git status; \
+	  exit 1; \
+	fi
