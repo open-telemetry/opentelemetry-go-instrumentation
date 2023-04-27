@@ -28,7 +28,7 @@ import (
 	"go.opentelemetry.io/auto/pkg/process"
 )
 
-// Manager handles the management of [Instrumentor]s.
+// Manager handles the management of [Instrumentor] instances.
 type Manager struct {
 	instrumentors  map[string]Instrumentor
 	done           chan bool
@@ -37,7 +37,7 @@ type Manager struct {
 	allocator      *allocator.Allocator
 }
 
-// NewManager reutrns a new [Manager].
+// NewManager returns a new [Manager].
 func NewManager(otelController *opentelemetry.Controller) (*Manager, error) {
 	m := &Manager{
 		instrumentors:  make(map[string]Instrumentor),
