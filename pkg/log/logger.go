@@ -20,7 +20,7 @@ import (
 	"go.uber.org/zap"
 )
 
-// Logger is an interface to an abstract logging implementation.
+// Logger is a global logger used for internal logging.
 var Logger logr.Logger
 
 // Init initializes [Logger] to be a production Zap logger.
