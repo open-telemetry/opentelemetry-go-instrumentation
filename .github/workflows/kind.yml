@@ -69,7 +69,7 @@ jobs:
       - name: copy telemetry trace output
         run: |
           kubectl cp -c filecp default/test-opentelemetry-collector-0:tmp/trace.json ./test/e2e/${{ matrix.library }}/traces.json.tmp
-          jq 'del(.resourceSpans[].scopeSpans[].spans[].endTimeUnixNano, .resourceSpans[].scopeSpans[].spans[].startTimeUnixNano) | .resourceSpans[].resource.attributes[].telemetry.auto.version|= (if . != "" then "xxxxx" else . end) | .resourceSpans[].scopeSpans[].spans[].spanId|= (if . != "" then "xxxxx" else . end) | .resourceSpans[].scopeSpans[].spans[].traceId|= (if . != "" then "xxxxx" else . end) | .resourceSpans[].scopeSpans|=sort_by(.scope.name)' ./test/e2e/${{ matrix.library }}/traces.json.tmp | jq --sort-keys . > ./test/e2e/${{ matrix.library }}/traces.json
+          jq 'del(.resourceSpans[].scopeSpans[].spans[].endTimeUnixNano, .resourceSpans[].scopeSpans[].spans[].startTimeUnixNano) | .resourceSpans[].scopeSpans[].spans[].spanId|= (if . != "" then "xxxxx" else . end) | .resourceSpans[].scopeSpans[].spans[].traceId|= (if . != "" then "xxxxx" else . end) | .resourceSpans[].scopeSpans|=sort_by(.scope.name)' ./test/e2e/${{ matrix.library }}/traces.json.tmp | jq --sort-keys . > ./test/e2e/${{ matrix.library }}/traces.json
           rm ./test/e2e/${{ matrix.library }}/traces.json.tmp
       - name: verify output
         run: |
