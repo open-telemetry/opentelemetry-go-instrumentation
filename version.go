@@ -12,7 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package bpffs
+package auto
 
-// BPFFsPath is the system path to the BPF file-system.
-const BPFFsPath = "/sys/fs/bpf"
+// Version is the current release version of OpenTelemetry Go auto-instrumentation in use.
+func Version() string {
+	return "v0.1.0-alpha"
+}
