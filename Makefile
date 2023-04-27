@@ -6,6 +6,11 @@ REPODIR := $(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
 BPF_INCLUDE += -I${REPODIR}/include/libbpf
 BPF_INCLUDE+= -I${REPODIR}/include
 
+.DEFAULT_GOAL := precommit
+
+.PHONY: precommit
+precommit: license-header-check
+
 # Tools
 TOOLS_MOD_DIR := ./internal/tools
 TOOLS = $(CURDIR)/.tools
@@ -22,6 +27,15 @@ $(TOOLS)/go-licenses: PACKAGE=github.com/google/go-licenses
 .PHONY: tools
 tools: $(GOLICENSES)
 
+ALL_GO_MODS := $(shell find . -type f -name 'go.mod' ! -path '$(TOOLS_MOD_DIR)/*' ! -path './LICENSES/*' | sort)
+GO_MODS_TO_TEST := $(ALL_GO_MODS:%=test/%)
+
+.PHONY: test
+test: $(GO_MODS_TO_TEST)
+test/%: GO_MOD=$*
+test/%:
+	cd $(shell dirname $(GO_MOD)) && go test -v ./...
+
 .PHONY: generate
 generate: export CFLAGS := $(BPF_INCLUDE)
 generate:
@@ -30,7 +44,7 @@ generate:
 
 .PHONY: build
 build: generate
-	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o otel-go-instrumentation cli/main.go
+	GOOS=linux GOARCH=amd64 go build -o otel-go-instrumentation cli/main.go
 
 .PHONY: docker-build
 docker-build:
@@ -40,14 +54,18 @@ docker-build:
 offsets:
 	cd offsets-tracker; OFFSETS_OUTPUT_FILE="../pkg/inject/offset_results.json" go run main.go
 
+.PHONY: docker-offsets
+docker-offsets:
+	docker run --rm -v $(shell pwd):/app golang:1.20 /bin/sh -c "cd ../app && make offsets"
+
 .PHONY: update-licenses
-update-licenses: | $(GOLICENSES)
+update-licenses: generate $(GOLICENSES)
 	rm -rf LICENSES
 	$(GOLICENSES) save ./cli/ --save_path LICENSES
 	cp -R ./include/libbpf ./LICENSES
 
 .PHONY: verify-licenses
-verify-licenses: | $(GOLICENSES)
+verify-licenses: generate $(GOLICENSES)
 	$(GOLICENSES) save ./cli --save_path temp
 	cp -R ./include/libbpf ./temp; \
     if diff temp LICENSES > /dev/null; then \
@@ -59,19 +77,25 @@ verify-licenses: | $(GOLICENSES)
       exit 1; \
     fi; \
 
+.PHONY: license-header-check
+license-header-check:
+	@licRes=$$(for f in $$(find . -type f \( -iname '*.go' -o -iname '*.sh' \) ! -path '**/third_party/*' ! -path './.git/*' ! -path './LICENSES/*' ) ; do \
+	           awk '/Copyright The OpenTelemetry Authors|generated|GENERATED/ && NR<=3 { found=1; next } END { if (!found) print FILENAME }' $$f; \
+	   done); \
+	   if [ -n "$${licRes}" ]; then \
+	           echo "license header checking failed:"; echo "$${licRes}"; \
+	           exit 1; \
+	   fi
+
 .PHONY: fixture-nethttp fixture-gorillamux
 fixture-nethttp: fixtures/nethttp
 fixture-gorillamux: fixtures/gorillamux
 fixtures/%: LIBRARY=$*
 fixtures/%:
 	IMG=otel-go-instrumentation $(MAKE) docker-build
-	if [ ! -d "launcher" ]; then \
-		git clone https://github.com/keyval-dev/launcher.git; \
-	fi
-	cd launcher && docker build -t kv-launcher .
 	cd test/e2e/$(LIBRARY) && docker build -t sample-app .
 	kind create cluster
-	kind load docker-image otel-go-instrumentation sample-app kv-launcher
+	kind load docker-image otel-go-instrumentation sample-app
 	helm repo add open-telemetry https://open-telemetry.github.io/opentelemetry-helm-charts
 	if [ ! -d "opentelemetry-helm-charts" ]; then \
 		git clone https://github.com/open-telemetry/opentelemetry-helm-charts.git; \

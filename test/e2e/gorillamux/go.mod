@@ -1,4 +1,4 @@
-module github.com/open-telemetry/opentelemetry-go-instrumentation/e2e/gorillamux
+module go.opentelemetry.io/auto/test/e2e/gorillamux
 
 go 1.20
 

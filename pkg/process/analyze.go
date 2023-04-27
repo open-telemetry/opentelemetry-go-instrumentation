@@ -22,11 +22,14 @@ import (
 	"os"
 	"strings"
 
-	"github.com/prometheus/procfs"
-
 	"github.com/hashicorp/go-version"
-	"github.com/open-telemetry/opentelemetry-go-instrumentation/pkg/log"
+	"go.opentelemetry.io/auto/pkg/log"
+	"go.opentelemetry.io/auto/pkg/process/ptrace"
 	"golang.org/x/arch/x86/x86asm"
+)
+
+const (
+	mapSize = 15 * 1024 * 1024
 )
 
 type TargetDetails struct {
@@ -73,28 +76,28 @@ func (t *TargetDetails) GetFunctionReturns(name string) ([]uint64, error) {
 	return nil, fmt.Errorf("could not find returns for function %s", name)
 }
 
-func findKeyvalMmap(pid int) *AllocationDetails {
-	fs, err := procfs.NewProc(pid)
+func (a *processAnalyzer) remoteMmap(pid int, mapSize uint64) (uint64, error) {
+	program, err := ptrace.NewTracedProgram(pid, log.Logger)
 	if err != nil {
-		panic(err)
+		log.Logger.Error(err, "Failed to attach ptrace", "pid", pid)
+		return 0, err
 	}
 
-	maps, err := fs.ProcMaps()
-	if err != nil {
-		panic(err)
-	}
-
-	for _, m := range maps {
-		if m.Perms != nil && m.Perms.Read && m.Perms.Write && m.Perms.Execute {
-			log.Logger.Info("found addr of keyval map", "addr", m.StartAddr)
-			return &AllocationDetails{
-				StartAddr: uint64(m.StartAddr),
-				EndAddr:   uint64(m.EndAddr),
-			}
+	defer func() {
+		log.Logger.V(0).Info("Detaching from process", "pid", pid)
+		err := program.Detach()
+		if err != nil {
+			log.Logger.Error(err, "Failed to detach ptrace", "pid", pid)
 		}
+	}()
+	fd := -1
+	addr, err := program.Mmap(mapSize, uint64(fd))
+	if err != nil {
+		log.Logger.Error(err, "Failed to mmap", "pid", pid)
+		return 0, err
 	}
-	log.Logger.V(1).Info("could not allocate remote memory, automatic context propagation will be disabled")
-	return nil
+
+	return addr, nil
 }
 
 func (a *processAnalyzer) Analyze(pid int, relevantFuncs map[string]interface{}) (*TargetDetails, error) {
@@ -120,7 +123,18 @@ func (a *processAnalyzer) Analyze(pid int, relevantFuncs map[string]interface{})
 	result.GoVersion = goVersion
 	result.Libraries = modules
 
-	result.AllocationDetails = findKeyvalMmap(pid)
+	addr, err := a.remoteMmap(pid, mapSize)
+	if err != nil {
+		log.Logger.Error(err, "Failed to mmap")
+		return nil, err
+	}
+	log.Logger.V(0).Info("mmaped remote memory", "start_addr", fmt.Sprintf("%X", addr),
+		"end_addr", fmt.Sprintf("%X", addr+mapSize))
+
+	result.AllocationDetails = &AllocationDetails{
+		StartAddr: addr,
+		EndAddr:   addr + mapSize,
+	}
 
 	var pclndat []byte
 	if sec := elfF.Section(".gopclntab"); sec != nil {

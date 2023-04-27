@@ -17,7 +17,7 @@ package opentelemetry
 import (
 	"context"
 
-	"github.com/open-telemetry/opentelemetry-go-instrumentation/pkg/instrumentors/events"
+	"go.opentelemetry.io/auto/pkg/instrumentors/events"
 	"go.opentelemetry.io/otel/trace"
 )
 

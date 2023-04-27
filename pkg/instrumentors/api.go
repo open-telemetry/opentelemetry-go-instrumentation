@@ -15,14 +15,25 @@
 package instrumentors
 
 import (
-	"github.com/open-telemetry/opentelemetry-go-instrumentation/pkg/instrumentors/context"
-	"github.com/open-telemetry/opentelemetry-go-instrumentation/pkg/instrumentors/events"
+	"go.opentelemetry.io/auto/pkg/instrumentors/context"
+	"go.opentelemetry.io/auto/pkg/instrumentors/events"
 )
 
+// Instrumentor provides instrumentation for a Go package.
 type Instrumentor interface {
+	// LibraryName returns the package name being instrumented.
 	LibraryName() string
+
+	// FuncNames returns the fully-qualified function names that are
+	// instrumented.
 	FuncNames() []string
+
+	// Load loads all instrumentation offsets.
 	Load(ctx *context.InstrumentorContext) error
+
+	// Run runs the events processing loop.
 	Run(eventsChan chan<- *events.Event)
+
+	// Close stops the Instrumentor.
 	Close()
 }

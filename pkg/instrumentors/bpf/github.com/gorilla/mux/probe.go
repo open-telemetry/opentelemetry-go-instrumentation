@@ -20,15 +20,15 @@ import (
 	"errors"
 	"os"
 
-	"github.com/open-telemetry/opentelemetry-go-instrumentation/pkg/instrumentors/bpffs"
+	"go.opentelemetry.io/auto/pkg/instrumentors/bpffs"
 
 	"github.com/cilium/ebpf"
 	"github.com/cilium/ebpf/link"
 	"github.com/cilium/ebpf/perf"
-	"github.com/open-telemetry/opentelemetry-go-instrumentation/pkg/inject"
-	"github.com/open-telemetry/opentelemetry-go-instrumentation/pkg/instrumentors/context"
-	"github.com/open-telemetry/opentelemetry-go-instrumentation/pkg/instrumentors/events"
-	"github.com/open-telemetry/opentelemetry-go-instrumentation/pkg/log"
+	"go.opentelemetry.io/auto/pkg/inject"
+	"go.opentelemetry.io/auto/pkg/instrumentors/context"
+	"go.opentelemetry.io/auto/pkg/instrumentors/events"
+	"go.opentelemetry.io/auto/pkg/log"
 	"go.opentelemetry.io/otel/attribute"
 	semconv "go.opentelemetry.io/otel/semconv/v1.7.0"
 	"go.opentelemetry.io/otel/trace"
@@ -42,7 +42,7 @@ type HttpEvent struct {
 	EndTime     uint64
 	Method      [100]byte
 	Path        [100]byte
-	SpanContext context.EbpfSpanContext
+	SpanContext context.EBPFSpanContext
 }
 
 type gorillaMuxInstrumentor struct {
@@ -95,7 +95,7 @@ func (g *gorillaMuxInstrumentor) Load(ctx *context.InstrumentorContext) error {
 	g.bpfObjects = &bpfObjects{}
 	err = spec.LoadAndAssign(g.bpfObjects, &ebpf.CollectionOptions{
 		Maps: ebpf.MapOptions{
-			PinPath: bpffs.BpfFsPath,
+			PinPath: bpffs.BPFFsPath,
 		},
 	})
 	if err != nil {

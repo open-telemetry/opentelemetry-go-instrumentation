@@ -6,8 +6,8 @@ We aim to bring the automatic instrumentation experience found in languages like
 
 - No code changes required - any Go application can be instrumented without modifying the source code.
 - Support wide range of Go applications - instrumentation is supported for Go version 1.12 and above. In addition, a common practice for Go applications is to shrink the binary size by stripping debug symbols via `go build -ldflags "-s -w"`. This instrumentation works for stripped binaries as well.
-- Configuration is done via `OTEL_*` environment variables according to [OpenTelemetry Environment Variable Specification](https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/sdk-environment-variables.md#general-sdk-configuration).
-  **In order to inject instrumentation into your process, set the `OTEL_TARGET_EXE` environment variable to the path of the target executable. This is not a part of the OTEL specification mentioned above.**
+- Configuration is done via `OTEL_*` environment variables according to [OpenTelemetry Environment Variable Specification](https://opentelemetry.io/docs/reference/specification/sdk-environment-variables/#general-sdk-configuration).
+  **In order to inject instrumentation into your process, set the `OTEL_GO_AUTO_TARGET_EXE` environment variable to the path of the target executable. This is not a part of the OTEL specification mentioned above.**
 - Instrumented libraries follow the [OpenTelemetry specification](https://github.com/open-telemetry/opentelemetry-specification) and semantic conventions to produce standard OpenTelemetry data.
 
 ## Why eBPF
@@ -30,7 +30,7 @@ Notice that one of our design goals is to support stripped Go binaries - meaning
 
 We currently track instrumented structs inside the Go standard library and selected open source packages. This solution does not require DWARF information on the target binary and provides stability to instrumentations. Instrumentation authors can get a field location by name instead of hard coding a field offset.
 
-The offsets-tracker generates the [offset_results.json](https://github.com/open-telemetry/opentelemetry-go-instrumentation/blob/master/pkg/inject/offset_results.json) file. This file contains the offsets of the fields in the instrumented structs.
+The offsets-tracker generates the [offset_results.json](https://github.com/open-telemetry/opentelemetry-go-instrumentation/blob/main/pkg/inject/offset_results.json) file. This file contains the offsets of the fields in the instrumented structs.
 
 ### Uretprobes
 

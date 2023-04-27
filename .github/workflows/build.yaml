@@ -6,7 +6,7 @@ on:
   pull_request:
 
 jobs:
-  generate:
+  generate-and-test:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repo
@@ -23,7 +23,10 @@ jobs:
           make generate
       - name: verify output
         run: |
-          git diff --exit-code || (echo 'generated diff, please run "make generate"')
+          git diff --exit-code || (echo 'generated diff, please run "make generate"' && exit 1)
+      - name: Run unit tests
+        run: |
+          make test
   docker-build:
     runs-on: ubuntu-latest
     steps:
@@ -32,3 +35,14 @@ jobs:
       - name: Build auto-instrumentation
         run: |
           IMG=otel-go-instrumentation make docker-build
+  offsets:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v3
+      - name: Update offsets
+        run: |
+          make docker-offsets
+      - name: Check diff
+        run: |
+          git diff --exit-code || (echo 'offsets diff detected, run "make offsets"' && exit 1)

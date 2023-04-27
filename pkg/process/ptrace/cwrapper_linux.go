@@ -12,7 +12,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package bpffs
+//go:build cgo
 
-// BPFFsPath is the system path to the BPF file-system.
-const BPFFsPath = "/sys/fs/bpf"
+package ptrace
+
+/*
+#define _GNU_SOURCE
+#include <sys/wait.h>
+#include <sys/uio.h>
+#include <errno.h>
+*/
+import "C"
+
+func waitpid(pid int) int {
+	return int(C.waitpid(C.int(pid), nil, C.__WALL))
+}
