@@ -16,24 +16,20 @@ package ptrace
 
 import (
 	"fmt"
-	"github.com/go-logr/logr"
-	"github.com/pkg/errors"
 	"os"
 	"strconv"
 	"strings"
 	"syscall"
+
+	"github.com/go-logr/logr"
+	"github.com/pkg/errors"
 )
 
 const waitPidErrorMessage = "waitpid ret value: %d"
 
-// If it's on 64-bit platform, `^uintptr(0)` will get a 64-bit number full of one.
-// After shifting right for 63-bit, only 1 will be left. Than we got 8 here.
-// If it's on 32-bit platform, After shifting nothing will be left. Than we got 4 here.
-const ptrSize = 4 << uintptr(^uintptr(0)>>63)
-
 var threadRetryLimit = 10
 
-// TracedProgram is a program traced by ptrace
+// TracedProgram is a program traced by ptrace.
 type TracedProgram struct {
 	pid  int
 	tids []int
@@ -44,7 +40,7 @@ type TracedProgram struct {
 	logger logr.Logger
 }
 
-// Pid return the pid of traced program
+// Pid return the pid of traced program.
 func (p *TracedProgram) Pid() int {
 	return p.pid
 }
@@ -58,10 +54,8 @@ func waitPid(pid int) error {
 	return errors.Errorf(waitPidErrorMessage, ret)
 }
 
-// NewTracedProgram ptrace all threads of a process
+// NewTracedProgram ptrace all threads of a process.
 func NewTracedProgram(pid int, logger logr.Logger) (*TracedProgram, error) {
-	traceSuccess := false
-
 	tidMap := make(map[int]bool)
 	retryCount := make(map[int]int)
 
@@ -114,17 +108,13 @@ func NewTracedProgram(pid int, logger logr.Logger) (*TracedProgram, error) {
 				}
 				continue
 			}
-			defer func() {
-				if !traceSuccess {
-					err = syscall.PtraceDetach(tid)
-					if err != nil && !strings.Contains(err.Error(), "no such process") {
-						logger.Error(err, "detach failed", "tid", tid)
-					}
-				}
-			}()
 
 			err = waitPid(tid)
 			if err != nil {
+				e := syscall.PtraceDetach(tid)
+				if e != nil && !strings.Contains(e.Error(), "no such process") {
+					logger.Error(e, "detach failed", "tid", tid)
+				}
 				return nil, errors.WithStack(err)
 			}
 
@@ -152,12 +142,10 @@ func NewTracedProgram(pid int, logger logr.Logger) (*TracedProgram, error) {
 		logger:     logger,
 	}
 
-	traceSuccess = true
-
 	return program, nil
 }
 
-// Detach detaches from all threads of the processes
+// Detach detaches from all threads of the processes.
 func (p *TracedProgram) Detach() error {
 	for _, tid := range p.tids {
 		err := syscall.PtraceDetach(tid)
@@ -172,14 +160,14 @@ func (p *TracedProgram) Detach() error {
 	return nil
 }
 
-// Protect will backup regs and rip into fields
+// Protect will backup regs and rip into fields.
 func (p *TracedProgram) Protect() error {
 	err := getRegs(p.pid, p.backupRegs)
 	if err != nil {
 		return errors.WithStack(err)
 	}
 
-	_, err = syscall.PtracePeekData(p.pid, getIp(p.backupRegs), p.backupCode)
+	_, err = syscall.PtracePeekData(p.pid, getIP(p.backupRegs), p.backupCode)
 	if err != nil {
 		return errors.WithStack(err)
 	}
@@ -187,14 +175,14 @@ func (p *TracedProgram) Protect() error {
 	return nil
 }
 
-// Restore will restore regs and rip from fields
+// Restore will restore regs and rip from fields.
 func (p *TracedProgram) Restore() error {
 	err := setRegs(p.pid, p.backupRegs)
 	if err != nil {
 		return errors.WithStack(err)
 	}
 
-	_, err = syscall.PtracePokeData(p.pid, getIp(p.backupRegs), p.backupCode)
+	_, err = syscall.PtracePokeData(p.pid, getIP(p.backupRegs), p.backupCode)
 	if err != nil {
 		return errors.WithStack(err)
 	}
@@ -202,13 +190,13 @@ func (p *TracedProgram) Restore() error {
 	return nil
 }
 
-// Wait waits until the process stops
+// Wait waits until the process stops.
 func (p *TracedProgram) Wait() error {
 	_, err := syscall.Wait4(p.pid, nil, 0, nil)
 	return err
 }
 
-// Step moves one step forward
+// Step moves one step forward.
 func (p *TracedProgram) Step() error {
 	err := syscall.PtraceSingleStep(p.pid)
 	if err != nil {
@@ -218,7 +206,7 @@ func (p *TracedProgram) Step() error {
 	return p.Wait()
 }
 
-// Mmap runs mmap syscall
+// Mmap runs mmap syscall.
 func (p *TracedProgram) Mmap(length uint64, fd uint64) (uint64, error) {
 	return p.Syscall(syscall.SYS_MMAP, 0, length, syscall.PROT_READ|syscall.PROT_WRITE|syscall.PROT_EXEC, syscall.MAP_ANON|syscall.MAP_PRIVATE|syscall.MAP_POPULATE, fd, 0)
 }
