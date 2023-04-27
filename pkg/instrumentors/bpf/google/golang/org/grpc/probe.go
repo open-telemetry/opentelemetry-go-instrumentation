@@ -64,7 +64,7 @@ func New() *Instrumentor {
 	return &Instrumentor{}
 }
 
-// LibraryName returns the gRPC package name.
+// LibraryName returns the gRPC package import path.
 func (g *Instrumentor) LibraryName() string {
 	return "google.golang.org/grpc"
 }

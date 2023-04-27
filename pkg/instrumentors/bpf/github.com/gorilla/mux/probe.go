@@ -38,7 +38,7 @@ import (
 
 //go:generate go run github.com/cilium/ebpf/cmd/bpf2go -target bpfel -cc clang -cflags $CFLAGS bpf ./bpf/probe.bpf.c
 
-// Event represents an event in the Gorilla Mux server during an HTTP
+// Event represents an event in the gorilla/mux server during an HTTP
 // request-response.
 type Event struct {
 	StartTime   uint64
@@ -48,7 +48,7 @@ type Event struct {
 	SpanContext context.EBPFSpanContext
 }
 
-// Instrumentor is the Gorilla mux instrumentor.
+// Instrumentor is the gorilla/mux instrumentor.
 type Instrumentor struct {
 	bpfObjects   *bpfObjects
 	uprobe       link.Link
@@ -61,7 +61,7 @@ func New() *Instrumentor {
 	return &Instrumentor{}
 }
 
-// LibraryName returns the Gorilla mux package name.
+// LibraryName returns the gorilla/mux package import path.
 func (g *Instrumentor) LibraryName() string {
 	return "github.com/gorilla/mux"
 }
