@@ -1,4 +1,4 @@
-module go.opentelemetry.io/auto/test/e2e/nethttp
+module go.opentelemetry.io/auto/test/e2e/gin
 
 go 1.20
 
