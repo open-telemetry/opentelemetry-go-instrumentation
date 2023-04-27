@@ -94,9 +94,10 @@ license-header-check:
 	           exit 1; \
 	   fi
 
-.PHONY: fixture-nethttp fixture-gorillamux
+.PHONY: fixture-nethttp fixture-gorillamux fixture-gin
 fixture-nethttp: fixtures/nethttp
 fixture-gorillamux: fixtures/gorillamux
+fixture-gin: fixtures/gin
 fixtures/%: LIBRARY=$*
 fixtures/%:
 	IMG=otel-go-instrumentation $(MAKE) docker-build
