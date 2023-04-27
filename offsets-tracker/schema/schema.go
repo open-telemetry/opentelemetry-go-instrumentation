@@ -14,21 +14,25 @@
 
 package schema
 
+// TrackedOffsets are all the tracked offsets.
 type TrackedOffsets struct {
 	Data []TrackedLibrary `json:"data"`
 }
 
+// TrackedLibrary are all the offsets for a tracked package.
 type TrackedLibrary struct {
 	Name        string              `json:"name"`
 	DataMembers []TrackedDataMember `json:"data_members"`
 }
 
+// TrackedDataMember are the Offsets for struct from a package.
 type TrackedDataMember struct {
 	Struct  string            `json:"struct"`
 	Field   string            `json:"field_name"`
 	Offsets []VersionedOffset `json:"offsets"`
 }
 
+// VersionedOffset if a offset for a version of a module.
 type VersionedOffset struct {
 	Offset  uint64 `json:"offset"`
 	Version string `json:"version"`

@@ -29,7 +29,9 @@ const (
 	urlPattern = "https://go.dev/dl/go%s.linux-amd64.tar.gz"
 )
 
-func DownloadBinaryFromRemote(modName string, version string) (string, string, error) {
+// DownloadBinaryFromRemote returns the downloaded Go binary at version from
+// https://go.dev/dl/.
+func DownloadBinaryFromRemote(_ string, version string) (string, string, error) {
 	dir, err := ioutil.TempDir("", version)
 	if err != nil {
 		return "", "", err
@@ -50,7 +52,7 @@ func DownloadBinaryFromRemote(modName string, version string) (string, string, e
 		return "", "", err
 	}
 
-	err, _, _ = utils.RunCommand("tar -xf go.tar.gz -C .", dir)
+	_, _, err = utils.RunCommand("tar -xf go.tar.gz -C .", dir)
 	if err != nil {
 		return "", "", err
 	}
