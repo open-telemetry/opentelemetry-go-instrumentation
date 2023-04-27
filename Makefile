@@ -15,7 +15,7 @@ BPF_INCLUDE+= -I${REPODIR}/include
 .DEFAULT_GOAL := precommit
 
 .PHONY: precommit
-precommit: license-header-check golangci-lint-fix
+precommit: license-header-check go-mod-tidy golangci-lint-fix
 
 # Tools
 $(TOOLS):
@@ -44,9 +44,14 @@ test/%:
 
 .PHONY: generate
 generate: export CFLAGS := $(BPF_INCLUDE)
-generate:
-	go mod tidy
+generate: go-mod-tidy
 	go generate ./...
+
+.PHONY: go-mod-tidy
+go-mod-tidy: $(ALL_GO_MOD_DIRS:%=go-mod-tidy/%)
+go-mod-tidy/%: DIR=$*
+go-mod-tidy/%:
+	@cd $(DIR) && go mod tidy -compat=1.20
 
 .PHONY: golangci-lint golangci-lint-fix
 golangci-lint-fix: ARGS=--fix
@@ -124,3 +129,13 @@ fixtures/%:
 	jq 'del(.resourceSpans[].scopeSpans[].spans[].endTimeUnixNano, .resourceSpans[].scopeSpans[].spans[].startTimeUnixNano) | .resourceSpans[].scopeSpans[].spans[].spanId|= (if . != "" then "xxxxx" else . end) | .resourceSpans[].scopeSpans[].spans[].traceId|= (if . != "" then "xxxxx" else . end) | .resourceSpans[].scopeSpans|=sort_by(.scope.name)' ./test/e2e/$(LIBRARY)/traces.json.tmp | jq --sort-keys . > ./test/e2e/$(LIBRARY)/traces.json
 	rm ./test/e2e/$(LIBRARY)/traces.json.tmp
 	kind delete cluster
+
+.PHONY: check-clean-work-tree
+check-clean-work-tree:
+	@if ! git diff --quiet; then \
+	  echo; \
+	  echo 'Working tree is not clean, did you forget to run "make precommit"?'; \
+	  echo; \
+	  git status; \
+	  exit 1; \
+	fi

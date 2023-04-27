@@ -46,7 +46,9 @@ jobs:
           path: ~/.tools
           key: ${{ runner.os }}-${{ env.cache-name }}-${{ hashFiles('./internal/tools/**') }}
       - name: Run linters
-        run: make license-header-check
+        run: make license-header-check go-mod-tidy
+      - name: Check clean repository
+        run: make check-clean-work-tree
   verify-licenses:
     runs-on: ubuntu-22.04
     steps:
