@@ -12,27 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package utils
+package opentelemetry
 
 import (
-	"bytes"
-	"os/exec"
+	"fmt"
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"go.opentelemetry.io/auto"
 )
 
-// ShellToUse is the shell flavor used to run commands.
-const ShellToUse = "bash"
-
-// RunCommand runs command in dir.
-func RunCommand(command string, dir string) (string, string, error) {
-	var stdout bytes.Buffer
-	var stderr bytes.Buffer
-	cmd := exec.Command(ShellToUse, "-c", command)
-	if dir != "" {
-		cmd.Dir = dir
-	}
-
-	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
-	err := cmd.Run()
-	return stdout.String(), stderr.String(), err
+func TestUserAgent(t *testing.T) {
+	assert.Contains(t, autoinstUserAgent, fmt.Sprintf("OTel-Go-Auto-Instrumentation/%s", auto.Version()))
 }
