@@ -29,7 +29,8 @@ import (
 	"go.opentelemetry.io/auto/pkg/process"
 )
 
-type instrumentorsManager struct {
+// Manager handles the management of [Instrumentor] instances.
+type Manager struct {
 	instrumentors  map[string]Instrumentor
 	done           chan bool
 	incomingEvents chan *events.Event
@@ -37,8 +38,9 @@ type instrumentorsManager struct {
 	allocator      *allocator.Allocator
 }
 
-func NewManager(otelController *opentelemetry.Controller) (*instrumentorsManager, error) {
-	m := &instrumentorsManager{
+// NewManager returns a new [Manager].
+func NewManager(otelController *opentelemetry.Controller) (*Manager, error) {
+	m := &Manager{
 		instrumentors:  make(map[string]Instrumentor),
 		done:           make(chan bool, 1),
 		incomingEvents: make(chan *events.Event),
@@ -54,7 +56,7 @@ func NewManager(otelController *opentelemetry.Controller) (*instrumentorsManager
 	return m, nil
 }
 
-func (m *instrumentorsManager) registerInstrumentor(instrumentor Instrumentor) error {
+func (m *Manager) registerInstrumentor(instrumentor Instrumentor) error {
 	if _, exists := m.instrumentors[instrumentor.LibraryName()]; exists {
 		return fmt.Errorf("library %s registered twice, aborting", instrumentor.LibraryName())
 	}
@@ -63,7 +65,9 @@ func (m *instrumentorsManager) registerInstrumentor(instrumentor Instrumentor) e
 	return nil
 }
 
-func (m *instrumentorsManager) GetRelevantFuncs() map[string]interface{} {
+// GetRelevantFuncs returns the instrumented functions for all managed
+// Instrumentors.
+func (m *Manager) GetRelevantFuncs() map[string]interface{} {
 	funcsMap := make(map[string]interface{})
 	for _, i := range m.instrumentors {
 		for _, f := range i.FuncNames() {
@@ -74,7 +78,9 @@ func (m *instrumentorsManager) GetRelevantFuncs() map[string]interface{} {
 	return funcsMap
 }
 
-func (m *instrumentorsManager) FilterUnusedInstrumentors(target *process.TargetDetails) {
+// FilterUnusedInstrumentors filterers Instrumentors whose functions are
+// already instrumented out of the Manager.
+func (m *Manager) FilterUnusedInstrumentors(target *process.TargetDetails) {
 	existingFuncMap := make(map[string]interface{})
 	for _, f := range target.Functions {
 		existingFuncMap[f.Name] = nil
@@ -96,7 +102,7 @@ func (m *instrumentorsManager) FilterUnusedInstrumentors(target *process.TargetD
 	}
 }
 
-func registerInstrumentors(m *instrumentorsManager) error {
+func registerInstrumentors(m *Manager) error {
 	insts := []Instrumentor{
 		grpc.New(),
 		grpcServer.New(),
