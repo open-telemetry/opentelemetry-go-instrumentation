@@ -33,5 +33,6 @@ func RunCommand(command string, dir string) (string, string, error) {
 
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
-	return stdout.String(), stderr.String(), cmd.Run()
+	err := cmd.Run()
+	return stdout.String(), stderr.String(), err
 }
