@@ -19,14 +19,16 @@ import (
 	"os"
 )
 
-const (
-	ExePathEnvVar = "OTEL_GO_AUTO_TARGET_EXE"
-)
+// ExePathEnvVar is the environment variable key whose value points to the
+// instrumented executable.
+const ExePathEnvVar = "OTEL_GO_AUTO_TARGET_EXE"
 
+// TargetArgs are the binary target information.
 type TargetArgs struct {
 	ExePath string
 }
 
+// Validate validates t and returns an error if not valid.
 func (t *TargetArgs) Validate() error {
 	if t.ExePath == "" {
 		return errors.New("target binary path not specified, please specify " + ExePathEnvVar + " env variable")
@@ -35,6 +37,8 @@ func (t *TargetArgs) Validate() error {
 	return nil
 }
 
+// ParseTargetArgs returns TargetArgs for the target pointed to by the
+// environment variable OTEL_GO_AUTO_TARGET_EXE.
 func ParseTargetArgs() *TargetArgs {
 	result := &TargetArgs{}
 
