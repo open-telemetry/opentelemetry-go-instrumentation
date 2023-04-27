@@ -20,22 +20,27 @@ import (
 	"os"
 )
 
+// DataMember defines a data structure.
 type DataMember struct {
 	StructName string
 	Field      string
 }
 
+// DataMemberOffset is the offset of a DataMember.
 type DataMemberOffset struct {
 	*DataMember
 	Offset uint64
 }
 
+// Results are all the returned offsets for a data member.
 type Result struct {
 	DataMembers []*DataMemberOffset
 }
 
+// ErrOffsetsNotFound is returned when the requested offsets cannot be found.
 var ErrOffsetsNotFound = errors.New("could not find offset")
 
+// FindOffsets finds all the dataMembers offsets.
 func FindOffsets(file *os.File, dataMembers []*DataMember) (*Result, error) {
 	elfF, err := elf.NewFile(file)
 	if err != nil {
@@ -52,12 +57,11 @@ func FindOffsets(file *os.File, dataMembers []*DataMember) (*Result, error) {
 		offset, found := findDataMemberOffset(dwarfData, dm)
 		if !found {
 			return nil, ErrOffsetsNotFound
-		} else {
-			result.DataMembers = append(result.DataMembers, &DataMemberOffset{
-				DataMember: dm,
-				Offset:     uint64(offset),
-			})
 		}
+		result.DataMembers = append(result.DataMembers, &DataMemberOffset{
+			DataMember: dm,
+			Offset:     uint64(offset),
+		})
 	}
 
 	return result, nil
