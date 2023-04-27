@@ -42,7 +42,7 @@ type HttpEvent struct {
 	EndTime     uint64
 	Method      [100]byte
 	Path        [100]byte
-	SpanContext context.EbpfSpanContext
+	SpanContext context.EBPFSpanContext
 }
 
 type gorillaMuxInstrumentor struct {
@@ -95,7 +95,7 @@ func (g *gorillaMuxInstrumentor) Load(ctx *context.InstrumentorContext) error {
 	g.bpfObjects = &bpfObjects{}
 	err = spec.LoadAndAssign(g.bpfObjects, &ebpf.CollectionOptions{
 		Maps: ebpf.MapOptions{
-			PinPath: bpffs.BpfFsPath,
+			PinPath: bpffs.BPFFsPath,
 		},
 	})
 	if err != nil {

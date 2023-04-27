@@ -12,36 +12,39 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package process
+package main
 
 import (
-	"errors"
-	"os"
+	"io/ioutil"
+	"log"
+	"net/http"
+	"time"
+
+	"github.com/gin-gonic/gin"
 )
 
-const (
-	ExePathEnvVar = "OTEL_GO_AUTO_TARGET_EXE"
-)
+func main() {
+	r := gin.Default()
+	r.GET("/hello-gin", func(c *gin.Context) {
+		c.String(http.StatusOK, "hello\n")
+	})
+	go r.Run();
 
-type TargetArgs struct {
-	ExePath string
-}
+	// give time for auto-instrumentation to start up
+	time.Sleep(5 * time.Second)
 
-func (t *TargetArgs) Validate() error {
-	if t.ExePath == "" {
-		return errors.New("target binary path not specified, please specify " + ExePathEnvVar + " env variable")
+	resp, err := http.Get("http://localhost:8080/hello-gin")
+	if err != nil {
+		log.Fatal(err)
+	}
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		log.Fatal(err)
 	}
 
-	return nil
-}
+	log.Printf("Body: %s\n", string(body))
+	_ = resp.Body.Close()
 
-func ParseTargetArgs() *TargetArgs {
-	result := &TargetArgs{}
-
-	val, exists := os.LookupEnv(ExePathEnvVar)
-	if exists {
-		result.ExePath = val
-	}
-
-	return result
+	// give time for auto-instrumentation to report signal
+	time.Sleep(5 * time.Second)
 }

@@ -6,7 +6,7 @@ on:
   pull_request:
 
 jobs:
-  generate:
+  generate-and-test:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repo
@@ -24,6 +24,9 @@ jobs:
       - name: verify output
         run: |
           git diff --exit-code || (echo 'generated diff, please run "make generate"' && exit 1)
+      - name: Run unit tests
+        run: |
+          make test
   docker-build:
     runs-on: ubuntu-latest
     steps:

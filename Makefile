@@ -2,9 +2,16 @@
 # Assume the Makefile is in the root of the repository.
 REPODIR := $(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
 
+ALL_GO_MOD_DIRS := $(shell find . -type f -name 'go.mod' ! -path './LICENSES/*' -exec dirname {} \; | sort)
+
 # Build the list of include directories to compile the bpf program
 BPF_INCLUDE += -I${REPODIR}/include/libbpf
 BPF_INCLUDE += -I${REPODIR}/include
+
+.DEFAULT_GOAL := precommit
+
+.PHONY: precommit
+precommit: license-header-check go-mod-tidy
 
 # Tools
 TOOLS_MOD_DIR := ./internal/tools
@@ -25,11 +32,27 @@ TARGET ?= amd64
 .PHONY: tools
 tools: $(GOLICENSES)
 
+ALL_GO_MODS := $(shell find . -type f -name 'go.mod' ! -path '$(TOOLS_MOD_DIR)/*' ! -path './LICENSES/*' | sort)
+GO_MODS_TO_TEST := $(ALL_GO_MODS:%=test/%)
+
+.PHONY: test
+test: $(GO_MODS_TO_TEST)
+test/%: GO_MOD=$*
+test/%:
+	cd $(shell dirname $(GO_MOD)) && go test -v ./...
+
 .PHONY: generate
 generate: export CFLAGS := $(BPF_INCLUDE)
+generate: go-mod-tidy
 generate:
 	go mod tidy
 	TARGET=$(TARGET) go generate ./...
+
+.PHONY: go-mod-tidy
+go-mod-tidy: $(ALL_GO_MOD_DIRS:%=go-mod-tidy/%)
+go-mod-tidy/%: DIR=$*
+go-mod-tidy/%:
+	@cd $(DIR) && go mod tidy -compat=1.20
 
 .PHONY: build
 build: generate
@@ -48,13 +71,13 @@ docker-offsets:
 	docker run --rm -v $(shell pwd):/app golang:1.20 /bin/sh -c "cd ../app && make offsets"
 
 .PHONY: update-licenses
-update-licenses: | $(GOLICENSES)
+update-licenses: generate $(GOLICENSES)
 	rm -rf LICENSES
 	$(GOLICENSES) save ./cli/ --save_path LICENSES
 	cp -R ./include/libbpf ./LICENSES
 
 .PHONY: verify-licenses
-verify-licenses: | $(GOLICENSES)
+verify-licenses: generate $(GOLICENSES)
 	$(GOLICENSES) save ./cli --save_path temp
 	cp -R ./include/libbpf ./temp; \
     if diff temp LICENSES > /dev/null; then \
@@ -66,9 +89,20 @@ verify-licenses: | $(GOLICENSES)
       exit 1; \
     fi; \
 
-.PHONY: fixture-nethttp fixture-gorillamux
+.PHONY: license-header-check
+license-header-check:
+	@licRes=$$(for f in $$(find . -type f \( -iname '*.go' -o -iname '*.sh' \) ! -path '**/third_party/*' ! -path './.git/*' ! -path './LICENSES/*' ) ; do \
+	           awk '/Copyright The OpenTelemetry Authors|generated|GENERATED/ && NR<=3 { found=1; next } END { if (!found) print FILENAME }' $$f; \
+	   done); \
+	   if [ -n "$${licRes}" ]; then \
+	           echo "license header checking failed:"; echo "$${licRes}"; \
+	           exit 1; \
+	   fi
+
+.PHONY: fixture-nethttp fixture-gorillamux fixture-gin
 fixture-nethttp: fixtures/nethttp
 fixture-gorillamux: fixtures/gorillamux
+fixture-gin: fixtures/gin
 fixtures/%: LIBRARY=$*
 fixtures/%:
 	$(MAKE) docker-build
@@ -87,3 +121,13 @@ fixtures/%:
 	jq 'del(.resourceSpans[].scopeSpans[].spans[].endTimeUnixNano, .resourceSpans[].scopeSpans[].spans[].startTimeUnixNano) | .resourceSpans[].scopeSpans[].spans[].spanId|= (if . != "" then "xxxxx" else . end) | .resourceSpans[].scopeSpans[].spans[].traceId|= (if . != "" then "xxxxx" else . end) | .resourceSpans[].scopeSpans|=sort_by(.scope.name)' ./test/e2e/$(LIBRARY)/traces.json.tmp | jq --sort-keys . > ./test/e2e/$(LIBRARY)/traces.json
 	rm ./test/e2e/$(LIBRARY)/traces.json.tmp
 	kind delete cluster
+
+.PHONY: check-clean-work-tree
+check-clean-work-tree:
+	@if ! git diff --quiet; then \
+	  echo; \
+	  echo 'Working tree is not clean, did you forget to run "make precommit"?'; \
+	  echo; \
+	  git status; \
+	  exit 1; \
+	fi
