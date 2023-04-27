@@ -1,0 +1,59 @@
+{
+  "resourceSpans": [
+    {
+      "resource": {
+        "attributes": [
+          {
+            "key": "service.name",
+            "value": {
+              "stringValue": "sample-app"
+            }
+          },
+          {
+            "key": "telemetry.auto.version",
+            "value": {
+              "stringValue": "v0.1.0-alpha"
+            }
+          },
+          {
+            "key": "telemetry.sdk.language",
+            "value": {
+              "stringValue": "go"
+            }
+          }
+        ]
+      },
+      "scopeSpans": [
+        {
+          "scope": {
+            "name": "github.com/gin-gonic/gin"
+          },
+          "spans": [
+            {
+              "attributes": [
+                {
+                  "key": "http.method",
+                  "value": {
+                    "stringValue": "GET"
+                  }
+                },
+                {
+                  "key": "http.target",
+                  "value": {
+                    "stringValue": "/hello-gin"
+                  }
+                }
+              ],
+              "kind": 2,
+              "name": "/hello-gin",
+              "parentSpanId": "",
+              "spanId": "xxxxx",
+              "status": {},
+              "traceId": "xxxxx"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
