@@ -26,8 +26,10 @@ type goListResponse struct {
 	Versions []string `json:"versions"`
 }
 
+// FindVersionsUsingGoList returns all locally known version of module with
+// moduleName.
 func FindVersionsUsingGoList(moduleName string) ([]string, error) {
-	err, stdout, _ := utils.RunCommand(fmt.Sprintf("go list -m -json -versions %s", moduleName), "")
+	stdout, _, err := utils.RunCommand(fmt.Sprintf("go list -m -json -versions %s", moduleName), "")
 	if err != nil {
 		return nil, err
 	}
