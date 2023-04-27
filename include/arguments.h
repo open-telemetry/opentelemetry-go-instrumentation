@@ -68,3 +68,19 @@ void *get_argument(struct pt_regs *ctx, int index)
 inline void *get_goroutine_address(struct pt_regs *ctx) {
     return (void *)(ctx->r14);
 }
+
+// Every span created by the auto instrumentation should contain end timestamp.
+// This end timestamp is recorded at the end of probed function by editing the struct that was created at the beginning.
+// Usually instrumentors create an eBPF map to store the span struct and retrieve it at the end of the function.
+// Consistent key is used as a key to the map.
+// For Go < 1.17: consistent key is the address of context.Context.
+// For Go >= 1.17: consistent key is the goroutine address.
+static __always_inline void *get_consistent_key(struct pt_regs *ctx, int go_ctx_index)
+{
+    if (is_registers_abi)
+    {
+        return GOROUTINE(ctx);
+    }
+
+    return get_argument_by_stack(ctx, go_ctx_index);
+}

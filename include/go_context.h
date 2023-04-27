@@ -16,22 +16,71 @@
 
 #define MAX_DISTANCE 10
 
-static __always_inline void *find_context_in_map(void *ctx, void *context_map)
+struct
 {
+    __uint(type, BPF_MAP_TYPE_HASH);
+    __type(key, void *);
+    __type(value, struct span_context);
+    __uint(max_entries, MAX_CONCURRENT_SPANS);
+    __uint(pinning, LIBBPF_PIN_BY_NAME);
+} tracked_spans SEC(".maps");
+
+struct
+{
+    __uint(type, BPF_MAP_TYPE_HASH);
+    __type(key, struct span_context);
+    __type(value, void *);
+    __uint(max_entries, MAX_CONCURRENT_SPANS);
+    __uint(pinning, LIBBPF_PIN_BY_NAME);
+} tracked_spans_by_sc SEC(".maps");
+
+static __always_inline void *get_parent_go_context(void *ctx) {
     void *data = ctx;
     for (int i = 0; i < MAX_DISTANCE; i++)
     {
-        void *found_in_map = bpf_map_lookup_elem(context_map, &data);
+        void *found_in_map = bpf_map_lookup_elem(&tracked_spans, &data);
         if (found_in_map != NULL)
         {
             return data;
         }
 
-        // We assume context.Context implementation containens Parent context.Context member
+        // We assume context.Context implementation contains Parent context.Context member
         // Since the parent is also an interface, we need to read the data part of it
         bpf_probe_read(&data, sizeof(data), data + 8);
     }
 
     bpf_printk("context %lx not found in context map", ctx);
     return NULL;
+}
+
+static __always_inline struct span_context *get_parent_span_context(void *ctx) {
+    void *parent_ctx = get_tracked_parent_go_context(ctx);
+    if (parent_ctx == NULL)
+    {
+        return NULL;
+    }
+
+    struct span_context *parent_sc = bpf_map_lookup_elem(&tracked_spans, &parent_ctx);
+    if (parent_sc == NULL)
+    {
+        return NULL;
+    }
+
+    return parent_sc;
+}
+
+static __always_inline void track_running_span(void *ctx, struct span_context *sc) {
+    bpf_map_update_elem(&tracked_spans, &ctx, &sc, BPF_ANY);
+    bpf_map_update_elem(&tracked_spans_by_sc, &sc, &ctx, BPF_ANY);
+}
+
+static __always_inline void stop_tracking_span(struct span_context *sc) {
+    void *ctx = bpf_map_lookup_elem(&tracked_spans_by_sc, &sc);
+    if (ctx == NULL)
+    {
+        return;
+    }
+
+    bpf_map_delete_elem(&tracked_spans, &ctx);
+    bpf_map_delete_elem(&tracked_spans_by_sc, &sc);
 }
