@@ -16,7 +16,9 @@ package context
 
 import "go.opentelemetry.io/otel/trace"
 
-type EbpfSpanContext struct {
+// EBPFSpanContext is the the span context representation within the eBPF
+// instrumentation system.
+type EBPFSpanContext struct {
 	TraceID trace.TraceID
 	SpanID  trace.SpanID
 }
