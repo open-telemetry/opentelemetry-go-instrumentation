@@ -12,27 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package utils
+package auto
 
-import (
-	"bytes"
-	"os/exec"
-)
-
-// ShellToUse is the shell flavor used to run commands.
-const ShellToUse = "bash"
-
-// RunCommand runs command in dir.
-func RunCommand(command string, dir string) (string, string, error) {
-	var stdout bytes.Buffer
-	var stderr bytes.Buffer
-	cmd := exec.Command(ShellToUse, "-c", command)
-	if dir != "" {
-		cmd.Dir = dir
-	}
-
-	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
-	err := cmd.Run()
-	return stdout.String(), stderr.String(), err
+// Version is the current release version of OpenTelemetry Go auto-instrumentation in use.
+func Version() string {
+	return "v0.1.0-alpha"
 }
