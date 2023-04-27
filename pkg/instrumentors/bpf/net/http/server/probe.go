@@ -45,7 +45,7 @@ type Event struct {
 	EndTime     uint64
 	Method      [6]byte
 	Path        [100]byte
-	SpanContext context.EbpfSpanContext
+	SpanContext context.EBPFSpanContext
 }
 
 // Instrumentor is the net/http instrumentor.
@@ -98,7 +98,7 @@ func (h *Instrumentor) Load(ctx *context.InstrumentorContext) error {
 	h.bpfObjects = &bpfObjects{}
 	err = spec.LoadAndAssign(h.bpfObjects, &ebpf.CollectionOptions{
 		Maps: ebpf.MapOptions{
-			PinPath: bpffs.BpfFsPath,
+			PinPath: bpffs.BPFFsPath,
 		},
 	})
 	if err != nil {
