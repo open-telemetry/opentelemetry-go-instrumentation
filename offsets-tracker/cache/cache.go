@@ -25,10 +25,12 @@ import (
 	"go.opentelemetry.io/auto/offsets-tracker/schema"
 )
 
+// Cache holds already seen offsets.
 type Cache struct {
 	data *schema.TrackedOffsets
 }
 
+// NewCache returns a new [Cache].
 func NewCache(prevOffsetFile string) *Cache {
 	f, err := os.Open(prevOffsetFile)
 	if err != nil {
@@ -55,6 +57,8 @@ func NewCache(prevOffsetFile string) *Cache {
 	}
 }
 
+// IsAllInCache returns all DataMemberOffset for a module with modName and
+// version and offsets describe by dm.
 func (c *Cache) IsAllInCache(modName string, version string, dm []*binary.DataMember) ([]*binary.DataMemberOffset, bool) {
 	for _, item := range c.data.Data {
 		if item.Name == modName {
@@ -77,9 +81,8 @@ func (c *Cache) IsAllInCache(modName string, version string, dm []*binary.DataMe
 			}
 			if offsetsFound == len(dm) {
 				return results, true
-			} else {
-				return nil, false
 			}
+			return nil, false
 		}
 	}
 
