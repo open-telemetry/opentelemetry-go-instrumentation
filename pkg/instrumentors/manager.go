@@ -18,6 +18,7 @@ import (
 	"fmt"
 
 	"go.opentelemetry.io/auto/pkg/instrumentors/allocator"
+	"go.opentelemetry.io/auto/pkg/instrumentors/bpf/github.com/gin-gonic/gin"
 	gorillaMux "go.opentelemetry.io/auto/pkg/instrumentors/bpf/github.com/gorilla/mux"
 	"go.opentelemetry.io/auto/pkg/instrumentors/bpf/google/golang/org/grpc"
 	grpcServer "go.opentelemetry.io/auto/pkg/instrumentors/bpf/google/golang/org/grpc/server"
@@ -107,6 +108,7 @@ func registerInstrumentors(m *Manager) error {
 		grpcServer.New(),
 		httpServer.New(),
 		gorillaMux.New(),
+		gin.New(),
 	}
 
 	for _, i := range insts {
