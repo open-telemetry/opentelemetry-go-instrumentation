@@ -19,14 +19,16 @@ import (
 	"fmt"
 	"os"
 	"runtime"
+	"strings"
 	"time"
 
 	"golang.org/x/sys/unix"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
 
+	"go.opentelemetry.io/auto"
 	"go.opentelemetry.io/auto/pkg/instrumentors/events"
 	"go.opentelemetry.io/auto/pkg/log"
+	"go.opentelemetry.io/otel/exporters/otlp/otlptrace"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
@@ -35,8 +37,18 @@ import (
 )
 
 const (
-	otelEndpointEnvVar    = "OTEL_EXPORTER_OTLP_ENDPOINT"
 	otelServiceNameEnvVar = "OTEL_SERVICE_NAME"
+)
+
+var (
+	// Controller-local reference to the auto-instrumentation release version.
+	releaseVersion = auto.Version()
+	// Start of this auto-instrumentation's exporter User-Agent header, e.g. ""OTel-Go-Auto-Instrumentation/1.2.3".
+	baseUserAgent = fmt.Sprintf("OTel-Go-Auto-Instrumentation/%s", releaseVersion)
+	// Information about the runtime environment for inclusion in User-Agent, e.g. "go/1.18.2 (linux/amd64)".
+	runtimeInfo = fmt.Sprintf("%s (%s/%s)", strings.Replace(runtime.Version(), "go", "go/", 1), runtime.GOOS, runtime.GOARCH)
+	// Combined User-Agent identifying this auto-instrumentation and its runtime environment, see RFC7231 for format considerations.
+	autoinstUserAgent = fmt.Sprintf("%s %s", baseUserAgent, runtimeInfo)
 )
 
 // Controller handles OpenTelemetry telemetry generation for events.
@@ -87,11 +99,6 @@ func (c *Controller) convertTime(t int64) time.Time {
 
 // NewController returns a new initialized [Controller].
 func NewController() (*Controller, error) {
-	endpoint, exists := os.LookupEnv(otelEndpointEnvVar)
-	if !exists {
-		return nil, fmt.Errorf("%s env var must be set", otelEndpointEnvVar)
-	}
-
 	serviceName, exists := os.LookupEnv(otelServiceNameEnvVar)
 	if !exists {
 		return nil, fmt.Errorf("%s env var must be set", otelServiceNameEnvVar)
@@ -102,27 +109,20 @@ func NewController() (*Controller, error) {
 		resource.WithAttributes(
 			semconv.ServiceNameKey.String(serviceName),
 			semconv.TelemetrySDKLanguageGo,
+			semconv.TelemetryAutoVersionKey.String(releaseVersion),
 		),
 	)
 	if err != nil {
 		return nil, err
 	}
 
-	log.Logger.V(0).Info("Establishing connection to OpenTelemetry collector ...")
-	timeoutContext, cancel := context.WithTimeout(ctx, time.Second*10)
-	defer cancel()
-	insecureOpt := grpc.WithTransportCredentials(insecure.NewCredentials())
-	conn, err := grpc.DialContext(timeoutContext, endpoint, insecureOpt, grpc.WithBlock())
-	if err != nil {
-		log.Logger.Error(err, "unable to connect to OpenTelemetry collector", "addr", endpoint)
-		return nil, err
-	}
-
-	traceExporter, err := otlptracegrpc.New(ctx,
-		otlptracegrpc.WithGRPCConn(conn),
+	log.Logger.V(0).Info("Establishing connection to OTLP receiver ...")
+	otlpTraceClient := otlptracegrpc.NewClient(
+		otlptracegrpc.WithDialOption(grpc.WithUserAgent(autoinstUserAgent)),
 	)
-
+	traceExporter, err := otlptrace.New(ctx, otlpTraceClient)
 	if err != nil {
+		log.Logger.Error(err, "unable to connect to OTLP endpoint")
 		return nil, err
 	}
 
