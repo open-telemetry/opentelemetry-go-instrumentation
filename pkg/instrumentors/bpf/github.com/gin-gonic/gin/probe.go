@@ -60,7 +60,7 @@ func New() *Instrumentor {
 	return &Instrumentor{}
 }
 
-// LibraryName returns the gorilla/mux package import path.
+// LibraryName returns the gin-gonic/gin package import path.
 func (h *Instrumentor) LibraryName() string {
 	return "github.com/gin-gonic/gin"
 }
