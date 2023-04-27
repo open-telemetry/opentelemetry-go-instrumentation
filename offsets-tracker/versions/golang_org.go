@@ -22,7 +22,7 @@ import (
 )
 
 const (
-	jsonUrl = "https://go.dev/dl/?mode=json&include=all"
+	jsonURL = "https://go.dev/dl/?mode=json&include=all"
 )
 
 type goDevResponse struct {
@@ -30,8 +30,10 @@ type goDevResponse struct {
 	Stable  bool   `json:"stable"`
 }
 
+// FindVersionsFromGoWebsite returns all known Go versions from the Go package
+// mirror at https://go.dev/dl/.
 func FindVersionsFromGoWebsite() ([]string, error) {
-	res, err := http.Get(jsonUrl)
+	res, err := http.Get(jsonURL)
 	if err != nil {
 		return nil, err
 	}

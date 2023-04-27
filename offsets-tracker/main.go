@@ -21,6 +21,7 @@ import (
 	"os"
 
 	"github.com/hashicorp/go-version"
+
 	"go.opentelemetry.io/auto/offsets-tracker/binary"
 	"go.opentelemetry.io/auto/offsets-tracker/target"
 	"go.opentelemetry.io/auto/offsets-tracker/writer"
