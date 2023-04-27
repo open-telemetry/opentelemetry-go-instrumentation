@@ -14,6 +14,5 @@
 
 package bpffs
 
-const (
-	BpfFsPath = "/sys/fs/bpf"
-)
+// BPFFsPath is the system path to the BPF file-system.
+const BPFFsPath = "/sys/fs/bpf"
