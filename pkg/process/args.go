@@ -20,7 +20,7 @@ import (
 )
 
 // ExePathEnvVar is the environment variable key whose value points to the
-// target executable.
+// instrumented executable.
 const ExePathEnvVar = "OTEL_GO_AUTO_TARGET_EXE"
 
 // TargetArgs are the binary target information.

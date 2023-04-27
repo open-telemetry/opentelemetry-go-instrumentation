@@ -114,7 +114,7 @@ func (a *Analyzer) findProcessID(target *TargetArgs) (int, error) {
 	return 0, errors.ErrProcessNotFound
 }
 
-// Close closes a.
+// Close closes the analyzer.
 func (a *Analyzer) Close() {
 	a.done <- true
 }
