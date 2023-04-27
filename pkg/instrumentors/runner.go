@@ -19,15 +19,17 @@ import (
 
 	"github.com/cilium/ebpf/link"
 	"github.com/cilium/ebpf/rlimit"
+
 	"go.opentelemetry.io/auto/pkg/inject"
 	"go.opentelemetry.io/auto/pkg/instrumentors/context"
 	"go.opentelemetry.io/auto/pkg/log"
 	"go.opentelemetry.io/auto/pkg/process"
 )
 
-func (m *instrumentorsManager) Run(target *process.TargetDetails) error {
+// Run runs the event processing loop for all managed Instrumentors.
+func (m *Manager) Run(target *process.TargetDetails) error {
 	if len(m.instrumentors) == 0 {
-		log.Logger.V(0).Info("there are no avilable instrumentations for target process")
+		log.Logger.V(0).Info("there are no available instrumentations for target process")
 		return nil
 	}
 
@@ -52,7 +54,7 @@ func (m *instrumentorsManager) Run(target *process.TargetDetails) error {
 	}
 }
 
-func (m *instrumentorsManager) load(target *process.TargetDetails) error {
+func (m *Manager) load(target *process.TargetDetails) error {
 	// Allow the current process to lock memory for eBPF resources.
 	if err := rlimit.RemoveMemlock(); err != nil {
 		return err
@@ -93,13 +95,14 @@ func (m *instrumentorsManager) load(target *process.TargetDetails) error {
 	return nil
 }
 
-func (m *instrumentorsManager) cleanup() {
+func (m *Manager) cleanup() {
 	close(m.incomingEvents)
 	for _, i := range m.instrumentors {
 		i.Close()
 	}
 }
 
-func (m *instrumentorsManager) Close() {
+// Close closes m.
+func (m *Manager) Close() {
 	m.done <- true
 }

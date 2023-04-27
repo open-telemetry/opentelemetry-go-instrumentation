@@ -19,6 +19,7 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
+// Event is a telemetry event that happens within an instrumented package.
 type Event struct {
 	Library           string
 	Name              string
