@@ -30,7 +30,7 @@ import (
 // module.
 type VersionsStrategy int
 
-// BinaryFetchStrategy is a strategies used when fetching executable binaries.
+// BinaryFetchStrategy is a strategy used when fetching executable binaries.
 type BinaryFetchStrategy int
 
 // Target parsing strategies.
