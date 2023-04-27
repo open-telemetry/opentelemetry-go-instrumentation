@@ -22,6 +22,17 @@ spec:
       serviceAccountName: emoji
       shareProcessNamespace: true
       terminationGracePeriodSeconds: 0
+      initContainers:
+        - name: copy-launcher
+          image: keyval/launcher:v0.1
+          command:
+            - cp
+            - -a
+            - /kv-launcher/.
+            - /odigos-launcher/
+          volumeMounts:
+            - name: launcherdir
+              mountPath: /odigos-launcher
       containers:
         - env:
             - name: GRPC_PORT
@@ -31,7 +42,11 @@ spec:
           image: docker.l5d.io/buoyantio/emojivoto-emoji-svc:v11
           name: emoji-svc
           command:
+            - /odigos-launcher/launch
             - /usr/local/bin/emojivoto-emoji-svc
+          volumeMounts:
+            - mountPath: /odigos-launcher
+              name: launcherdir
           ports:
             - containerPort: 8080
               name: grpc
@@ -41,7 +56,7 @@ spec:
             requests:
               cpu: 100m
         - name: emojivoto-emoji-instrumentation
-          image: edenfed/otel-go-agent:v0.123
+          image: keyval/otel-go-agent:v0.6.0
           env:
             - name: OTEL_TARGET_EXE
               value: /usr/local/bin/emojivoto-emoji-svc
@@ -59,6 +74,8 @@ spec:
             - mountPath: /sys/kernel/debug
               name: kernel-debug
       volumes:
+        - name: launcherdir
+          emptyDir: {}
         - name: kernel-debug
           hostPath:
             path: /sys/kernel/debug
@@ -87,6 +104,17 @@ spec:
       serviceAccountName: voting
       shareProcessNamespace: true
       terminationGracePeriodSeconds: 0
+      initContainers:
+        - name: copy-launcher
+          image: keyval/launcher:v0.1
+          command:
+            - cp
+            - -a
+            - /kv-launcher/.
+            - /odigos-launcher/
+          volumeMounts:
+            - name: launcherdir
+              mountPath: /odigos-launcher
       containers:
         - env:
             - name: GRPC_PORT
@@ -96,7 +124,11 @@ spec:
           image: docker.l5d.io/buoyantio/emojivoto-voting-svc:v11
           name: voting-svc
           command:
+            - /odigos-launcher/launch
             - /usr/local/bin/emojivoto-voting-svc
+          volumeMounts:
+            - mountPath: /odigos-launcher
+              name: launcherdir
           ports:
             - containerPort: 8080
               name: grpc
@@ -106,7 +138,7 @@ spec:
             requests:
               cpu: 100m
         - name: emojivoto-voting-instrumentation
-          image: edenfed/otel-go-agent:v0.123
+          image: keyval/otel-go-agent:v0.6.0
           env:
             - name: OTEL_TARGET_EXE
               value: /usr/local/bin/emojivoto-voting-svc
@@ -124,6 +156,8 @@ spec:
             - mountPath: /sys/kernel/debug
               name: kernel-debug
       volumes:
+        - name: launcherdir
+          emptyDir: {}
         - name: kernel-debug
           hostPath:
             path: /sys/kernel/debug
@@ -152,6 +186,17 @@ spec:
       serviceAccountName: web
       shareProcessNamespace: true
       terminationGracePeriodSeconds: 0
+      initContainers:
+        - name: copy-launcher
+          image: keyval/launcher:v0.1
+          command:
+            - cp
+            - -a
+            - /kv-launcher/.
+            - /odigos-launcher/
+          volumeMounts:
+            - name: launcherdir
+              mountPath: /odigos-launcher
       containers:
         - env:
             - name: WEB_PORT
@@ -165,7 +210,11 @@ spec:
           image: docker.l5d.io/buoyantio/emojivoto-web:v11
           name: web-svc
           command:
+            - /odigos-launcher/launch
             - /usr/local/bin/emojivoto-web
+          volumeMounts:
+            - mountPath: /odigos-launcher
+              name: launcherdir
           ports:
             - containerPort: 8080
               name: http
@@ -173,7 +222,7 @@ spec:
             requests:
               cpu: 100m
         - name: emojivoto-web-instrumentation
-          image: edenfed/otel-go-agent:v0.123
+          image: keyval/otel-go-agent:v0.6.0
           env:
             - name: OTEL_TARGET_EXE
               value: /usr/local/bin/emojivoto-web
@@ -191,6 +240,8 @@ spec:
             - mountPath: /sys/kernel/debug
               name: kernel-debug
       volumes:
+        - name: launcherdir
+          emptyDir: {}
         - name: kernel-debug
           hostPath:
             path: /sys/kernel/debug
