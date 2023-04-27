@@ -10,6 +10,12 @@
             }
           },
           {
+            "key": "telemetry.auto.version",
+            "value": {
+              "stringValue": "xxxxx"
+            }
+          },
+          {
             "key": "telemetry.sdk.language",
             "value": {
               "stringValue": "go"
