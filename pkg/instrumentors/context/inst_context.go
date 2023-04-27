@@ -16,10 +16,12 @@ package context
 
 import (
 	"github.com/cilium/ebpf/link"
+
 	"go.opentelemetry.io/auto/pkg/inject"
 	"go.opentelemetry.io/auto/pkg/process"
 )
 
+// InstrumentorContext holds the state of the auto-instrumentation system.
 type InstrumentorContext struct {
 	TargetDetails *process.TargetDetails
 	Executable    *link.Executable
