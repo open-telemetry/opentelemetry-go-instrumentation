@@ -32,7 +32,7 @@ func New() *Allocator {
 	return &Allocator{}
 }
 
-// Load loads the BPF file-sysystem.
+// Load loads the BPF file-system.
 func (a *Allocator) Load(ctx *context.InstrumentorContext) error {
 	logger := log.Logger.WithName("allocator")
 	if ctx.TargetDetails.AllocationDetails != nil {
