@@ -8,7 +8,6 @@ require (
 	github.com/go-logr/zapr v1.2.3
 	github.com/hashicorp/go-version v1.6.0
 	github.com/pkg/errors v0.9.1
-	github.com/prometheus/procfs v0.9.0
 	github.com/stretchr/testify v1.8.2
 	go.opentelemetry.io/otel v1.14.0
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace v1.14.0

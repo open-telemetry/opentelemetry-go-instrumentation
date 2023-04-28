@@ -2,7 +2,11 @@
 # Assume the Makefile is in the root of the repository.
 REPODIR := $(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
 
+TOOLS_MOD_DIR := ./internal/tools
+TOOLS = $(CURDIR)/.tools
+
 ALL_GO_MOD_DIRS := $(shell find . -type f -name 'go.mod' ! -path './LICENSES/*' -exec dirname {} \; | sort)
+OTEL_GO_MOD_DIRS := $(filter-out $(TOOLS_MOD_DIR), $(ALL_GO_MOD_DIRS))
 
 # Build the list of include directories to compile the bpf program
 BPF_INCLUDE += -I${REPODIR}/include/libbpf
@@ -11,12 +15,9 @@ BPF_INCLUDE+= -I${REPODIR}/include
 .DEFAULT_GOAL := precommit
 
 .PHONY: precommit
-precommit: license-header-check go-mod-tidy
+precommit: license-header-check go-mod-tidy golangci-lint-fix
 
 # Tools
-TOOLS_MOD_DIR := ./internal/tools
-TOOLS = $(CURDIR)/.tools
-
 $(TOOLS):
 	@mkdir -p $@
 $(TOOLS)/%: | $(TOOLS)
@@ -26,8 +27,11 @@ $(TOOLS)/%: | $(TOOLS)
 GOLICENSES = $(TOOLS)/go-licenses
 $(TOOLS)/go-licenses: PACKAGE=github.com/google/go-licenses
 
+GOLANGCI_LINT = $(TOOLS)/golangci-lint
+$(TOOLS)/golangci-lint: PACKAGE=github.com/golangci/golangci-lint/cmd/golangci-lint
+
 .PHONY: tools
-tools: $(GOLICENSES)
+tools: $(GOLICENSES) $(GOLANGCI_LINT)
 
 ALL_GO_MODS := $(shell find . -type f -name 'go.mod' ! -path '$(TOOLS_MOD_DIR)/*' ! -path './LICENSES/*' | sort)
 GO_MODS_TO_TEST := $(ALL_GO_MODS:%=test/%)
@@ -48,6 +52,16 @@ go-mod-tidy: $(ALL_GO_MOD_DIRS:%=go-mod-tidy/%)
 go-mod-tidy/%: DIR=$*
 go-mod-tidy/%:
 	@cd $(DIR) && go mod tidy -compat=1.20
+
+.PHONY: golangci-lint golangci-lint-fix
+golangci-lint-fix: ARGS=--fix
+golangci-lint-fix: golangci-lint
+golangci-lint: generate $(OTEL_GO_MOD_DIRS:%=golangci-lint/%)
+golangci-lint/%: DIR=$*
+golangci-lint/%: | $(GOLANGCI_LINT)
+	@echo 'golangci-lint $(if $(ARGS),$(ARGS) ,)$(DIR)' \
+		&& cd $(DIR) \
+		&& $(GOLANGCI_LINT) run --allow-serial-runners $(ARGS)
 
 .PHONY: build
 build: generate
@@ -94,9 +108,10 @@ license-header-check:
 	           exit 1; \
 	   fi
 
-.PHONY: fixture-nethttp fixture-gorillamux
+.PHONY: fixture-nethttp fixture-gorillamux fixture-gin
 fixture-nethttp: fixtures/nethttp
 fixture-gorillamux: fixtures/gorillamux
+fixture-gin: fixtures/gin
 fixtures/%: LIBRARY=$*
 fixtures/%:
 	IMG=otel-go-instrumentation $(MAKE) docker-build

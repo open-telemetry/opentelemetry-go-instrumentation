@@ -23,15 +23,17 @@ import (
 	"strings"
 
 	"github.com/hashicorp/go-version"
+	"golang.org/x/arch/x86/x86asm"
+
 	"go.opentelemetry.io/auto/pkg/log"
 	"go.opentelemetry.io/auto/pkg/process/ptrace"
-	"golang.org/x/arch/x86/x86asm"
 )
 
 const (
 	mapSize = 15 * 1024 * 1024
 )
 
+// TargetDetails are the details about a target function.
 type TargetDetails struct {
 	PID               int
 	Functions         []*Func
@@ -40,22 +42,26 @@ type TargetDetails struct {
 	AllocationDetails *AllocationDetails
 }
 
+// AllocationDetails are the details about allocated memory.
 type AllocationDetails struct {
 	StartAddr uint64
 	EndAddr   uint64
 }
 
+// Func represents a function target.
 type Func struct {
 	Name          string
 	Offset        uint64
 	ReturnOffsets []uint64
 }
 
+// IsRegistersABI returns if t is supported.
 func (t *TargetDetails) IsRegistersABI() bool {
 	regAbiMinVersion, _ := version.NewVersion("1.17")
 	return t.GoVersion.GreaterThanOrEqual(regAbiMinVersion)
 }
 
+// GetFunctionOffset returns the offset for of the function with name.
 func (t *TargetDetails) GetFunctionOffset(name string) (uint64, error) {
 	for _, f := range t.Functions {
 		if f.Name == name {
@@ -66,6 +72,8 @@ func (t *TargetDetails) GetFunctionOffset(name string) (uint64, error) {
 	return 0, fmt.Errorf("could not find offset for function %s", name)
 }
 
+// GetFunctionReturns returns the return value of the call for the function
+// with name.
 func (t *TargetDetails) GetFunctionReturns(name string) ([]uint64, error) {
 	for _, f := range t.Functions {
 		if f.Name == name {
@@ -76,7 +84,7 @@ func (t *TargetDetails) GetFunctionReturns(name string) ([]uint64, error) {
 	return nil, fmt.Errorf("could not find returns for function %s", name)
 }
 
-func (a *processAnalyzer) remoteMmap(pid int, mapSize uint64) (uint64, error) {
+func (a *Analyzer) remoteMmap(pid int, mapSize uint64) (uint64, error) {
 	program, err := ptrace.NewTracedProgram(pid, log.Logger)
 	if err != nil {
 		log.Logger.Error(err, "Failed to attach ptrace", "pid", pid)
@@ -100,7 +108,8 @@ func (a *processAnalyzer) remoteMmap(pid int, mapSize uint64) (uint64, error) {
 	return addr, nil
 }
 
-func (a *processAnalyzer) Analyze(pid int, relevantFuncs map[string]interface{}) (*TargetDetails, error) {
+// Analyze returns the target details for an actively running process.
+func (a *Analyzer) Analyze(pid int, relevantFuncs map[string]interface{}) (*TargetDetails, error) {
 	result := &TargetDetails{
 		PID: pid,
 	}
@@ -149,6 +158,9 @@ func (a *processAnalyzer) Analyze(pid int, relevantFuncs map[string]interface{})
 		return nil, fmt.Errorf("%s section not found in target binary, make sure this is a Go application", ".gosymtab")
 	}
 	symTabRaw, err := sec.Data()
+	if err != nil {
+		return nil, err
+	}
 	pcln := gosym.NewLineTable(pclndat, elfF.Section(".text").Addr)
 	symTab, err := gosym.NewTable(symTabRaw, pcln)
 	if err != nil {
@@ -189,8 +201,7 @@ func (a *processAnalyzer) Analyze(pid int, relevantFuncs map[string]interface{})
 	return result, nil
 }
 
-func (a *processAnalyzer) findFuncOffset(f *gosym.Func, elfF *elf.File) (uint64, []uint64, error) {
-	off := f.Value
+func (a *Analyzer) findFuncOffset(f *gosym.Func, elfF *elf.File) (uint64, []uint64, error) {
 	for _, prog := range elfF.Progs {
 		if prog.Type != elf.PT_LOAD || (prog.Flags&elf.PF_X) == 0 {
 			continue
@@ -198,7 +209,7 @@ func (a *processAnalyzer) findFuncOffset(f *gosym.Func, elfF *elf.File) (uint64,
 
 		// For more info on this calculation: stackoverflow.com/a/40249502
 		if prog.Vaddr <= f.Value && f.Value < (prog.Vaddr+prog.Memsz) {
-			off = f.Value - prog.Vaddr + prog.Off
+			off := f.Value - prog.Vaddr + prog.Off
 
 			funcLen := f.End - f.Entry
 			data := make([]byte, funcLen)
@@ -225,7 +236,6 @@ func (a *processAnalyzer) findFuncOffset(f *gosym.Func, elfF *elf.File) (uint64,
 
 			return off, returns, nil
 		}
-
 	}
 
 	return 0, nil, fmt.Errorf("prog not found")
