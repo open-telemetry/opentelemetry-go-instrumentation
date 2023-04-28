@@ -133,10 +133,9 @@ fixtures/%:
 
 .PHONY: check-clean-work-tree
 check-clean-work-tree:
-	@if ! git diff --quiet; then \
-	  echo; \
-	  echo 'Working tree is not clean, did you forget to run "make precommit"?'; \
-	  echo; \
-	  git status; \
-	  exit 1; \
+	if [ -n "$$(git status --porcelain)" ]; then \
+		git status; \
+		git --no-pager diff; \
+		echo 'Working tree is not clean, did you forget to run "make precommit" or "make generate"?'; \
+		exit 1; \
 	fi
