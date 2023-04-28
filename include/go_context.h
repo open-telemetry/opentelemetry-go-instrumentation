@@ -54,7 +54,7 @@ static __always_inline void *get_parent_go_context(void *ctx) {
 }
 
 static __always_inline struct span_context *get_parent_span_context(void *ctx) {
-    void *parent_ctx = get_tracked_parent_go_context(ctx);
+    void *parent_ctx = get_parent_go_context(ctx);
     if (parent_ctx == NULL)
     {
         return NULL;
@@ -69,9 +69,9 @@ static __always_inline struct span_context *get_parent_span_context(void *ctx) {
     return parent_sc;
 }
 
-static __always_inline void track_running_span(void *ctx, struct span_context *sc) {
-    bpf_map_update_elem(&tracked_spans, &ctx, &sc, BPF_ANY);
-    bpf_map_update_elem(&tracked_spans_by_sc, &sc, &ctx, BPF_ANY);
+static __always_inline void track_running_span(void *contextContext, struct span_context *sc) {
+    bpf_map_update_elem(&tracked_spans, &contextContext, &sc, BPF_ANY);
+    bpf_map_update_elem(&tracked_spans_by_sc, &sc, &contextContext, BPF_ANY);
 }
 
 static __always_inline void stop_tracking_span(struct span_context *sc) {
