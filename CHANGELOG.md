@@ -14,6 +14,7 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 - Add ARMM64 support. ([#82](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/82))
 ### Changed
 
+- Use verion spans in `offsets_results.json` instead of storing each version. ([#45](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/45))
 - Change `OTEL_TARGET_EXE` environment variable to `OTEL_GO_AUTO_TARGET_EXE`.
   ([#97](https://github.com/open-telemetry/opentelemetry-go-instrumentation/issues/97))
 

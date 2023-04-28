@@ -16,25 +16,32 @@ package inject
 
 // TrackedOffsets are the offsets for all instrumented packages.
 type TrackedOffsets struct {
-	Data []TrackedLibrary `json:"data"`
+	// Data key: struct name, which includes the library name in external
+	// libraries.
+	Data map[string]TrackedStruct `json:"data"`
 }
 
-// TrackedLibrary are the offsets for an instrumented package.
-type TrackedLibrary struct {
-	Name        string              `json:"name"`
-	DataMembers []TrackedDataMember `json:"data_members"`
-}
+// TrackedStruct maps fields names to the tracked fields offsets.
+type TrackedStruct map[string]TrackedField
 
-// TrackedDataMember are the offsets for a data type from a package.
-type TrackedDataMember struct {
-	Struct  string            `json:"struct"`
-	Field   string            `json:"field_name"`
+// TrackedField are the field offsets for a tracked struct.
+type TrackedField struct {
+	// Versions range that are tracked for this given field
+	Versions VersionInfo `json:"versions"`
+	// Offsets are the sorted version offsets for the field. These need to be
+	// sorted in descending order.
 	Offsets []VersionedOffset `json:"offsets"`
+}
+
+// VersionInfo is the span of supported versions.
+type VersionInfo struct {
+	Oldest string `json:"oldest"`
+	Newest string `json:"newest"`
 }
 
 // VersionedOffset is the offset for a particular version of a data type from a
 // package.
 type VersionedOffset struct {
-	Offset  uint64 `json:"offset"`
-	Version string `json:"version"`
+	Offset uint64 `json:"offset"`
+	Since  string `json:"since"`
 }

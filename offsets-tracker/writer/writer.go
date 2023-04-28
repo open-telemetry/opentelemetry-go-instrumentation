@@ -23,34 +23,21 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/hashicorp/go-version"
+
 	"go.opentelemetry.io/auto/offsets-tracker/schema"
 	"go.opentelemetry.io/auto/offsets-tracker/target"
+	"go.opentelemetry.io/auto/offsets-tracker/versions"
 )
 
 // WriteResults writes results to fileName.
 func WriteResults(fileName string, results ...*target.Result) error {
-	var offsets schema.TrackedOffsets
+	offsets := schema.TrackedOffsets{
+		Data: map[string]schema.TrackedStruct{},
+	}
 	for _, r := range results {
-		offsets.Data = append(offsets.Data, convertResult(r))
+		convertResult(r, &offsets)
 	}
-
-	// sort data for consistent output
-	for i := 0; i < len(offsets.Data); i++ {
-		trackedLibrary := offsets.Data[i]
-		sort.Slice(trackedLibrary.DataMembers, func(i, j int) bool {
-			dataMemberi := trackedLibrary.DataMembers[i]
-			dataMemberj := trackedLibrary.DataMembers[j]
-			if dataMemberi.Struct != dataMemberj.Struct {
-				return dataMemberi.Struct < dataMemberj.Struct
-			}
-			return dataMemberi.Field < dataMemberj.Field
-		})
-	}
-	sort.Slice(offsets.Data, func(i, j int) bool {
-		trackedLibraryi := offsets.Data[i]
-		trackedLibraryj := offsets.Data[j]
-		return trackedLibraryi.Name < trackedLibraryj.Name
-	})
 
 	jsonData, err := json.Marshal(&offsets)
 	if err != nil {
@@ -66,30 +53,78 @@ func WriteResults(fileName string, results ...*target.Result) error {
 	return os.WriteFile(fileName, prettyJSON.Bytes(), fs.ModePerm)
 }
 
-func convertResult(r *target.Result) schema.TrackedLibrary {
-	tl := schema.TrackedLibrary{
-		Name: r.ModuleName,
-	}
-
+func convertResult(r *target.Result, offsets *schema.TrackedOffsets) {
 	offsetsMap := make(map[string][]schema.VersionedOffset)
 	for _, vr := range r.ResultsByVersion {
 		for _, od := range vr.OffsetData.DataMembers {
 			key := fmt.Sprintf("%s,%s", od.StructName, od.Field)
 			offsetsMap[key] = append(offsetsMap[key], schema.VersionedOffset{
-				Offset:  od.Offset,
-				Version: vr.Version,
+				Offset: od.Offset,
+				Since:  vr.Version,
 			})
 		}
 	}
 
-	for key, offsets := range offsetsMap {
-		parts := strings.Split(key, ",")
-		tl.DataMembers = append(tl.DataMembers, schema.TrackedDataMember{
-			Struct:  parts[0],
-			Field:   parts[1],
-			Offsets: offsets,
+	// normalize offsets: just annotate the offsets from the version
+	// that changed them
+	fieldVersionsMap := map[string]hiLoSemVers{}
+	for key, offs := range offsetsMap {
+		if len(offs) == 0 {
+			continue
+		}
+		// the algorithm below assumes offsets versions are sorted from older to newer
+		sort.Slice(offs, func(i, j int) bool {
+			return versions.MustParse(offs[i].Since).
+				LessThanOrEqual(versions.MustParse(offs[j].Since))
 		})
+
+		hilo := hiLoSemVers{}
+		var om []schema.VersionedOffset
+		var last schema.VersionedOffset
+		for n, off := range offs {
+			hilo.updateModuleVersion(off.Since)
+			// only append versions that changed the field value from its predecessor
+			if n == 0 || off.Offset != last.Offset {
+				om = append(om, off)
+			}
+			last = off
+		}
+		offsetsMap[key] = om
+		fieldVersionsMap[key] = hilo
 	}
 
-	return tl
+	// Append offsets as fields to the existing file map map
+	for key, offs := range offsetsMap {
+		parts := strings.Split(key, ",")
+		strFields, ok := offsets.Data[parts[0]]
+		if !ok {
+			strFields = schema.TrackedStruct{}
+			offsets.Data[parts[0]] = strFields
+		}
+		hl := fieldVersionsMap[key]
+		strFields[parts[1]] = schema.TrackedField{
+			Offsets: offs,
+			Versions: schema.VersionInfo{
+				Oldest: hl.lo.String(),
+				Newest: hl.hi.String(),
+			},
+		}
+	}
+}
+
+// hiLoSemVers track highest and lowest version.
+type hiLoSemVers struct {
+	hi *version.Version
+	lo *version.Version
+}
+
+func (hl *hiLoSemVers) updateModuleVersion(vr string) {
+	ver := versions.MustParse(vr)
+
+	if hl.lo == nil || ver.LessThan(hl.lo) {
+		hl.lo = ver
+	}
+	if hl.hi == nil || ver.GreaterThan(hl.hi) {
+		hl.hi = ver
+	}
 }
