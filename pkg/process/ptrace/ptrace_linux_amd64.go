@@ -23,7 +23,7 @@ import (
 
 const syscallInstrSize = 2
 
-func getIp(regs *syscall.PtraceRegs) uintptr {
+func getIP(regs *syscall.PtraceRegs) uintptr {
 	return uintptr(regs.Rip)
 }
 
@@ -45,7 +45,7 @@ func setRegs(pid int, regs *syscall.PtraceRegs) error {
 	return nil
 }
 
-// Syscall runs a syscall at main thread of process
+// Syscall runs a syscall at main thread of process.
 func (p *TracedProgram) Syscall(number uint64, args ...uint64) (uint64, error) {
 	// save the original registers and the current instructions
 	err := p.Protect()
@@ -88,7 +88,7 @@ func (p *TracedProgram) Syscall(number uint64, args ...uint64) (uint64, error) {
 	}
 
 	instruction := make([]byte, syscallInstrSize)
-	ip := getIp(p.backupRegs)
+	ip := getIP(p.backupRegs)
 
 	// set the current instruction (the ip register points to) to the `syscall`
 	// instruction. In x86_64, the `syscall` instruction is 0x050f.

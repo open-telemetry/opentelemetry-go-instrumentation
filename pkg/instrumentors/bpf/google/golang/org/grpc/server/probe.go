@@ -41,8 +41,8 @@ type GrpcEvent struct {
 	StartTime         uint64
 	EndTime           uint64
 	Method            [100]byte
-	SpanContext       context.EbpfSpanContext
-	ParentSpanContext context.EbpfSpanContext
+	SpanContext       context.EBPFSpanContext
+	ParentSpanContext context.EBPFSpanContext
 }
 
 type grpcServerInstrumentor struct {
@@ -72,7 +72,7 @@ func (g *grpcServerInstrumentor) Load(ctx *context.InstrumentorContext) error {
 	if !exists {
 		libVersion = ""
 	}
-	spec, err := ctx.Injector.Inject(loadBpf, "google.golang.org/grpc", libVersion, []*inject.InjectStructField{
+	spec, err := ctx.Injector.Inject(loadBpf, "google.golang.org/grpc", libVersion, []*inject.StructField{
 		{
 			VarName:    "stream_method_ptr_pos",
 			StructName: "google.golang.org/grpc/internal/transport.Stream",
@@ -107,7 +107,7 @@ func (g *grpcServerInstrumentor) Load(ctx *context.InstrumentorContext) error {
 	g.bpfObjects = &bpfObjects{}
 	err = spec.LoadAndAssign(g.bpfObjects, &ebpf.CollectionOptions{
 		Maps: ebpf.MapOptions{
-			PinPath: bpffs.BpfFsPath,
+			PinPath: bpffs.BPFFsPath,
 		},
 	})
 	if err != nil {

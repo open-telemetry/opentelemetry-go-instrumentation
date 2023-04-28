@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package server
+package gin
 
 import (
 	"bytes"
@@ -37,7 +37,9 @@ import (
 
 //go:generate go run github.com/cilium/ebpf/cmd/bpf2go -target bpfel -cc clang -cflags $CFLAGS bpf ./bpf/probe.bpf.c
 
-type HttpEvent struct {
+// Event represents an event in the gin-gonic/gin server during an HTTP
+// request-response.
+type Event struct {
 	StartTime   uint64
 	EndTime     uint64
 	Method      [6]byte
@@ -45,26 +47,32 @@ type HttpEvent struct {
 	SpanContext context.EBPFSpanContext
 }
 
-type httpServerInstrumentor struct {
+// Instrumentor is the gin-gonic/gin instrumentor.
+type Instrumentor struct {
 	bpfObjects   *bpfObjects
 	uprobes      []link.Link
 	returnProbs  []link.Link
 	eventsReader *perf.Reader
 }
 
-func New() *httpServerInstrumentor {
-	return &httpServerInstrumentor{}
+// New returns a new [Instrumentor].
+func New() *Instrumentor {
+	return &Instrumentor{}
 }
 
-func (h *httpServerInstrumentor) LibraryName() string {
-	return "net/http"
+// LibraryName returns the gin-gonic/gin package import path.
+func (h *Instrumentor) LibraryName() string {
+	return "github.com/gin-gonic/gin"
 }
 
-func (h *httpServerInstrumentor) FuncNames() []string {
-	return []string{"net/http.(*ServeMux).ServeHTTP", "net/http.HandlerFunc.ServeHTTP"}
+// FuncNames returns the function names from "github.com/gin-gonic/gin" that are
+// instrumented.
+func (h *Instrumentor) FuncNames() []string {
+	return []string{"github.com/gin-gonic/gin.(*Engine).ServeHTTP"}
 }
 
-func (h *httpServerInstrumentor) Load(ctx *context.InstrumentorContext) error {
+// Load loads all instrumentation offsets.
+func (h *Instrumentor) Load(ctx *context.InstrumentorContext) error {
 	spec, err := ctx.Injector.Inject(loadBpf, "go", ctx.TargetDetails.GoVersion.Original(), []*inject.StructField{
 		{
 			VarName:    "method_ptr_pos",
@@ -110,8 +118,8 @@ func (h *httpServerInstrumentor) Load(ctx *context.InstrumentorContext) error {
 	return nil
 }
 
-func (h *httpServerInstrumentor) registerProbes(ctx *context.InstrumentorContext, funcName string) {
-	logger := log.Logger.WithName("net/http-instrumentor").WithValues("function", funcName)
+func (h *Instrumentor) registerProbes(ctx *context.InstrumentorContext, funcName string) {
+	logger := log.Logger.WithName("gin-gonic/gin-instrumentor").WithValues("function", funcName)
 	offset, err := ctx.TargetDetails.GetFunctionOffset(funcName)
 	if err != nil {
 		logger.Error(err, "could not find function start offset. Skipping")
@@ -123,7 +131,7 @@ func (h *httpServerInstrumentor) registerProbes(ctx *context.InstrumentorContext
 		return
 	}
 
-	up, err := ctx.Executable.Uprobe("", h.bpfObjects.UprobeServerMuxServeHTTP, &link.UprobeOptions{
+	up, err := ctx.Executable.Uprobe("", h.bpfObjects.UprobeGinEngineServeHTTP, &link.UprobeOptions{
 		Address: offset,
 	})
 	if err != nil {
@@ -135,7 +143,7 @@ func (h *httpServerInstrumentor) registerProbes(ctx *context.InstrumentorContext
 	h.uprobes = append(h.uprobes, up)
 
 	for _, ret := range retOffsets {
-		retProbe, err := ctx.Executable.Uprobe("", h.bpfObjects.UprobeServerMuxServeHTTP_Returns, &link.UprobeOptions{
+		retProbe, err := ctx.Executable.Uprobe("", h.bpfObjects.UprobeGinEngineServeHTTP_Returns, &link.UprobeOptions{
 			Address: ret,
 		})
 		if err != nil {
@@ -146,9 +154,10 @@ func (h *httpServerInstrumentor) registerProbes(ctx *context.InstrumentorContext
 	}
 }
 
-func (h *httpServerInstrumentor) Run(eventsChan chan<- *events.Event) {
-	logger := log.Logger.WithName("net/http-instrumentor")
-	var event HttpEvent
+// Run runs the events processing loop.
+func (h *Instrumentor) Run(eventsChan chan<- *events.Event) {
+	logger := log.Logger.WithName("gin-gonic/gin-instrumentor")
+	var event Event
 	for {
 		record, err := h.eventsReader.Read()
 		if err != nil {
@@ -173,7 +182,7 @@ func (h *httpServerInstrumentor) Run(eventsChan chan<- *events.Event) {
 	}
 }
 
-func (h *httpServerInstrumentor) convertEvent(e *HttpEvent) *events.Event {
+func (h *Instrumentor) convertEvent(e *Event) *events.Event {
 	method := unix.ByteSliceToString(e.Method[:])
 	path := unix.ByteSliceToString(e.Path[:])
 
@@ -197,8 +206,9 @@ func (h *httpServerInstrumentor) convertEvent(e *HttpEvent) *events.Event {
 	}
 }
 
-func (h *httpServerInstrumentor) Close() {
-	log.Logger.V(0).Info("closing net/http instrumentor")
+// Close stops the Instrumentor.
+func (h *Instrumentor) Close() {
+	log.Logger.V(0).Info("closing gin-gonic/gin instrumentor")
 	if h.eventsReader != nil {
 		h.eventsReader.Close()
 	}

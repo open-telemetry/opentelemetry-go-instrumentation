@@ -1,3 +1,17 @@
+// Copyright The OpenTelemetry Authors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package cache
 
 import (
@@ -8,15 +22,18 @@ import (
 	"os"
 
 	"github.com/hashicorp/go-version"
+
 	"go.opentelemetry.io/auto/offsets-tracker/binary"
 	"go.opentelemetry.io/auto/offsets-tracker/schema"
 	"go.opentelemetry.io/auto/offsets-tracker/versions"
 )
 
+// Cache holds already seen offsets.
 type Cache struct {
 	data *schema.TrackedOffsets
 }
 
+// NewCache returns a new [Cache].
 func NewCache(prevOffsetFile string) *Cache {
 	f, err := os.Open(prevOffsetFile)
 	if err != nil {
@@ -43,11 +60,13 @@ func NewCache(prevOffsetFile string) *Cache {
 	}
 }
 
-// IsAllInCache checks whether the passed datamembers exist in the cache for a given version
+// IsAllInCache checks whether the passed datamembers exist in the cache for a
+// given version.
 func (c *Cache) IsAllInCache(version string, dataMembers []*binary.DataMember) ([]*binary.DataMemberOffset, bool) {
 	var results []*binary.DataMemberOffset
 	for _, dm := range dataMembers {
-		// first, look for the field and check that the target version is in chache
+		// first, look for the field and check that the target version is in
+		// chache.
 		strct, ok := c.data.Data[dm.StructName]
 		if !ok {
 			return nil, false
@@ -73,7 +92,7 @@ func (c *Cache) IsAllInCache(version string, dataMembers []*binary.DataMember) (
 }
 
 // searchOffset searches an offset from the newest field whose version
-// is lower than or equal to the target version
+// is lower than or equal to the target version.
 func searchOffset(field schema.TrackedField, targetVersion string) (uint64, bool) {
 	target := versions.MustParse(targetVersion)
 

@@ -23,6 +23,7 @@ import (
 	"github.com/hashicorp/go-version"
 
 	"github.com/cilium/ebpf"
+
 	"go.opentelemetry.io/auto/pkg/log"
 	"go.opentelemetry.io/auto/pkg/process"
 )
@@ -32,6 +33,7 @@ var (
 	offsetsData string
 )
 
+// Injector injects OpenTelemetry instrumentation Go packages.
 type Injector struct {
 	data              *TrackedOffsets
 	isRegAbi          bool
@@ -39,6 +41,7 @@ type Injector struct {
 	AllocationDetails *process.AllocationDetails
 }
 
+// New returns an [Injector] configured for the target.
 func New(target *process.TargetDetails) (*Injector, error) {
 	var offsets TrackedOffsets
 	err := json.Unmarshal([]byte(offsetsData), &offsets)
@@ -56,13 +59,16 @@ func New(target *process.TargetDetails) (*Injector, error) {
 
 type loadBpfFunc func() (*ebpf.CollectionSpec, error)
 
-type InjectStructField struct {
+// StructField is the definition of a structure field for which instrumentation
+// is injected.
+type StructField struct {
 	VarName    string
 	StructName string
 	Field      string
 }
 
-func (i *Injector) Inject(loadBpf loadBpfFunc, library string, libVersion string, fields []*InjectStructField, initAlloc bool) (*ebpf.CollectionSpec, error) {
+// Inject injects instrumentation for the provided library data type.
+func (i *Injector) Inject(loadBpf loadBpfFunc, library string, libVersion string, fields []*StructField, initAlloc bool) (*ebpf.CollectionSpec, error) {
 	spec, err := loadBpf()
 	if err != nil {
 		return nil, err
@@ -93,7 +99,7 @@ func (i *Injector) Inject(loadBpf loadBpfFunc, library string, libVersion string
 	return spec, nil
 }
 
-func (i *Injector) addCommonInjections(varsMap map[string]interface{}, initAlloc bool) error {
+func (i *Injector) addCommonInjections(varsMap map[string]interface{}, initAlloc bool) error { // nolint:revive  // initAlloc is a control flag.
 	varsMap["is_registers_abi"] = i.isRegAbi
 	if initAlloc {
 		if i.AllocationDetails == nil {

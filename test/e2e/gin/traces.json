@@ -26,7 +26,7 @@
       "scopeSpans": [
         {
           "scope": {
-            "name": "net/http"
+            "name": "github.com/gin-gonic/gin"
           },
           "spans": [
             {
@@ -40,37 +40,16 @@
                 {
                   "key": "http.target",
                   "value": {
-                    "stringValue": "/hello"
+                    "stringValue": "/hello-gin"
                   }
                 }
               ],
               "kind": 2,
-              "name": "/hello",
+              "name": "/hello-gin",
               "parentSpanId": "",
               "spanId": "xxxxx",
               "status": {},
               "traceId": "xxxxx"
-            },
-            {
-              "attributes": [
-                {
-                  "key": "http.method",
-                  "value": {
-                    "stringValue": ""
-                  }
-                },
-                {
-                  "key": "http.target",
-                  "value": {
-                    "stringValue": ""
-                  }
-                }
-              ],
-              "kind": 2,
-              "parentSpanId": "",
-              "spanId": "",
-              "status": {},
-              "traceId": ""
             }
           ]
         }

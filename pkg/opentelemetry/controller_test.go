@@ -12,7 +12,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package bpffs
+package opentelemetry
 
-// BPFFsPath is the system path to the BPF file-system.
-const BPFFsPath = "/sys/fs/bpf"
+import (
+	"fmt"
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+
+	"go.opentelemetry.io/auto"
+)
+
+func TestUserAgent(t *testing.T) {
+	assert.Contains(t, autoinstUserAgent, fmt.Sprintf("OTel-Go-Auto-Instrumentation/%s", auto.Version()))
+}
