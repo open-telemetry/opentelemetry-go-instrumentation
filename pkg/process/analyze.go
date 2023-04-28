@@ -21,6 +21,7 @@ import (
 	"os"
 
 	"github.com/hashicorp/go-version"
+
 	"go.opentelemetry.io/auto/pkg/log"
 	"go.opentelemetry.io/auto/pkg/process/ptrace"
 )
@@ -29,6 +30,7 @@ const (
 	mapSize = 4096 * 6 * 1024
 )
 
+// TargetDetails are the details about a target function.
 type TargetDetails struct {
 	PID               int
 	Functions         []*Func
@@ -37,22 +39,26 @@ type TargetDetails struct {
 	AllocationDetails *AllocationDetails
 }
 
+// AllocationDetails are the details about allocated memory.
 type AllocationDetails struct {
 	StartAddr uint64
 	EndAddr   uint64
 }
 
+// Func represents a function target.
 type Func struct {
 	Name          string
 	Offset        uint64
 	ReturnOffsets []uint64
 }
 
+// IsRegistersABI returns if t is supported.
 func (t *TargetDetails) IsRegistersABI() bool {
 	regAbiMinVersion, _ := version.NewVersion("1.17")
 	return t.GoVersion.GreaterThanOrEqual(regAbiMinVersion)
 }
 
+// GetFunctionOffset returns the offset for of the function with name.
 func (t *TargetDetails) GetFunctionOffset(name string) (uint64, error) {
 	for _, f := range t.Functions {
 		if f.Name == name {
@@ -63,6 +69,8 @@ func (t *TargetDetails) GetFunctionOffset(name string) (uint64, error) {
 	return 0, fmt.Errorf("could not find offset for function %s", name)
 }
 
+// GetFunctionReturns returns the return value of the call for the function
+// with name.
 func (t *TargetDetails) GetFunctionReturns(name string) ([]uint64, error) {
 	for _, f := range t.Functions {
 		if f.Name == name {
@@ -73,7 +81,7 @@ func (t *TargetDetails) GetFunctionReturns(name string) ([]uint64, error) {
 	return nil, fmt.Errorf("could not find returns for function %s", name)
 }
 
-func (a *processAnalyzer) remoteMmap(pid int, mapSize uint64) (uint64, error) {
+func (a *Analyzer) remoteMmap(pid int, mapSize uint64) (uint64, error) {
 	program, err := ptrace.NewTracedProgram(pid, log.Logger)
 	if err != nil {
 		log.Logger.Error(err, "Failed to attach ptrace", "pid", pid)
@@ -97,7 +105,8 @@ func (a *processAnalyzer) remoteMmap(pid int, mapSize uint64) (uint64, error) {
 	return addr, nil
 }
 
-func (a *processAnalyzer) Analyze(pid int, relevantFuncs map[string]interface{}) (*TargetDetails, error) {
+// Analyze returns the target details for an actively running process.
+func (a *Analyzer) Analyze(pid int, relevantFuncs map[string]interface{}) (*TargetDetails, error) {
 	result := &TargetDetails{
 		PID: pid,
 	}

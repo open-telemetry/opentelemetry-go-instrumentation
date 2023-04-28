@@ -73,7 +73,7 @@ func (g *grpcInstrumentor) Load(ctx *context.InstrumentorContext) error {
 	if !exists {
 		libVersion = ""
 	}
-	spec, err := ctx.Injector.Inject(loadBpf, g.LibraryName(), libVersion, []*inject.InjectStructField{
+	spec, err := ctx.Injector.Inject(loadBpf, g.LibraryName(), libVersion, []*inject.StructField{
 		{
 			VarName:    "clientconn_target_ptr_pos",
 			StructName: "google.golang.org/grpc.ClientConn",

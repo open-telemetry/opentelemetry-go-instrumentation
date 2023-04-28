@@ -73,7 +73,7 @@ func (h *Instrumentor) FuncNames() []string {
 
 // Load loads all instrumentation offsets.
 func (h *Instrumentor) Load(ctx *context.InstrumentorContext) error {
-	spec, err := ctx.Injector.Inject(loadBpf, "go", ctx.TargetDetails.GoVersion.Original(), []*inject.InjectStructField{
+	spec, err := ctx.Injector.Inject(loadBpf, "go", ctx.TargetDetails.GoVersion.Original(), []*inject.StructField{
 		{
 			VarName:    "method_ptr_pos",
 			StructName: "net/http.Request",
