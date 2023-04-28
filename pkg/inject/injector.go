@@ -20,7 +20,10 @@ import (
 	"fmt"
 	"runtime"
 
+	"github.com/hashicorp/go-version"
+
 	"github.com/cilium/ebpf"
+
 	"go.opentelemetry.io/auto/pkg/log"
 	"go.opentelemetry.io/auto/pkg/process"
 )
@@ -30,6 +33,7 @@ var (
 	offsetsData string
 )
 
+// Injector injects OpenTelemetry instrumentation Go packages.
 type Injector struct {
 	data              *TrackedOffsets
 	isRegAbi          bool
@@ -37,6 +41,7 @@ type Injector struct {
 	AllocationDetails *process.AllocationDetails
 }
 
+// New returns an [Injector] configured for the target.
 func New(target *process.TargetDetails) (*Injector, error) {
 	var offsets TrackedOffsets
 	err := json.Unmarshal([]byte(offsetsData), &offsets)
@@ -54,13 +59,16 @@ func New(target *process.TargetDetails) (*Injector, error) {
 
 type loadBpfFunc func() (*ebpf.CollectionSpec, error)
 
-type InjectStructField struct {
+// StructField is the definition of a structure field for which instrumentation
+// is injected.
+type StructField struct {
 	VarName    string
 	StructName string
 	Field      string
 }
 
-func (i *Injector) Inject(loadBpf loadBpfFunc, library string, libVersion string, fields []*InjectStructField, initAlloc bool) (*ebpf.CollectionSpec, error) {
+// Inject injects instrumentation for the provided library data type.
+func (i *Injector) Inject(loadBpf loadBpfFunc, library string, libVersion string, fields []*StructField, initAlloc bool) (*ebpf.CollectionSpec, error) {
 	spec, err := loadBpf()
 	if err != nil {
 		return nil, err
@@ -69,7 +77,7 @@ func (i *Injector) Inject(loadBpf loadBpfFunc, library string, libVersion string
 	injectedVars := make(map[string]interface{})
 
 	for _, dm := range fields {
-		offset, found := i.getFieldOffset(library, libVersion, dm.StructName, dm.Field)
+		offset, found := i.getFieldOffset(dm.StructName, dm.Field, libVersion)
 		if !found {
 			log.Logger.V(0).Info("could not find offset", "lib", library, "version", libVersion, "struct", dm.StructName, "field", dm.Field)
 		} else {
@@ -91,7 +99,7 @@ func (i *Injector) Inject(loadBpf loadBpfFunc, library string, libVersion string
 	return spec, nil
 }
 
-func (i *Injector) addCommonInjections(varsMap map[string]interface{}, initAlloc bool) error {
+func (i *Injector) addCommonInjections(varsMap map[string]interface{}, initAlloc bool) error { // nolint:revive  // initAlloc is a control flag.
 	varsMap["is_registers_abi"] = i.isRegAbi
 	if initAlloc {
 		if i.AllocationDetails == nil {
@@ -104,18 +112,34 @@ func (i *Injector) addCommonInjections(varsMap map[string]interface{}, initAlloc
 	return nil
 }
 
-func (i *Injector) getFieldOffset(libName string, libVersion string, structName string, fieldName string) (uint64, bool) {
-	for _, l := range i.data.Data {
-		if l.Name == libName {
-			for _, dm := range l.DataMembers {
-				if dm.Struct == structName && dm.Field == fieldName {
-					for _, o := range dm.Offsets {
-						if o.Version == libVersion {
-							return o.Offset, true
-						}
-					}
-				}
-			}
+func (i *Injector) getFieldOffset(structName string, fieldName string, libVersion string) (uint64, bool) {
+	strct, ok := i.data.Data[structName]
+	if !ok {
+		return 0, false
+	}
+	field, ok := strct[fieldName]
+	if !ok {
+		return 0, false
+	}
+	target, err := version.NewVersion(libVersion)
+	if err != nil {
+		// shouldn't happen unless a bug in our code/files
+		panic(err.Error())
+	}
+
+	// Search from the newest version (last in the slice)
+	for o := len(field.Offsets) - 1; o >= 0; o-- {
+		od := &field.Offsets[o]
+		fieldVersion, err := version.NewVersion(od.Since)
+		if err != nil {
+			// shouldn't happen unless a bug in our code
+			panic(err.Error())
+		}
+		if target.Compare(fieldVersion) >= 0 {
+			// if target version is larger or equal than lib version:
+			// we certainly know that it is the most recent tracked offset
+			// matching the target libVersion
+			return od.Offset, true
 		}
 	}
 
