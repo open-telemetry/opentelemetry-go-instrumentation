@@ -14,21 +14,26 @@
 
 package inject
 
+// TrackedOffsets are the offsets for all instrumented packages.
 type TrackedOffsets struct {
 	Data []TrackedLibrary `json:"data"`
 }
 
+// TrackedLibrary are the offsets for an instrumented package.
 type TrackedLibrary struct {
 	Name        string              `json:"name"`
 	DataMembers []TrackedDataMember `json:"data_members"`
 }
 
+// TrackedDataMember are the offsets for a data type from a package.
 type TrackedDataMember struct {
 	Struct  string            `json:"struct"`
 	Field   string            `json:"field_name"`
 	Offsets []VersionedOffset `json:"offsets"`
 }
 
+// VersionedOffset is the offset for a particular version of a data type from a
+// package.
 type VersionedOffset struct {
 	Offset  uint64 `json:"offset"`
 	Version string `json:"version"`
