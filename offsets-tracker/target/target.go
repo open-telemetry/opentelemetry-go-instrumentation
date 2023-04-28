@@ -104,7 +104,7 @@ func (t *Data) FindOffsets(dm []*binary.DataMember) (*Result, error) {
 	}
 	for _, v := range vers {
 		if t.cache != nil {
-			cachedResults, found := t.cache.IsAllInCache(t.name, v, dm)
+			cachedResults, found := t.cache.IsAllInCache(v, dm)
 			if found {
 				fmt.Printf("%s: Found all requested offsets in cache for version %s\n", t.name, v)
 				result.ResultsByVersion = append(result.ResultsByVersion, &VersionedResult{
