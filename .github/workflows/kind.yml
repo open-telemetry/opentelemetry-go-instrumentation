@@ -73,4 +73,4 @@ jobs:
           kubectl cp -c filecp default/test-opentelemetry-collector-0:tmp/trace.json ./test/e2e/${{ matrix.library }}/traces.json
       - name: verify output
         run: |
-          bats ./test/e2e/$(LIBRARY)/verify.bats
+          bats ./test/e2e/${{ matrix.library }}/verify.bats
