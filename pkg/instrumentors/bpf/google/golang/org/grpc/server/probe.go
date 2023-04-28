@@ -80,7 +80,7 @@ func (g *Instrumentor) Load(ctx *context.InstrumentorContext) error {
 	if !exists {
 		libVersion = ""
 	}
-	spec, err := ctx.Injector.Inject(loadBpf, "google.golang.org/grpc", libVersion, []*inject.InjectStructField{
+	spec, err := ctx.Injector.Inject(loadBpf, "google.golang.org/grpc", libVersion, []*inject.StructField{
 		{
 			VarName:    "stream_method_ptr_pos",
 			StructName: "google.golang.org/grpc/internal/transport.Stream",
