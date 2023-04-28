@@ -49,7 +49,6 @@ test/%:
 generate: export CFLAGS := $(BPF_INCLUDE)
 generate: go-mod-tidy
 generate:
-	go mod tidy
 	TARGET=$(TARGET) go generate ./...
 
 .PHONY: go-mod-tidy
