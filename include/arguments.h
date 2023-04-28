@@ -64,7 +64,12 @@ void *get_argument(struct pt_regs *ctx, int index)
     return get_argument_by_stack(ctx, index);
 }
 
-inline void *get_goroutine_address(struct pt_regs *ctx)
+inline void *get_goroutine_address(struct pt_regs *ctx, int go_ctx_index)
 {
-    return (void *)GOROUTINE(ctx);
+    if (is_registers_abi)
+    {
+        return (void *)GOROUTINE(ctx);
+    }
+
+    return get_argument_by_stack(ctx, go_ctx_index);
 }
