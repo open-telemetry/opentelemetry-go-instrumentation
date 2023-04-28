@@ -61,7 +61,7 @@ func (h *httpServerInstrumentor) LibraryName() string {
 }
 
 func (h *httpServerInstrumentor) FuncNames() []string {
-	return []string{"net/http.(*ServeMux).ServeHTTP", "net/http.HandlerFunc.ServeHTTP"}
+	return []string{"net/http.HandlerFunc.ServeHTTP"}
 }
 
 func (h *httpServerInstrumentor) Load(ctx *context.InstrumentorContext) error {
