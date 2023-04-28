@@ -68,9 +68,7 @@ jobs:
           kubectl wait --for=condition=Complete --timeout=60s job/sample-job
       - name: copy telemetry trace output
         run: |
-          kubectl cp -c filecp default/test-opentelemetry-collector-0:tmp/trace.json ./test/e2e/${{ matrix.library }}/traces.json.tmp
-          jq 'del(.resourceSpans[].scopeSpans[].spans[].endTimeUnixNano, .resourceSpans[].scopeSpans[].spans[].startTimeUnixNano) | .resourceSpans[].scopeSpans[].spans[].spanId|= (if . != "" then "xxxxx" else . end) | .resourceSpans[].scopeSpans[].spans[].traceId|= (if . != "" then "xxxxx" else . end) | .resourceSpans[].scopeSpans|=sort_by(.scope.name)' ./test/e2e/${{ matrix.library }}/traces.json.tmp | jq --sort-keys . > ./test/e2e/${{ matrix.library }}/traces.json
-          rm ./test/e2e/${{ matrix.library }}/traces.json.tmp
+          kubectl cp -c filecp default/test-opentelemetry-collector-0:tmp/trace.json ./test/e2e/${{ matrix.library }}/traces.json
       - name: verify output
         run: |
-          make check-clean-work-tree
+          bats ./test/e2e/$(LIBRARY)/verify.bats
