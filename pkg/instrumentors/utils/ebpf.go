@@ -17,9 +17,10 @@ package utils
 import (
 	"errors"
 	"fmt"
-	"github.com/cilium/ebpf"
 	"os"
 	"strconv"
+
+	"github.com/cilium/ebpf"
 )
 
 const (
