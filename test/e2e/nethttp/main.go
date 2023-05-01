@@ -16,19 +16,21 @@ package main
 
 import (
 	"fmt"
-	"io/ioutil"
+	"io"
 	"log"
 	"net/http"
 	"time"
 )
 
-func hello(w http.ResponseWriter, req *http.Request) {
+func hello(w http.ResponseWriter, _ *http.Request) {
 	fmt.Fprintf(w, "hello\n")
 }
 
 func main() {
 	http.HandleFunc("/hello", hello)
-	go http.ListenAndServe(":8080", nil)
+	go func() {
+		_ = http.ListenAndServe(":8080", nil)
+	}()
 
 	// give time for auto-instrumentation to start up
 	time.Sleep(5 * time.Second)
@@ -37,7 +39,7 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		log.Fatal(err)
 	}
