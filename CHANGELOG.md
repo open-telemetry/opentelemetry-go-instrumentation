@@ -17,7 +17,8 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 - Use verion spans in `offsets_results.json` instead of storing each version. ([#45](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/45))
 - Change `OTEL_TARGET_EXE` environment variable to `OTEL_GO_AUTO_TARGET_EXE`.
   ([#97](https://github.com/open-telemetry/opentelemetry-go-instrumentation/issues/97))
-
+- Add `OTEL_GO_AUTO_SHOW_VERIFIER_LOG` environment variable to control whether
+  the verifier log is shown. ([#128](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/128))
 ## [v0.1.0-alpha] - 2023-04-17
 
 This is the first release of OpenTelemetry Go Automatic Instrumentation.
