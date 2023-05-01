@@ -68,10 +68,9 @@ type bpfSpecs struct {
 //
 // It can be passed ebpf.CollectionSpec.Assign.
 type bpfProgramSpecs struct {
-	UprobeDecodeStateDecodeHeader       *ebpf.ProgramSpec `ebpf:"uprobe_decodeState_decodeHeader"`
-	UprobeServerHandleStream            *ebpf.ProgramSpec `ebpf:"uprobe_server_handleStream"`
-	UprobeServerHandleStreamByRegisters *ebpf.ProgramSpec `ebpf:"uprobe_server_handleStream_ByRegisters"`
-	UprobeServerHandleStreamReturns     *ebpf.ProgramSpec `ebpf:"uprobe_server_handleStream_Returns"`
+	UprobeDecodeStateDecodeHeader   *ebpf.ProgramSpec `ebpf:"uprobe_decodeState_decodeHeader"`
+	UprobeServerHandleStream        *ebpf.ProgramSpec `ebpf:"uprobe_server_handleStream"`
+	UprobeServerHandleStreamReturns *ebpf.ProgramSpec `ebpf:"uprobe_server_handleStream_Returns"`
 }
 
 // bpfMapSpecs contains maps before they are loaded into the kernel.
@@ -79,10 +78,11 @@ type bpfProgramSpecs struct {
 // It can be passed ebpf.CollectionSpec.Assign.
 type bpfMapSpecs struct {
 	AllocMap             *ebpf.MapSpec `ebpf:"alloc_map"`
-	ContextToGrpcEvents  *ebpf.MapSpec `ebpf:"context_to_grpc_events"`
 	Events               *ebpf.MapSpec `ebpf:"events"`
-	SpansInProgress      *ebpf.MapSpec `ebpf:"spans_in_progress"`
+	GrpcEvents           *ebpf.MapSpec `ebpf:"grpc_events"`
 	StreamidToGrpcEvents *ebpf.MapSpec `ebpf:"streamid_to_grpc_events"`
+	TrackedSpans         *ebpf.MapSpec `ebpf:"tracked_spans"`
+	TrackedSpansBySc     *ebpf.MapSpec `ebpf:"tracked_spans_by_sc"`
 }
 
 // bpfObjects contains all objects after they have been loaded into the kernel.
@@ -105,19 +105,21 @@ func (o *bpfObjects) Close() error {
 // It can be passed to loadBpfObjects or ebpf.CollectionSpec.LoadAndAssign.
 type bpfMaps struct {
 	AllocMap             *ebpf.Map `ebpf:"alloc_map"`
-	ContextToGrpcEvents  *ebpf.Map `ebpf:"context_to_grpc_events"`
 	Events               *ebpf.Map `ebpf:"events"`
-	SpansInProgress      *ebpf.Map `ebpf:"spans_in_progress"`
+	GrpcEvents           *ebpf.Map `ebpf:"grpc_events"`
 	StreamidToGrpcEvents *ebpf.Map `ebpf:"streamid_to_grpc_events"`
+	TrackedSpans         *ebpf.Map `ebpf:"tracked_spans"`
+	TrackedSpansBySc     *ebpf.Map `ebpf:"tracked_spans_by_sc"`
 }
 
 func (m *bpfMaps) Close() error {
 	return _BpfClose(
 		m.AllocMap,
-		m.ContextToGrpcEvents,
 		m.Events,
-		m.SpansInProgress,
+		m.GrpcEvents,
 		m.StreamidToGrpcEvents,
+		m.TrackedSpans,
+		m.TrackedSpansBySc,
 	)
 }
 
@@ -125,17 +127,15 @@ func (m *bpfMaps) Close() error {
 //
 // It can be passed to loadBpfObjects or ebpf.CollectionSpec.LoadAndAssign.
 type bpfPrograms struct {
-	UprobeDecodeStateDecodeHeader       *ebpf.Program `ebpf:"uprobe_decodeState_decodeHeader"`
-	UprobeServerHandleStream            *ebpf.Program `ebpf:"uprobe_server_handleStream"`
-	UprobeServerHandleStreamByRegisters *ebpf.Program `ebpf:"uprobe_server_handleStream_ByRegisters"`
-	UprobeServerHandleStreamReturns     *ebpf.Program `ebpf:"uprobe_server_handleStream_Returns"`
+	UprobeDecodeStateDecodeHeader   *ebpf.Program `ebpf:"uprobe_decodeState_decodeHeader"`
+	UprobeServerHandleStream        *ebpf.Program `ebpf:"uprobe_server_handleStream"`
+	UprobeServerHandleStreamReturns *ebpf.Program `ebpf:"uprobe_server_handleStream_Returns"`
 }
 
 func (p *bpfPrograms) Close() error {
 	return _BpfClose(
 		p.UprobeDecodeStateDecodeHeader,
 		p.UprobeServerHandleStream,
-		p.UprobeServerHandleStreamByRegisters,
 		p.UprobeServerHandleStreamReturns,
 	)
 }

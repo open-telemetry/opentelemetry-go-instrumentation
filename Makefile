@@ -67,6 +67,10 @@ golangci-lint/%: | $(GOLANGCI_LINT)
 build: generate
 	GOOS=linux GOARCH=amd64 go build -o otel-go-instrumentation cli/main.go
 
+.PHONY: docker-generate
+docker-generate:
+	docker run --rm -v $(shell pwd):/app golang:1.20 /bin/sh -c "apt-get update && apt-get install -y clang llvm libbpf-dev && cd ../app && make generate"
+
 .PHONY: docker-build
 docker-build:
 	docker build -t $(IMG) .
