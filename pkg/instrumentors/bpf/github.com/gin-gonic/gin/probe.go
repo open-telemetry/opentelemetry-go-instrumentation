@@ -18,6 +18,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"errors"
+	"go.opentelemetry.io/auto/pkg/instrumentors/utils"
 	"os"
 
 	"go.opentelemetry.io/auto/pkg/instrumentors/bpffs"
@@ -97,7 +98,7 @@ func (h *Instrumentor) Load(ctx *context.InstrumentorContext) error {
 	}
 
 	h.bpfObjects = &bpfObjects{}
-	err = spec.LoadAndAssign(h.bpfObjects, &ebpf.CollectionOptions{
+	err = utils.LoadEbpfObjects(spec, h.bpfObjects, &ebpf.CollectionOptions{
 		Maps: ebpf.MapOptions{
 			PinPath: bpffs.BPFFsPath,
 		},
