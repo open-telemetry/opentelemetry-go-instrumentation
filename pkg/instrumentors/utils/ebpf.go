@@ -24,9 +24,11 @@ import (
 )
 
 const (
-	ShowVerifierLogEnvVar = "OTEL_GO_AUTO_SHOW_VERIFIER_LOG"
+	showVerifierLogEnvVar = "OTEL_GO_AUTO_SHOW_VERIFIER_LOG"
 )
 
+// LoadEbpfObjects loads eBPF objects from the given spec into the given interface.
+// If the environment variable OTEL_GO_AUTO_SHOW_VERIFIER_LOG is set to true, the verifier log will be printed
 func LoadEbpfObjects(spec *ebpf.CollectionSpec, to interface{}, opts *ebpf.CollectionOptions) error {
 	showVerifierLogs := shouldShowVerifierLogs()
 	if showVerifierLogs {
@@ -47,7 +49,7 @@ func LoadEbpfObjects(spec *ebpf.CollectionSpec, to interface{}, opts *ebpf.Colle
 
 // Getting full verifier log is expensive, so we only do it if the user explicitly asks for it.
 func shouldShowVerifierLogs() bool {
-	val, exists := os.LookupEnv(ShowVerifierLogEnvVar)
+	val, exists := os.LookupEnv(showVerifierLogEnvVar)
 	if exists {
 		boolVal, err := strconv.ParseBool(val)
 		if err != nil {
