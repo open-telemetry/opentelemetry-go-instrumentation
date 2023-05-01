@@ -15,6 +15,7 @@
 #include "arguments.h"
 #include "go_types.h"
 #include "span_context.h"
+#include "go_context.h"
 
 char __license[] SEC("license") = "Dual MIT/GPL";
 
@@ -40,7 +41,7 @@ struct
     __type(key, void *);
     __type(value, struct grpc_request_t);
     __uint(max_entries, MAX_CONCURRENT);
-} context_to_grpc_events SEC(".maps");
+} grpc_events SEC(".maps");
 
 struct
 {
@@ -104,56 +105,19 @@ int uprobe_server_handleStream(struct pt_regs *ctx)
     method_size = method_size < method_len ? method_size : method_len;
     bpf_probe_read(&grpcReq.method, method_size, method_ptr);
 
-    // Write event
+    // Get key
     void *ctx_iface = 0;
     bpf_probe_read(&ctx_iface, sizeof(ctx_iface), (void *)(stream_ptr + stream_ctx_pos));
-    void *ctx_instance = 0;
-    bpf_probe_read(&ctx_instance, sizeof(ctx_instance), (void *)(ctx_iface + 8));
-    bpf_map_update_elem(&context_to_grpc_events, &ctx_instance, &grpcReq, 0);
-    bpf_map_update_elem(&spans_in_progress, &ctx_instance, &grpcReq.sc, 0);
-    return 0;
-}
-
-SEC("uprobe/server_handleStream")
-int uprobe_server_handleStream_ByRegisters(struct pt_regs *ctx)
-{
-    void *stream_ptr = (void *)(ctx->rdi);
-
-    // Get parent context if exists
-    u32 stream_id = 0;
-    bpf_probe_read(&stream_id, sizeof(stream_id), (void *)(stream_ptr + stream_id_pos));
-    void *grpcReq_ptr = bpf_map_lookup_elem(&streamid_to_grpc_events, &stream_id);
-    struct grpc_request_t grpcReq = {};
-    if (grpcReq_ptr != NULL)
-    {
-        bpf_probe_read(&grpcReq, sizeof(grpcReq), grpcReq_ptr);
-        bpf_map_delete_elem(&streamid_to_grpc_events, &stream_id);
-        copy_byte_arrays(grpcReq.psc.TraceID, grpcReq.sc.TraceID, TRACE_ID_SIZE);
-        generate_random_bytes(grpcReq.sc.SpanID, SPAN_ID_SIZE);
-    }
-    else
-    {
-        grpcReq.sc = generate_span_context();
-    }
-
-    // Set attributes
-    grpcReq.start_time = bpf_ktime_get_ns();
-    void *method_ptr = 0;
-    bpf_probe_read(&method_ptr, sizeof(method_ptr), (void *)(stream_ptr + stream_method_ptr_pos));
-    u64 method_len = 0;
-    bpf_probe_read(&method_len, sizeof(method_len), (void *)(stream_ptr + (stream_method_ptr_pos + 8)));
-    u64 method_size = sizeof(grpcReq.method);
-    method_size = method_size < method_len ? method_size : method_len;
-    bpf_probe_read(&grpcReq.method, method_size, method_ptr);
+    void *key = get_consistent_key(ctx, (void *)(stream_ptr + stream_ctx_pos));
 
     // Write event
-    void *ctx_iface = 0;
-    bpf_probe_read(&ctx_iface, sizeof(ctx_iface), (void *)(stream_ptr + stream_ctx_pos));
-    void *ctx_instance = 0;
-    bpf_probe_read(&ctx_instance, sizeof(ctx_instance), (void *)(ctx_iface + 8));
-    bpf_map_update_elem(&context_to_grpc_events, &ctx_instance, &grpcReq, 0);
-    bpf_map_update_elem(&spans_in_progress, &ctx_instance, &grpcReq.sc, 0);
+    bpf_map_update_elem(&grpc_events, &key, &grpcReq, 0);
+    track_running_span(ctx_iface, &grpcReq.sc);
     return 0;
+//    void *ctx_instance = 0;
+//    bpf_probe_read(&ctx_instance, sizeof(ctx_instance), (void *)(ctx_iface + 8));
+//    bpf_map_update_elem(&grpc_events, &ctx_instance, &grpcReq, 0);
+//    bpf_map_update_elem(&spans_in_progress, &ctx_instance, &grpcReq.sc, 0);
 }
 
 SEC("uprobe/server_handleStream")
@@ -161,19 +125,16 @@ int uprobe_server_handleStream_Returns(struct pt_regs *ctx)
 {
     u64 stream_pos = 4;
     void *stream_ptr = get_argument(ctx, stream_pos);
-    void *ctx_iface = 0;
-    bpf_probe_read(&ctx_iface, sizeof(ctx_iface), (void *)(stream_ptr + stream_ctx_pos));
-    void *ctx_instance = 0;
-    bpf_probe_read(&ctx_instance, sizeof(ctx_instance), (void *)(ctx_iface + 8));
+    void *key = get_consistent_key(ctx, (void *)(stream_ptr + stream_ctx_pos));
 
-    void *grpcReq_ptr = bpf_map_lookup_elem(&context_to_grpc_events, &ctx_instance);
+    void *grpcReq_ptr = bpf_map_lookup_elem(&grpc_events, &key);
     struct grpc_request_t grpcReq = {};
     bpf_probe_read(&grpcReq, sizeof(grpcReq), grpcReq_ptr);
 
     grpcReq.end_time = bpf_ktime_get_ns();
     bpf_perf_event_output(ctx, &events, BPF_F_CURRENT_CPU, &grpcReq, sizeof(grpcReq));
-    bpf_map_delete_elem(&context_to_grpc_events, &ctx_instance);
-    bpf_map_delete_elem(&spans_in_progress, &ctx_instance);
+    bpf_map_delete_elem(&grpc_events, &key);
+    stop_tracking_span(&grpcReq.sc);
     return 0;
 }
 

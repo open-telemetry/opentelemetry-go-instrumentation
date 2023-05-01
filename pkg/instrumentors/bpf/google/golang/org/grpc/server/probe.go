@@ -127,14 +127,7 @@ func (g *Instrumentor) Load(ctx *context.InstrumentorContext) error {
 		return err
 	}
 
-	var uprobeObj *ebpf.Program
-	if ctx.TargetDetails.IsRegistersABI() {
-		uprobeObj = g.bpfObjects.UprobeServerHandleStreamByRegisters
-	} else {
-		uprobeObj = g.bpfObjects.UprobeServerHandleStream
-	}
-
-	up, err := ctx.Executable.Uprobe("", uprobeObj, &link.UprobeOptions{
+	up, err := ctx.Executable.Uprobe("", g.bpfObjects.UprobeServerHandleStream, &link.UprobeOptions{
 		Address: offset,
 	})
 	if err != nil {
