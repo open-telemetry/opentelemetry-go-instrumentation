@@ -34,11 +34,11 @@ struct
     __uint(pinning, LIBBPF_PIN_BY_NAME);
 } tracked_spans_by_sc SEC(".maps");
 
-static __always_inline void *get_parent_go_context(void *ctx) {
+static __always_inline void *get_parent_go_context(void *ctx, void *map) {
     void *data = ctx;
     for (int i = 0; i < MAX_DISTANCE; i++)
     {
-        void *found_in_map = bpf_map_lookup_elem(&tracked_spans, &data);
+        void *found_in_map = bpf_map_lookup_elem(map, &data);
         if (found_in_map != NULL)
         {
             return data;
@@ -54,7 +54,7 @@ static __always_inline void *get_parent_go_context(void *ctx) {
 }
 
 static __always_inline struct span_context *get_parent_span_context(void *ctx) {
-    void *parent_ctx = get_parent_go_context(ctx);
+    void *parent_ctx = get_parent_go_context(ctx, &tracked_spans);
     if (parent_ctx == NULL)
     {
         return NULL;

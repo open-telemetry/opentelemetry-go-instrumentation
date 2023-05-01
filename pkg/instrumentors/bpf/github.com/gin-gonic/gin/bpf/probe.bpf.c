@@ -81,7 +81,7 @@ int uprobe_GinEngine_ServeHTTP(struct pt_regs *ctx) {
     // Get key
     void *req_ctx_ptr = 0;
     bpf_probe_read(&req_ctx_ptr, sizeof(req_ctx_ptr), (void *)(req_ptr + ctx_ptr_pos));
-    void *key = get_consistent_key(ctx, req_ctx_ptr);
+    void *key = get_consistent_key(ctx, (void *)(req_ptr + ctx_ptr_pos));
 
     // Write event
     httpReq.sc = generate_span_context();
@@ -96,9 +96,7 @@ int uprobe_GinEngine_ServeHTTP_Returns(struct pt_regs *ctx) {
     void *req_ptr = get_argument(ctx, request_pos);
 
     // Get key
-    void *req_ctx_ptr = 0;
-    bpf_probe_read(&req_ctx_ptr, sizeof(req_ctx_ptr), (void *)(req_ptr + ctx_ptr_pos));
-    void *key = get_consistent_key(ctx, req_ctx_ptr);
+    void *key = get_consistent_key(ctx, (void *)(req_ptr + ctx_ptr_pos));
 
     void *httpReq_ptr = bpf_map_lookup_elem(&http_events, &key);
     struct http_request_t httpReq = {};

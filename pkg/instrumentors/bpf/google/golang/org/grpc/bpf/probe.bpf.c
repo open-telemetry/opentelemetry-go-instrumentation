@@ -46,7 +46,7 @@ struct
     __type(key, void *);
     __type(value, struct grpc_request_t);
     __uint(max_entries, MAX_CONCURRENT);
-} context_to_grpc_events SEC(".maps");
+} grpc_events SEC(".maps");
 
 struct headers_buff
 {
@@ -100,9 +100,12 @@ int uprobe_ClientConn_Invoke(struct pt_regs *ctx)
     target_size = target_size < target_len ? target_size : target_len;
     bpf_probe_read(&grpcReq.target, target_size, target_ptr);
 
-    // Write event
+    // Get key
     void *context_ptr = get_argument(ctx, context_pos);
-    bpf_map_update_elem(&context_to_grpc_events, &context_ptr, &grpcReq, 0);
+    void *key = get_consistent_key(ctx, context_ptr);
+
+    // Write event
+    bpf_map_update_elem(&grpc_events, &key, &grpcReq, 0);
     return 0;
 }
 
@@ -111,14 +114,14 @@ int uprobe_ClientConn_Invoke_Returns(struct pt_regs *ctx)
 {
     u64 context_pos = 3;
     void *context_ptr = get_argument(ctx, context_pos);
-    void *grpcReq_ptr = bpf_map_lookup_elem(&context_to_grpc_events, &context_ptr);
+    void *key = get_consistent_key(ctx, context_ptr);
+    void *grpcReq_ptr = bpf_map_lookup_elem(&grpc_events, &key);
     struct grpc_request_t grpcReq = {};
     bpf_probe_read(&grpcReq, sizeof(grpcReq), grpcReq_ptr);
 
     grpcReq.end_time = bpf_ktime_get_ns();
     bpf_perf_event_output(ctx, &events, BPF_F_CURRENT_CPU, &grpcReq, sizeof(grpcReq));
-    bpf_map_delete_elem(&context_to_grpc_events, &context_ptr);
-
+    bpf_map_delete_elem(&grpc_events, &key);
     return 0;
 }
 
@@ -130,6 +133,8 @@ int uprobe_Http2Client_CreateHeaderFields(struct pt_regs *ctx)
     s32 context_pointer_pos = 3;
     struct go_slice slice = {};
     struct go_slice_user_ptr slice_user_ptr = {};
+    void *context_ptr = get_argument(ctx, context_pointer_pos);
+    void *key = get_consistent_key(ctx, context_ptr);
     if (is_registers_abi)
     {
         slice.array = (void *)ctx->rax;
@@ -150,24 +155,21 @@ int uprobe_Http2Client_CreateHeaderFields(struct pt_regs *ctx)
         slice_user_ptr.array = (void *)ctx->rsp + (slice_pointer_pos * 8);
         slice_user_ptr.len = (void *)ctx->rsp + (slice_len_pos * 8);
         slice_user_ptr.cap = (void *)ctx->rsp + (slice_cap_pos * 8);
+        key = get_parent_go_context(key, &grpc_events);
     }
-    char key[11] = "traceparent";
-    struct go_string key_str = write_user_go_string(key, sizeof(key));
+    char tp_key[11] = "traceparent";
+    struct go_string key_str = write_user_go_string(tp_key, sizeof(tp_key));
 
     // Get grpc request struct
-    void *context_ptr = 0;
-    bpf_probe_read(&context_ptr, sizeof(context_ptr), (void *)(ctx->rsp + (context_pointer_pos * 8)));
-    void *parent_ctx = find_context_in_map(context_ptr, &context_to_grpc_events);
-    void *grpcReq_ptr = bpf_map_lookup_elem(&context_to_grpc_events, &parent_ctx);
+    void *grpcReq_ptr = bpf_map_lookup_elem(&grpc_events, &key);
     struct grpc_request_t grpcReq = {};
     bpf_probe_read(&grpcReq, sizeof(grpcReq), grpcReq_ptr);
 
     // Get parent if exists
-    void *parent_span_ctx = find_context_in_map(context_ptr, &spans_in_progress);
+    struct span_context *parent_span_ctx = get_parent_span_context(context_ptr);
     if (parent_span_ctx != NULL)
     {
-        void *psc_ptr = bpf_map_lookup_elem(&spans_in_progress, &parent_span_ctx);
-        bpf_probe_read(&grpcReq.psc, sizeof(grpcReq.psc), psc_ptr);
+        bpf_probe_read(&grpcReq.psc, sizeof(grpcReq.psc), parent_span_ctx);
         copy_byte_arrays(grpcReq.psc.TraceID, grpcReq.sc.TraceID, TRACE_ID_SIZE);
         generate_random_bytes(grpcReq.sc.SpanID, SPAN_ID_SIZE);
     }
@@ -184,7 +186,7 @@ int uprobe_Http2Client_CreateHeaderFields(struct pt_regs *ctx)
     hf.name = key_str;
     hf.value = val_str;
     append_item_to_slice(&slice, &hf, sizeof(hf), &slice_user_ptr, &headers_buff_map);
-    bpf_map_update_elem(&context_to_grpc_events, &parent_ctx, &grpcReq, 0);
+    bpf_map_update_elem(&grpc_events, &key, &grpcReq, 0);
 
     return 0;
 }
