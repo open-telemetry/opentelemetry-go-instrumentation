@@ -16,8 +16,12 @@ package errors
 
 import "errors"
 
-// ErrInterrupted can be used as an error to signal that a process was
-// interrupted but didn't fail in any other way.
-var ErrInterrupted = errors.New("interrupted")
-var ErrProcessNotFound = errors.New("process_not_found")
-var ErrABIWrongInstruction = errors.New("could not detect ABI, got wrong instruction")
+var (
+	// ErrInterrupted is returned when a process was interrupted but didn't
+	// fail in any other way.
+	ErrInterrupted = errors.New("interrupted")
+
+	// ErrProcessNotFound is returned when a requested process is not currently
+	// running.
+	ErrProcessNotFound = errors.New("process not found")
+)

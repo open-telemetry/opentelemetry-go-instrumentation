@@ -21,8 +21,11 @@ import (
 	"log"
 	"os"
 
+	"github.com/hashicorp/go-version"
+
 	"go.opentelemetry.io/auto/offsets-tracker/binary"
 	"go.opentelemetry.io/auto/offsets-tracker/schema"
+	"go.opentelemetry.io/auto/offsets-tracker/versions"
 )
 
 // Cache holds already seen offsets.
@@ -57,34 +60,56 @@ func NewCache(prevOffsetFile string) *Cache {
 	}
 }
 
-// IsAllInCache returns all DataMemberOffset for a module with modName and
-// version and offsets describe by dm.
-func (c *Cache) IsAllInCache(modName string, version string, dm []*binary.DataMember) ([]*binary.DataMemberOffset, bool) {
-	for _, item := range c.data.Data {
-		if item.Name == modName {
-			offsetsFound := 0
-			var results []*binary.DataMemberOffset
-			for _, offsets := range item.DataMembers {
-				for _, targetDm := range dm {
-					if offsets.Struct == targetDm.StructName && offsets.Field == targetDm.Field {
-						for _, ver := range offsets.Offsets {
-							if ver.Version == version {
-								results = append(results, &binary.DataMemberOffset{
-									DataMember: targetDm,
-									Offset:     ver.Offset,
-								})
-								offsetsFound++
-							}
-						}
-					}
-				}
-			}
-			if offsetsFound == len(dm) {
-				return results, true
-			}
+// IsAllInCache checks whether the passed datamembers exist in the cache for a
+// given version.
+func (c *Cache) IsAllInCache(version string, dataMembers []*binary.DataMember) ([]*binary.DataMemberOffset, bool) {
+	var results []*binary.DataMemberOffset
+	for _, dm := range dataMembers {
+		// first, look for the field and check that the target version is in
+		// chache.
+		strct, ok := c.data.Data[dm.StructName]
+		if !ok {
 			return nil, false
+		}
+		field, ok := strct[dm.Field]
+		if !ok {
+			return nil, false
+		}
+		if !versions.Between(version, field.Versions.Oldest, field.Versions.Newest) {
+			return nil, false
+		}
+
+		off, ok := searchOffset(field, version)
+		if !ok {
+			return nil, false
+		}
+		results = append(results, &binary.DataMemberOffset{
+			DataMember: dm,
+			Offset:     off,
+		})
+	}
+	return results, true
+}
+
+// searchOffset searches an offset from the newest field whose version
+// is lower than or equal to the target version.
+func searchOffset(field schema.TrackedField, targetVersion string) (uint64, bool) {
+	target := versions.MustParse(targetVersion)
+
+	// Search from the newest version
+	for o := len(field.Offsets) - 1; o >= 0; o-- {
+		od := &field.Offsets[o]
+		fieldVersion, err := version.NewVersion(od.Since)
+		if err != nil {
+			// Malformed version: return not found
+			return 0, false
+		}
+		if target.Compare(fieldVersion) >= 0 {
+			// if target version is larger or equal than lib version:
+			// we certainly know that it is the most recent tracked offset
+			return od.Offset, true
 		}
 	}
 
-	return nil, false
+	return 0, false
 }
