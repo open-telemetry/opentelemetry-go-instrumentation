@@ -25,6 +25,8 @@ import (
 	"github.com/cilium/ebpf"
 	"github.com/cilium/ebpf/link"
 	"github.com/cilium/ebpf/perf"
+	"golang.org/x/sys/unix"
+
 	"go.opentelemetry.io/auto/pkg/inject"
 	"go.opentelemetry.io/auto/pkg/instrumentors/context"
 	"go.opentelemetry.io/auto/pkg/instrumentors/events"
@@ -32,10 +34,9 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	semconv "go.opentelemetry.io/otel/semconv/v1.7.0"
 	"go.opentelemetry.io/otel/trace"
-	"golang.org/x/sys/unix"
 )
 
-//go:generate go run github.com/cilium/ebpf/cmd/bpf2go -target bpfel -cc clang -cflags $CFLAGS bpf ./bpf/probe.bpf.c
+//go:generate go run github.com/cilium/ebpf/cmd/bpf2go -target amd64,arm64 -cc clang -cflags $CFLAGS bpf ./bpf/probe.bpf.c
 
 // Event represents an event in the gin-gonic/gin server during an HTTP
 // request-response.
@@ -83,6 +84,11 @@ func (h *Instrumentor) Load(ctx *context.InstrumentorContext) error {
 			VarName:    "url_ptr_pos",
 			StructName: "net/http.Request",
 			Field:      "URL",
+		},
+		{
+			VarName:    "ctx_ptr_pos",
+			StructName: "net/http.Request",
+			Field:      "ctx",
 		},
 		{
 			VarName:    "path_ptr_pos",

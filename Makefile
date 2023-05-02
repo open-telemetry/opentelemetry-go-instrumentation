@@ -10,7 +10,7 @@ OTEL_GO_MOD_DIRS := $(filter-out $(TOOLS_MOD_DIR), $(ALL_GO_MOD_DIRS))
 
 # Build the list of include directories to compile the bpf program
 BPF_INCLUDE += -I${REPODIR}/include/libbpf
-BPF_INCLUDE+= -I${REPODIR}/include
+BPF_INCLUDE += -I${REPODIR}/include
 
 .DEFAULT_GOAL := precommit
 
@@ -24,14 +24,19 @@ $(TOOLS)/%: | $(TOOLS)
 	cd $(TOOLS_MOD_DIR) && \
 	go build -o $@ $(PACKAGE)
 
+MULTIMOD = $(TOOLS)/multimod
+$(TOOLS)/multimod: PACKAGE=go.opentelemetry.io/build-tools/multimod
+
 GOLICENSES = $(TOOLS)/go-licenses
 $(TOOLS)/go-licenses: PACKAGE=github.com/google/go-licenses
+
+IMG_NAME ?= otel-go-instrumentation
 
 GOLANGCI_LINT = $(TOOLS)/golangci-lint
 $(TOOLS)/golangci-lint: PACKAGE=github.com/golangci/golangci-lint/cmd/golangci-lint
 
 .PHONY: tools
-tools: $(GOLICENSES) $(GOLANGCI_LINT)
+tools: $(GOLICENSES) $(MULTIMOD) $(GOLANGCI_LINT)
 
 ALL_GO_MODS := $(shell find . -type f -name 'go.mod' ! -path '$(TOOLS_MOD_DIR)/*' ! -path './LICENSES/*' | sort)
 GO_MODS_TO_TEST := $(ALL_GO_MODS:%=test/%)
@@ -45,6 +50,7 @@ test/%:
 .PHONY: generate
 generate: export CFLAGS := $(BPF_INCLUDE)
 generate: go-mod-tidy
+generate:
 	go generate ./...
 
 .PHONY: go-mod-tidy
@@ -65,11 +71,11 @@ golangci-lint/%: | $(GOLANGCI_LINT)
 
 .PHONY: build
 build: generate
-	GOOS=linux GOARCH=amd64 go build -o otel-go-instrumentation cli/main.go
+	GOOS=linux go build -o otel-go-instrumentation cli/main.go
 
 .PHONY: docker-build
 docker-build:
-	docker build -t $(IMG) .
+	docker buildx build -t $(IMG_NAME) .
 
 .PHONY: offsets
 offsets:
@@ -114,7 +120,7 @@ fixture-gorillamux: fixtures/gorillamux
 fixture-gin: fixtures/gin
 fixtures/%: LIBRARY=$*
 fixtures/%:
-	IMG=otel-go-instrumentation $(MAKE) docker-build
+	$(MAKE) docker-build
 	cd test/e2e/$(LIBRARY) && docker build -t sample-app .
 	kind create cluster
 	kind load docker-image otel-go-instrumentation sample-app
@@ -130,6 +136,17 @@ fixtures/%:
 	jq 'del(.resourceSpans[].scopeSpans[].spans[].endTimeUnixNano, .resourceSpans[].scopeSpans[].spans[].startTimeUnixNano) | .resourceSpans[].scopeSpans[].spans[].spanId|= (if . != "" then "xxxxx" else . end) | .resourceSpans[].scopeSpans[].spans[].traceId|= (if . != "" then "xxxxx" else . end) | .resourceSpans[].scopeSpans|=sort_by(.scope.name)' ./test/e2e/$(LIBRARY)/traces.json.tmp | jq --sort-keys . > ./test/e2e/$(LIBRARY)/traces.json
 	rm ./test/e2e/$(LIBRARY)/traces.json.tmp
 	kind delete cluster
+
+.PHONY: prerelease
+prerelease: | $(MULTIMOD)
+	@[ "${MODSET}" ] || ( echo ">> env var MODSET is not set"; exit 1 )
+	$(MULTIMOD) verify && $(MULTIMOD) prerelease -m ${MODSET}
+
+COMMIT ?= "HEAD"
+.PHONY: add-tags
+add-tags: | $(MULTIMOD)
+	@[ "${MODSET}" ] || ( echo ">> env var MODSET is not set"; exit 1 )
+	$(MULTIMOD) verify && $(MULTIMOD) tag -m ${MODSET} -c ${COMMIT}
 
 .PHONY: check-clean-work-tree
 check-clean-work-tree:

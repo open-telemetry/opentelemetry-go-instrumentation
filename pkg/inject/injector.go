@@ -20,6 +20,8 @@ import (
 	"fmt"
 	"runtime"
 
+	"github.com/hashicorp/go-version"
+
 	"github.com/cilium/ebpf"
 
 	"go.opentelemetry.io/auto/pkg/log"
@@ -75,7 +77,7 @@ func (i *Injector) Inject(loadBpf loadBpfFunc, library string, libVersion string
 	injectedVars := make(map[string]interface{})
 
 	for _, dm := range fields {
-		offset, found := i.getFieldOffset(library, libVersion, dm.StructName, dm.Field)
+		offset, found := i.getFieldOffset(dm.StructName, dm.Field, libVersion)
 		if !found {
 			log.Logger.V(0).Info("could not find offset", "lib", library, "version", libVersion, "struct", dm.StructName, "field", dm.Field)
 		} else {
@@ -110,18 +112,34 @@ func (i *Injector) addCommonInjections(varsMap map[string]interface{}, initAlloc
 	return nil
 }
 
-func (i *Injector) getFieldOffset(libName string, libVersion string, structName string, fieldName string) (uint64, bool) {
-	for _, l := range i.data.Data {
-		if l.Name == libName {
-			for _, dm := range l.DataMembers {
-				if dm.Struct == structName && dm.Field == fieldName {
-					for _, o := range dm.Offsets {
-						if o.Version == libVersion {
-							return o.Offset, true
-						}
-					}
-				}
-			}
+func (i *Injector) getFieldOffset(structName string, fieldName string, libVersion string) (uint64, bool) {
+	strct, ok := i.data.Data[structName]
+	if !ok {
+		return 0, false
+	}
+	field, ok := strct[fieldName]
+	if !ok {
+		return 0, false
+	}
+	target, err := version.NewVersion(libVersion)
+	if err != nil {
+		// shouldn't happen unless a bug in our code/files
+		panic(err.Error())
+	}
+
+	// Search from the newest version (last in the slice)
+	for o := len(field.Offsets) - 1; o >= 0; o-- {
+		od := &field.Offsets[o]
+		fieldVersion, err := version.NewVersion(od.Since)
+		if err != nil {
+			// shouldn't happen unless a bug in our code
+			panic(err.Error())
+		}
+		if target.Compare(fieldVersion) >= 0 {
+			// if target version is larger or equal than lib version:
+			// we certainly know that it is the most recent tracked offset
+			// matching the target libVersion
+			return od.Offset, true
 		}
 	}
 

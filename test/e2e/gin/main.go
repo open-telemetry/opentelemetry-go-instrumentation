@@ -15,7 +15,7 @@
 package main
 
 import (
-	"io/ioutil"
+	"io"
 	"log"
 	"net/http"
 	"time"
@@ -28,7 +28,9 @@ func main() {
 	r.GET("/hello-gin", func(c *gin.Context) {
 		c.String(http.StatusOK, "hello\n")
 	})
-	go r.Run();
+	go func() {
+		_ = r.Run()
+	}()
 
 	// give time for auto-instrumentation to start up
 	time.Sleep(5 * time.Second)
@@ -37,7 +39,7 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		log.Fatal(err)
 	}

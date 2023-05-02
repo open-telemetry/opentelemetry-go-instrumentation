@@ -22,10 +22,13 @@ import (
 	"strings"
 
 	"github.com/cilium/ebpf"
+
 	"go.opentelemetry.io/auto/pkg/instrumentors/bpffs"
 
 	"github.com/cilium/ebpf/link"
 	"github.com/cilium/ebpf/perf"
+	"golang.org/x/sys/unix"
+
 	"go.opentelemetry.io/auto/pkg/inject"
 	"go.opentelemetry.io/auto/pkg/instrumentors/context"
 	"go.opentelemetry.io/auto/pkg/instrumentors/events"
@@ -33,12 +36,12 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
 	"go.opentelemetry.io/otel/trace"
-	"golang.org/x/sys/unix"
 )
 
-//go:generate go run github.com/cilium/ebpf/cmd/bpf2go -target bpfel -cc clang -cflags $CFLAGS bpf ./bpf/probe.bpf.c
+//go:generate go run github.com/cilium/ebpf/cmd/bpf2go -target amd64,arm64 -cc clang -cflags $CFLAGS bpf ./bpf/probe.bpf.c
 
-type GrpcEvent struct {
+// Event represents an event in the gRPC client during a gRPC request.
+type Event struct {
 	StartTime         uint64
 	EndTime           uint64
 	Method            [50]byte
@@ -47,7 +50,8 @@ type GrpcEvent struct {
 	ParentSpanContext context.EBPFSpanContext
 }
 
-type grpcInstrumentor struct {
+// Instrumentor is the gRPC client instrumentor.
+type Instrumentor struct {
 	bpfObjects        *bpfObjects
 	uprobe            link.Link
 	returnProbs       []link.Link
@@ -55,20 +59,25 @@ type grpcInstrumentor struct {
 	eventsReader      *perf.Reader
 }
 
-func New() *grpcInstrumentor {
-	return &grpcInstrumentor{}
+// New returns a new [Instrumentor].
+func New() *Instrumentor {
+	return &Instrumentor{}
 }
 
-func (g *grpcInstrumentor) LibraryName() string {
+// LibraryName returns the gRPC package import path.
+func (g *Instrumentor) LibraryName() string {
 	return "google.golang.org/grpc"
 }
 
-func (g *grpcInstrumentor) FuncNames() []string {
+// FuncNames returns the function names from "google.golang.org/grpc" that are
+// instrumented.
+func (g *Instrumentor) FuncNames() []string {
 	return []string{"google.golang.org/grpc.(*ClientConn).Invoke",
 		"google.golang.org/grpc/internal/transport.(*http2Client).createHeaderFields"}
 }
 
-func (g *grpcInstrumentor) Load(ctx *context.InstrumentorContext) error {
+// Load loads all instrumentation offsets.
+func (g *Instrumentor) Load(ctx *context.InstrumentorContext) error {
 	libVersion, exists := ctx.TargetDetails.Libraries[g.LibraryName()]
 	if !exists {
 		libVersion = ""
@@ -148,9 +157,10 @@ func (g *grpcInstrumentor) Load(ctx *context.InstrumentorContext) error {
 	return nil
 }
 
-func (g *grpcInstrumentor) Run(eventsChan chan<- *events.Event) {
+// Run runs the events processing loop.
+func (g *Instrumentor) Run(eventsChan chan<- *events.Event) {
 	logger := log.Logger.WithName("grpc-instrumentor")
-	var event GrpcEvent
+	var event Event
 	for {
 		record, err := g.eventsReader.Read()
 		if err != nil {
@@ -176,7 +186,7 @@ func (g *grpcInstrumentor) Run(eventsChan chan<- *events.Event) {
 }
 
 // According to https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/trace/semantic_conventions/rpc.md
-func (g *grpcInstrumentor) convertEvent(e *GrpcEvent) *events.Event {
+func (g *Instrumentor) convertEvent(e *Event) *events.Event {
 	method := unix.ByteSliceToString(e.Method[:])
 	target := unix.ByteSliceToString(e.Target[:])
 	var attrs []attribute.KeyValue
@@ -224,7 +234,8 @@ func (g *grpcInstrumentor) convertEvent(e *GrpcEvent) *events.Event {
 	}
 }
 
-func (g *grpcInstrumentor) Close() {
+// Close stops the Instrumentor.
+func (g *Instrumentor) Close() {
 	log.Logger.V(0).Info("closing gRPC instrumentor")
 	if g.eventsReader != nil {
 		g.eventsReader.Close()

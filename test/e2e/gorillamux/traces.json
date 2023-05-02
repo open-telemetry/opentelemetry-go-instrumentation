@@ -26,34 +26,6 @@
       "scopeSpans": [
         {
           "scope": {
-            "name": "github.com/gorilla/mux"
-          },
-          "spans": [
-            {
-              "attributes": [
-                {
-                  "key": "http.method",
-                  "value": {
-                    "stringValue": ""
-                  }
-                },
-                {
-                  "key": "http.target",
-                  "value": {
-                    "stringValue": ""
-                  }
-                }
-              ],
-              "kind": 2,
-              "parentSpanId": "",
-              "spanId": "",
-              "status": {},
-              "traceId": ""
-            }
-          ]
-        },
-        {
-          "scope": {
             "name": "net/http"
           },
           "spans": [

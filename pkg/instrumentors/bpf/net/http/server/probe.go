@@ -25,6 +25,8 @@ import (
 	"github.com/cilium/ebpf"
 	"github.com/cilium/ebpf/link"
 	"github.com/cilium/ebpf/perf"
+	"golang.org/x/sys/unix"
+
 	"go.opentelemetry.io/auto/pkg/inject"
 	"go.opentelemetry.io/auto/pkg/instrumentors/context"
 	"go.opentelemetry.io/auto/pkg/instrumentors/events"
@@ -32,12 +34,13 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	semconv "go.opentelemetry.io/otel/semconv/v1.7.0"
 	"go.opentelemetry.io/otel/trace"
-	"golang.org/x/sys/unix"
 )
 
-//go:generate go run github.com/cilium/ebpf/cmd/bpf2go -target bpfel -cc clang -cflags $CFLAGS bpf ./bpf/probe.bpf.c
+//go:generate go run github.com/cilium/ebpf/cmd/bpf2go -target amd64,arm64 -cc clang -cflags $CFLAGS bpf ./bpf/probe.bpf.c
 
-type HttpEvent struct {
+// Event represents an event in an HTTP server during an HTTP
+// request-response.
+type Event struct {
 	StartTime   uint64
 	EndTime     uint64
 	Method      [6]byte
@@ -45,26 +48,31 @@ type HttpEvent struct {
 	SpanContext context.EBPFSpanContext
 }
 
-type httpServerInstrumentor struct {
+// Instrumentor is the net/http instrumentor.
+type Instrumentor struct {
 	bpfObjects   *bpfObjects
 	uprobes      []link.Link
 	returnProbs  []link.Link
 	eventsReader *perf.Reader
 }
 
-func New() *httpServerInstrumentor {
-	return &httpServerInstrumentor{}
+// New returns a new [Instrumentor].
+func New() *Instrumentor {
+	return &Instrumentor{}
 }
 
-func (h *httpServerInstrumentor) LibraryName() string {
+// LibraryName returns the net/http package name.
+func (h *Instrumentor) LibraryName() string {
 	return "net/http"
 }
 
-func (h *httpServerInstrumentor) FuncNames() []string {
-	return []string{"net/http.(*ServeMux).ServeHTTP", "net/http.HandlerFunc.ServeHTTP"}
+// FuncNames returns the function names from "net/http" that are instrumented.
+func (h *Instrumentor) FuncNames() []string {
+	return []string{"net/http.HandlerFunc.ServeHTTP"}
 }
 
-func (h *httpServerInstrumentor) Load(ctx *context.InstrumentorContext) error {
+// Load loads all instrumentation offsets.
+func (h *Instrumentor) Load(ctx *context.InstrumentorContext) error {
 	spec, err := ctx.Injector.Inject(loadBpf, "go", ctx.TargetDetails.GoVersion.Original(), []*inject.StructField{
 		{
 			VarName:    "method_ptr_pos",
@@ -75,6 +83,11 @@ func (h *httpServerInstrumentor) Load(ctx *context.InstrumentorContext) error {
 			VarName:    "url_ptr_pos",
 			StructName: "net/http.Request",
 			Field:      "URL",
+		},
+		{
+			VarName:    "ctx_ptr_pos",
+			StructName: "net/http.Request",
+			Field:      "ctx",
 		},
 		{
 			VarName:    "path_ptr_pos",
@@ -110,7 +123,7 @@ func (h *httpServerInstrumentor) Load(ctx *context.InstrumentorContext) error {
 	return nil
 }
 
-func (h *httpServerInstrumentor) registerProbes(ctx *context.InstrumentorContext, funcName string) {
+func (h *Instrumentor) registerProbes(ctx *context.InstrumentorContext, funcName string) {
 	logger := log.Logger.WithName("net/http-instrumentor").WithValues("function", funcName)
 	offset, err := ctx.TargetDetails.GetFunctionOffset(funcName)
 	if err != nil {
@@ -146,9 +159,10 @@ func (h *httpServerInstrumentor) registerProbes(ctx *context.InstrumentorContext
 	}
 }
 
-func (h *httpServerInstrumentor) Run(eventsChan chan<- *events.Event) {
+// Run runs the events processing loop.
+func (h *Instrumentor) Run(eventsChan chan<- *events.Event) {
 	logger := log.Logger.WithName("net/http-instrumentor")
-	var event HttpEvent
+	var event Event
 	for {
 		record, err := h.eventsReader.Read()
 		if err != nil {
@@ -173,7 +187,7 @@ func (h *httpServerInstrumentor) Run(eventsChan chan<- *events.Event) {
 	}
 }
 
-func (h *httpServerInstrumentor) convertEvent(e *HttpEvent) *events.Event {
+func (h *Instrumentor) convertEvent(e *Event) *events.Event {
 	method := unix.ByteSliceToString(e.Method[:])
 	path := unix.ByteSliceToString(e.Path[:])
 
@@ -197,7 +211,8 @@ func (h *httpServerInstrumentor) convertEvent(e *HttpEvent) *events.Event {
 	}
 }
 
-func (h *httpServerInstrumentor) Close() {
+// Close stops the Instrumentor.
+func (h *Instrumentor) Close() {
 	log.Logger.V(0).Info("closing net/http instrumentor")
 	if h.eventsReader != nil {
 		h.eventsReader.Close()

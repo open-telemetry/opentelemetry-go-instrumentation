@@ -84,41 +84,68 @@ enum
 #define BPF_F_INDEX_MASK 0xffffffffULL
 #define BPF_F_CURRENT_CPU BPF_F_INDEX_MASK
 
-#define PT_REGS_RC(x) ((x)->rax)
-struct pt_regs
-{
+#if defined(__TARGET_ARCH_x86)
+struct pt_regs {
 	/*
 	 * C ABI says these regs are callee-preserved. They aren't saved on kernel entry
 	 * unless syscall needs a complete, fully filled "struct pt_regs".
 	 */
-	unsigned long r15;
-	unsigned long r14;
-	unsigned long r13;
-	unsigned long r12;
-	unsigned long rbp;
-	unsigned long rbx;
+	long unsigned int r15;
+	long unsigned int r14;
+	long unsigned int r13;
+	long unsigned int r12;
+	long unsigned int bp;
+	long unsigned int bx;
 	/* These regs are callee-clobbered. Always saved on kernel entry. */
-	unsigned long r11;
-	unsigned long r10;
-	unsigned long r9;
-	unsigned long r8;
-	unsigned long rax;
-	unsigned long rcx;
-	unsigned long rdx;
-	unsigned long rsi;
-	unsigned long rdi;
+	long unsigned int r11;
+	long unsigned int r10;
+	long unsigned int r9;
+	long unsigned int r8;
+	long unsigned int ax;
+	long unsigned int cx;
+	long unsigned int dx;
+	long unsigned int si;
+	long unsigned int di;
 	/*
 	 * On syscall entry, this is syscall#. On CPU exception, this is error code.
 	 * On hw interrupt, it's IRQ number:
 	 */
-	unsigned long orig_rax;
+	long unsigned int orig_ax;
 	/* Return frame for iretq */
-	unsigned long rip;
-	unsigned long cs;
-	unsigned long eflags;
-	unsigned long rsp;
-	unsigned long ss;
+	long unsigned int ip;
+	long unsigned int cs;
+	long unsigned int flags;
+	long unsigned int sp;
+	long unsigned int ss;
 	/* top of stack page */
 };
+#elif defined(__TARGET_ARCH_arm64)
+struct user_pt_regs {
+	__u64 regs[31];
+	__u64 sp;
+	__u64 pc;
+	__u64 pstate;
+};
+
+struct pt_regs {
+	union {
+		struct user_pt_regs user_regs;
+		struct {
+			u64 regs[31];
+			u64 sp;
+			u64 pc;
+			u64 pstate;
+		};
+	};
+	u64 orig_x0;
+	s32 syscallno;
+	u32 unused2;
+	u64 orig_addr_limit;
+	u64 pmr_save;
+	u64 stackframe[2];
+	u64 lockdep_hardirqs;
+	u64 exit_rcu;
+};
+#endif
 
 #endif /* __VMLINUX_H__ */
