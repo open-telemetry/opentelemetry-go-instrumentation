@@ -30,7 +30,8 @@ import (
 )
 
 var (
-	ErrNotAllFuncsFound = fmt.Errorf("not all functions found for instrumentation")
+	// Error message returned when unable to find all instrumentation functions.
+	errNotAllFuncsFound = fmt.Errorf("not all functions found for instrumentation")
 )
 
 // Manager handles the management of [Instrumentor] instances.
@@ -100,7 +101,7 @@ func (m *Manager) FilterUnusedInstrumentors(target *process.TargetDetails) {
 
 		if funcsFound != len(inst.FuncNames()) {
 			if funcsFound > 0 {
-				log.Logger.Error(ErrNotAllFuncsFound, "some of expected functions not found - check instrumented functions", "instrumentation_name", name, "funcs_found", funcsFound, "funcs_expected", len(inst.FuncNames()))
+				log.Logger.Error(errNotAllFuncsFound, "some of expected functions not found - check instrumented functions", "instrumentation_name", name, "funcs_found", funcsFound, "funcs_expected", len(inst.FuncNames()))
 			}
 			delete(m.instrumentors, name)
 		}
