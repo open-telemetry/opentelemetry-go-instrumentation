@@ -52,10 +52,9 @@ func shouldShowVerifierLogs() bool {
 	val, exists := os.LookupEnv(showVerifierLogEnvVar)
 	if exists {
 		boolVal, err := strconv.ParseBool(val)
-		if err != nil {
-			return true
+		if err == nil {
+			return boolVal
 		}
-		return boolVal
 	}
 
 	return false
