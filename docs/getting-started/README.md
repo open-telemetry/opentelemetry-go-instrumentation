@@ -9,12 +9,26 @@ The following tools are required to run this tutorial:
 - [Kind](https://kind.sigs.k8s.io/) to run a local Kubernetes cluster with Docker container nodes.
 - [Kubernetes CLI (kubectl)](https://kubernetes.io/docs/tasks/tools/install-kubectl/) to run commands against Kubernetes clusters.
 
+## Local build
+
+From the root directory, build the tool as a local docker image called `otel-go-instrumentation`:
+
+```shell
+make docker-build
+```
+
 ## Creating the Kubernetes cluster
 
 Create a new local Kubernetes cluster, by running the following command:
 
 ```shell
 kind create cluster
+```
+
+Load the docker image into Kind:
+
+```shell
+kind load docker-image otel-go-instrumentation
 ```
 
 ## Deployment
