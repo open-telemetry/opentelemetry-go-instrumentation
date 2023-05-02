@@ -28,7 +28,6 @@ GOLICENSES = $(TOOLS)/go-licenses
 $(TOOLS)/go-licenses: PACKAGE=github.com/google/go-licenses
 
 IMG_NAME ?= otel-go-instrumentation
-TARGET ?= amd64
 
 GOLANGCI_LINT = $(TOOLS)/golangci-lint
 $(TOOLS)/golangci-lint: PACKAGE=github.com/golangci/golangci-lint/cmd/golangci-lint
@@ -49,7 +48,7 @@ test/%:
 generate: export CFLAGS := $(BPF_INCLUDE)
 generate: go-mod-tidy
 generate:
-	TARGET=$(TARGET) go generate ./...
+	go generate ./...
 
 .PHONY: go-mod-tidy
 go-mod-tidy: $(ALL_GO_MOD_DIRS:%=go-mod-tidy/%)

@@ -5,7 +5,7 @@ RUN curl -LO https://go.dev/dl/go1.20.linux-${TARGETARCH}.tar.gz && tar -C /usr/
 ENV PATH="/usr/local/go/bin:${PATH}"
 WORKDIR /app
 COPY . .
-RUN TARGET=${TARGETARCH} make build
+RUN make build
 
 FROM registry.fedoraproject.org/fedora-minimal:38
 COPY --from=builder /app/otel-go-instrumentation /
