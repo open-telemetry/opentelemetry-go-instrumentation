@@ -29,6 +29,11 @@ import (
 	"go.opentelemetry.io/auto/pkg/process"
 )
 
+var (
+	// Error message returned when unable to find all instrumentation functions.
+	errNotAllFuncsFound = fmt.Errorf("not all functions found for instrumentation")
+)
+
 // Manager handles the management of [Instrumentor] instances.
 type Manager struct {
 	instrumentors  map[string]Instrumentor
@@ -87,16 +92,17 @@ func (m *Manager) FilterUnusedInstrumentors(target *process.TargetDetails) {
 	}
 
 	for name, inst := range m.instrumentors {
-		allFuncExists := true
+		funcsFound := 0
 		for _, instF := range inst.FuncNames() {
-			if _, exists := existingFuncMap[instF]; !exists {
-				allFuncExists = false
-				break
+			if _, exists := existingFuncMap[instF]; exists {
+				funcsFound++
 			}
 		}
 
-		if !allFuncExists {
-			log.Logger.V(1).Info("filtering unused instrumentation", "name", name)
+		if funcsFound != len(inst.FuncNames()) {
+			if funcsFound > 0 {
+				log.Logger.Error(errNotAllFuncsFound, "some of expected functions not found - check instrumented functions", "instrumentation_name", name, "funcs_found", funcsFound, "funcs_expected", len(inst.FuncNames()))
+			}
 			delete(m.instrumentors, name)
 		}
 	}

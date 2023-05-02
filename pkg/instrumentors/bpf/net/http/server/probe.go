@@ -36,7 +36,7 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
-//go:generate go run github.com/cilium/ebpf/cmd/bpf2go -target bpfel -cc clang -cflags $CFLAGS bpf ./bpf/probe.bpf.c
+//go:generate go run github.com/cilium/ebpf/cmd/bpf2go -target amd64,arm64 -cc clang -cflags $CFLAGS bpf ./bpf/probe.bpf.c
 
 // Event represents an event in an HTTP server during an HTTP
 // request-response.
@@ -68,7 +68,7 @@ func (h *Instrumentor) LibraryName() string {
 
 // FuncNames returns the function names from "net/http" that are instrumented.
 func (h *Instrumentor) FuncNames() []string {
-	return []string{"net/http.(*ServeMux).ServeHTTP", "net/http.HandlerFunc.ServeHTTP"}
+	return []string{"net/http.HandlerFunc.ServeHTTP"}
 }
 
 // Load loads all instrumentation offsets.
@@ -83,6 +83,11 @@ func (h *Instrumentor) Load(ctx *context.InstrumentorContext) error {
 			VarName:    "url_ptr_pos",
 			StructName: "net/http.Request",
 			Field:      "URL",
+		},
+		{
+			VarName:    "ctx_ptr_pos",
+			StructName: "net/http.Request",
+			Field:      "ctx",
 		},
 		{
 			VarName:    "path_ptr_pos",
