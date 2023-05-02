@@ -57,3 +57,23 @@ assert_equal() {
 	fi
 }
 
+assert_not_empty() {
+	EMPTY=(\"\")
+	if [[ "$1" == "${EMPTY}" ]]; then
+		{
+			echo
+			echo "-- 💥 value is empty 💥 --"
+			echo "value : $1"
+			echo "--"
+			echo
+		} >&2 # output error to STDERR
+		return 1
+		else
+		{
+			echo
+			echo "-- ✅ value is not empty ✅ --"
+			echo "value : $1"
+		} >&3 # output success to STDOUT
+			return 0
+	fi
+}
