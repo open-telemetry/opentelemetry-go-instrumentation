@@ -27,7 +27,9 @@ import (
 )
 
 const (
-	mapSize = 4096 * 6 * 1024
+	// The concurrent trace & span ID pairs lookup size in bytes. Currently set to 24mb.
+	// TODO: Review map size.
+	mapSize = 25165824
 )
 
 // TargetDetails are the details about a target function.
