@@ -86,12 +86,17 @@ enum
 
 #if defined(__TARGET_ARCH_x86)
 struct pt_regs {
+	/*
+	 * C ABI says these regs are callee-preserved. They aren't saved on kernel entry
+	 * unless syscall needs a complete, fully filled "struct pt_regs".
+	 */
 	long unsigned int r15;
 	long unsigned int r14;
 	long unsigned int r13;
 	long unsigned int r12;
 	long unsigned int bp;
 	long unsigned int bx;
+	/* These regs are callee-clobbered. Always saved on kernel entry. */
 	long unsigned int r11;
 	long unsigned int r10;
 	long unsigned int r9;
@@ -101,12 +106,18 @@ struct pt_regs {
 	long unsigned int dx;
 	long unsigned int si;
 	long unsigned int di;
+	/*
+	 * On syscall entry, this is syscall#. On CPU exception, this is error code.
+	 * On hw interrupt, it's IRQ number:
+	 */
 	long unsigned int orig_ax;
+	/* Return frame for iretq */
 	long unsigned int ip;
 	long unsigned int cs;
 	long unsigned int flags;
 	long unsigned int sp;
 	long unsigned int ss;
+	/* top of stack page */
 };
 #elif defined(__TARGET_ARCH_arm64)
 struct user_pt_regs {
