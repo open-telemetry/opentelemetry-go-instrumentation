@@ -36,7 +36,7 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
-//go:generate go run github.com/cilium/ebpf/cmd/bpf2go -target bpfel -cc clang -cflags $CFLAGS bpf ./bpf/probe.bpf.c
+//go:generate go run github.com/cilium/ebpf/cmd/bpf2go -target amd64,arm64 -cc clang -cflags $CFLAGS bpf ./bpf/probe.bpf.c
 
 // Event represents an event in the gorilla/mux server during an HTTP
 // request-response.

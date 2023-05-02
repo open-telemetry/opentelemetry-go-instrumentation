@@ -36,7 +36,7 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
-//go:generate go run github.com/cilium/ebpf/cmd/bpf2go -target bpfel -cc clang -cflags $CFLAGS bpf ./bpf/probe.bpf.c
+//go:generate go run github.com/cilium/ebpf/cmd/bpf2go -target amd64,arm64 -cc clang -cflags $CFLAGS bpf ./bpf/probe.bpf.c
 
 // Event represents an event in the gRPC server during a gRPC request.
 type Event struct {
@@ -70,7 +70,7 @@ func (g *Instrumentor) LibraryName() string {
 // instrumented.
 func (g *Instrumentor) FuncNames() []string {
 	return []string{"google.golang.org/grpc.(*Server).handleStream",
-		"google.golang.org/grpc/internal/transport.(*decodeState).decodeHeader"}
+		"google.golang.org/grpc/internal/transport.(*http2Server).operateHeaders"}
 }
 
 // Load loads all instrumentation offsets.
@@ -127,15 +127,8 @@ func (g *Instrumentor) Load(ctx *context.InstrumentorContext) error {
 		return err
 	}
 
-	var uprobeObj *ebpf.Program
-	if ctx.TargetDetails.IsRegistersABI() {
-		uprobeObj = g.bpfObjects.UprobeServerHandleStreamByRegisters
-	} else {
-		uprobeObj = g.bpfObjects.UprobeServerHandleStream
-	}
-
-	up, err := ctx.Executable.Uprobe("", uprobeObj, &link.UprobeOptions{
-		Address: offset,
+	up, err := ctx.Executable.Uprobe("", g.bpfObjects.UprobeServerHandleStream, &link.UprobeOptions{
+		Offset: offset,
 	})
 	if err != nil {
 		return err
