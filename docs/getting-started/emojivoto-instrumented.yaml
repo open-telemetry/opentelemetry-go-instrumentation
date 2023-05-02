@@ -39,7 +39,7 @@ spec:
             requests:
               cpu: 100m
         - name: emojivoto-emoji-instrumentation
-          image: otel-go-instrumentation:v0.1
+          image: otel-go-instrumentation
           env:
             - name: OTEL_GO_AUTO_TARGET_EXE
               value: /usr/local/bin/emojivoto-emoji-svc
@@ -95,7 +95,7 @@ spec:
             requests:
               cpu: 100m
         - name: emojivoto-voting-instrumentation
-          image: otel-go-instrumentation:v0.1
+          image: otel-go-instrumentation
           env:
             - name: OTEL_GO_AUTO_TARGET_EXE
               value: /usr/local/bin/emojivoto-voting-svc
@@ -153,7 +153,7 @@ spec:
             requests:
               cpu: 100m
         - name: emojivoto-web-instrumentation
-          image: otel-go-instrumentation:v0.1
+          image: otel-go-instrumentation
           env:
             - name: OTEL_GO_AUTO_TARGET_EXE
               value: /usr/local/bin/emojivoto-web
