@@ -45,8 +45,11 @@ jobs:
         with:
           path: ~/.tools
           key: ${{ runner.os }}-${{ env.cache-name }}-${{ hashFiles('./internal/tools/**') }}
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update && sudo apt-get install -y clang llvm libbpf-dev
       - name: Run linters
-        run: make license-header-check go-mod-tidy
+        run: make license-header-check go-mod-tidy golangci-lint
       - name: Check clean repository
         run: make check-clean-work-tree
   verify-licenses:
