@@ -16,22 +16,23 @@ package process
 
 import (
 	"debug/elf"
-	"debug/gosym"
 	"errors"
 	"fmt"
 	"os"
-	"strings"
 
 	"github.com/hashicorp/go-version"
+
 	"go.opentelemetry.io/auto/pkg/log"
 	"go.opentelemetry.io/auto/pkg/process/ptrace"
-	"golang.org/x/arch/x86/x86asm"
 )
 
 const (
-	mapSize = 15 * 1024 * 1024
+	// The concurrent trace & span ID pairs lookup size in bytes. Currently set to 24mb.
+	// TODO: Review map size.
+	mapSize = 25165824
 )
 
+// TargetDetails are the details about a target function.
 type TargetDetails struct {
 	PID               int
 	Functions         []*Func
@@ -40,22 +41,26 @@ type TargetDetails struct {
 	AllocationDetails *AllocationDetails
 }
 
+// AllocationDetails are the details about allocated memory.
 type AllocationDetails struct {
 	StartAddr uint64
 	EndAddr   uint64
 }
 
+// Func represents a function target.
 type Func struct {
 	Name          string
 	Offset        uint64
 	ReturnOffsets []uint64
 }
 
+// IsRegistersABI returns if t is supported.
 func (t *TargetDetails) IsRegistersABI() bool {
 	regAbiMinVersion, _ := version.NewVersion("1.17")
 	return t.GoVersion.GreaterThanOrEqual(regAbiMinVersion)
 }
 
+// GetFunctionOffset returns the offset for of the function with name.
 func (t *TargetDetails) GetFunctionOffset(name string) (uint64, error) {
 	for _, f := range t.Functions {
 		if f.Name == name {
@@ -66,6 +71,8 @@ func (t *TargetDetails) GetFunctionOffset(name string) (uint64, error) {
 	return 0, fmt.Errorf("could not find offset for function %s", name)
 }
 
+// GetFunctionReturns returns the return value of the call for the function
+// with name.
 func (t *TargetDetails) GetFunctionReturns(name string) ([]uint64, error) {
 	for _, f := range t.Functions {
 		if f.Name == name {
@@ -76,7 +83,7 @@ func (t *TargetDetails) GetFunctionReturns(name string) ([]uint64, error) {
 	return nil, fmt.Errorf("could not find returns for function %s", name)
 }
 
-func (a *processAnalyzer) remoteMmap(pid int, mapSize uint64) (uint64, error) {
+func (a *Analyzer) remoteMmap(pid int, mapSize uint64) (uint64, error) {
 	program, err := ptrace.NewTracedProgram(pid, log.Logger)
 	if err != nil {
 		log.Logger.Error(err, "Failed to attach ptrace", "pid", pid)
@@ -100,7 +107,8 @@ func (a *processAnalyzer) remoteMmap(pid int, mapSize uint64) (uint64, error) {
 	return addr, nil
 }
 
-func (a *processAnalyzer) Analyze(pid int, relevantFuncs map[string]interface{}) (*TargetDetails, error) {
+// Analyze returns the target details for an actively running process.
+func (a *Analyzer) Analyze(pid int, relevantFuncs map[string]interface{}) (*TargetDetails, error) {
 	result := &TargetDetails{
 		PID: pid,
 	}
@@ -136,34 +144,22 @@ func (a *processAnalyzer) Analyze(pid int, relevantFuncs map[string]interface{})
 		EndAddr:   addr + mapSize,
 	}
 
-	var pclndat []byte
-	if sec := elfF.Section(".gopclntab"); sec != nil {
-		pclndat, err = sec.Data()
-		if err != nil {
-			return nil, err
-		}
+	if err != nil {
+		return nil, err
 	}
-
-	sec := elfF.Section(".gosymtab")
-	if sec == nil {
-		return nil, fmt.Errorf("%s section not found in target binary, make sure this is a Go application", ".gosymtab")
-	}
-	symTabRaw, err := sec.Data()
-	pcln := gosym.NewLineTable(pclndat, elfF.Section(".text").Addr)
-	symTab, err := gosym.NewTable(symTabRaw, pcln)
+	symbols, err := elfF.Symbols()
 	if err != nil {
 		return nil, err
 	}
 
-	for _, f := range symTab.Funcs {
-		fName := f.Name
-		// fetch short path of function for vendor scene
-		if paths := strings.Split(fName, "/vendor/"); len(paths) > 1 {
-			fName = paths[1]
-		}
+	for _, f := range symbols {
+		if _, exists := relevantFuncs[f.Name]; exists {
+			offset, err := getFuncOffset(elfF, f)
+			if err != nil {
+				return nil, err
+			}
 
-		if _, exists := relevantFuncs[fName]; exists {
-			start, returns, err := a.findFuncOffset(&f, elfF)
+			returns, err := findFuncReturns(elfF, f, offset)
 			if err != nil {
 				log.Logger.V(1).Info("can't find function offset. Skipping", "function", f.Name)
 				continue
@@ -171,11 +167,11 @@ func (a *processAnalyzer) Analyze(pid int, relevantFuncs map[string]interface{})
 
 			log.Logger.V(0).Info("found relevant function for instrumentation",
 				"function", f.Name,
-				"start", start,
+				"start", offset,
 				"returns", returns)
 			function := &Func{
-				Name:          fName,
-				Offset:        start,
+				Name:          f.Name,
+				Offset:        offset,
 				ReturnOffsets: returns,
 			}
 
@@ -189,44 +185,62 @@ func (a *processAnalyzer) Analyze(pid int, relevantFuncs map[string]interface{})
 	return result, nil
 }
 
-func (a *processAnalyzer) findFuncOffset(f *gosym.Func, elfF *elf.File) (uint64, []uint64, error) {
-	off := f.Value
-	for _, prog := range elfF.Progs {
-		if prog.Type != elf.PT_LOAD || (prog.Flags&elf.PF_X) == 0 {
-			continue
+func getFuncOffset(f *elf.File, symbol elf.Symbol) (uint64, error) {
+	var sections []*elf.Section
+
+	for i := range f.Sections {
+		if f.Sections[i].Flags == elf.SHF_ALLOC+elf.SHF_EXECINSTR {
+			sections = append(sections, f.Sections[i])
 		}
-
-		// For more info on this calculation: stackoverflow.com/a/40249502
-		if prog.Vaddr <= f.Value && f.Value < (prog.Vaddr+prog.Memsz) {
-			off = f.Value - prog.Vaddr + prog.Off
-
-			funcLen := f.End - f.Entry
-			data := make([]byte, funcLen)
-			_, err := prog.ReadAt(data, int64(f.Value-prog.Vaddr))
-			if err != nil {
-				log.Logger.Error(err, "error while finding function return")
-				return 0, nil, err
-			}
-
-			var returns []uint64
-			for i := 0; i < int(funcLen); {
-				inst, err := x86asm.Decode(data[i:], 64)
-				if err != nil {
-					log.Logger.Error(err, "error while finding function return")
-					return 0, nil, err
-				}
-
-				if inst.Op == x86asm.RET {
-					returns = append(returns, off+uint64(i))
-				}
-
-				i += inst.Len
-			}
-
-			return off, returns, nil
-		}
-
 	}
 
-	return 0, nil, fmt.Errorf("prog not found")
+	if len(sections) == 0 {
+		return 0, fmt.Errorf("function %q not found in file", symbol)
+	}
+
+	var execSection *elf.Section
+	for m := range sections {
+		sectionStart := sections[m].Addr
+		sectionEnd := sectionStart + sections[m].Size
+		if symbol.Value >= sectionStart && symbol.Value < sectionEnd {
+			execSection = sections[m]
+			break
+		}
+	}
+
+	if execSection == nil {
+		return 0, errors.New("could not find symbol in executable sections of binary")
+	}
+
+	return uint64(symbol.Value - execSection.Addr + execSection.Offset), nil
+}
+
+func findFuncReturns(elfFile *elf.File, sym elf.Symbol, functionOffset uint64) ([]uint64, error) {
+	textSection := elfFile.Section(".text")
+	if textSection == nil {
+		return nil, errors.New("could not find .text section in binary")
+	}
+
+	lowPC := sym.Value
+	highPC := lowPC + sym.Size
+	offset := lowPC - textSection.Addr
+	buf := make([]byte, int(highPC-lowPC))
+
+	readBytes, err := textSection.ReadAt(buf, int64(offset))
+	if err != nil {
+		return nil, fmt.Errorf("could not read text section: %w", err)
+	}
+	data := buf[:readBytes]
+	instructionIndices, err := findRetInstructions(data)
+	if err != nil {
+		return nil, fmt.Errorf("error while scanning instructions: %w", err)
+	}
+
+	// Add the function lowPC to each index to obtain the actual locations
+	newLocations := make([]uint64, len(instructionIndices))
+	for i, instructionIndex := range instructionIndices {
+		newLocations[i] = instructionIndex + functionOffset
+	}
+
+	return newLocations, nil
 }

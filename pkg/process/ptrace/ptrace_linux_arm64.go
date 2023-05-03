@@ -29,7 +29,7 @@ const syscallInstrSize = 4
 // see kernel source /include/uapi/linux/elf.h
 const nrPRStatus = 1
 
-func getIp(regs *syscall.PtraceRegs) uintptr {
+func getIP(regs *syscall.PtraceRegs) uintptr {
 	return uintptr(regs.Pc)
 }
 
@@ -81,7 +81,7 @@ func (p *TracedProgram) Syscall(number uint64, args ...uint64) (uint64, error) {
 	}
 
 	instruction := make([]byte, syscallInstrSize)
-	ip := getIp(p.backupRegs)
+	ip := getIP(p.backupRegs)
 
 	// most aarch64 devices are little endian
 	// 0xd4000001 is `svc #0` to call the system call

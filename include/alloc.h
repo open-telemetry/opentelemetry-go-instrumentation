@@ -88,6 +88,12 @@ static __always_inline void *write_target_data(void *data, s32 size)
     {
         s32 start_index = 0;
         u64 updated_start = start + size;
+
+        // align updated_start to 8 bytes
+        if (updated_start % 8 != 0) {
+            updated_start += 8 - (updated_start % 8);
+        }
+
         bpf_map_update_elem(&alloc_map, &start_index, &updated_start, BPF_ANY);
         return target;
     }
