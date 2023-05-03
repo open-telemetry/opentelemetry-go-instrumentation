@@ -42,7 +42,9 @@ func main() {
 	}
 	s := grpc.NewServer()
 	helloworld.RegisterGreeterServer(s, &server{})
-	go s.Serve(lis)
+	go func() {
+		_ = s.Serve(lis)
+	}()
 
 	// give time for auto-instrumentation to start up
 	time.Sleep(5 * time.Second)
