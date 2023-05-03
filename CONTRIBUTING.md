@@ -39,5 +39,5 @@ It will be ready to merge when:
 - All feedback has been addressed.
 - All open comments should be resolved.
 
-A [project maintainer](https://github.com/orgs/open-telemetry/teams/go-instrumentaiton-maintainers) can merge the PR once these conditions are satisfied.
+A [project maintainer](https://github.com/orgs/open-telemetry/teams/go-instrumentation-maintainers) can merge the PR once these conditions are satisfied.
 It is up to project maintains to ensure enough time has been allowed for review of PRs.
