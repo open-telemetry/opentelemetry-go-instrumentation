@@ -47,7 +47,7 @@ func LoadEbpfObjects(spec *ebpf.CollectionSpec, to interface{}, opts *ebpf.Colle
 	return err
 }
 
-// Getting full verifier log is expensive, so we only do it if the user explicitly asks for it.
+// shouldShowVerifierLogs returns if the user has configured verifier logs to be emitted.
 func shouldShowVerifierLogs() bool {
 	val, exists := os.LookupEnv(showVerifierLogEnvVar)
 	if exists {
