@@ -36,7 +36,7 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
-//go:generate go run github.com/cilium/ebpf/cmd/bpf2go -target bpfel -cc clang -cflags $CFLAGS bpf ./bpf/probe.bpf.c
+//go:generate go run github.com/cilium/ebpf/cmd/bpf2go -target amd64,arm64 -cc clang -cflags $CFLAGS bpf ./bpf/probe.bpf.c
 
 // Event represents an event in the gin-gonic/gin server during an HTTP
 // request-response.
@@ -84,6 +84,11 @@ func (h *Instrumentor) Load(ctx *context.InstrumentorContext) error {
 			VarName:    "url_ptr_pos",
 			StructName: "net/http.Request",
 			Field:      "URL",
+		},
+		{
+			VarName:    "ctx_ptr_pos",
+			StructName: "net/http.Request",
+			Field:      "ctx",
 		},
 		{
 			VarName:    "path_ptr_pos",

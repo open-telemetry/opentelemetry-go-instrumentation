@@ -114,10 +114,6 @@ int uprobe_server_handleStream(struct pt_regs *ctx)
     bpf_map_update_elem(&grpc_events, &key, &grpcReq, 0);
     track_running_span(ctx_iface, &grpcReq.sc);
     return 0;
-//    void *ctx_instance = 0;
-//    bpf_probe_read(&ctx_instance, sizeof(ctx_instance), (void *)(ctx_iface + 8));
-//    bpf_map_update_elem(&grpc_events, &ctx_instance, &grpcReq, 0);
-//    bpf_map_update_elem(&spans_in_progress, &ctx_instance, &grpcReq.sc, 0);
 }
 
 SEC("uprobe/server_handleStream")

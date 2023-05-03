@@ -18,14 +18,15 @@
 
 char __license[] SEC("license") = "Dual MIT/GPL";
 
-#define MAX_SIZE 100
+#define PATH_MAX_LEN 100
+#define METHOD_MAX_LEN 6 // Longer method: DELETE
 #define MAX_CONCURRENT 50
 
 struct http_request_t {
     u64 start_time;
     u64 end_time;
-    char method[MAX_SIZE];
-    char path[MAX_SIZE];
+    char method[METHOD_MAX_LEN];
+    char path[PATH_MAX_LEN];
     struct span_context sc;
 };
 
@@ -37,7 +38,7 @@ struct {
 } http_events SEC(".maps");
 
 struct {
-	__uint(type, BPF_MAP_TYPE_PERF_EVENT_ARRAY);
+    __uint(type, BPF_MAP_TYPE_PERF_EVENT_ARRAY);
 } events SEC(".maps");
 
 // Injected in init
@@ -55,24 +56,24 @@ int uprobe_GorillaMux_ServeHTTP(struct pt_regs *ctx) {
     httpReq.start_time = bpf_ktime_get_ns();
 
     // Get request struct
-    void* req_ptr = get_argument(ctx, request_pos);
+    void *req_ptr = get_argument(ctx, request_pos);
 
     // Get method from request
-    void* method_ptr = 0;
-    bpf_probe_read(&method_ptr, sizeof(method_ptr), (void *)(req_ptr+method_ptr_pos));
+    void *method_ptr = 0;
+    bpf_probe_read(&method_ptr, sizeof(method_ptr), (void *)(req_ptr + method_ptr_pos));
     u64 method_len = 0;
-    bpf_probe_read(&method_len, sizeof(method_len), (void *)(req_ptr+(method_ptr_pos+8)));
+    bpf_probe_read(&method_len, sizeof(method_len), (void *)(req_ptr + (method_ptr_pos + 8)));
     u64 method_size = sizeof(httpReq.method);
     method_size = method_size < method_len ? method_size : method_len;
     bpf_probe_read(&httpReq.method, method_size, method_ptr);
 
     // get path from Request.URL
     void *url_ptr = 0;
-    bpf_probe_read(&url_ptr, sizeof(url_ptr), (void *)(req_ptr+url_ptr_pos));
-    void* path_ptr = 0;
-    bpf_probe_read(&path_ptr, sizeof(path_ptr), (void *)(url_ptr+path_ptr_pos));
+    bpf_probe_read(&url_ptr, sizeof(url_ptr), (void *)(req_ptr + url_ptr_pos));
+    void *path_ptr = 0;
+    bpf_probe_read(&path_ptr, sizeof(path_ptr), (void *)(url_ptr + path_ptr_pos));
     u64 path_len = 0;
-    bpf_probe_read(&path_len, sizeof(path_len), (void *)(url_ptr+(path_ptr_pos+8)));
+    bpf_probe_read(&path_len, sizeof(path_len), (void *)(url_ptr + (path_ptr_pos + 8)));
     u64 path_size = sizeof(httpReq.path);
     path_size = path_size < path_len ? path_size : path_len;
     bpf_probe_read(&httpReq.path, path_size, path_ptr);

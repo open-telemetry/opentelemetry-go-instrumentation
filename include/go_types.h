@@ -54,7 +54,11 @@ static __always_inline struct go_string write_user_go_string(char *str, u32 len)
     new_string.len = len;
 
     // Copy new string struct to userspace
-    write_target_data((void *)&new_string, sizeof(new_string));
+    void *res = write_target_data((void *)&new_string, sizeof(new_string));
+    if (res == NULL) {
+        new_string.len = 0;
+    }
+
     return new_string;
 }
 

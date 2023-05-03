@@ -137,12 +137,12 @@ int uprobe_Http2Client_CreateHeaderFields(struct pt_regs *ctx)
     void *key = get_consistent_key(ctx, context_ptr);
     if (is_registers_abi)
     {
-        slice.array = (void *)ctx->rax;
-        slice.len = (s32)ctx->rbx;
-        slice.cap = (s32)ctx->rcx;
-        slice_user_ptr.array = &ctx->rax;
-        slice_user_ptr.len = &ctx->rbx;
-        slice_user_ptr.cap = &ctx->rcx;
+        slice.array = (void *)GO_PARAM1(ctx);
+        slice.len = (s32)GO_PARAM2(ctx);
+        slice.cap = (s32)GO_PARAM3(ctx);
+        slice_user_ptr.array = (void *)&GO_PARAM1(ctx);
+        slice_user_ptr.len = (void *)&GO_PARAM2(ctx);
+        slice_user_ptr.cap = (void *)&GO_PARAM3(ctx);
     }
     else
     {
@@ -150,15 +150,19 @@ int uprobe_Http2Client_CreateHeaderFields(struct pt_regs *ctx)
         s32 slice_len_pos = 6;
         s32 slice_cap_pos = 7;
         slice.array = get_argument(ctx, slice_pointer_pos);
-        slice.len = (s32)get_argument(ctx, slice_len_pos);
-        slice.cap = (s32)get_argument(ctx, slice_cap_pos);
-        slice_user_ptr.array = (void *)ctx->rsp + (slice_pointer_pos * 8);
-        slice_user_ptr.len = (void *)ctx->rsp + (slice_len_pos * 8);
-        slice_user_ptr.cap = (void *)ctx->rsp + (slice_cap_pos * 8);
+        slice.len = (long)get_argument(ctx, slice_len_pos);
+        slice.cap = (long)get_argument(ctx, slice_cap_pos);
+        slice_user_ptr.array = (void *)(PT_REGS_SP(ctx) + (slice_pointer_pos * 8));
+        slice_user_ptr.len = (void *)(PT_REGS_SP(ctx) + (slice_len_pos * 8));
+        slice_user_ptr.cap = (void *)(PT_REGS_SP(ctx) + (slice_cap_pos * 8));
         key = get_parent_go_context(key, &grpc_events);
     }
     char tp_key[11] = "traceparent";
     struct go_string key_str = write_user_go_string(tp_key, sizeof(tp_key));
+    if (key_str.len == 0) {
+        bpf_printk("write failed, aborting ebpf probe");
+        return 0;
+    }
 
     // Get grpc request struct
     void *grpcReq_ptr = bpf_map_lookup_elem(&grpc_events, &key);
