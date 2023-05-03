@@ -49,6 +49,7 @@ struct
 volatile const u64 method_ptr_pos;
 volatile const u64 url_ptr_pos;
 volatile const u64 path_ptr_pos;
+volatile const u64 ctx_ptr_pos;
 
 // This instrumentation attaches uprobe to the following function:
 // func (mux *ServeMux) ServeHTTP(w ResponseWriter, r *Request)
@@ -83,22 +84,19 @@ int uprobe_ServerMux_ServeHTTP(struct pt_regs *ctx)
     bpf_probe_read(&httpReq.path, path_size, path_ptr);
 
     // Get goroutine pointer
-    void *goroutine = get_goroutine_address(ctx);
+    void *goroutine = get_goroutine_address(ctx, ctx_ptr_pos);
 
     // Write event
     httpReq.sc = generate_span_context();
     bpf_map_update_elem(&context_to_http_events, &goroutine, &httpReq, 0);
-    long res = bpf_map_update_elem(&spans_in_progress, &goroutine, &httpReq.sc, 0);
+    bpf_map_update_elem(&spans_in_progress, &goroutine, &httpReq.sc, 0);
     return 0;
 }
 
 SEC("uprobe/ServerMux_ServeHTTP")
 int uprobe_ServerMux_ServeHTTP_Returns(struct pt_regs *ctx)
 {
-    u64 request_pos = 4;
-    void *req_ptr = get_argument(ctx, request_pos);
-    void *goroutine = get_goroutine_address(ctx);
-
+    void *goroutine = get_goroutine_address(ctx, ctx_ptr_pos);
     void *httpReq_ptr = bpf_map_lookup_elem(&context_to_http_events, &goroutine);
     struct http_request_t httpReq = {};
     bpf_probe_read(&httpReq, sizeof(httpReq), httpReq_ptr);
