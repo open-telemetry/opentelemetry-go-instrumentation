@@ -124,11 +124,6 @@ A PR is considered **ready to merge** when:
   * To ensure this does not block the PR, it should be configured to allow
     maintainers to update it.
 
-* It has been open for review for at least one working day. This gives people
-  reasonable time to review.
-  * Trivial changes[^2] do not have to wait for one day and may be merged with
-    a single [Maintainer]'s approval.
-
 * All required GitHub workflows have succeeded.
 * Urgent fix can take exception as long as it has been actively communicated
   among [Maintainer]s.
