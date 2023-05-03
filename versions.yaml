@@ -18,6 +18,7 @@ module-sets:
     modules:
       - go.opentelemetry.io/auto
       - go.opentelemetry.io/auto/offsets-tracker
+      - go.opentelemetry.io/auto/test/e2e/gin
       - go.opentelemetry.io/auto/test/e2e/gorillamux
       - go.opentelemetry.io/auto/test/e2e/nethttp
 excluded-modules:
