@@ -30,6 +30,7 @@ import (
 	"go.opentelemetry.io/auto/pkg/inject"
 	"go.opentelemetry.io/auto/pkg/instrumentors/context"
 	"go.opentelemetry.io/auto/pkg/instrumentors/events"
+	"go.opentelemetry.io/auto/pkg/instrumentors/utils"
 	"go.opentelemetry.io/auto/pkg/log"
 	"go.opentelemetry.io/otel/attribute"
 	semconv "go.opentelemetry.io/otel/semconv/v1.7.0"
@@ -101,7 +102,7 @@ func (h *Instrumentor) Load(ctx *context.InstrumentorContext) error {
 	}
 
 	h.bpfObjects = &bpfObjects{}
-	err = spec.LoadAndAssign(h.bpfObjects, &ebpf.CollectionOptions{
+	err = utils.LoadEBPFObjects(spec, h.bpfObjects, &ebpf.CollectionOptions{
 		Maps: ebpf.MapOptions{
 			PinPath: bpffs.BPFFsPath,
 		},
