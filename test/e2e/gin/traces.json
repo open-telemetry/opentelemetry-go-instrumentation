@@ -12,7 +12,7 @@
           {
             "key": "telemetry.auto.version",
             "value": {
-              "stringValue": "v0.1.0-alpha"
+              "stringValue": "v0.2.0-alpha"
             }
           },
           {
