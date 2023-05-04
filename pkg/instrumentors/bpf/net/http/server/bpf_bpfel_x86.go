@@ -76,9 +76,10 @@ type bpfProgramSpecs struct {
 //
 // It can be passed ebpf.CollectionSpec.Assign.
 type bpfMapSpecs struct {
-	ContextToHttpEvents *ebpf.MapSpec `ebpf:"context_to_http_events"`
-	Events              *ebpf.MapSpec `ebpf:"events"`
-	SpansInProgress     *ebpf.MapSpec `ebpf:"spans_in_progress"`
+	Events           *ebpf.MapSpec `ebpf:"events"`
+	HttpEvents       *ebpf.MapSpec `ebpf:"http_events"`
+	TrackedSpans     *ebpf.MapSpec `ebpf:"tracked_spans"`
+	TrackedSpansBySc *ebpf.MapSpec `ebpf:"tracked_spans_by_sc"`
 }
 
 // bpfObjects contains all objects after they have been loaded into the kernel.
@@ -100,16 +101,18 @@ func (o *bpfObjects) Close() error {
 //
 // It can be passed to loadBpfObjects or ebpf.CollectionSpec.LoadAndAssign.
 type bpfMaps struct {
-	ContextToHttpEvents *ebpf.Map `ebpf:"context_to_http_events"`
-	Events              *ebpf.Map `ebpf:"events"`
-	SpansInProgress     *ebpf.Map `ebpf:"spans_in_progress"`
+	Events           *ebpf.Map `ebpf:"events"`
+	HttpEvents       *ebpf.Map `ebpf:"http_events"`
+	TrackedSpans     *ebpf.Map `ebpf:"tracked_spans"`
+	TrackedSpansBySc *ebpf.Map `ebpf:"tracked_spans_by_sc"`
 }
 
 func (m *bpfMaps) Close() error {
 	return _BpfClose(
-		m.ContextToHttpEvents,
 		m.Events,
-		m.SpansInProgress,
+		m.HttpEvents,
+		m.TrackedSpans,
+		m.TrackedSpansBySc,
 	)
 }
 

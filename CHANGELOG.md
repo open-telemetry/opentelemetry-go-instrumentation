@@ -8,6 +8,10 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 
 ## [Unreleased]
 
+### Changed
+
+- Avoid misuse of goroutine id by refactoring eBPF maps access functions ([#118](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/118))
+
 ## [v0.2.0-alpha] - 2023-05-03
 
 ### Added
