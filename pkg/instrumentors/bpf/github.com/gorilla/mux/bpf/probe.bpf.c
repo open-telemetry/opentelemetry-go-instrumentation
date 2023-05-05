@@ -46,6 +46,7 @@ struct {
 volatile const u64 method_ptr_pos;
 volatile const u64 url_ptr_pos;
 volatile const u64 path_ptr_pos;
+volatile const u64 ctx_ptr_pos;
 
 // This instrumentation attaches uprobe to the following function:
 // func (mux *ServeMux) ServeHTTP(w ResponseWriter, r *Request)
@@ -84,14 +85,17 @@ int uprobe_GorillaMux_ServeHTTP(struct pt_regs *ctx) {
     // Write event
     httpReq.sc = generate_span_context();
     bpf_map_update_elem(&context_to_http_events, &goroutine, &httpReq, 0);
-    bpf_map_update_elem(&spans_in_progress, &goroutine, &httpReq.sc, 0);
+    long res = bpf_map_update_elem(&spans_in_progress, &goroutine, &httpReq.sc, 0);
     return 0;
 }
 
 SEC("uprobe/GorillaMux_ServeHTTP")
 int uprobe_GorillaMux_ServeHTTP_Returns(struct pt_regs *ctx) {
+    u64 request_pos = 4;
     void *goroutine = get_goroutine_address(ctx, ctx_ptr_pos);
-    void *httpReq_ptr = bpf_map_lookup_elem(&context_to_http_events, &goroutine);
+    void* req_ptr = get_argument(ctx, request_pos);
+
+    void* httpReq_ptr = bpf_map_lookup_elem(&context_to_http_events, &goroutine);
     struct http_request_t httpReq = {};
     bpf_probe_read(&httpReq, sizeof(httpReq), httpReq_ptr);
     httpReq.end_time = bpf_ktime_get_ns();

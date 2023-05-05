@@ -87,6 +87,11 @@ func (g *Instrumentor) Load(ctx *context.InstrumentorContext) error {
 			Field:      "URL",
 		},
 		{
+			VarName:    "ctx_ptr_pos",
+			StructName: "net/http.Request",
+			Field:      "ctx",
+		},
+		{
 			VarName:    "path_ptr_pos",
 			StructName: "net/url.URL",
 			Field:      "Path",
@@ -119,7 +124,7 @@ func (g *Instrumentor) Load(ctx *context.InstrumentorContext) error {
 	return nil
 }
 
-func (g *gorillaMuxInstrumentor) registerProbes(ctx *context.InstrumentorContext, funcName string) {
+func (g *Instrumentor) registerProbes(ctx *context.InstrumentorContext, funcName string) {
 	logger := log.Logger.WithName("gorilla/mux-instrumentor").WithValues("function", funcName)
 	offset, err := ctx.TargetDetails.GetFunctionOffset(funcName)
 	if err != nil {
@@ -136,8 +141,7 @@ func (g *gorillaMuxInstrumentor) registerProbes(ctx *context.InstrumentorContext
 		Address: offset,
 	})
 	if err != nil {
-		logger.V(1).Info("could not insert start uprobe. Skipping",
-			"error", err.Error())
+		logger.Error(err, "could not insert start uprobe. Skipping")
 		return
 	}
 
