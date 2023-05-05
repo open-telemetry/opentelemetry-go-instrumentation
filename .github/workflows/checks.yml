@@ -1,0 +1,66 @@
+name: Checks
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+  workflow_dispatch:
+
+env:
+  GO_VERSION: "1.20"
+
+jobs:
+  check-links:
+    runs-on: ubuntu-22.04
+    steps:
+    - uses: actions/checkout@v3.5.0
+      with:
+        fetch-depth: 0
+    - uses: lycheeverse/lychee-action@v1.7.0
+      with:
+        args: >-
+          -v -n "*.md" "**/*.md"
+          --exclude "http://localhost*"
+        fail: true
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install Go
+        uses: actions/setup-go@v4.0.0
+        with:
+          go-version: ${{ env.DEFAULT_GO_VERSION }}
+      - name: Checkout Repo
+        uses: actions/checkout@v3.5.0
+      - name: Module cache
+        uses: actions/cache@v3.3.1
+        env:
+          cache-name: go-mod-cache
+        with:
+          path: ~/go/pkg/mod
+          key: ${{ runner.os }}-${{ env.cache-name }}-${{ hashFiles('**/go.sum') }}
+      - name: Tools cache
+        uses: actions/cache@v3.3.1
+        env:
+          cache-name: go-tools-cache
+        with:
+          path: ~/.tools
+          key: ${{ runner.os }}-${{ env.cache-name }}-${{ hashFiles('./internal/tools/**') }}
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update && sudo apt-get install -y clang llvm libbpf-dev
+      - name: Run linters
+        run: make license-header-check go-mod-tidy golangci-lint
+      - name: Check clean repository
+        run: make check-clean-work-tree
+  verify-licenses:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v3.5.0
+      - name: Setup Go
+        uses: actions/setup-go@v4.0.0
+        with:
+          go-version: ${{ env.DEFAULT_GO_VERSION }}
+      - name: Install build dependencies
+        run: sudo apt-get update && sudo apt-get install -y clang llvm libbpf-dev
+      - run: make verify-licenses

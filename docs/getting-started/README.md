@@ -9,12 +9,26 @@ The following tools are required to run this tutorial:
 - [Kind](https://kind.sigs.k8s.io/) to run a local Kubernetes cluster with Docker container nodes.
 - [Kubernetes CLI (kubectl)](https://kubernetes.io/docs/tasks/tools/install-kubectl/) to run commands against Kubernetes clusters.
 
+## Local build
+
+From the root directory, build the tool as a local docker image called `otel-go-instrumentation`:
+
+```shell
+make docker-build
+```
+
 ## Creating the Kubernetes cluster
 
 Create a new local Kubernetes cluster, by running the following command:
 
 ```shell
 kind create cluster
+```
+
+Load the docker image into Kind:
+
+```shell
+kind load docker-image otel-go-instrumentation
 ```
 
 ## Deployment
@@ -30,7 +44,7 @@ The different emojivoto applications are communicating via gRPC. Instrumenting t
 Run the following command:
 
 ```shell
-kubectl apply -k github.com/open-telemetry/opentelemetry-go-instrumentation/docs/getting-started/emojivoto
+kubectl apply -k emojivoto/
 ```
 
 ### Deploying Jaeger UI
@@ -38,7 +52,7 @@ kubectl apply -k github.com/open-telemetry/opentelemetry-go-instrumentation/docs
 Install Jaeger UI by running:
 
 ```shell
-kubectl apply -f https://raw.githubusercontent.com/open-telemetry/opentelemetry-go-instrumentation/master/docs/getting-started/jaeger.yaml -n emojivoto
+kubectl apply -f jaeger.yaml -n emojivoto
 ```
 
 This command installs Jaeger as a new Deployment and an additional Service that we will use later for accessing the Jaeger UI.
@@ -50,12 +64,12 @@ In a real world application, you would probably want to send the tracing data to
 Apply the automatic instrumentation to the `emoji`, `voting`, and `web` applications by executing the following command:
 
 ```shell
-kubectl apply -f https://raw.githubusercontent.com/open-telemetry/opentelemetry-go-instrumentation/master/docs/getting-started/emojivoto-instrumented.yaml -n emojivoto
+kubectl apply -f emojivoto-instrumented.yaml -n emojivoto
 ```
 
 ## Perform actions on the target Application
 
-Now all that left to do is to perform some actions on the target application that will cause the creation of detailed distributed traces.
+Now all that's left to do is to perform some actions on the target application that will cause the creation of detailed distributed traces.
 
 Port forward to the frontend service:
 
@@ -97,13 +111,7 @@ We can get a pretty good understanding of how the leaderboard feature works by l
 - Second, The web service will loop over the received list of emojis and for every item on the list it will perform a gRPC request to the `emoji` service to get the amount of votes for the current item.
 - As you can see this happens sequentially, which is one of the reason the leaderboard endpoint takes about 150ms to complete.
 
-### Notice that we did not change any application code to get those traces, we are using the exact same containers from the emojivoto project.
-
-## Next Steps
-
-The easiest way to apply this automatic instrumentation for any application is by using a control plane such as [Odigos](https://github.com/keyval-dev/odigos).
-
-For more details visit the [Odigos website](https://odigos.io).
+**Notice that we did not change any application code to get those traces, we are using the exact same containers from the emojivoto project.**
 
 ## Cleanup
 

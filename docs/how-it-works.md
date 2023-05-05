@@ -6,8 +6,8 @@ We aim to bring the automatic instrumentation experience found in languages like
 
 - No code changes required - any Go application can be instrumented without modifying the source code.
 - Support wide range of Go applications - instrumentation is supported for Go version 1.12 and above. In addition, a common practice for Go applications is to shrink the binary size by stripping debug symbols via `go build -ldflags "-s -w"`. This instrumentation works for stripped binaries as well.
-- Configuration is done via `OTEL_*` environment variables according to [OpenTelemetry Environment Variable Specification](https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/sdk-environment-variables.md#general-sdk-configuration).
-  **In order to inject instrumentation into your process, set the `OTEL_TARGET_EXE` environment variable to the path of the target executable. This is not a part of the OTEL specification mentioned above.**
+- Configuration is done via `OTEL_*` environment variables according to [OpenTelemetry Environment Variable Specification](https://opentelemetry.io/docs/reference/specification/sdk-environment-variables/#general-sdk-configuration).
+  **In order to inject instrumentation into your process, set the `OTEL_GO_AUTO_TARGET_EXE` environment variable to the path of the target executable. This is not a part of the OTEL specification mentioned above.**
 - Instrumented libraries follow the [OpenTelemetry specification](https://github.com/open-telemetry/opentelemetry-specification) and semantic conventions to produce standard OpenTelemetry data.
 
 ## Why eBPF

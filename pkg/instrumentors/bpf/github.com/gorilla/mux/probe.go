@@ -25,47 +25,57 @@ import (
 	"github.com/cilium/ebpf"
 	"github.com/cilium/ebpf/link"
 	"github.com/cilium/ebpf/perf"
+	"golang.org/x/sys/unix"
+
 	"go.opentelemetry.io/auto/pkg/inject"
 	"go.opentelemetry.io/auto/pkg/instrumentors/context"
 	"go.opentelemetry.io/auto/pkg/instrumentors/events"
+	"go.opentelemetry.io/auto/pkg/instrumentors/utils"
 	"go.opentelemetry.io/auto/pkg/log"
 	"go.opentelemetry.io/otel/attribute"
 	semconv "go.opentelemetry.io/otel/semconv/v1.7.0"
 	"go.opentelemetry.io/otel/trace"
-	"golang.org/x/sys/unix"
 )
 
-//go:generate go run github.com/cilium/ebpf/cmd/bpf2go -target bpfel -cc clang -cflags $CFLAGS bpf ./bpf/probe.bpf.c
+//go:generate go run github.com/cilium/ebpf/cmd/bpf2go -target amd64,arm64 -cc clang -cflags $CFLAGS bpf ./bpf/probe.bpf.c
 
-type HttpEvent struct {
+// Event represents an event in the gorilla/mux server during an HTTP
+// request-response.
+type Event struct {
 	StartTime   uint64
 	EndTime     uint64
 	Method      [6]byte
 	Path        [100]byte
-	SpanContext context.EbpfSpanContext
+	SpanContext context.EBPFSpanContext
 }
 
-type gorillaMuxInstrumentor struct {
+// Instrumentor is the gorilla/mux instrumentor.
+type Instrumentor struct {
 	bpfObjects   *bpfObjects
 	uprobes      []link.Link
 	returnProbs  []link.Link
 	eventsReader *perf.Reader
 }
 
-func New() *gorillaMuxInstrumentor {
-	return &gorillaMuxInstrumentor{}
+// New returns a new [Instrumentor].
+func New() *Instrumentor {
+	return &Instrumentor{}
 }
 
-func (g *gorillaMuxInstrumentor) LibraryName() string {
+// LibraryName returns the gorilla/mux package import path.
+func (g *Instrumentor) LibraryName() string {
 	return "github.com/gorilla/mux"
 }
 
-func (g *gorillaMuxInstrumentor) FuncNames() []string {
+// FuncNames returns the function names from "github.com/gorilla/mux" that are
+// instrumented.
+func (g *Instrumentor) FuncNames() []string {
 	return []string{"github.com/gorilla/mux.(*Router).ServeHTTP"}
 }
 
-func (g *gorillaMuxInstrumentor) Load(ctx *context.InstrumentorContext) error {
-	spec, err := ctx.Injector.Inject(loadBpf, "go", ctx.TargetDetails.GoVersion.Original(), []*inject.InjectStructField{
+// Load loads all instrumentation offsets.
+func (g *Instrumentor) Load(ctx *context.InstrumentorContext) error {
+	spec, err := ctx.Injector.Inject(loadBpf, "go", ctx.TargetDetails.GoVersion.Original(), []*inject.StructField{
 		{
 			VarName:    "method_ptr_pos",
 			StructName: "net/http.Request",
@@ -88,9 +98,9 @@ func (g *gorillaMuxInstrumentor) Load(ctx *context.InstrumentorContext) error {
 	}
 
 	g.bpfObjects = &bpfObjects{}
-	err = spec.LoadAndAssign(g.bpfObjects, &ebpf.CollectionOptions{
+	err = utils.LoadEBPFObjects(spec, g.bpfObjects, &ebpf.CollectionOptions{
 		Maps: ebpf.MapOptions{
-			PinPath: bpffs.BpfFsPath,
+			PinPath: bpffs.BPFFsPath,
 		},
 	})
 	if err != nil {
@@ -145,9 +155,10 @@ func (g *gorillaMuxInstrumentor) registerProbes(ctx *context.InstrumentorContext
 	}
 }
 
-func (g *gorillaMuxInstrumentor) Run(eventsChan chan<- *events.Event) {
+// Run runs the events processing loop.
+func (g *Instrumentor) Run(eventsChan chan<- *events.Event) {
 	logger := log.Logger.WithName("gorilla/mux-instrumentor")
-	var event HttpEvent
+	var event Event
 	for {
 		record, err := g.eventsReader.Read()
 		if err != nil {
@@ -172,7 +183,7 @@ func (g *gorillaMuxInstrumentor) Run(eventsChan chan<- *events.Event) {
 	}
 }
 
-func (g *gorillaMuxInstrumentor) convertEvent(e *HttpEvent) *events.Event {
+func (g *Instrumentor) convertEvent(e *Event) *events.Event {
 	method := unix.ByteSliceToString(e.Method[:])
 	path := unix.ByteSliceToString(e.Path[:])
 
@@ -196,7 +207,8 @@ func (g *gorillaMuxInstrumentor) convertEvent(e *HttpEvent) *events.Event {
 	}
 }
 
-func (g *gorillaMuxInstrumentor) Close() {
+// Close stops the Instrumentor.
+func (g *Instrumentor) Close() {
 	log.Logger.V(0).Info("closing gorilla/mux instrumentor")
 	if g.eventsReader != nil {
 		g.eventsReader.Close()

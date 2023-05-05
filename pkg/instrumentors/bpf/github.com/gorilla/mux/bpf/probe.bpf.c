@@ -31,17 +31,15 @@ struct http_request_t {
 };
 
 // map key: pointer to the goroutine that handles the request
-struct
-{
-	__uint(type, BPF_MAP_TYPE_HASH);
-	__type(key, void *);
-	__type(value, struct http_request_t);
-	__uint(max_entries, MAX_CONCURRENT);
+struct {
+    __uint(type, BPF_MAP_TYPE_HASH);
+    __type(key, void *);
+    __type(value, struct http_request_t);
+    __uint(max_entries, MAX_CONCURRENT);
 } context_to_http_events SEC(".maps");
 
-struct
-{
-	__uint(type, BPF_MAP_TYPE_PERF_EVENT_ARRAY);
+struct {
+    __uint(type, BPF_MAP_TYPE_PERF_EVENT_ARRAY);
 } events SEC(".maps");
 
 // Injected in init
@@ -58,45 +56,42 @@ int uprobe_GorillaMux_ServeHTTP(struct pt_regs *ctx) {
     httpReq.start_time = bpf_ktime_get_ns();
 
     // Get request struct
-    void* req_ptr = get_argument(ctx, request_pos);
+    void *req_ptr = get_argument(ctx, request_pos);
 
     // Get method from request
-    void* method_ptr = 0;
-    bpf_probe_read(&method_ptr, sizeof(method_ptr), (void *)(req_ptr+method_ptr_pos));
+    void *method_ptr = 0;
+    bpf_probe_read(&method_ptr, sizeof(method_ptr), (void *)(req_ptr + method_ptr_pos));
     u64 method_len = 0;
-    bpf_probe_read(&method_len, sizeof(method_len), (void *)(req_ptr+(method_ptr_pos+8)));
+    bpf_probe_read(&method_len, sizeof(method_len), (void *)(req_ptr + (method_ptr_pos + 8)));
     u64 method_size = sizeof(httpReq.method);
     method_size = method_size < method_len ? method_size : method_len;
     bpf_probe_read(&httpReq.method, method_size, method_ptr);
 
     // get path from Request.URL
     void *url_ptr = 0;
-    bpf_probe_read(&url_ptr, sizeof(url_ptr), (void *)(req_ptr+url_ptr_pos));
-    void* path_ptr = 0;
-    bpf_probe_read(&path_ptr, sizeof(path_ptr), (void *)(url_ptr+path_ptr_pos));
+    bpf_probe_read(&url_ptr, sizeof(url_ptr), (void *)(req_ptr + url_ptr_pos));
+    void *path_ptr = 0;
+    bpf_probe_read(&path_ptr, sizeof(path_ptr), (void *)(url_ptr + path_ptr_pos));
     u64 path_len = 0;
-    bpf_probe_read(&path_len, sizeof(path_len), (void *)(url_ptr+(path_ptr_pos+8)));
+    bpf_probe_read(&path_len, sizeof(path_len), (void *)(url_ptr + (path_ptr_pos + 8)));
     u64 path_size = sizeof(httpReq.path);
     path_size = path_size < path_len ? path_size : path_len;
     bpf_probe_read(&httpReq.path, path_size, path_ptr);
 
     // Get goroutine pointer
-    void *goroutine = get_goroutine_address(ctx);
+    void *goroutine = get_goroutine_address(ctx, ctx_ptr_pos);
 
     // Write event
     httpReq.sc = generate_span_context();
     bpf_map_update_elem(&context_to_http_events, &goroutine, &httpReq, 0);
-    long res = bpf_map_update_elem(&spans_in_progress, &goroutine, &httpReq.sc, 0);
+    bpf_map_update_elem(&spans_in_progress, &goroutine, &httpReq.sc, 0);
     return 0;
 }
 
 SEC("uprobe/GorillaMux_ServeHTTP")
 int uprobe_GorillaMux_ServeHTTP_Returns(struct pt_regs *ctx) {
-    u64 request_pos = 4;
-    void* req_ptr = get_argument(ctx, request_pos);
-    void *goroutine = get_goroutine_address(ctx);
-
-    void* httpReq_ptr = bpf_map_lookup_elem(&context_to_http_events, &goroutine);
+    void *goroutine = get_goroutine_address(ctx, ctx_ptr_pos);
+    void *httpReq_ptr = bpf_map_lookup_elem(&context_to_http_events, &goroutine);
     struct http_request_t httpReq = {};
     bpf_probe_read(&httpReq, sizeof(httpReq), httpReq_ptr);
     httpReq.end_time = bpf_ktime_get_ns();

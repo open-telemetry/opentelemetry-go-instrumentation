@@ -22,17 +22,6 @@ spec:
       serviceAccountName: emoji
       shareProcessNamespace: true
       terminationGracePeriodSeconds: 0
-      initContainers:
-        - name: copy-launcher
-          image: keyval/launcher:v0.1
-          command:
-            - cp
-            - -a
-            - /kv-launcher/.
-            - /odigos-launcher/
-          volumeMounts:
-            - name: launcherdir
-              mountPath: /odigos-launcher
       containers:
         - env:
             - name: GRPC_PORT
@@ -41,12 +30,6 @@ spec:
               value: "8801"
           image: docker.l5d.io/buoyantio/emojivoto-emoji-svc:v11
           name: emoji-svc
-          command:
-            - /odigos-launcher/launch
-            - /usr/local/bin/emojivoto-emoji-svc
-          volumeMounts:
-            - mountPath: /odigos-launcher
-              name: launcherdir
           ports:
             - containerPort: 8080
               name: grpc
@@ -56,12 +39,12 @@ spec:
             requests:
               cpu: 100m
         - name: emojivoto-emoji-instrumentation
-          image: keyval/otel-go-agent:v0.6.0
+          image: otel-go-instrumentation
           env:
-            - name: OTEL_TARGET_EXE
+            - name: OTEL_GO_AUTO_TARGET_EXE
               value: /usr/local/bin/emojivoto-emoji-svc
             - name: OTEL_EXPORTER_OTLP_ENDPOINT
-              value: "jaeger:4317"
+              value: "http://jaeger:4317"
             - name: OTEL_SERVICE_NAME
               value: "emojivoto-emoji"
           securityContext:
@@ -70,15 +53,6 @@ spec:
               add:
                 - SYS_PTRACE
             privileged: true
-          volumeMounts:
-            - mountPath: /sys/kernel/debug
-              name: kernel-debug
-      volumes:
-        - name: launcherdir
-          emptyDir: {}
-        - name: kernel-debug
-          hostPath:
-            path: /sys/kernel/debug
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -104,17 +78,6 @@ spec:
       serviceAccountName: voting
       shareProcessNamespace: true
       terminationGracePeriodSeconds: 0
-      initContainers:
-        - name: copy-launcher
-          image: keyval/launcher:v0.1
-          command:
-            - cp
-            - -a
-            - /kv-launcher/.
-            - /odigos-launcher/
-          volumeMounts:
-            - name: launcherdir
-              mountPath: /odigos-launcher
       containers:
         - env:
             - name: GRPC_PORT
@@ -123,12 +86,6 @@ spec:
               value: "8801"
           image: docker.l5d.io/buoyantio/emojivoto-voting-svc:v11
           name: voting-svc
-          command:
-            - /odigos-launcher/launch
-            - /usr/local/bin/emojivoto-voting-svc
-          volumeMounts:
-            - mountPath: /odigos-launcher
-              name: launcherdir
           ports:
             - containerPort: 8080
               name: grpc
@@ -138,12 +95,12 @@ spec:
             requests:
               cpu: 100m
         - name: emojivoto-voting-instrumentation
-          image: keyval/otel-go-agent:v0.6.0
+          image: otel-go-instrumentation
           env:
-            - name: OTEL_TARGET_EXE
+            - name: OTEL_GO_AUTO_TARGET_EXE
               value: /usr/local/bin/emojivoto-voting-svc
             - name: OTEL_EXPORTER_OTLP_ENDPOINT
-              value: "jaeger:4317"
+              value: "http://jaeger:4317"
             - name: OTEL_SERVICE_NAME
               value: "emojivoto-voting"
           securityContext:
@@ -152,15 +109,6 @@ spec:
               add:
                 - SYS_PTRACE
             privileged: true
-          volumeMounts:
-            - mountPath: /sys/kernel/debug
-              name: kernel-debug
-      volumes:
-        - name: launcherdir
-          emptyDir: {}
-        - name: kernel-debug
-          hostPath:
-            path: /sys/kernel/debug
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -186,17 +134,6 @@ spec:
       serviceAccountName: web
       shareProcessNamespace: true
       terminationGracePeriodSeconds: 0
-      initContainers:
-        - name: copy-launcher
-          image: keyval/launcher:v0.1
-          command:
-            - cp
-            - -a
-            - /kv-launcher/.
-            - /odigos-launcher/
-          volumeMounts:
-            - name: launcherdir
-              mountPath: /odigos-launcher
       containers:
         - env:
             - name: WEB_PORT
@@ -209,12 +146,6 @@ spec:
               value: dist/index_bundle.js
           image: docker.l5d.io/buoyantio/emojivoto-web:v11
           name: web-svc
-          command:
-            - /odigos-launcher/launch
-            - /usr/local/bin/emojivoto-web
-          volumeMounts:
-            - mountPath: /odigos-launcher
-              name: launcherdir
           ports:
             - containerPort: 8080
               name: http
@@ -222,12 +153,12 @@ spec:
             requests:
               cpu: 100m
         - name: emojivoto-web-instrumentation
-          image: keyval/otel-go-agent:v0.6.0
+          image: otel-go-instrumentation
           env:
-            - name: OTEL_TARGET_EXE
+            - name: OTEL_GO_AUTO_TARGET_EXE
               value: /usr/local/bin/emojivoto-web
             - name: OTEL_EXPORTER_OTLP_ENDPOINT
-              value: "jaeger:4317"
+              value: "http://jaeger:4317"
             - name: OTEL_SERVICE_NAME
               value: "emojivoto-web"
           securityContext:
@@ -236,12 +167,3 @@ spec:
               add:
                 - SYS_PTRACE
             privileged: true
-          volumeMounts:
-            - mountPath: /sys/kernel/debug
-              name: kernel-debug
-      volumes:
-        - name: launcherdir
-          emptyDir: {}
-        - name: kernel-debug
-          hostPath:
-            path: /sys/kernel/debug

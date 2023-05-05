@@ -10,10 +10,10 @@ on:
 
 jobs:
   kubernetes-test:
-    strategy: 
+    strategy:
       matrix:
         k8s-version: ["v1.26.0"]
-        library: ["gorillamux", "nethttp"]
+        library: ["gorillamux", "nethttp", "gin"]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repo
@@ -73,4 +73,4 @@ jobs:
           rm ./test/e2e/${{ matrix.library }}/traces.json.tmp
       - name: verify output
         run: |
-          git diff --exit-code || (echo 'output fixture diff detected' && exit 1)
+          make check-clean-work-tree
