@@ -44,7 +44,7 @@ import (
 type Event struct {
 	StartTime   uint64
 	EndTime     uint64
-	Method      [6]byte
+	Method      [7]byte
 	Path        [100]byte
 	SpanContext context.EBPFSpanContext
 }
