@@ -10,7 +10,7 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 
 ### Added
 
-- Fix missing spans in gorillamux instrumentation ([#86](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/86))
+- Fix missing spans in gorillamux instrumentation. ([#86](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/86))
 
 ## [v0.2.0-alpha] - 2023-05-03
 
