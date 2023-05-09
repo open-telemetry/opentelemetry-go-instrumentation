@@ -16,6 +16,7 @@
 
 #define MAX_ENTRIES 50
 #define MAX_BUFFER_SIZE 1024
+#define MIN_BUFFER_SIZE 1
 
 // Injected in init
 volatile const u32 total_cpus;
@@ -76,10 +77,7 @@ static __always_inline s32 bound_number(s32 num, s32 min, s32 max)
     {
         return max;
     }
-    else
-    {
-        return num;
-    }
+    return num;
 }
 
 static __always_inline void *write_target_data(void *data, s32 size)
@@ -100,7 +98,7 @@ static __always_inline void *write_target_data(void *data, s32 size)
     }
 
     void *target = (void *)start;
-    size = bound_number(size, 1, MAX_BUFFER_SIZE);
+    size = bound_number(size, MIN_BUFFER_SIZE, MAX_BUFFER_SIZE);
     long success = bpf_probe_write_user(target, data, size);
     if (success == 0)
     {
