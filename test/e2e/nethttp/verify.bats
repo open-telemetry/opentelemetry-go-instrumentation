@@ -9,11 +9,9 @@ LIBRARY_NAME="net/http"
   assert_equal "$result" '"sample-app"'
 }
 
-# TODO: span name should include http.method per spec
-# @test "${LIBRARY_NAME} :: emits a span name '{http.method} {http.target}' (per semconv)" {
-@test "${LIBRARY_NAME} :: emits a span name '{http.route}'" {
+@test "${LIBRARY_NAME} :: emits a span name '{http.method} {http.target}' (per semconv)" {
   result=$(span_names_for ${LIBRARY_NAME})
-  assert_equal "$result" '"/hello"'
+  assert_equal "$result" '"GET /hello"'
 }
 
 @test "${LIBRARY_NAME} :: includes http.method attribute" {
