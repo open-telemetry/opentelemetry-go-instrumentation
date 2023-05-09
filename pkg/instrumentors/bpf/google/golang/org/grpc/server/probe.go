@@ -53,7 +53,6 @@ type Instrumentor struct {
 	bpfObjects   *bpfObjects
 	uprobe       link.Link
 	returnProbs  []link.Link
-	headersProbe link.Link
 	eventsReader *perf.Reader
 }
 
@@ -70,8 +69,7 @@ func (g *Instrumentor) LibraryName() string {
 // FuncNames returns the function names from "google.golang.org/grpc" that are
 // instrumented.
 func (g *Instrumentor) FuncNames() []string {
-	return []string{"google.golang.org/grpc.(*Server).handleStream",
-		"google.golang.org/grpc/internal/transport.(*http2Server).operateHeaders"}
+	return []string{"google.golang.org/grpc.(*Server).handleStream"}
 }
 
 // Load loads all instrumentation offsets.
@@ -81,34 +79,14 @@ func (g *Instrumentor) Load(ctx *context.InstrumentorContext) error {
 	if !exists {
 		libVersion = ""
 	}
+
 	spec, err := ctx.Injector.Inject(loadBpf, "google.golang.org/grpc", libVersion, []*inject.StructField{
 		{
 			VarName:    "stream_method_ptr_pos",
 			StructName: "google.golang.org/grpc/internal/transport.Stream",
 			Field:      "method",
 		},
-		{
-			VarName:    "stream_id_pos",
-			StructName: "google.golang.org/grpc/internal/transport.Stream",
-			Field:      "id",
-		},
-		{
-			VarName:    "stream_ctx_pos",
-			StructName: "google.golang.org/grpc/internal/transport.Stream",
-			Field:      "ctx",
-		},
-		{
-			VarName:    "frame_fields_pos",
-			StructName: "golang.org/x/net/http2.MetaHeadersFrame",
-			Field:      "Fields",
-		},
-		{
-			VarName:    "frame_stream_id_pod",
-			StructName: "golang.org/x/net/http2.FrameHeader",
-			Field:      "StreamID",
-		},
-	}, true)
-
+	}, false)
 	if err != nil {
 		return err
 	}
@@ -129,7 +107,7 @@ func (g *Instrumentor) Load(ctx *context.InstrumentorContext) error {
 	}
 
 	up, err := ctx.Executable.Uprobe("", g.bpfObjects.UprobeServerHandleStream, &link.UprobeOptions{
-		Offset: offset,
+		Address: offset,
 	})
 	if err != nil {
 		return err
@@ -151,24 +129,11 @@ func (g *Instrumentor) Load(ctx *context.InstrumentorContext) error {
 		g.returnProbs = append(g.returnProbs, retProbe)
 	}
 
-	headerOffset, err := ctx.TargetDetails.GetFunctionOffset(g.FuncNames()[1])
-	if err != nil {
-		return err
-	}
-	hProbe, err := ctx.Executable.Uprobe("", g.bpfObjects.UprobeDecodeStateDecodeHeader, &link.UprobeOptions{
-		Address: headerOffset,
-	})
-	if err != nil {
-		return err
-	}
-	g.headersProbe = hProbe
-
 	rd, err := perf.NewReader(g.bpfObjects.Events, os.Getpagesize())
 	if err != nil {
 		return err
 	}
 	g.eventsReader = rd
-
 	return nil
 }
 
@@ -250,10 +215,6 @@ func (g *Instrumentor) Close() {
 
 	for _, r := range g.returnProbs {
 		r.Close()
-	}
-
-	if g.headersProbe != nil {
-		g.headersProbe.Close()
 	}
 
 	if g.bpfObjects != nil {

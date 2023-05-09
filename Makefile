@@ -53,6 +53,10 @@ generate: go-mod-tidy
 generate:
 	go generate ./...
 
+.PHONY: docker-generate
+docker-generate:
+	docker run --rm -v $(shell pwd):/app golang:1.20 /bin/sh -c "apt-get update && apt-get install -y clang llvm libbpf-dev && cd ../app && make generate"
+
 .PHONY: go-mod-tidy
 go-mod-tidy: $(ALL_GO_MOD_DIRS:%=go-mod-tidy/%)
 go-mod-tidy/%: DIR=$*
@@ -157,3 +161,12 @@ check-clean-work-tree:
 		echo 'Working tree is not clean, did you forget to run "make precommit", "make generate" or "make offsets"?'; \
 		exit 1; \
 	fi
+
+.PHONY: local-test
+local-test:
+	make docker-build
+	kind load docker-image otel-go-instrumentation
+	kubectl delete -f .github/workflows/e2e/k8s/sample-job.yml
+	kubectl create -f .github/workflows/e2e/k8s/sample-job.yml
+	sleep 5
+	kubectl logs job/sample-job -c auto-instrumentation

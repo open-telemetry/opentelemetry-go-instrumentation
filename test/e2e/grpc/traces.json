@@ -10,6 +10,12 @@
             }
           },
           {
+            "key": "telemetry.auto.version",
+            "value": {
+              "stringValue": "v0.2.0-alpha"
+            }
+          },
+          {
             "key": "telemetry.sdk.language",
             "value": {
               "stringValue": "go"
@@ -26,20 +32,60 @@
             {
               "attributes": [
                 {
-                  "key": "http.method",
+                  "key": "rpc.system",
                   "value": {
-                    "stringValue": "GET"
+                    "stringValue": "grpc"
                   }
                 },
                 {
-                  "key": "http.target",
+                  "key": "rpc.service",
                   "value": {
-                    "stringValue": "/hello"
+                    "stringValue": ""
+                  }
+                },
+                {
+                  "key": "net.peer.ip",
+                  "value": {
+                    "stringValue": ""
+                  }
+                },
+                {
+                  "key": "net.peer.name",
+                  "value": {
+                    "stringValue": ""
+                  }
+                }
+              ],
+              "kind": 3,
+              "parentSpanId": "",
+              "spanId": "",
+              "status": {},
+              "traceId": ""
+            }
+          ]
+        },
+        {
+          "scope": {
+            "name": "google.golang.org/grpc/server"
+          },
+          "spans": [
+            {
+              "attributes": [
+                {
+                  "key": "rpc.system",
+                  "value": {
+                    "stringValue": "grpc"
+                  }
+                },
+                {
+                  "key": "rpc.service",
+                  "value": {
+                    "stringValue": "/helloworld.Greeter/SayHello"
                   }
                 }
               ],
               "kind": 2,
-              "name": "/hello",
+              "name": "/helloworld.Greeter/SayHello",
               "parentSpanId": "",
               "spanId": "xxxxx",
               "status": {},
