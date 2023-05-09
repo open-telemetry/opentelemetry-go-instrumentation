@@ -18,6 +18,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"errors"
+	"fmt"
 	"os"
 
 	"go.opentelemetry.io/auto/pkg/instrumentors/bpffs"
@@ -191,6 +192,7 @@ func (h *Instrumentor) Run(eventsChan chan<- *events.Event) {
 func (h *Instrumentor) convertEvent(e *Event) *events.Event {
 	method := unix.ByteSliceToString(e.Method[:])
 	path := unix.ByteSliceToString(e.Path[:])
+	name := fmt.Sprintf("%s %s", method, path)
 
 	sc := trace.NewSpanContext(trace.SpanContextConfig{
 		TraceID:    e.SpanContext.TraceID,
@@ -200,7 +202,7 @@ func (h *Instrumentor) convertEvent(e *Event) *events.Event {
 
 	return &events.Event{
 		Library:     h.LibraryName(),
-		Name:        path,
+		Name:        name,
 		Kind:        trace.SpanKindServer,
 		StartTime:   int64(e.StartTime),
 		EndTime:     int64(e.EndTime),

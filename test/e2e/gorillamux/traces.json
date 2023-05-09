@@ -74,7 +74,7 @@
                 }
               ],
               "kind": 2,
-              "name": "/users/foo",
+              "name": "GET /users/foo",
               "parentSpanId": "",
               "spanId": "xxxxx",
               "status": {},
