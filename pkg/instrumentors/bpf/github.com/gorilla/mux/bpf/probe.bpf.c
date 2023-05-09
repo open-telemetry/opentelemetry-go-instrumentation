@@ -85,7 +85,7 @@ int uprobe_GorillaMux_ServeHTTP(struct pt_regs *ctx) {
     // Write event
     httpReq.sc = generate_span_context();
     bpf_map_update_elem(&context_to_http_events, &goroutine, &httpReq, 0);
-    long res = bpf_map_update_elem(&spans_in_progress, &goroutine, &httpReq.sc, 0);
+    bpf_map_update_elem(&spans_in_progress, &goroutine, &httpReq.sc, 0);
     return 0;
 }
 
