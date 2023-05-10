@@ -44,7 +44,7 @@ volatile const u64 method_ptr_pos;
 volatile const u64 url_ptr_pos;
 volatile const u64 path_ptr_pos;
 volatile const u64 headers_ptr_pos;
-
+volatile const u64 ctx_ptr_pos;
 
 static __always_inline long inject_header(void* headers_ptr, struct span_context* propagated_ctx) {
 
@@ -155,7 +155,7 @@ int uprobe_HttpClient_Do(struct pt_regs *ctx) {
     void *req_ptr = get_argument(ctx, request_pos);
 
     // Get Request.ctx
-    void *goroutine = get_goroutine_address(ctx);
+    void *goroutine = get_goroutine_address(ctx, ctx_ptr_pos);
     // Get parent if exists
     struct span_context *span_ctx = bpf_map_lookup_elem(&spans_in_progress, &goroutine);
     if (span_ctx != NULL) {
@@ -208,7 +208,7 @@ SEC("uprobe/HttpClient")
 int uprobe_HttpClient_Do_Returns(struct pt_regs *ctx) {
     u64 request_pos = 2;
     void *req_ptr = get_argument_by_stack(ctx, request_pos);
-    void *goroutine = get_goroutine_address(ctx);
+    void *goroutine = get_goroutine_address(ctx, ctx_ptr_pos);
     void *httpReq_ptr = bpf_map_lookup_elem(&context_to_http_events, &goroutine);
     struct http_request_t httpReq = {};
     bpf_probe_read(&httpReq, sizeof(httpReq), httpReq_ptr);

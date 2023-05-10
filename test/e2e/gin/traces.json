@@ -45,6 +45,35 @@
                 }
               ],
               "kind": 2,
+              "name": "GET /hello-gin",
+              "parentSpanId": "",
+              "spanId": "xxxxx",
+              "status": {},
+              "traceId": "xxxxx"
+            }
+          ]
+        },
+        {
+          "scope": {
+            "name": "net/http/client"
+          },
+          "spans": [
+            {
+              "attributes": [
+                {
+                  "key": "http.method",
+                  "value": {
+                    "stringValue": "GET"
+                  }
+                },
+                {
+                  "key": "http.target",
+                  "value": {
+                    "stringValue": "/hello-gin"
+                  }
+                }
+              ],
+              "kind": 3,
               "name": "/hello-gin",
               "parentSpanId": "",
               "spanId": "xxxxx",

@@ -1,3 +1,17 @@
+// Copyright The OpenTelemetry Authors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package client
 
 import (
@@ -11,6 +25,8 @@ import (
 	"github.com/cilium/ebpf"
 	"github.com/cilium/ebpf/link"
 	"github.com/cilium/ebpf/perf"
+	"golang.org/x/sys/unix"
+
 	"go.opentelemetry.io/auto/pkg/inject"
 	"go.opentelemetry.io/auto/pkg/instrumentors/context"
 	"go.opentelemetry.io/auto/pkg/instrumentors/events"
@@ -18,41 +34,47 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	semconv "go.opentelemetry.io/otel/semconv/v1.7.0"
 	"go.opentelemetry.io/otel/trace"
-	"golang.org/x/sys/unix"
 )
 
-//go:generate go run github.com/cilium/ebpf/cmd/bpf2go -target bpfel -cc clang -cflags $CFLAGS bpf ./bpf/probe.bpf.c
+//go:generate go run github.com/cilium/ebpf/cmd/bpf2go -target amd64,arm64 -cc clang -cflags $CFLAGS bpf ./bpf/probe.bpf.c
 
-type HttpEvent struct {
+// Event represents an event in an HTTP server during an HTTP
+// request-response.
+type Event struct {
 	StartTime         uint64
 	EndTime           uint64
 	Method            [10]byte
 	Path              [100]byte
-	SpanContext       context.EbpfSpanContext
-	ParentSpanContext context.EbpfSpanContext
+	SpanContext       context.EBPFSpanContext
+	ParentSpanContext context.EBPFSpanContext
 }
 
-type httpClientInstrumentor struct {
+// Instrumentor is the net/http instrumentor.
+type Instrumentor struct {
 	bpfObjects   *bpfObjects
 	uprobes      []link.Link
 	returnProbs  []link.Link
 	eventsReader *perf.Reader
 }
 
-func New() *httpClientInstrumentor {
-	return &httpClientInstrumentor{}
+// New returns a new [Instrumentor].
+func New() *Instrumentor {
+	return &Instrumentor{}
 }
 
-func (h *httpClientInstrumentor) LibraryName() string {
+// LibraryName returns the net/http package name.
+func (h *Instrumentor) LibraryName() string {
 	return "net/http/client"
 }
 
-func (h *httpClientInstrumentor) FuncNames() []string {
+// FuncNames returns the function names from "net/http" that are instrumented.
+func (h *Instrumentor) FuncNames() []string {
 	return []string{"net/http.(*Client).do"}
 }
 
-func (h *httpClientInstrumentor) Load(ctx *context.InstrumentorContext) error {
-	spec, err := ctx.Injector.Inject(loadBpf, "go", ctx.TargetDetails.GoVersion.Original(), []*inject.InjectStructField{
+// Load loads all instrumentation offsets.
+func (h *Instrumentor) Load(ctx *context.InstrumentorContext) error {
+	spec, err := ctx.Injector.Inject(loadBpf, "go", ctx.TargetDetails.GoVersion.Original(), []*inject.StructField{
 		{
 			VarName:    "method_ptr_pos",
 			StructName: "net/http.Request",
@@ -73,6 +95,11 @@ func (h *httpClientInstrumentor) Load(ctx *context.InstrumentorContext) error {
 			StructName: "net/http.Request",
 			Field:      "Header",
 		},
+		{
+			VarName:    "ctx_ptr_pos",
+			StructName: "net/http.Request",
+			Field:      "ctx",
+		},
 	}, true)
 
 	if err != nil {
@@ -82,7 +109,7 @@ func (h *httpClientInstrumentor) Load(ctx *context.InstrumentorContext) error {
 	h.bpfObjects = &bpfObjects{}
 	err = spec.LoadAndAssign(h.bpfObjects, &ebpf.CollectionOptions{
 		Maps: ebpf.MapOptions{
-			PinPath: bpffs.BpfFsPath,
+			PinPath: bpffs.BPFFsPath,
 		},
 	})
 
@@ -131,9 +158,10 @@ func (h *httpClientInstrumentor) Load(ctx *context.InstrumentorContext) error {
 	return nil
 }
 
-func (h *httpClientInstrumentor) Run(eventsChan chan<- *events.Event) {
+// Run runs the events processing loop.
+func (h *Instrumentor) Run(eventsChan chan<- *events.Event) {
 	logger := log.Logger.WithName("net/http/client-instrumentor")
-	var event HttpEvent
+	var event Event
 	for {
 		record, err := h.eventsReader.Read()
 		if err != nil {
@@ -158,7 +186,7 @@ func (h *httpClientInstrumentor) Run(eventsChan chan<- *events.Event) {
 	}
 }
 
-func (h *httpClientInstrumentor) convertEvent(e *HttpEvent) *events.Event {
+func (h *Instrumentor) convertEvent(e *Event) *events.Event {
 	method := unix.ByteSliceToString(e.Method[:])
 	path := unix.ByteSliceToString(e.Path[:])
 
@@ -196,7 +224,8 @@ func (h *httpClientInstrumentor) convertEvent(e *HttpEvent) *events.Event {
 	}
 }
 
-func (h *httpClientInstrumentor) Close() {
+// Close stops the Instrumentor.
+func (h *Instrumentor) Close() {
 	log.Logger.V(0).Info("closing net/http/client instrumentor")
 	if h.eventsReader != nil {
 		h.eventsReader.Close()
