@@ -113,18 +113,6 @@
           }
         ]
       },
-      "Header": {
-        "versions": {
-          "oldest": "1.12.0",
-          "newest": "1.20.4"
-        },
-        "offsets": [
-          {
-            "offset": 56,
-            "since": "1.12"
-          }
-        ]
-      },
       "RemoteAddr": {
         "versions": {
           "oldest": "1.12.0",

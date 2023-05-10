@@ -221,7 +221,7 @@ func (h *Instrumentor) convertEvent(e *Event) *events.Event {
 
 	return &events.Event{
 		Library:           h.LibraryName(),
-		Name:              path,
+		Name:              name,
 		Kind:              trace.SpanKindServer,
 		StartTime:         int64(e.StartTime),
 		EndTime:           int64(e.EndTime),
