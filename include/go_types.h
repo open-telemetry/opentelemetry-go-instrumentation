@@ -16,6 +16,7 @@
 #include "bpf_helpers.h"
 
 #define MAX_REALLOCATION 400
+#define MAX_DATA_SIZE 400
 
 struct go_string
 {
@@ -79,6 +80,11 @@ static __always_inline void append_item_to_slice(struct go_slice *slice, void *n
     else
     {
         // No room on current array - copy to new one of size item_size * (len + 1)
+        if (slice->len > MAX_DATA_SIZE || slice->len < 1)
+        {
+            return;
+        }
+
         s32 alloc_size = item_size * slice->len;
         s32 bounded_alloc_size = alloc_size > MAX_REALLOCATION ? MAX_REALLOCATION : (alloc_size < 1 ? 1 : alloc_size);
 
@@ -93,7 +99,15 @@ static __always_inline void append_item_to_slice(struct go_slice *slice, void *n
         // Append to buffer
         bpf_probe_read_user(map_buff, bounded_alloc_size, slice->array);
         bpf_probe_read(map_buff + bounded_alloc_size, item_size, new_item);
-        void *new_array = write_target_data(map_buff, bounded_alloc_size + item_size);
+
+        // Copy buffer to userspace
+        u32 new_array_size = bounded_alloc_size + item_size;
+        if (new_array_size > MAX_DATA_SIZE || new_array_size < 1)
+        {
+            return;
+        }
+
+        void *new_array = write_target_data(map_buff, new_array_size);
 
         // Update array
         slice->array = new_array;

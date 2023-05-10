@@ -45,7 +45,7 @@
                 }
               ],
               "kind": 2,
-              "name": "/hello-gin",
+              "name": "GET /hello-gin",
               "parentSpanId": "",
               "spanId": "xxxxx",
               "status": {},
