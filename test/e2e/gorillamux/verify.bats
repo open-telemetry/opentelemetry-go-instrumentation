@@ -27,12 +27,12 @@ TEMP_LIBRARY_NAME="net/http"
 }
 
 @test "${LIBRARY_NAME} :: trace ID present and valid in all spans" {
-  trace_id=$(spans_from_scope_named ${LIBRARY_NAME} | jq ".traceId")
+  trace_id=$(spans_from_scope_named ${TEMP_LIBRARY_NAME} | jq ".traceId")
   assert_regex "$trace_id" ${MATCH_A_TRACE_ID}
 }
 
 @test "${LIBRARY_NAME} :: span ID present and valid in all spans" {
-  span_id=$(spans_from_scope_named ${LIBRARY_NAME} | jq ".spanId")
+  span_id=$(spans_from_scope_named ${TEMP_LIBRARY_NAME} | jq ".spanId")
   assert_regex "$span_id" ${MATCH_A_SPAN_ID}
 }
 
