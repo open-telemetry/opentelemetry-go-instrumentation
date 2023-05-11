@@ -27,17 +27,40 @@ spans_from_scope_named() {
 
 # Returns an array of all spans received
 spans_received() {
-	jq ".resourceSpans[]?" "${BATS_TEST_DIRNAME}/traces.json"
+	json_output | jq ".resourceSpans[]?"
 }
 
 # Returns the content of the log file produced by a collector
 # and located in the same directory as the BATS test file
 # loading this helper script.
 json_output() {
-	cat "${BATS_TEST_DIRNAME}/traces.json"
+	cat "${BATS_TEST_DIRNAME}/traces-orig.json"
+}
+
+redact_json() {
+	json_output | \
+		jq --sort-keys '
+			del(
+				.resourceSpans[].scopeSpans[].spans[].startTimeUnixNano,
+				.resourceSpans[].scopeSpans[].spans[].endTimeUnixNano
+			)
+			| .resourceSpans[].scopeSpans[].spans[].traceId|= (if
+					. // "" | test("^[A-Fa-f0-9]{32}$") then "xxxxx" else (. + "<-INVALID")
+				end)
+			| .resourceSpans[].scopeSpans[].spans[].spanId|= (if
+					. // "" | test("^[A-Fa-f0-9]{16}$") then "xxxxx" else (. + "<-INVALID")
+				end)
+			| .resourceSpans[].scopeSpans|=sort_by(.scope.name)
+			' > ${BATS_TEST_DIRNAME}/traces.json
 }
 
 # ASSERTION HELPERS
+
+# expect a 32-digit hexadecimal string (in quotes)
+MATCH_A_TRACE_ID=^"\"[A-Fa-f0-9]{32}\"$"
+
+# expect a 16-digit hexadecimal string (in quotes)
+MATCH_A_SPAN_ID=^"\"[A-Fa-f0-9]{16}\"$"
 
 # Fail and display details if the expected and actual values do not
 # equal. Details include both values.
@@ -57,6 +80,20 @@ assert_equal() {
 	fi
 }
 
+assert_regex() {
+	if ! [[ $1 =~ $2 ]]; then
+		{
+			echo
+			echo "-- 💥 value does not match regular expression 💥 --"
+			echo "value   : $1"
+			echo "pattern : $2"
+			echo "--"
+			echo
+		} >&2 # output error to STDERR
+		return 1
+	fi
+}
+
 assert_not_empty() {
 	EMPTY=(\"\")
 	if [[ "$1" == "${EMPTY}" ]]; then
@@ -68,12 +105,5 @@ assert_not_empty() {
 			echo
 		} >&2 # output error to STDERR
 		return 1
-		else
-		{
-			echo
-			echo "-- ✅ value is not empty ✅ --"
-			echo "value : $1"
-		} >&3 # output success to STDOUT
-			return 0
 	fi
 }

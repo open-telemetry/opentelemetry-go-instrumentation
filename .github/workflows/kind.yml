@@ -70,7 +70,8 @@ jobs:
           kubectl wait --for=condition=Complete --timeout=60s job/sample-job
       - name: copy telemetry trace output
         run: |
-          kubectl cp -c filecp default/test-opentelemetry-collector-0:tmp/trace.json ./test/e2e/${{ matrix.library }}/traces.json
-      - name: verify output
+          kubectl cp -c filecp default/test-opentelemetry-collector-0:tmp/trace.json ./test/e2e/${{ matrix.library }}/traces-orig.json
+          rm -f ./test/e2e/${{ matrix.library }}/traces.json
+      - name: verify output and redact to traces.json
         run: |
           bats ./test/e2e/${{ matrix.library }}/verify.bats
