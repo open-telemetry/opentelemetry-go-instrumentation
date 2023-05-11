@@ -9,7 +9,8 @@ jobs:
     permissions:
       contents: read
       packages: write
-
+    env:
+      IMAGE_NAME: otel-autoinstrumentation-go
     steps:
       - uses: actions/checkout@v3.5.2
 
@@ -30,7 +31,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v4.4.0
         with:
-          images: ghcr.io/${{ github.repository }}/autoinstrumentation-go
+          images: ghcr.io/${{ github.repository }}/${{ env.IMAGE_NAME }}
 
       - name: Build and push
         uses: docker/build-push-action@v4.0.0

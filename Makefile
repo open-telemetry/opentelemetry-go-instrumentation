@@ -30,7 +30,7 @@ $(TOOLS)/multimod: PACKAGE=go.opentelemetry.io/build-tools/multimod
 GOLICENSES = $(TOOLS)/go-licenses
 $(TOOLS)/go-licenses: PACKAGE=github.com/google/go-licenses
 
-IMG_NAME ?= otel-go-instrumentation
+IMG_NAME ?= otel-autoinstrumentation-go
 
 GOLANGCI_LINT = $(TOOLS)/golangci-lint
 $(TOOLS)/golangci-lint: PACKAGE=github.com/golangci/golangci-lint/cmd/golangci-lint
@@ -71,7 +71,7 @@ golangci-lint/%: | $(GOLANGCI_LINT)
 
 .PHONY: build
 build: generate
-	GOOS=linux go build -o otel-go-instrumentation cli/main.go
+	GOOS=linux go build -o $(IMG_NAME) cli/main.go
 
 .PHONY: docker-build
 docker-build:
@@ -123,7 +123,7 @@ fixtures/%:
 	$(MAKE) docker-build
 	cd test/e2e/$(LIBRARY) && docker build -t sample-app .
 	kind create cluster
-	kind load docker-image otel-go-instrumentation sample-app
+	kind load docker-image $(IMG_NAME) sample-app
 	helm repo add open-telemetry https://open-telemetry.github.io/opentelemetry-helm-charts
 	if [ ! -d "opentelemetry-helm-charts" ]; then \
 		git clone https://github.com/open-telemetry/opentelemetry-helm-charts.git; \
