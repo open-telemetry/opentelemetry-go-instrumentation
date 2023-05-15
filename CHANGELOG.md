@@ -8,6 +8,8 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 
 ## [Unreleased]
 
+## [v0.3.0-alpha] - 2023-05-15
+
 ### Fixed
 
 - Fix gRPC instrumentation memory access issue on newer kernels. ([#150](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/150))
