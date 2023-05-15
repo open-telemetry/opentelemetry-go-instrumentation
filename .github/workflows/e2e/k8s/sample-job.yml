@@ -21,8 +21,8 @@ spec:
         image: sample-app
         imagePullPolicy: IfNotPresent
         command: ["/bin/sh", "-c"]
-        # send SIGTERM to otel-go-instrumentation once the sample app has generated data so the job completes.
-        args: ["/sample-app/main && kill -TERM $(pidof otel-go-instrumentation)"]
+        # send SIGTERM to otel-autoinstrumentation-go once the sample app has generated data so the job completes.
+        args: ["/sample-app/main && kill -TERM $(pidof otel-autoinstrumentation-go)"]
       - name: auto-instrumentation
         image: otel-autoinstrumentation-go
         imagePullPolicy: IfNotPresent
