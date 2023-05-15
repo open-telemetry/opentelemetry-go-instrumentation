@@ -24,7 +24,7 @@ spec:
         # send SIGTERM to otel-go-instrumentation once the sample app has generated data so the job completes.
         args: ["/sample-app/main && kill -TERM $(pidof otel-go-instrumentation)"]
       - name: auto-instrumentation
-        image: otel-go-instrumentation
+        image: otel-autoinstrumentation-go
         imagePullPolicy: IfNotPresent
         env:
         - name: OTEL_GO_AUTO_TARGET_EXE
