@@ -11,6 +11,7 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 ### Fixed
 
 - Fix gRPC instrumentation memory access issue on newer kernels. ([#150](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/150))
+- Fix missing spans in gorillamux instrumentation. ([#86](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/86))
 
 ### Changed
 
