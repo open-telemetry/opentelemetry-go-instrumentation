@@ -53,6 +53,10 @@ generate: go-mod-tidy
 generate:
 	go generate ./...
 
+.PHONY: docker-generate
+docker-generate:
+	docker run --rm -v $(shell pwd):/app golang:1.20 /bin/sh -c "apt-get update && apt-get install -y clang llvm libbpf-dev && cd ../app && make generate"
+
 .PHONY: go-mod-tidy
 go-mod-tidy: $(ALL_GO_MOD_DIRS:%=go-mod-tidy/%)
 go-mod-tidy/%: DIR=$*
