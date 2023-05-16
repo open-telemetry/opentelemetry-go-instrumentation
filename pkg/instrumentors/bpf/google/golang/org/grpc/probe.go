@@ -35,7 +35,7 @@ import (
 	"go.opentelemetry.io/auto/pkg/instrumentors/utils"
 	"go.opentelemetry.io/auto/pkg/log"
 	"go.opentelemetry.io/otel/attribute"
-	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.18.0"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -201,7 +201,6 @@ func (g *Instrumentor) convertEvent(e *Event) *events.Event {
 
 	attrs = append(attrs, semconv.RPCSystemKey.String("grpc"),
 		semconv.RPCServiceKey.String(method),
-		semconv.NetPeerIPKey.String(target),
 		semconv.NetPeerNameKey.String(target))
 
 	sc := trace.NewSpanContext(trace.SpanContextConfig{
