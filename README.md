@@ -26,7 +26,14 @@ Currently, OpenTelemetry Go Automatic Instrumentation is tested for the followin
 | Ubuntu  | 1.20       | amd64        |
 
 Automatic instrumentation should work on any Linux kernel above 4.4.
-Windows/Mac users should currently use Docker/VM to compile and run this repository.
+
+OpenTelemetry Go Automatic Instrumentation supports the arm64 architecture.
+However, there is no automated testing for this platform.
+Be sure to validate support on your own ARM based system.
+
+Users of non-Linux operating systems can use
+[the Docker images](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pkgs/container/opentelemetry-go-instrumentation%2Fautoinstrumentation-go)
+or create a virtual machine to compile and run OpenTelemetry Go Automatic Instrumentation.
 
 ## Contributing
 
