@@ -28,7 +28,7 @@ Currently, OpenTelemetry Go Automatic Instrumentation is tested for the followin
 
 Automatic instrumentation should work on any Linux kernel above 4.4.
 
-This project supports the ARM platform.
+OpenTelemetry Go Automatic Instrumentation supports the arm64 architecture.
 However, there is no automated testing for this platform.
 Be sure to validate support on your own ARM based system.
 
