@@ -12,7 +12,7 @@
           {
             "key": "telemetry.auto.version",
             "value": {
-              "stringValue": "v0.2.0-alpha"
+              "stringValue": "v0.2.1-alpha"
             }
           },
           {
@@ -45,7 +45,7 @@
                 }
               ],
               "kind": 2,
-              "name": "/hello",
+              "name": "GET /hello",
               "parentSpanId": "",
               "spanId": "xxxxx",
               "status": {},
