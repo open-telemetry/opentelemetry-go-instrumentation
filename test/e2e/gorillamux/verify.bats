@@ -9,9 +9,9 @@ LIBRARY_NAME="github.com/gorilla/mux"
   assert_equal "$result" '"sample-app"'
 }
 
-@test "${LIBRARY_NAME} :: emits a span name '{http.method} {http.target}' (per semconv)" {
+@test "${LIBRARY_NAME} :: emits a span name '{http.method}' (per semconv)" {
   result=$(span_names_for ${LIBRARY_NAME})
-  assert_equal "$result" '"GET /users/foo"'
+  assert_equal "$result" '"GET"'
 }
 
 @test "${LIBRARY_NAME} :: includes http.method attribute" {
