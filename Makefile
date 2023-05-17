@@ -75,7 +75,7 @@ golangci-lint/%: | $(GOLANGCI_LINT)
 
 .PHONY: build
 build: generate
-	GOOS=linux go build -o $(IMG_NAME) cli/main.go
+	GOOS=linux go build -o otel-go-instrumentation cli/main.go
 
 .PHONY: docker-build
 docker-build:

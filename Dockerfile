@@ -8,5 +8,5 @@ COPY . .
 RUN make build
 
 FROM registry.fedoraproject.org/fedora-minimal:38
-COPY --from=builder /app/otel-autoinstrumentation-go /
-CMD ["/otel-autoinstrumentation-go"]
+COPY --from=builder /app/ otel-go-instrumentation/
+CMD ["/otel-go-instrumentation"]
