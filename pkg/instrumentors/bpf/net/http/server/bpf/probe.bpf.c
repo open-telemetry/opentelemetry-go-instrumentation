@@ -19,7 +19,7 @@
 char __license[] SEC("license") = "Dual MIT/GPL";
 
 #define PATH_MAX_LEN 100
-#define METHOD_MAX_LEN 6 // Longer method: DELETE
+#define METHOD_MAX_LEN 7
 #define MAX_CONCURRENT 50
 
 struct http_request_t

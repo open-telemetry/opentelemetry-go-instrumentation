@@ -22,6 +22,8 @@ jobs:
         uses: actions/setup-go@v4
         with:
           go-version: "1.20"
+      - name: Setup BATS
+        uses: mig4/setup-bats@v1
       - name: Build auto-instrumentation
         run: |
           IMG=otel-go-instrumentation:latest make docker-build
@@ -68,9 +70,8 @@ jobs:
           kubectl wait --for=condition=Complete --timeout=60s job/sample-job
       - name: copy telemetry trace output
         run: |
-          kubectl cp -c filecp default/test-opentelemetry-collector-0:tmp/trace.json ./test/e2e/${{ matrix.library }}/traces.json.tmp
-          jq 'del(.resourceSpans[].scopeSpans[].spans[].endTimeUnixNano, .resourceSpans[].scopeSpans[].spans[].startTimeUnixNano) | .resourceSpans[].scopeSpans[].spans[].spanId|= (if . != "" then "xxxxx" else . end) | .resourceSpans[].scopeSpans[].spans[].traceId|= (if . != "" then "xxxxx" else . end) | .resourceSpans[].scopeSpans|=sort_by(.scope.name)' ./test/e2e/${{ matrix.library }}/traces.json.tmp | jq --sort-keys . > ./test/e2e/${{ matrix.library }}/traces.json
-          rm ./test/e2e/${{ matrix.library }}/traces.json.tmp
-      - name: verify output
+          kubectl cp -c filecp default/test-opentelemetry-collector-0:tmp/trace.json ./test/e2e/${{ matrix.library }}/traces-orig.json
+          rm -f ./test/e2e/${{ matrix.library }}/traces.json
+      - name: verify output and redact to traces.json
         run: |
-          make check-clean-work-tree
+          bats ./test/e2e/${{ matrix.library }}/verify.bats

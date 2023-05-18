@@ -18,6 +18,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"errors"
+	"fmt"
 
 	"os"
 
@@ -34,7 +35,7 @@ import (
 	"go.opentelemetry.io/auto/pkg/instrumentors/utils"
 	"go.opentelemetry.io/auto/pkg/log"
 	"go.opentelemetry.io/otel/attribute"
-	semconv "go.opentelemetry.io/otel/semconv/v1.7.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.18.0"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -45,7 +46,7 @@ import (
 type Event struct {
 	StartTime   uint64
 	EndTime     uint64
-	Method      [6]byte
+	Method      [7]byte
 	Path        [100]byte
 	SpanContext context.EBPFSpanContext
 }
@@ -198,6 +199,7 @@ func (h *Instrumentor) Run(eventsChan chan<- *events.Event) {
 func (h *Instrumentor) convertEvent(e *Event) *events.Event {
 	method := unix.ByteSliceToString(e.Method[:])
 	path := unix.ByteSliceToString(e.Path[:])
+	name := fmt.Sprintf("%s %s", method, path)
 
 	sc := trace.NewSpanContext(trace.SpanContextConfig{
 		TraceID:    e.SpanContext.TraceID,
@@ -207,7 +209,7 @@ func (h *Instrumentor) convertEvent(e *Event) *events.Event {
 
 	return &events.Event{
 		Library:     h.LibraryName(),
-		Name:        path,
+		Name:        name,
 		Kind:        trace.SpanKindServer,
 		StartTime:   int64(e.StartTime),
 		EndTime:     int64(e.EndTime),

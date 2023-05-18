@@ -18,6 +18,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"errors"
+	"fmt"
 	"os"
 
 	"go.opentelemetry.io/auto/pkg/instrumentors/bpffs"
@@ -33,7 +34,7 @@ import (
 	"go.opentelemetry.io/auto/pkg/instrumentors/utils"
 	"go.opentelemetry.io/auto/pkg/log"
 	"go.opentelemetry.io/otel/attribute"
-	semconv "go.opentelemetry.io/otel/semconv/v1.7.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.18.0"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -44,7 +45,7 @@ import (
 type Event struct {
 	StartTime   uint64
 	EndTime     uint64
-	Method      [100]byte
+	Method      [7]byte
 	Path        [100]byte
 	SpanContext context.EBPFSpanContext
 }
@@ -52,7 +53,7 @@ type Event struct {
 // Instrumentor is the gorilla/mux instrumentor.
 type Instrumentor struct {
 	bpfObjects   *bpfObjects
-	uprobe       link.Link
+	uprobes      []link.Link
 	returnProbs  []link.Link
 	eventsReader *perf.Reader
 }
@@ -112,34 +113,9 @@ func (g *Instrumentor) Load(ctx *context.InstrumentorContext) error {
 		return err
 	}
 
-	offset, err := ctx.TargetDetails.GetFunctionOffset(g.FuncNames()[0])
-	if err != nil {
-		return err
+	for _, funcName := range g.FuncNames() {
+		g.registerProbes(ctx, funcName)
 	}
-
-	up, err := ctx.Executable.Uprobe("", g.bpfObjects.UprobeGorillaMuxServeHTTP, &link.UprobeOptions{
-		Address: offset,
-	})
-	if err != nil {
-		return err
-	}
-
-	g.uprobe = up
-	retOffsets, err := ctx.TargetDetails.GetFunctionReturns(g.FuncNames()[0])
-	if err != nil {
-		return err
-	}
-
-	for _, ret := range retOffsets {
-		retProbe, err := ctx.Executable.Uprobe("", g.bpfObjects.UprobeGorillaMuxServeHTTP_Returns, &link.UprobeOptions{
-			Address: ret,
-		})
-		if err != nil {
-			return err
-		}
-		g.returnProbs = append(g.returnProbs, retProbe)
-	}
-
 	rd, err := perf.NewReader(g.bpfObjects.Events, os.Getpagesize())
 	if err != nil {
 		return err
@@ -147,6 +123,41 @@ func (g *Instrumentor) Load(ctx *context.InstrumentorContext) error {
 	g.eventsReader = rd
 
 	return nil
+}
+
+func (g *Instrumentor) registerProbes(ctx *context.InstrumentorContext, funcName string) {
+	logger := log.Logger.WithName("gorilla/mux-instrumentor").WithValues("function", funcName)
+	offset, err := ctx.TargetDetails.GetFunctionOffset(funcName)
+	if err != nil {
+		logger.Error(err, "could not find function start offset. Skipping")
+		return
+	}
+	retOffsets, err := ctx.TargetDetails.GetFunctionReturns(funcName)
+	if err != nil {
+		logger.Error(err, "could not find function end offset. Skipping")
+		return
+	}
+
+	up, err := ctx.Executable.Uprobe("", g.bpfObjects.UprobeGorillaMuxServeHTTP, &link.UprobeOptions{
+		Address: offset,
+	})
+	if err != nil {
+		logger.Error(err, "could not insert start uprobe. Skipping")
+		return
+	}
+
+	g.uprobes = append(g.uprobes, up)
+
+	for _, ret := range retOffsets {
+		retProbe, err := ctx.Executable.Uprobe("", g.bpfObjects.UprobeGorillaMuxServeHTTP_Returns, &link.UprobeOptions{
+			Address: ret,
+		})
+		if err != nil {
+			logger.Error(err, "could not insert return uprobe. Skipping")
+			return
+		}
+		g.returnProbs = append(g.returnProbs, retProbe)
+	}
 }
 
 // Run runs the events processing loop.
@@ -180,6 +191,7 @@ func (g *Instrumentor) Run(eventsChan chan<- *events.Event) {
 func (g *Instrumentor) convertEvent(e *Event) *events.Event {
 	method := unix.ByteSliceToString(e.Method[:])
 	path := unix.ByteSliceToString(e.Path[:])
+	name := fmt.Sprintf("%s %s", method, path)
 
 	sc := trace.NewSpanContext(trace.SpanContextConfig{
 		TraceID:    e.SpanContext.TraceID,
@@ -189,7 +201,7 @@ func (g *Instrumentor) convertEvent(e *Event) *events.Event {
 
 	return &events.Event{
 		Library:     g.LibraryName(),
-		Name:        path,
+		Name:        name,
 		Kind:        trace.SpanKindServer,
 		StartTime:   int64(e.StartTime),
 		EndTime:     int64(e.EndTime),
@@ -208,8 +220,8 @@ func (g *Instrumentor) Close() {
 		g.eventsReader.Close()
 	}
 
-	if g.uprobe != nil {
-		g.uprobe.Close()
+	for _, r := range g.uprobes {
+		r.Close()
 	}
 
 	for _, r := range g.returnProbs {
