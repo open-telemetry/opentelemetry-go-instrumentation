@@ -18,7 +18,6 @@ import (
 	"bytes"
 	"encoding/binary"
 	"errors"
-	"fmt"
 
 	"os"
 
@@ -40,6 +39,8 @@ import (
 )
 
 //go:generate go run github.com/cilium/ebpf/cmd/bpf2go -target amd64,arm64 -cc clang -cflags $CFLAGS bpf ./bpf/probe.bpf.c
+
+const instrumentedPkg = "github.com/gin-gonic/gin"
 
 // Event represents an event in the gin-gonic/gin server during an HTTP
 // request-response.
@@ -66,7 +67,7 @@ func New() *Instrumentor {
 
 // LibraryName returns the gin-gonic/gin package import path.
 func (h *Instrumentor) LibraryName() string {
-	return "github.com/gin-gonic/gin"
+	return instrumentedPkg
 }
 
 // FuncNames returns the function names from "github.com/gin-gonic/gin" that are
@@ -199,7 +200,6 @@ func (h *Instrumentor) Run(eventsChan chan<- *events.Event) {
 func (h *Instrumentor) convertEvent(e *Event) *events.Event {
 	method := unix.ByteSliceToString(e.Method[:])
 	path := unix.ByteSliceToString(e.Path[:])
-	name := fmt.Sprintf("%s %s", method, path)
 
 	sc := trace.NewSpanContext(trace.SpanContextConfig{
 		TraceID:    e.SpanContext.TraceID,
@@ -208,8 +208,11 @@ func (h *Instrumentor) convertEvent(e *Event) *events.Event {
 	})
 
 	return &events.Event{
-		Library:     h.LibraryName(),
-		Name:        name,
+		Library: h.LibraryName(),
+		// Do not include the high-cardinality path here (there is no
+		// templatized path manifest to reference, given we are instrumenting
+		// Engine.ServeHTTP which is not passed a Gin Context).
+		Name:        method,
 		Kind:        trace.SpanKindServer,
 		StartTime:   int64(e.StartTime),
 		EndTime:     int64(e.EndTime),

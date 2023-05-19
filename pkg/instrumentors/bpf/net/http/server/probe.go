@@ -18,7 +18,6 @@ import (
 	"bytes"
 	"encoding/binary"
 	"errors"
-	"fmt"
 	"os"
 
 	"go.opentelemetry.io/auto/pkg/instrumentors/bpffs"
@@ -39,6 +38,8 @@ import (
 )
 
 //go:generate go run github.com/cilium/ebpf/cmd/bpf2go -target amd64,arm64 -cc clang -cflags $CFLAGS bpf ./bpf/probe.bpf.c
+
+const instrumentedPkg = "net/http"
 
 // Event represents an event in an HTTP server during an HTTP
 // request-response.
@@ -65,7 +66,7 @@ func New() *Instrumentor {
 
 // LibraryName returns the net/http package name.
 func (h *Instrumentor) LibraryName() string {
-	return "net/http"
+	return instrumentedPkg
 }
 
 // FuncNames returns the function names from "net/http" that are instrumented.
@@ -197,7 +198,6 @@ func (h *Instrumentor) Run(eventsChan chan<- *events.Event) {
 func (h *Instrumentor) convertEvent(e *Event) *events.Event {
 	method := unix.ByteSliceToString(e.Method[:])
 	path := unix.ByteSliceToString(e.Path[:])
-	name := fmt.Sprintf("%s %s", method, path)
 
 	sc := trace.NewSpanContext(trace.SpanContextConfig{
 		TraceID:    e.SpanContext.TraceID,
@@ -206,8 +206,10 @@ func (h *Instrumentor) convertEvent(e *Event) *events.Event {
 	})
 
 	return &events.Event{
-		Library:     h.LibraryName(),
-		Name:        name,
+		Library: h.LibraryName(),
+		// Do not include the high-cardinality path here (there is no
+		// templatized path manifest to reference).
+		Name:        method,
 		Kind:        trace.SpanKindServer,
 		StartTime:   int64(e.StartTime),
 		EndTime:     int64(e.EndTime),
