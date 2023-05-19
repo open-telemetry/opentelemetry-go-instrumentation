@@ -70,17 +70,17 @@ static __always_inline struct span_context *get_parent_span_context(void *ctx) {
 }
 
 static __always_inline void track_running_span(void *contextContext, struct span_context *sc) {
-    bpf_map_update_elem(&tracked_spans, &contextContext, &sc, BPF_ANY);
-    bpf_map_update_elem(&tracked_spans_by_sc, &sc, &contextContext, BPF_ANY);
+    bpf_map_update_elem(&tracked_spans, &contextContext, sc, BPF_ANY);
+    bpf_map_update_elem(&tracked_spans_by_sc, sc, &contextContext, BPF_ANY);
 }
 
 static __always_inline void stop_tracking_span(struct span_context *sc) {
-    void *ctx = bpf_map_lookup_elem(&tracked_spans_by_sc, &sc);
+    void *ctx = bpf_map_lookup_elem(&tracked_spans_by_sc, sc);
     if (ctx == NULL)
     {
         return;
     }
 
     bpf_map_delete_elem(&tracked_spans, &ctx);
-    bpf_map_delete_elem(&tracked_spans_by_sc, &sc);
+    bpf_map_delete_elem(&tracked_spans_by_sc, sc);
 }

@@ -33,7 +33,7 @@ func LoadEBPFObjects(spec *ebpf.CollectionSpec, to interface{}, opts *ebpf.Colle
 	// Getting full verifier log is expensive, so we only do it if the user explicitly asks for it.
 	showVerifierLogs := shouldShowVerifierLogs()
 	if showVerifierLogs {
-		opts.Programs.LogSize = ebpf.DefaultVerifierLogSize * 100
+		opts.Programs.LogSize = ebpf.DefaultVerifierLogSize * 10000
 		opts.Programs.LogLevel = ebpf.LogLevelInstruction | ebpf.LogLevelBranch | ebpf.LogLevelStats
 	}
 
