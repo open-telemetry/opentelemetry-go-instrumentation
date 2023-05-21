@@ -48,6 +48,14 @@ struct
     __uint(max_entries, MAX_CONCURRENT);
 } grpc_events SEC(".maps");
 
+struct
+{
+    __uint(type, BPF_MAP_TYPE_HASH);
+    __type(key, u32);
+    __type(value, struct grpc_request_t);
+    __uint(max_entries, MAX_CONCURRENT);
+} streamid_to_grpc_events SEC(".maps");
+
 struct headers_buff
 {
     unsigned char buff[MAX_HEADERS_BUFF_SIZE];
@@ -68,6 +76,9 @@ struct
 
 // Injected in init
 volatile const u64 clientconn_target_ptr_pos;
+volatile const u64 csattempt_ctx_pos;
+volatile const u64 csattempt_stream_pos;
+volatile const u64 stream_id_pos;
 
 // This instrumentation attaches uprobe to the following function:
 // func (cc *ClientConn) Invoke(ctx context.Context, method string, args, reply interface{}, opts ...CallOption) error
@@ -100,8 +111,25 @@ int uprobe_ClientConn_Invoke(struct pt_regs *ctx)
     target_size = target_size < target_len ? target_size : target_len;
     bpf_probe_read(&grpcReq.target, target_size, target_ptr);
 
-    // Get key
+    // Get parent if exists
     void *context_ptr = get_argument(ctx, context_pos);
+    void *context_ptr_val = 0;
+    bpf_printk("context_ptr: %lx", context_ptr);
+    bpf_probe_read(&context_ptr_val, sizeof(context_ptr_val), context_ptr);
+    bpf_printk("context_ptr_val: %lx", context_ptr_val);
+    struct span_context *parent_span_ctx = get_parent_span_context(context_ptr_val);
+    if (parent_span_ctx != NULL)
+    {
+        bpf_probe_read(&grpcReq.psc, sizeof(grpcReq.psc), parent_span_ctx);
+        copy_byte_arrays(grpcReq.psc.TraceID, grpcReq.sc.TraceID, TRACE_ID_SIZE);
+        generate_random_bytes(grpcReq.sc.SpanID, SPAN_ID_SIZE);
+    }
+    else
+    {
+        grpcReq.sc = generate_span_context();
+    }
+
+    // Get key
     void *key = get_consistent_key(ctx, context_ptr);
 
     // Write event
@@ -125,6 +153,42 @@ int uprobe_ClientConn_Invoke_Returns(struct pt_regs *ctx)
     return 0;
 }
 
+// Context propagation on Go >= 1.17: No need access to context.Context, but cant write to registers
+// func (l *loopyWriter) writeHeader(streamID uint32, endStream bool, hf []hpack.HeaderField, onWrite func()) error {
+SEC("uprobe/loopyWriter_writeHeader")
+int uprobe_LoopyWriter_WriterHeader(struct pt_regs *ctx) {
+    // TODO(edenfed): loopywriter runs on a different goroutine, so we need to find a way to get the grpcReq
+    // We have access to streamID, so we need to have a map to it in previous probes
+    // We can replace other probes with:google.golang.org/grpc.(*csAttempt).sendMsg
+    bpf_printk("uprobe_LoopyWriter_WriterHeader");
+    // Get grpc request struct
+    u32 stream_id = get_argument(ctx, 2);
+    bpf_printk("stream id at loopyWriter_writeHeader: %d", stream_id);
+    void *grpcReq_ptr = bpf_map_lookup_elem(&streamid_to_grpc_events, &stream_id);
+    struct grpc_request_t grpcReq = {};
+    bpf_probe_read(&grpcReq, sizeof(grpcReq), grpcReq_ptr);
+    bpf_printk("grpcReq.method at loopyWriter_writeHeader: %s", grpcReq.method);
+    bpf_map_delete_elem(&streamid_to_grpc_events, &stream_id);
+}
+
+SEC("uprobe/csAttempt_sendMsg")
+// func (a *csAttempt) sendMsg(m interface{}, hdr, payld, data []byte) error
+int uprobe_CsAttempt_SendMsg(struct pt_regs *ctx) {
+    bpf_printk("uprobe_CsAttempt_SendMsg");
+    s32 csAttempt_pos = 1;
+    void *csAttempt_ptr = get_argument(ctx, csAttempt_pos);
+    void *context_ptr = 0;
+    bpf_probe_read(&context_ptr, sizeof(context_ptr), (void *)(csAttempt_ptr + (csattempt_ctx_pos)));
+    bpf_printk("context_ptr: %lx", context_ptr);
+
+    void *stream_ptr = 0;
+    bpf_probe_read(&stream_ptr, sizeof(stream_ptr), (void *)(csAttempt_ptr + (csattempt_stream_pos)));
+    u32 stream_id = 0;
+    bpf_probe_read(&stream_id, sizeof(stream_id), (void *)(stream_ptr + stream_id_pos));
+    bpf_printk("stream_id: %d", stream_id);
+}
+
+// Context propagation on Go < 1.17: Need access to context.Context, but can write to headers
 // func (t *http2Client) createHeaderFields(ctx context.Context, callHdr *CallHdr) ([]hpack.HeaderField, error)
 SEC("uprobe/Http2Client_createHeaderFields")
 int uprobe_Http2Client_CreateHeaderFields(struct pt_regs *ctx)
@@ -140,7 +204,8 @@ int uprobe_Http2Client_CreateHeaderFields(struct pt_regs *ctx)
         slice.array = (void *)GO_PARAM1(ctx);
         slice.len = (s32)GO_PARAM2(ctx);
         slice.cap = (s32)GO_PARAM3(ctx);
-        slice_user_ptr.array = (void *)&GO_PARAM1(ctx);
+        slice_user_ptr.array = (void *)GO_PARAM1(ctx);
+        bpf_printk("slice_user_ptr.array: %lx", slice_user_ptr.array);
         slice_user_ptr.len = (void *)&GO_PARAM2(ctx);
         slice_user_ptr.cap = (void *)&GO_PARAM3(ctx);
     }
@@ -155,6 +220,7 @@ int uprobe_Http2Client_CreateHeaderFields(struct pt_regs *ctx)
         slice_user_ptr.array = (void *)(PT_REGS_SP(ctx) + (slice_pointer_pos * 8));
         slice_user_ptr.len = (void *)(PT_REGS_SP(ctx) + (slice_len_pos * 8));
         slice_user_ptr.cap = (void *)(PT_REGS_SP(ctx) + (slice_cap_pos * 8));
+        bpf_printk("key %lx", key);
         key = get_parent_go_context(key, &grpc_events);
     }
     char tp_key[11] = "traceparent";
@@ -169,23 +235,11 @@ int uprobe_Http2Client_CreateHeaderFields(struct pt_regs *ctx)
     struct grpc_request_t grpcReq = {};
     bpf_probe_read(&grpcReq, sizeof(grpcReq), grpcReq_ptr);
 
-    // Get parent if exists
-    struct span_context *parent_span_ctx = get_parent_span_context(context_ptr);
-    if (parent_span_ctx != NULL)
-    {
-        bpf_probe_read(&grpcReq.psc, sizeof(grpcReq.psc), parent_span_ctx);
-        copy_byte_arrays(grpcReq.psc.TraceID, grpcReq.sc.TraceID, TRACE_ID_SIZE);
-        generate_random_bytes(grpcReq.sc.SpanID, SPAN_ID_SIZE);
-    }
-    else
-    {
-        grpcReq.sc = generate_span_context();
-    }
-
     // Write headers
     char val[SPAN_CONTEXT_STRING_SIZE];
     span_context_to_w3c_string(&grpcReq.sc, val);
     struct go_string val_str = write_user_go_string(val, sizeof(val));
+    bpf_printk("writing string %s to address %lx", val, val_str.str);
     struct hpack_header_field hf = {};
     hf.name = key_str;
     hf.value = val_str;

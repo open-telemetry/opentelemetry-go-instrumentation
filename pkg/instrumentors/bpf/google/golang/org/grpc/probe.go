@@ -74,7 +74,8 @@ func (g *Instrumentor) LibraryName() string {
 // instrumented.
 func (g *Instrumentor) FuncNames() []string {
 	return []string{"google.golang.org/grpc.(*ClientConn).Invoke",
-		"google.golang.org/grpc/internal/transport.(*http2Client).createHeaderFields"}
+		"google.golang.org/grpc/internal/transport.(*http2Client).createHeaderFields",
+		"google.golang.org/grpc/internal/transport.(*loopyWriter).writeHeader"}
 }
 
 // Load loads all instrumentation offsets.
@@ -141,19 +142,35 @@ func (g *Instrumentor) Load(ctx *context.InstrumentorContext) error {
 	g.eventsReader = rd
 
 	// Write headers probe
-	whOffsets, err := ctx.TargetDetails.GetFunctionReturns(g.FuncNames()[1])
-	if err != nil {
-		return err
-	}
-	for _, whOffset := range whOffsets {
-		whProbe, err := ctx.Executable.Uprobe("", g.bpfObjects.UprobeHttp2ClientCreateHeaderFields, &link.UprobeOptions{
+	if !ctx.TargetDetails.IsRegistersABI() {
+		whOffsets, err := ctx.TargetDetails.GetFunctionReturns(g.FuncNames()[1])
+		if err != nil {
+			return err
+		}
+		for _, whOffset := range whOffsets {
+			whProbe, err := ctx.Executable.Uprobe("", g.bpfObjects.UprobeHttp2ClientCreateHeaderFields, &link.UprobeOptions{
+				Address: whOffset,
+			})
+			if err != nil {
+				return err
+			}
+
+			g.writeHeadersProbe = append(g.writeHeadersProbe, whProbe)
+		}
+	} else {
+		whOffset, err := ctx.TargetDetails.GetFunctionOffset(g.FuncNames()[2])
+		if err != nil {
+			return err
+		}
+
+		up, err := ctx.Executable.Uprobe("", g.bpfObjects.UprobeLoopyWriterWriterHeader, &link.UprobeOptions{
 			Address: whOffset,
 		})
 		if err != nil {
 			return err
 		}
 
-		g.writeHeadersProbe = append(g.writeHeadersProbe, whProbe)
+		g.writeHeadersProbe = append(g.writeHeadersProbe, up)
 	}
 
 	return nil

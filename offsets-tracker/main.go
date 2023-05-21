@@ -105,6 +105,14 @@ func main() {
 				StructName: "golang.org/x/net/http2.FrameHeader",
 				Field:      "StreamID",
 			},
+			{
+				StructName: "google.golang.org/grpc.csAttempt",
+				Field:      "ctx",
+			},
+			{
+				StructName: "google.golang.org/grpc.csAttempt",
+				Field:      "s",
+			},
 		})
 
 	if err != nil {

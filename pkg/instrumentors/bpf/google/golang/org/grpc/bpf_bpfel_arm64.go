@@ -74,6 +74,7 @@ type bpfProgramSpecs struct {
 	UprobeClientConnInvoke              *ebpf.ProgramSpec `ebpf:"uprobe_ClientConn_Invoke"`
 	UprobeClientConnInvokeReturns       *ebpf.ProgramSpec `ebpf:"uprobe_ClientConn_Invoke_Returns"`
 	UprobeHttp2ClientCreateHeaderFields *ebpf.ProgramSpec `ebpf:"uprobe_Http2Client_CreateHeaderFields"`
+	UprobeLoopyWriterWriterHeader       *ebpf.ProgramSpec `ebpf:"uprobe_LoopyWriter_WriterHeader"`
 }
 
 // bpfMapSpecs contains maps before they are loaded into the kernel.
@@ -133,6 +134,7 @@ type bpfPrograms struct {
 	UprobeClientConnInvoke              *ebpf.Program `ebpf:"uprobe_ClientConn_Invoke"`
 	UprobeClientConnInvokeReturns       *ebpf.Program `ebpf:"uprobe_ClientConn_Invoke_Returns"`
 	UprobeHttp2ClientCreateHeaderFields *ebpf.Program `ebpf:"uprobe_Http2Client_CreateHeaderFields"`
+	UprobeLoopyWriterWriterHeader       *ebpf.Program `ebpf:"uprobe_LoopyWriter_WriterHeader"`
 }
 
 func (p *bpfPrograms) Close() error {
@@ -140,6 +142,7 @@ func (p *bpfPrograms) Close() error {
 		p.UprobeClientConnInvoke,
 		p.UprobeClientConnInvokeReturns,
 		p.UprobeHttp2ClientCreateHeaderFields,
+		p.UprobeLoopyWriterWriterHeader,
 	)
 }
 
