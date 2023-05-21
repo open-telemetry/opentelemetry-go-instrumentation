@@ -153,7 +153,6 @@ int uprobe_ClientConn_Invoke_Returns(struct pt_regs *ctx)
     return 0;
 }
 
-// Context propagation on Go >= 1.17: No need access to context.Context, but cant write to registers
 // func (l *loopyWriter) writeHeader(streamID uint32, endStream bool, hf []hpack.HeaderField, onWrite func()) error {
 SEC("uprobe/loopyWriter_writeHeader")
 int uprobe_LoopyWriter_WriterHeader(struct pt_regs *ctx) {
@@ -188,11 +187,11 @@ int uprobe_CsAttempt_SendMsg(struct pt_regs *ctx) {
     bpf_printk("stream_id: %d", stream_id);
 }
 
-// Context propagation on Go < 1.17: Need access to context.Context, but can write to headers
 // func (t *http2Client) createHeaderFields(ctx context.Context, callHdr *CallHdr) ([]hpack.HeaderField, error)
 SEC("uprobe/Http2Client_createHeaderFields")
 int uprobe_Http2Client_CreateHeaderFields(struct pt_regs *ctx)
 {
+    // TODO: Delete this probe, do the writing in loopyWriter_writeHeader
     // Read slice
     s32 context_pointer_pos = 3;
     struct go_slice slice = {};
