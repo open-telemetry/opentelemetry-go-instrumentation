@@ -19,7 +19,7 @@
 char __license[] SEC("license") = "Dual MIT/GPL";
 
 #define PATH_MAX_LEN 100
-#define METHOD_MAX_LEN 6 // Longer method: DELETE
+#define METHOD_MAX_LEN 7
 #define MAX_CONCURRENT 50
 
 struct http_request_t {
@@ -91,8 +91,11 @@ int uprobe_GorillaMux_ServeHTTP(struct pt_regs *ctx) {
 
 SEC("uprobe/GorillaMux_ServeHTTP")
 int uprobe_GorillaMux_ServeHTTP_Returns(struct pt_regs *ctx) {
+    u64 request_pos = 4;
     void *goroutine = get_goroutine_address(ctx, ctx_ptr_pos);
-    void *httpReq_ptr = bpf_map_lookup_elem(&context_to_http_events, &goroutine);
+    void* req_ptr = get_argument(ctx, request_pos);
+
+    void* httpReq_ptr = bpf_map_lookup_elem(&context_to_http_events, &goroutine);
     struct http_request_t httpReq = {};
     bpf_probe_read(&httpReq, sizeof(httpReq), httpReq_ptr);
     httpReq.end_time = bpf_ktime_get_ns();

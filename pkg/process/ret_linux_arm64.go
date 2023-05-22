@@ -21,7 +21,7 @@ import (
 )
 
 const (
-	// In ARM64 each instruction is 4 bytes in length
+	// In ARM64 each instruction is 4 bytes in length.
 	armInstructionSize = 4
 )
 

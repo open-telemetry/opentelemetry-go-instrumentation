@@ -26,7 +26,7 @@ var endian = binary.LittleEndian
 
 const syscallInstrSize = 4
 
-// see kernel source /include/uapi/linux/elf.h
+// see kernel source /include/uapi/linux/elf.h.
 const nrPRStatus = 1
 
 func getIP(regs *syscall.PtraceRegs) uintptr {
@@ -49,7 +49,7 @@ func setRegs(pid int, regs *syscall.PtraceRegs) error {
 	return nil
 }
 
-// Syscall runs a syscall at main thread of process
+// Syscall runs a syscall at main thread of process.
 func (p *TracedProgram) Syscall(number uint64, args ...uint64) (uint64, error) {
 	if len(args) > 7 {
 		return 0, errors.New("too many arguments for a syscall")
@@ -71,10 +71,8 @@ func (p *TracedProgram) Syscall(number uint64, args ...uint64) (uint64, error) {
 	// it in `man 2 syscall`. In aarch64 the syscall nr is stored in w8, and the
 	// arguments are stored in x0, x1, x2, x3, x4, x5 in order
 	regs.Regs[8] = number
-	for index, arg := range args {
-		// All these registers are hard coded for x86 platform
-		regs.Regs[index] = arg
-	}
+	copy(regs.Regs[:len(args)], args)
+
 	err = setRegs(p.pid, &regs)
 	if err != nil {
 		return 0, err
