@@ -106,12 +106,16 @@ func main() {
 				Field:      "StreamID",
 			},
 			{
-				StructName: "google.golang.org/grpc.csAttempt",
-				Field:      "ctx",
+				StructName: "google.golang.org/grpc/internal/transport.http2Client",
+				Field:      "nextID",
 			},
 			{
-				StructName: "google.golang.org/grpc.csAttempt",
-				Field:      "s",
+				StructName: "google.golang.org/grpc/internal/transport.headerFrame",
+				Field:      "streamID",
+			},
+			{
+				StructName: "google.golang.org/grpc/internal/transport.headerFrame",
+				Field:      "hf",
 			},
 		})
 

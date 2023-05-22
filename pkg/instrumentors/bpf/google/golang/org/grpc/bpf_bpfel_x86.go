@@ -71,22 +71,23 @@ type bpfSpecs struct {
 //
 // It can be passed ebpf.CollectionSpec.Assign.
 type bpfProgramSpecs struct {
-	UprobeClientConnInvoke              *ebpf.ProgramSpec `ebpf:"uprobe_ClientConn_Invoke"`
-	UprobeClientConnInvokeReturns       *ebpf.ProgramSpec `ebpf:"uprobe_ClientConn_Invoke_Returns"`
-	UprobeHttp2ClientCreateHeaderFields *ebpf.ProgramSpec `ebpf:"uprobe_Http2Client_CreateHeaderFields"`
-	UprobeLoopyWriterWriterHeader       *ebpf.ProgramSpec `ebpf:"uprobe_LoopyWriter_WriterHeader"`
+	UprobeClientConnInvoke         *ebpf.ProgramSpec `ebpf:"uprobe_ClientConn_Invoke"`
+	UprobeClientConnInvokeReturns  *ebpf.ProgramSpec `ebpf:"uprobe_ClientConn_Invoke_Returns"`
+	UprobeLoopyWriterHeaderHandler *ebpf.ProgramSpec `ebpf:"uprobe_LoopyWriter_HeaderHandler"`
+	UprobeHttp2ClientNewStream     *ebpf.ProgramSpec `ebpf:"uprobe_http2Client_NewStream"`
 }
 
 // bpfMapSpecs contains maps before they are loaded into the kernel.
 //
 // It can be passed ebpf.CollectionSpec.Assign.
 type bpfMapSpecs struct {
-	AllocMap         *ebpf.MapSpec `ebpf:"alloc_map"`
-	Events           *ebpf.MapSpec `ebpf:"events"`
-	GrpcEvents       *ebpf.MapSpec `ebpf:"grpc_events"`
-	HeadersBuffMap   *ebpf.MapSpec `ebpf:"headers_buff_map"`
-	TrackedSpans     *ebpf.MapSpec `ebpf:"tracked_spans"`
-	TrackedSpansBySc *ebpf.MapSpec `ebpf:"tracked_spans_by_sc"`
+	AllocMap             *ebpf.MapSpec `ebpf:"alloc_map"`
+	Events               *ebpf.MapSpec `ebpf:"events"`
+	GrpcEvents           *ebpf.MapSpec `ebpf:"grpc_events"`
+	HeadersBuffMap       *ebpf.MapSpec `ebpf:"headers_buff_map"`
+	StreamidToGrpcEvents *ebpf.MapSpec `ebpf:"streamid_to_grpc_events"`
+	TrackedSpans         *ebpf.MapSpec `ebpf:"tracked_spans"`
+	TrackedSpansBySc     *ebpf.MapSpec `ebpf:"tracked_spans_by_sc"`
 }
 
 // bpfObjects contains all objects after they have been loaded into the kernel.
@@ -108,12 +109,13 @@ func (o *bpfObjects) Close() error {
 //
 // It can be passed to loadBpfObjects or ebpf.CollectionSpec.LoadAndAssign.
 type bpfMaps struct {
-	AllocMap         *ebpf.Map `ebpf:"alloc_map"`
-	Events           *ebpf.Map `ebpf:"events"`
-	GrpcEvents       *ebpf.Map `ebpf:"grpc_events"`
-	HeadersBuffMap   *ebpf.Map `ebpf:"headers_buff_map"`
-	TrackedSpans     *ebpf.Map `ebpf:"tracked_spans"`
-	TrackedSpansBySc *ebpf.Map `ebpf:"tracked_spans_by_sc"`
+	AllocMap             *ebpf.Map `ebpf:"alloc_map"`
+	Events               *ebpf.Map `ebpf:"events"`
+	GrpcEvents           *ebpf.Map `ebpf:"grpc_events"`
+	HeadersBuffMap       *ebpf.Map `ebpf:"headers_buff_map"`
+	StreamidToGrpcEvents *ebpf.Map `ebpf:"streamid_to_grpc_events"`
+	TrackedSpans         *ebpf.Map `ebpf:"tracked_spans"`
+	TrackedSpansBySc     *ebpf.Map `ebpf:"tracked_spans_by_sc"`
 }
 
 func (m *bpfMaps) Close() error {
@@ -122,6 +124,7 @@ func (m *bpfMaps) Close() error {
 		m.Events,
 		m.GrpcEvents,
 		m.HeadersBuffMap,
+		m.StreamidToGrpcEvents,
 		m.TrackedSpans,
 		m.TrackedSpansBySc,
 	)
@@ -131,18 +134,18 @@ func (m *bpfMaps) Close() error {
 //
 // It can be passed to loadBpfObjects or ebpf.CollectionSpec.LoadAndAssign.
 type bpfPrograms struct {
-	UprobeClientConnInvoke              *ebpf.Program `ebpf:"uprobe_ClientConn_Invoke"`
-	UprobeClientConnInvokeReturns       *ebpf.Program `ebpf:"uprobe_ClientConn_Invoke_Returns"`
-	UprobeHttp2ClientCreateHeaderFields *ebpf.Program `ebpf:"uprobe_Http2Client_CreateHeaderFields"`
-	UprobeLoopyWriterWriterHeader       *ebpf.Program `ebpf:"uprobe_LoopyWriter_WriterHeader"`
+	UprobeClientConnInvoke         *ebpf.Program `ebpf:"uprobe_ClientConn_Invoke"`
+	UprobeClientConnInvokeReturns  *ebpf.Program `ebpf:"uprobe_ClientConn_Invoke_Returns"`
+	UprobeLoopyWriterHeaderHandler *ebpf.Program `ebpf:"uprobe_LoopyWriter_HeaderHandler"`
+	UprobeHttp2ClientNewStream     *ebpf.Program `ebpf:"uprobe_http2Client_NewStream"`
 }
 
 func (p *bpfPrograms) Close() error {
 	return _BpfClose(
 		p.UprobeClientConnInvoke,
 		p.UprobeClientConnInvokeReturns,
-		p.UprobeHttp2ClientCreateHeaderFields,
-		p.UprobeLoopyWriterWriterHeader,
+		p.UprobeLoopyWriterHeaderHandler,
+		p.UprobeHttp2ClientNewStream,
 	)
 }
 

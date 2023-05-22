@@ -52,9 +52,9 @@ struct
 {
     __uint(type, BPF_MAP_TYPE_HASH);
     __type(key, u32);
-    __type(value, struct grpc_request_t);
+    __type(value, struct span_context);
     __uint(max_entries, MAX_CONCURRENT);
-} streamid_to_grpc_events SEC(".maps");
+} streamid_to_span_contexts SEC(".maps");
 
 struct headers_buff
 {
@@ -76,9 +76,9 @@ struct
 
 // Injected in init
 volatile const u64 clientconn_target_ptr_pos;
-volatile const u64 csattempt_ctx_pos;
-volatile const u64 csattempt_stream_pos;
-volatile const u64 stream_id_pos;
+volatile const u64 httpclient_nextid_pos;
+volatile const u64 headerFrame_streamid_pos;
+volatile const u64 headerFrame_hf_pos;
 
 // This instrumentation attaches uprobe to the following function:
 // func (cc *ClientConn) Invoke(ctx context.Context, method string, args, reply interface{}, opts ...CallOption) error
@@ -114,9 +114,7 @@ int uprobe_ClientConn_Invoke(struct pt_regs *ctx)
     // Get parent if exists
     void *context_ptr = get_argument(ctx, context_pos);
     void *context_ptr_val = 0;
-    bpf_printk("context_ptr: %lx", context_ptr);
     bpf_probe_read(&context_ptr_val, sizeof(context_ptr_val), context_ptr);
-    bpf_printk("context_ptr_val: %lx", context_ptr_val);
     struct span_context *parent_span_ctx = get_parent_span_context(context_ptr_val);
     if (parent_span_ctx != NULL)
     {
@@ -134,6 +132,7 @@ int uprobe_ClientConn_Invoke(struct pt_regs *ctx)
 
     // Write event
     bpf_map_update_elem(&grpc_events, &key, &grpcReq, 0);
+    track_running_span(context_ptr_val, &grpcReq.sc);
     return 0;
 }
 
@@ -150,78 +149,36 @@ int uprobe_ClientConn_Invoke_Returns(struct pt_regs *ctx)
     grpcReq.end_time = bpf_ktime_get_ns();
     bpf_perf_event_output(ctx, &events, BPF_F_CURRENT_CPU, &grpcReq, sizeof(grpcReq));
     bpf_map_delete_elem(&grpc_events, &key);
+    stop_tracking_span(&grpcReq.sc);
     return 0;
 }
 
-// func (l *loopyWriter) writeHeader(streamID uint32, endStream bool, hf []hpack.HeaderField, onWrite func()) error {
-SEC("uprobe/loopyWriter_writeHeader")
-int uprobe_LoopyWriter_WriterHeader(struct pt_regs *ctx) {
-    // TODO(edenfed): loopywriter runs on a different goroutine, so we need to find a way to get the grpcReq
-    // We have access to streamID, so we need to have a map to it in previous probes
-    // We can replace other probes with:google.golang.org/grpc.(*csAttempt).sendMsg
-    bpf_printk("uprobe_LoopyWriter_WriterHeader");
-    // Get grpc request struct
-    u32 stream_id = get_argument(ctx, 2);
-    bpf_printk("stream id at loopyWriter_writeHeader: %d", stream_id);
-    void *grpcReq_ptr = bpf_map_lookup_elem(&streamid_to_grpc_events, &stream_id);
-    struct grpc_request_t grpcReq = {};
-    bpf_probe_read(&grpcReq, sizeof(grpcReq), grpcReq_ptr);
-    bpf_printk("grpcReq.method at loopyWriter_writeHeader: %s", grpcReq.method);
-    bpf_map_delete_elem(&streamid_to_grpc_events, &stream_id);
-}
-
-SEC("uprobe/csAttempt_sendMsg")
-// func (a *csAttempt) sendMsg(m interface{}, hdr, payld, data []byte) error
-int uprobe_CsAttempt_SendMsg(struct pt_regs *ctx) {
-    bpf_printk("uprobe_CsAttempt_SendMsg");
-    s32 csAttempt_pos = 1;
-    void *csAttempt_ptr = get_argument(ctx, csAttempt_pos);
-    void *context_ptr = 0;
-    bpf_probe_read(&context_ptr, sizeof(context_ptr), (void *)(csAttempt_ptr + (csattempt_ctx_pos)));
-    bpf_printk("context_ptr: %lx", context_ptr);
-
-    void *stream_ptr = 0;
-    bpf_probe_read(&stream_ptr, sizeof(stream_ptr), (void *)(csAttempt_ptr + (csattempt_stream_pos)));
-    u32 stream_id = 0;
-    bpf_probe_read(&stream_id, sizeof(stream_id), (void *)(stream_ptr + stream_id_pos));
-    bpf_printk("stream_id: %d", stream_id);
-}
-
-// func (t *http2Client) createHeaderFields(ctx context.Context, callHdr *CallHdr) ([]hpack.HeaderField, error)
-SEC("uprobe/Http2Client_createHeaderFields")
-int uprobe_Http2Client_CreateHeaderFields(struct pt_regs *ctx)
+// func (l *loopyWriter) headerHandler(h *headerFrame) error
+SEC("uprobe/loopyWriter_headerHandler")
+int uprobe_LoopyWriter_HeaderHandler(struct pt_regs *ctx)
 {
-    // TODO: Delete this probe, do the writing in loopyWriter_writeHeader
-    // Read slice
-    s32 context_pointer_pos = 3;
+    void *headerFrame_ptr = get_argument(ctx, 2);
+    u32 stream_id = 0;
+    bpf_probe_read(&stream_id, sizeof(stream_id), (void *)(headerFrame_ptr + (headerFrame_streamid_pos)));
+    void *sc_ptr = bpf_map_lookup_elem(&streamid_to_span_contexts, &stream_id);
+    if (sc_ptr == NULL)
+    {
+        return 0;
+    }
+
+    bpf_map_delete_elem(&streamid_to_span_contexts, &stream_id);
     struct go_slice slice = {};
     struct go_slice_user_ptr slice_user_ptr = {};
-    void *context_ptr = get_argument(ctx, context_pointer_pos);
-    void *key = get_consistent_key(ctx, context_ptr);
-    if (is_registers_abi)
-    {
-        slice.array = (void *)GO_PARAM1(ctx);
-        slice.len = (s32)GO_PARAM2(ctx);
-        slice.cap = (s32)GO_PARAM3(ctx);
-        slice_user_ptr.array = (void *)GO_PARAM1(ctx);
-        bpf_printk("slice_user_ptr.array: %lx", slice_user_ptr.array);
-        slice_user_ptr.len = (void *)&GO_PARAM2(ctx);
-        slice_user_ptr.cap = (void *)&GO_PARAM3(ctx);
-    }
-    else
-    {
-        u64 slice_pointer_pos = 5;
-        s32 slice_len_pos = 6;
-        s32 slice_cap_pos = 7;
-        slice.array = get_argument(ctx, slice_pointer_pos);
-        slice.len = (long)get_argument(ctx, slice_len_pos);
-        slice.cap = (long)get_argument(ctx, slice_cap_pos);
-        slice_user_ptr.array = (void *)(PT_REGS_SP(ctx) + (slice_pointer_pos * 8));
-        slice_user_ptr.len = (void *)(PT_REGS_SP(ctx) + (slice_len_pos * 8));
-        slice_user_ptr.cap = (void *)(PT_REGS_SP(ctx) + (slice_cap_pos * 8));
-        bpf_printk("key %lx", key);
-        key = get_parent_go_context(key, &grpc_events);
-    }
+    slice_user_ptr.array = (void *)(headerFrame_ptr + (headerFrame_hf_pos));
+    slice_user_ptr.len = (void *)(headerFrame_ptr + (headerFrame_hf_pos + 8));
+    slice_user_ptr.cap = (void *)(headerFrame_ptr + (headerFrame_hf_pos + 16));
+    bpf_probe_read(&slice.array, sizeof(slice.array), slice_user_ptr.array);
+    bpf_probe_read(&slice.len, sizeof(slice.len), slice_user_ptr.len);
+    bpf_probe_read(&slice.cap, sizeof(slice.cap), slice_user_ptr.cap);
+
+    struct span_context current_span_context = {};
+    bpf_probe_read(&current_span_context, sizeof(current_span_context), sc_ptr);
+
     char tp_key[11] = "traceparent";
     struct go_string key_str = write_user_go_string(tp_key, sizeof(tp_key));
     if (key_str.len == 0) {
@@ -229,21 +186,33 @@ int uprobe_Http2Client_CreateHeaderFields(struct pt_regs *ctx)
         return 0;
     }
 
-    // Get grpc request struct
-    void *grpcReq_ptr = bpf_map_lookup_elem(&grpc_events, &key);
-    struct grpc_request_t grpcReq = {};
-    bpf_probe_read(&grpcReq, sizeof(grpcReq), grpcReq_ptr);
-
     // Write headers
     char val[SPAN_CONTEXT_STRING_SIZE];
-    span_context_to_w3c_string(&grpcReq.sc, val);
+    span_context_to_w3c_string(&current_span_context, val);
     struct go_string val_str = write_user_go_string(val, sizeof(val));
-    bpf_printk("writing string %s to address %lx", val, val_str.str);
     struct hpack_header_field hf = {};
     hf.name = key_str;
     hf.value = val_str;
     append_item_to_slice(&slice, &hf, sizeof(hf), &slice_user_ptr, &headers_buff_map);
-    bpf_map_update_elem(&grpc_events, &key, &grpcReq, 0);
+    return 0;
+}
+
+SEC("uprobe/http2Client_NewStream")
+// func (t *http2Client) NewStream(ctx context.Context, callHdr *CallHdr) (*Stream, error)
+int uprobe_http2Client_NewStream(struct pt_regs *ctx)
+{
+    void *context_ptr = get_argument(ctx, 3);
+    void *context_ptr_val = 0;
+    bpf_probe_read(&context_ptr_val, sizeof(context_ptr_val), context_ptr);
+
+    void *httpclient_ptr = get_argument(ctx, 1);
+    u32 nextid = 0;
+    bpf_probe_read(&nextid, sizeof(nextid), (void *)(httpclient_ptr + (httpclient_nextid_pos)));
+
+    struct span_context *current_span_context = get_parent_span_context(context_ptr_val);
+    if (current_span_context != NULL) {
+        bpf_map_update_elem(&streamid_to_span_contexts, &nextid, current_span_context, 0);
+    }
 
     return 0;
 }
