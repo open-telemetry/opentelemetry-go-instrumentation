@@ -136,9 +136,9 @@ fixtures/%:
 	kubectl wait --for=condition=Ready --timeout=60s pod/test-opentelemetry-collector-0
 	kubectl -n default create -f .github/workflows/e2e/k8s/sample-job.yml
 	kubectl wait --for=condition=Complete --timeout=60s job/sample-job
-	kubectl cp -c filecp default/test-opentelemetry-collector-0:tmp/trace.json ./test/e2e/$(LIBRARY)/traces.json.tmp
-	jq 'del(.resourceSpans[].scopeSpans[].spans[].endTimeUnixNano, .resourceSpans[].scopeSpans[].spans[].startTimeUnixNano) | .resourceSpans[].scopeSpans[].spans[].spanId|= (if . != "" then "xxxxx" else . end) | .resourceSpans[].scopeSpans[].spans[].traceId|= (if . != "" then "xxxxx" else . end) | .resourceSpans[].scopeSpans|=sort_by(.scope.name)' ./test/e2e/$(LIBRARY)/traces.json.tmp | jq --sort-keys . > ./test/e2e/$(LIBRARY)/traces.json
-	rm ./test/e2e/$(LIBRARY)/traces.json.tmp
+	kubectl cp -c filecp default/test-opentelemetry-collector-0:tmp/trace.json ./test/e2e/$(LIBRARY)/traces-orig.json
+	rm -f ./test/e2e/$(LIBRARY)/traces.json
+	bats ./test/e2e/$(LIBRARY)/verify.bats
 	kind delete cluster
 
 .PHONY: prerelease

@@ -18,7 +18,6 @@ import (
 	"bytes"
 	"encoding/binary"
 	"errors"
-	"fmt"
 	"os"
 
 	"go.opentelemetry.io/auto/pkg/instrumentors/bpffs"
@@ -34,11 +33,13 @@ import (
 	"go.opentelemetry.io/auto/pkg/instrumentors/utils"
 	"go.opentelemetry.io/auto/pkg/log"
 	"go.opentelemetry.io/otel/attribute"
-	semconv "go.opentelemetry.io/otel/semconv/v1.7.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.18.0"
 	"go.opentelemetry.io/otel/trace"
 )
 
 //go:generate go run github.com/cilium/ebpf/cmd/bpf2go -target amd64,arm64 -cc clang -cflags $CFLAGS bpf ./bpf/probe.bpf.c
+
+const instrumentedPkg = "github.com/gorilla/mux"
 
 // Event represents an event in the gorilla/mux server during an HTTP
 // request-response.
@@ -65,7 +66,7 @@ func New() *Instrumentor {
 
 // LibraryName returns the gorilla/mux package import path.
 func (g *Instrumentor) LibraryName() string {
-	return "github.com/gorilla/mux"
+	return instrumentedPkg
 }
 
 // FuncNames returns the function names from "github.com/gorilla/mux" that are
@@ -191,7 +192,6 @@ func (g *Instrumentor) Run(eventsChan chan<- *events.Event) {
 func (g *Instrumentor) convertEvent(e *Event) *events.Event {
 	method := unix.ByteSliceToString(e.Method[:])
 	path := unix.ByteSliceToString(e.Path[:])
-	name := fmt.Sprintf("%s %s", method, path)
 
 	sc := trace.NewSpanContext(trace.SpanContextConfig{
 		TraceID:    e.SpanContext.TraceID,
@@ -200,8 +200,10 @@ func (g *Instrumentor) convertEvent(e *Event) *events.Event {
 	})
 
 	return &events.Event{
-		Library:     g.LibraryName(),
-		Name:        name,
+		Library: g.LibraryName(),
+		// Do not include the high-cardinality path here (there is no
+		// templatized path manifest to reference).
+		Name:        method,
 		Kind:        trace.SpanKindServer,
 		StartTime:   int64(e.StartTime),
 		EndTime:     int64(e.EndTime),
