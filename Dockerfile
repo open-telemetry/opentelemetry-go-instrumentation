@@ -7,6 +7,6 @@ WORKDIR /app
 COPY . .
 RUN make build
 
-FROM registry.fedoraproject.org/fedora-minimal:38
+FROM cgr.dev/chainguard/glibc-dynamic:latest
 COPY --from=builder /app/otel-go-instrumentation /
 CMD ["/otel-go-instrumentation"]
