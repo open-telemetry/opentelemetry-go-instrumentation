@@ -4,7 +4,7 @@
       "StreamID": {
         "versions": {
           "oldest": "1.3.0",
-          "newest": "1.56.0-dev"
+          "newest": "1.57.0-dev"
         },
         "offsets": [
           {
@@ -18,7 +18,7 @@
       "Fields": {
         "versions": {
           "oldest": "1.3.0",
-          "newest": "1.56.0-dev"
+          "newest": "1.57.0-dev"
         },
         "offsets": [
           {
@@ -32,7 +32,7 @@
       "target": {
         "versions": {
           "oldest": "1.3.0",
-          "newest": "1.56.0-dev"
+          "newest": "1.57.0-dev"
         },
         "offsets": [
           {
@@ -46,7 +46,7 @@
       "ctx": {
         "versions": {
           "oldest": "1.3.0",
-          "newest": "1.56.0-dev"
+          "newest": "1.57.0-dev"
         },
         "offsets": [
           {
@@ -66,7 +66,7 @@
       "id": {
         "versions": {
           "oldest": "1.3.0",
-          "newest": "1.56.0-dev"
+          "newest": "1.57.0-dev"
         },
         "offsets": [
           {
@@ -78,7 +78,7 @@
       "method": {
         "versions": {
           "oldest": "1.3.0",
-          "newest": "1.56.0-dev"
+          "newest": "1.57.0-dev"
         },
         "offsets": [
           {
