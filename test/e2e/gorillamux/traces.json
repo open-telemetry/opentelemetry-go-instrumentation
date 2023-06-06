@@ -75,7 +75,7 @@
               ],
               "kind": 2,
               "name": "GET",
-              "parentSpanId": "",
+              "parentSpanId": "xxxxx",
               "spanId": "xxxxx",
               "status": {},
               "traceId": "xxxxx"
