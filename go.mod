@@ -5,7 +5,7 @@ go 1.18
 require (
 	github.com/cilium/ebpf v0.10.0
 	github.com/go-logr/logr v1.2.4
-	github.com/go-logr/zapr v1.2.3
+	github.com/go-logr/zapr v1.2.4
 	github.com/hashicorp/go-version v1.6.0
 	github.com/pkg/errors v0.9.1
 	github.com/stretchr/testify v1.8.2

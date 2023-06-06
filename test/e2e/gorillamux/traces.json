@@ -12,7 +12,7 @@
           {
             "key": "telemetry.auto.version",
             "value": {
-              "stringValue": "v0.2.0-alpha"
+              "stringValue": "v0.2.1-alpha"
             }
           },
           {
@@ -26,7 +26,7 @@
       "scopeSpans": [
         {
           "scope": {
-            "name": "net/http"
+            "name": "github.com/gorilla/mux"
           },
           "spans": [
             {
@@ -55,7 +55,7 @@
         },
         {
           "scope": {
-            "name": "net/http/client"
+            "name": "net/http"
           },
           "spans": [
             {
@@ -73,8 +73,8 @@
                   }
                 }
               ],
-              "kind": 3,
-              "name": "/users/foo",
+              "kind": 2,
+              "name": "GET /users/foo",
               "parentSpanId": "",
               "spanId": "xxxxx",
               "status": {},
