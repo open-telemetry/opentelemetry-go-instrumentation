@@ -141,15 +141,13 @@ Any [Maintainer] can merge the PR once the above criteria have been met.
 
 - [Dinesh Gurumurthy](https://github.com/dineshg13), DataDog
 - [Mike Dame](https://github.com/damemi), Google
-- [Mike Goldsmith](https://github.com/MikeGoldsmith), Honeycomb
 - [Robert Pająk](https://github.com/pellared), Splunk
+- [Aaron Clawson](https://github.com/MadVikingGod), LightStep
 
 ### Maintainers
 
-- [Aaron Clawson](https://github.com/MadVikingGod), LightStep
-- [Anthony Mirabella](https://github.com/Aneurysm9), AWS
+- [Mike Goldsmith](https://github.com/MikeGoldsmith), Honeycomb
 - [Eden Federman](https://github.com/edeNFed), KeyVal
-- [Joshua MacDonald](https://github.com/jmacd), LightStep
 - [Przemyslaw Delewski](https://github.com/pdelewski), SumoLogic
 - [Tyler Yahn](https://github.com/MrAlias), Splunk
 
