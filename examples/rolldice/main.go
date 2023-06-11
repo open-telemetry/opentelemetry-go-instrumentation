@@ -23,17 +23,32 @@ import (
 	"go.uber.org/zap"
 )
 
-func init() {
-	rand.Seed(time.Now().Unix())
+// Server is Http server that exposes multiple endpoints.
+type Server struct {
+	rand *rand.Rand
 }
 
-func rolldice(w http.ResponseWriter, _ *http.Request) {
-	n := rand.Intn(6)
+// NewServer creates a server struct after initialing rand.
+func NewServer() *Server {
+	rd := rand.New(rand.NewSource(time.Now().Unix()))
+	return &Server{
+		rand: rd,
+	}
+}
+
+func (s *Server) rolldice(w http.ResponseWriter, _ *http.Request) {
+	n := s.rand.Intn(6)
 	logger.Info("rolldice called", zap.Int("dice", n))
 	fmt.Fprintf(w, "%v", n)
 }
 
 var logger *zap.Logger
+
+func setupHandler(s *Server) *http.ServeMux {
+	mux := http.NewServeMux()
+	mux.HandleFunc("/rolldice", s.rolldice)
+	return mux
+}
 
 func main() {
 	var err error
@@ -45,8 +60,9 @@ func main() {
 	port := fmt.Sprintf(":%d", 8080)
 	logger.Info("starting http server", zap.String("port", port))
 
-	http.HandleFunc("/rolldice", rolldice)
-	if err := http.ListenAndServe(port, nil); err != nil {
+	s := NewServer()
+	mux := setupHandler(s)
+	if err := http.ListenAndServe(port, mux); err != nil {
 		logger.Error("error running server", zap.Error(err))
 	}
 }
