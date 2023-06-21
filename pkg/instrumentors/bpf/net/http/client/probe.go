@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package server
+package client
 
 import (
 	"bytes"
@@ -30,23 +30,20 @@ import (
 	"go.opentelemetry.io/auto/pkg/inject"
 	"go.opentelemetry.io/auto/pkg/instrumentors/context"
 	"go.opentelemetry.io/auto/pkg/instrumentors/events"
-	"go.opentelemetry.io/auto/pkg/instrumentors/utils"
 	"go.opentelemetry.io/auto/pkg/log"
 	"go.opentelemetry.io/otel/attribute"
-	semconv "go.opentelemetry.io/otel/semconv/v1.18.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.7.0"
 	"go.opentelemetry.io/otel/trace"
 )
 
 //go:generate go run github.com/cilium/ebpf/cmd/bpf2go -target amd64,arm64 -cc clang -cflags $CFLAGS bpf ./bpf/probe.bpf.c
-
-const instrumentedPkg = "net/http"
 
 // Event represents an event in an HTTP server during an HTTP
 // request-response.
 type Event struct {
 	StartTime         uint64
 	EndTime           uint64
-	Method            [7]byte
+	Method            [10]byte
 	Path              [100]byte
 	SpanContext       context.EBPFSpanContext
 	ParentSpanContext context.EBPFSpanContext
@@ -67,12 +64,12 @@ func New() *Instrumentor {
 
 // LibraryName returns the net/http package name.
 func (h *Instrumentor) LibraryName() string {
-	return instrumentedPkg
+	return "net/http/client"
 }
 
 // FuncNames returns the function names from "net/http" that are instrumented.
 func (h *Instrumentor) FuncNames() []string {
-	return []string{"net/http.HandlerFunc.ServeHTTP"}
+	return []string{"net/http.(*Client).do"}
 }
 
 // Load loads all instrumentation offsets.
@@ -89,43 +86,67 @@ func (h *Instrumentor) Load(ctx *context.InstrumentorContext) error {
 			Field:      "URL",
 		},
 		{
-			VarName:    "ctx_ptr_pos",
-			StructName: "net/http.Request",
-			Field:      "ctx",
-		},
-		{
 			VarName:    "path_ptr_pos",
 			StructName: "net/url.URL",
 			Field:      "Path",
-		},
-		{
-			VarName:    "ctx_ptr_pos",
-			StructName: "net/http.Request",
-			Field:      "ctx",
 		},
 		{
 			VarName:    "headers_ptr_pos",
 			StructName: "net/http.Request",
 			Field:      "Header",
 		},
-	}, false)
+		{
+			VarName:    "ctx_ptr_pos",
+			StructName: "net/http.Request",
+			Field:      "ctx",
+		},
+	}, true)
 
 	if err != nil {
 		return err
 	}
 
 	h.bpfObjects = &bpfObjects{}
-	err = utils.LoadEBPFObjects(spec, h.bpfObjects, &ebpf.CollectionOptions{
+	err = spec.LoadAndAssign(h.bpfObjects, &ebpf.CollectionOptions{
 		Maps: ebpf.MapOptions{
 			PinPath: bpffs.BPFFsPath,
 		},
 	})
+
 	if err != nil {
 		return err
 	}
 
-	for _, funcName := range h.FuncNames() {
-		h.registerProbes(ctx, funcName)
+	offset, err := ctx.TargetDetails.GetFunctionOffset(h.FuncNames()[0])
+
+	if err != nil {
+		return err
+	}
+
+	up, err := ctx.Executable.Uprobe("", h.bpfObjects.UprobeHttpClientDo, &link.UprobeOptions{
+		Address: offset,
+	})
+
+	if err != nil {
+		return err
+	}
+
+	h.uprobes = append(h.uprobes, up)
+
+	retOffsets, err := ctx.TargetDetails.GetFunctionReturns(h.FuncNames()[0])
+
+	if err != nil {
+		return err
+	}
+
+	for _, ret := range retOffsets {
+		retProbe, err := ctx.Executable.Uprobe("", h.bpfObjects.UprobeHttpClientDoReturns, &link.UprobeOptions{
+			Address: ret,
+		})
+		if err != nil {
+			return err
+		}
+		h.returnProbs = append(h.returnProbs, retProbe)
 	}
 
 	rd, err := perf.NewReader(h.bpfObjects.Events, os.Getpagesize())
@@ -137,45 +158,9 @@ func (h *Instrumentor) Load(ctx *context.InstrumentorContext) error {
 	return nil
 }
 
-func (h *Instrumentor) registerProbes(ctx *context.InstrumentorContext, funcName string) {
-	logger := log.Logger.WithName("net/http-instrumentor").WithValues("function", funcName)
-	offset, err := ctx.TargetDetails.GetFunctionOffset(funcName)
-	if err != nil {
-		logger.Error(err, "could not find function start offset. Skipping")
-		return
-	}
-	retOffsets, err := ctx.TargetDetails.GetFunctionReturns(funcName)
-	if err != nil {
-		logger.Error(err, "could not find function end offsets. Skipping")
-		return
-	}
-
-	up, err := ctx.Executable.Uprobe("", h.bpfObjects.UprobeServerMuxServeHTTP, &link.UprobeOptions{
-		Address: offset,
-	})
-	if err != nil {
-		logger.V(1).Info("could not insert start uprobe. Skipping",
-			"error", err.Error())
-		return
-	}
-
-	h.uprobes = append(h.uprobes, up)
-
-	for _, ret := range retOffsets {
-		retProbe, err := ctx.Executable.Uprobe("", h.bpfObjects.UprobeServerMuxServeHTTP_Returns, &link.UprobeOptions{
-			Address: ret,
-		})
-		if err != nil {
-			logger.Error(err, "could not insert return uprobe. Skipping")
-			return
-		}
-		h.returnProbs = append(h.returnProbs, retProbe)
-	}
-}
-
 // Run runs the events processing loop.
 func (h *Instrumentor) Run(eventsChan chan<- *events.Event) {
-	logger := log.Logger.WithName("net/http-instrumentor")
+	logger := log.Logger.WithName("net/http/client-instrumentor")
 	var event Event
 	for {
 		record, err := h.eventsReader.Read()
@@ -225,25 +210,23 @@ func (h *Instrumentor) convertEvent(e *Event) *events.Event {
 	}
 
 	return &events.Event{
-		Library: h.LibraryName(),
-		// Do not include the high-cardinality path here (there is no
-		// templatized path manifest to reference).
-		Name:              method,
-		Kind:              trace.SpanKindServer,
-		StartTime:         int64(e.StartTime),
-		EndTime:           int64(e.EndTime),
-		SpanContext:       &sc,
-		ParentSpanContext: pscPtr,
+		Library:     h.LibraryName(),
+		Name:        path,
+		Kind:        trace.SpanKindClient,
+		StartTime:   int64(e.StartTime),
+		EndTime:     int64(e.EndTime),
+		SpanContext: &sc,
 		Attributes: []attribute.KeyValue{
 			semconv.HTTPMethodKey.String(method),
 			semconv.HTTPTargetKey.String(path),
 		},
+		ParentSpanContext: pscPtr,
 	}
 }
 
 // Close stops the Instrumentor.
 func (h *Instrumentor) Close() {
-	log.Logger.V(0).Info("closing net/http instrumentor")
+	log.Logger.V(0).Info("closing net/http/client instrumentor")
 	if h.eventsReader != nil {
 		h.eventsReader.Close()
 	}

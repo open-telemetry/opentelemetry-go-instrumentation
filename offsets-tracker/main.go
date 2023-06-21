@@ -67,6 +67,10 @@ func main() {
 			},
 			{
 				StructName: "net/http.Request",
+				Field:      "Header",
+			},
+			{
+				StructName: "net/http.Request",
 				Field:      "ctx",
 			},
 			{

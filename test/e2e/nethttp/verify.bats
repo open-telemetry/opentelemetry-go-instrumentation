@@ -34,6 +34,11 @@ LIBRARY_NAME="net/http"
   assert_regex "$span_id" ${MATCH_A_SPAN_ID}
 }
 
+@test "${LIBRARY_NAME} :: parent span ID present and valid in all spans" {
+  parent_span_id=$(spans_from_scope_named ${LIBRARY_NAME} | jq ".parentSpanId")
+  assert_regex "$parent_span_id" ${MATCH_A_SPAN_ID}
+}
+
 @test "${LIBRARY_NAME} :: expected (redacted) trace output" {
   redact_json
   assert_equal "$(git --no-pager diff ${BATS_TEST_DIRNAME}/traces.json)" ""
