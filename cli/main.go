@@ -22,10 +22,13 @@ import (
 
 	"go.opentelemetry.io/auto/pkg/errors"
 	"go.opentelemetry.io/auto/pkg/instrumentors"
+	"go.opentelemetry.io/auto/pkg/instrumentors/events"
 	"go.opentelemetry.io/auto/pkg/log"
 	"go.opentelemetry.io/auto/pkg/opentelemetry"
 	"go.opentelemetry.io/auto/pkg/process"
 )
+
+const eventsBufferSize = 1000
 
 func main() {
 	err := log.Init()
@@ -48,7 +51,8 @@ func main() {
 		return
 	}
 
-	instManager, err := instrumentors.NewManager(otelController)
+	ch := make(chan *events.Event, eventsBufferSize)
+	instManager, err := instrumentors.NewManager(ch)
 	if err != nil {
 		log.Logger.Error(err, "error creating instrumetors manager")
 		return
@@ -59,6 +63,7 @@ func main() {
 	go func() {
 		<-stopper
 		log.Logger.V(0).Info("Got SIGTERM, cleaning up..")
+		close(ch)
 		processAnalyzer.Close()
 		instManager.Close()
 	}()
@@ -80,11 +85,17 @@ func main() {
 		"go_version", targetDetails.GoVersion, "dependencies", targetDetails.Libraries,
 		"total_functions_found", len(targetDetails.Functions))
 
-	instManager.FilterUnusedInstrumentors(targetDetails)
-
 	log.Logger.V(0).Info("invoking instrumentors")
+
+	go func() {
+		for e := range ch {
+			otelController.Trace(e)
+		}
+	}()
+
 	err = instManager.Run(targetDetails)
 	if err != nil && err != errors.ErrInterrupted {
 		log.Logger.Error(err, "error while running instrumentors")
 	}
+
 }

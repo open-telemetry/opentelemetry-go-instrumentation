@@ -22,11 +22,9 @@ import (
 	gorillaMux "go.opentelemetry.io/auto/pkg/instrumentors/bpf/github.com/gorilla/mux"
 	"go.opentelemetry.io/auto/pkg/instrumentors/bpf/google/golang/org/grpc"
 	grpcServer "go.opentelemetry.io/auto/pkg/instrumentors/bpf/google/golang/org/grpc/server"
-	httpClient "go.opentelemetry.io/auto/pkg/instrumentors/bpf/net/http/client"
 	httpServer "go.opentelemetry.io/auto/pkg/instrumentors/bpf/net/http/server"
 	"go.opentelemetry.io/auto/pkg/instrumentors/events"
 	"go.opentelemetry.io/auto/pkg/log"
-	"go.opentelemetry.io/auto/pkg/opentelemetry"
 	"go.opentelemetry.io/auto/pkg/process"
 )
 
@@ -40,17 +38,15 @@ type Manager struct {
 	instrumentors  map[string]Instrumentor
 	done           chan bool
 	incomingEvents chan *events.Event
-	otelController *opentelemetry.Controller
 	allocator      *allocator.Allocator
 }
 
 // NewManager returns a new [Manager].
-func NewManager(otelController *opentelemetry.Controller) (*Manager, error) {
+func NewManager(ch chan *events.Event) (*Manager, error) {
 	m := &Manager{
 		instrumentors:  make(map[string]Instrumentor),
 		done:           make(chan bool, 1),
-		incomingEvents: make(chan *events.Event),
-		otelController: otelController,
+		incomingEvents: ch,
 		allocator:      allocator.New(),
 	}
 
@@ -84,9 +80,9 @@ func (m *Manager) GetRelevantFuncs() map[string]interface{} {
 	return funcsMap
 }
 
-// FilterUnusedInstrumentors filterers Instrumentors whose functions are
+// filterUnusedInstrumentors filterers Instrumentors whose functions are
 // already instrumented out of the Manager.
-func (m *Manager) FilterUnusedInstrumentors(target *process.TargetDetails) {
+func (m *Manager) filterUnusedInstrumentors(target *process.TargetDetails) {
 	existingFuncMap := make(map[string]interface{})
 	for _, f := range target.Functions {
 		existingFuncMap[f.Name] = nil
@@ -114,7 +110,6 @@ func registerInstrumentors(m *Manager) error {
 		grpc.New(),
 		grpcServer.New(),
 		httpServer.New(),
-		httpClient.New(),
 		gorillaMux.New(),
 		gin.New(),
 	}

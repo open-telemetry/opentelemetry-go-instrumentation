@@ -28,30 +28,28 @@ import (
 
 // Run runs the event processing loop for all managed Instrumentors.
 func (m *Manager) Run(target *process.TargetDetails) error {
+
+	m.filterUnusedInstrumentors(target)
+
 	if len(m.instrumentors) == 0 {
 		log.Logger.V(0).Info("there are no available instrumentations for target process")
 		return nil
 	}
+	log.Logger.V(0).Info("running instrumentors", "number", fmt.Sprintf("%d", len(m.instrumentors)))
 
 	err := m.load(target)
 	if err != nil {
 		return err
 	}
-
 	for _, i := range m.instrumentors {
 		go i.Run(m.incomingEvents)
 	}
 
-	for {
-		select {
-		case <-m.done:
-			log.Logger.V(0).Info("shutting down all instrumentors due to signal")
-			m.cleanup()
-			return nil
-		case e := <-m.incomingEvents:
-			m.otelController.Trace(e)
-		}
-	}
+	// wait for done
+	<-m.done
+	log.Logger.V(0).Info("shutting down all instrumentors due to signal")
+	m.cleanup()
+	return nil
 }
 
 func (m *Manager) load(target *process.TargetDetails) error {
@@ -96,7 +94,6 @@ func (m *Manager) load(target *process.TargetDetails) error {
 }
 
 func (m *Manager) cleanup() {
-	close(m.incomingEvents)
 	for _, i := range m.instrumentors {
 		i.Close()
 	}
