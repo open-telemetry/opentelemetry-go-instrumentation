@@ -144,9 +144,6 @@ func (a *Analyzer) Analyze(pid int, relevantFuncs map[string]interface{}) (*Targ
 		EndAddr:   addr + mapSize,
 	}
 
-	if err != nil {
-		return nil, err
-	}
 	symbols, err := elfF.Symbols()
 	if err != nil {
 		return nil, err

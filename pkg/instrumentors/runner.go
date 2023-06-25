@@ -28,16 +28,18 @@ import (
 
 // Run runs the event processing loop for all managed Instrumentors.
 func (m *Manager) Run(target *process.TargetDetails) error {
+	m.filterUnusedInstrumentors(target)
+
 	if len(m.instrumentors) == 0 {
 		log.Logger.V(0).Info("there are no available instrumentations for target process")
 		return nil
 	}
+	log.Logger.V(0).Info("running instrumentors", "number", fmt.Sprintf("%d", len(m.instrumentors)))
 
 	err := m.load(target)
 	if err != nil {
 		return err
 	}
-
 	for _, i := range m.instrumentors {
 		go i.Run(m.incomingEvents)
 	}
@@ -91,12 +93,12 @@ func (m *Manager) load(target *process.TargetDetails) error {
 		}
 	}
 
-	log.Logger.V(0).Info("loaded instrumentors to memory", "total_instrumentors", len(m.instrumentors))
+	log.Logger.V(0).
+		Info("loaded instrumentors to memory", "total_instrumentors", len(m.instrumentors))
 	return nil
 }
 
 func (m *Manager) cleanup() {
-	close(m.incomingEvents)
 	for _, i := range m.instrumentors {
 		i.Close()
 	}

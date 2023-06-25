@@ -15,16 +15,39 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/signal"
+	"runtime"
+	"strings"
 	"syscall"
 
-	"go.opentelemetry.io/auto/pkg/errors"
-	"go.opentelemetry.io/auto/pkg/instrumentors"
+	"google.golang.org/grpc"
+
+	"go.opentelemetry.io/otel/exporters/otlp/otlptrace"
+	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
+
+	"go.opentelemetry.io/auto"
 	"go.opentelemetry.io/auto/pkg/log"
-	"go.opentelemetry.io/auto/pkg/opentelemetry"
+	"go.opentelemetry.io/auto/pkg/orchestrator"
 	"go.opentelemetry.io/auto/pkg/process"
+)
+
+var (
+	// Controller-local reference to the auto-instrumentation release version.
+	releaseVersion = auto.Version()
+	// Start of this auto-instrumentation's exporter User-Agent header, e.g. ""OTel-Go-Auto-Instrumentation/1.2.3".
+	baseUserAgent = fmt.Sprintf("OTel-Go-Auto-Instrumentation/%s", releaseVersion)
+	// Information about the runtime environment for inclusion in User-Agent, e.g. "go/1.18.2 (linux/amd64)".
+	runtimeInfo = fmt.Sprintf(
+		"%s (%s/%s)",
+		strings.Replace(runtime.Version(), "go", "go/", 1),
+		runtime.GOOS,
+		runtime.GOARCH,
+	)
+	// Combined User-Agent identifying this auto-instrumentation and its runtime environment, see RFC7231 for format considerations.
+	autoinstUserAgent = fmt.Sprintf("%s %s", baseUserAgent, runtimeInfo)
 )
 
 func main() {
@@ -35,56 +58,49 @@ func main() {
 	}
 
 	log.Logger.V(0).Info("starting Go OpenTelemetry Agent ...")
-	target := process.ParseTargetArgs()
-	if err = target.Validate(); err != nil {
-		log.Logger.Error(err, "invalid target args")
-		return
-	}
-
-	processAnalyzer := process.NewAnalyzer()
-	otelController, err := opentelemetry.NewController()
+	ctx := contextWithSigterm(context.Background())
+	log.Logger.V(0).Info("Establishing connection to OTLP receiver ...")
+	otlpTraceClient := otlptracegrpc.NewClient(
+		otlptracegrpc.WithDialOption(grpc.WithUserAgent(autoinstUserAgent)),
+	)
+	traceExporter, err := otlptrace.New(ctx, otlpTraceClient)
 	if err != nil {
-		log.Logger.Error(err, "unable to create OpenTelemetry controller")
+		log.Logger.Error(err, "unable to connect to OTLP endpoint")
 		return
 	}
-
-	instManager, err := instrumentors.NewManager(otelController)
+	targetArgs := process.ParseTargetArgs()
+	if targetArgs != nil {
+		if err := targetArgs.Validate(); err != nil {
+			log.Logger.Error(err, "invalid target args")
+			return
+		}
+	}
+	r, err := orchestrator.New(ctx, targetArgs, traceExporter)
 	if err != nil {
-		log.Logger.Error(err, "error creating instrumetors manager")
-		return
+		log.Logger.V(0).Error(err, "creating orchestrator")
 	}
+	if err = r.Run(); err != nil {
+		log.Logger.Error(err, "running orchestrator")
+	}
+}
 
-	stopper := make(chan os.Signal, 1)
-	signal.Notify(stopper, os.Interrupt, syscall.SIGTERM)
+func contextWithSigterm(parent context.Context) context.Context {
+	ctx, cancel := context.WithCancel(parent)
+
+	ch := make(chan os.Signal, 1)
+	signal.Notify(ch, os.Interrupt, syscall.SIGTERM)
+
 	go func() {
-		<-stopper
-		log.Logger.V(0).Info("Got SIGTERM, cleaning up..")
-		processAnalyzer.Close()
-		instManager.Close()
+		defer close(ch)
+		defer signal.Stop(ch)
+
+		select {
+		case <-parent.Done(): // if parent is cancelled, return
+			return
+		case <-ch: // if SIGTERM is received, cancel this context
+			cancel()
+		}
 	}()
 
-	pid, err := processAnalyzer.DiscoverProcessID(target)
-	if err != nil {
-		if err != errors.ErrInterrupted {
-			log.Logger.Error(err, "error while discovering process id")
-		}
-		return
-	}
-
-	targetDetails, err := processAnalyzer.Analyze(pid, instManager.GetRelevantFuncs())
-	if err != nil {
-		log.Logger.Error(err, "error while analyzing target process")
-		return
-	}
-	log.Logger.V(0).Info("target process analysis completed", "pid", targetDetails.PID,
-		"go_version", targetDetails.GoVersion, "dependencies", targetDetails.Libraries,
-		"total_functions_found", len(targetDetails.Functions))
-
-	instManager.FilterUnusedInstrumentors(targetDetails)
-
-	log.Logger.V(0).Info("invoking instrumentors")
-	err = instManager.Run(targetDetails)
-	if err != nil && err != errors.ErrInterrupted {
-		log.Logger.Error(err, "error while running instrumentors")
-	}
+	return ctx
 }

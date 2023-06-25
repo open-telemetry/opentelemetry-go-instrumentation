@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package opentelemetry
+package main
 
 import (
 	"fmt"
@@ -24,5 +24,9 @@ import (
 )
 
 func TestUserAgent(t *testing.T) {
-	assert.Contains(t, autoinstUserAgent, fmt.Sprintf("OTel-Go-Auto-Instrumentation/%s", auto.Version()))
+	assert.Contains(
+		t,
+		autoinstUserAgent,
+		fmt.Sprintf("OTel-Go-Auto-Instrumentation/%s", auto.Version()),
+	)
 }

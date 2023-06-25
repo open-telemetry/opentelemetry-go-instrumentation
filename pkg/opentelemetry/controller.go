@@ -16,39 +16,19 @@ package opentelemetry
 
 import (
 	"context"
-	"fmt"
-	"os"
 	"runtime"
-	"strings"
 	"time"
 
 	"golang.org/x/sys/unix"
-	"google.golang.org/grpc"
 
-	"go.opentelemetry.io/auto"
-	"go.opentelemetry.io/auto/pkg/instrumentors/events"
-	"go.opentelemetry.io/auto/pkg/log"
-	"go.opentelemetry.io/otel/exporters/otlp/otlptrace"
-	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.18.0"
 	"go.opentelemetry.io/otel/trace"
-)
 
-const (
-	otelServiceNameEnvVar = "OTEL_SERVICE_NAME"
-)
-
-var (
-	// Controller-local reference to the auto-instrumentation release version.
-	releaseVersion = auto.Version()
-	// Start of this auto-instrumentation's exporter User-Agent header, e.g. ""OTel-Go-Auto-Instrumentation/1.2.3".
-	baseUserAgent = fmt.Sprintf("OTel-Go-Auto-Instrumentation/%s", releaseVersion)
-	// Information about the runtime environment for inclusion in User-Agent, e.g. "go/1.18.2 (linux/amd64)".
-	runtimeInfo = fmt.Sprintf("%s (%s/%s)", strings.Replace(runtime.Version(), "go", "go/", 1), runtime.GOOS, runtime.GOARCH)
-	// Combined User-Agent identifying this auto-instrumentation and its runtime environment, see RFC7231 for format considerations.
-	autoinstUserAgent = fmt.Sprintf("%s %s", baseUserAgent, runtimeInfo)
+	"go.opentelemetry.io/auto"
+	"go.opentelemetry.io/auto/pkg/instrumentors/events"
+	"go.opentelemetry.io/auto/pkg/log"
 )
 
 // Controller handles OpenTelemetry telemetry generation for events.
@@ -76,7 +56,6 @@ func (c *Controller) Trace(event *events.Event) {
 
 	if event.SpanContext == nil {
 		log.Logger.V(0).Info("got event without context - dropping")
-		return
 	}
 
 	// TODO: handle remote parent
@@ -98,35 +77,23 @@ func (c *Controller) convertTime(t int64) time.Time {
 }
 
 // NewController returns a new initialized [Controller].
-func NewController() (*Controller, error) {
-	serviceName, exists := os.LookupEnv(otelServiceNameEnvVar)
-	if !exists {
-		return nil, fmt.Errorf("%s env var must be set", otelServiceNameEnvVar)
-	}
-
-	ctx := context.Background()
+func NewController(
+	ctx context.Context,
+	serviceName string,
+	exporter sdktrace.SpanExporter,
+) (*Controller, error) {
 	res, err := resource.New(ctx,
 		resource.WithAttributes(
 			semconv.ServiceNameKey.String(serviceName),
 			semconv.TelemetrySDKLanguageGo,
-			semconv.TelemetryAutoVersionKey.String(releaseVersion),
+			semconv.TelemetryAutoVersionKey.String(auto.Version()),
 		),
 	)
 	if err != nil {
 		return nil, err
 	}
 
-	log.Logger.V(0).Info("Establishing connection to OTLP receiver ...")
-	otlpTraceClient := otlptracegrpc.NewClient(
-		otlptracegrpc.WithDialOption(grpc.WithUserAgent(autoinstUserAgent)),
-	)
-	traceExporter, err := otlptrace.New(ctx, otlpTraceClient)
-	if err != nil {
-		log.Logger.Error(err, "unable to connect to OTLP endpoint")
-		return nil, err
-	}
-
-	bsp := sdktrace.NewBatchSpanProcessor(traceExporter)
+	bsp := sdktrace.NewBatchSpanProcessor(exporter)
 	tracerProvider := sdktrace.NewTracerProvider(
 		sdktrace.WithSampler(sdktrace.AlwaysSample()),
 		sdktrace.WithResource(res),
