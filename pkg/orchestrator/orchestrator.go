@@ -16,10 +16,7 @@ package orchestrator
 
 import (
 	"context"
-	"strings"
 	"time"
-
-	"github.com/google/gops/goprocess"
 
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 
@@ -34,16 +31,21 @@ import (
 type Interface interface {
 	Run() error
 }
+
+type pidServiceName struct {
+	pid         int
+	serviceName string
+}
+
 type impl struct {
-	ctx             context.Context
-	analyzer        *process.Analyzer
-	targetArgs      *process.TargetArgs
-	processch       chan *goprocess.P
-	deadProcess     chan int
-	managers        map[int]*instrumentors.Manager
-	exporter        sdktrace.SpanExporter
-	ignoreProcesses map[string]interface{}
-	pidTicker       <-chan time.Time
+	ctx         context.Context
+	analyzer    *process.Analyzer
+	targetArgs  *process.TargetArgs
+	processch   chan *pidServiceName
+	deadProcess chan int
+	managers    map[int]*instrumentors.Manager
+	exporter    sdktrace.SpanExporter
+	pidTicker   <-chan time.Time
 }
 
 // New creates a new Implementation of orchestrator Interface.
@@ -52,26 +54,15 @@ func New(
 	targetArgs *process.TargetArgs,
 	exporter sdktrace.SpanExporter,
 ) (Interface, error) {
-	// TODO read from env var
-	ignoreProcesses := make(map[string]interface{})
-	ignoreProcesses["dockerd"] = nil
-	ignoreProcesses["containerd"] = nil
-	ignoreProcesses["gopls"] = nil
-	ignoreProcesses["docker-proxy"] = nil
-	ignoreProcesses["otel-go-instrumentation"] = nil
-	ignoreProcesses["gops"] = nil
-	ignoreProcesses["containerd-shim-runc-v2"] = nil
-
 	return &impl{
-		ctx:             ctx,
-		analyzer:        process.NewAnalyzer(),
-		targetArgs:      targetArgs,
-		exporter:        exporter,
-		ignoreProcesses: ignoreProcesses,
-		processch:       make(chan *goprocess.P, 10),
-		deadProcess:     make(chan int, 10),
-		managers:        make(map[int]*instrumentors.Manager),
-		pidTicker:       time.NewTicker(2 * time.Second).C,
+		ctx:         ctx,
+		analyzer:    process.NewAnalyzer(),
+		targetArgs:  targetArgs,
+		exporter:    exporter,
+		processch:   make(chan *pidServiceName, 10),
+		deadProcess: make(chan int, 10),
+		managers:    make(map[int]*instrumentors.Manager),
+		pidTicker:   time.NewTicker(2 * time.Second).C,
 	}, nil
 }
 
@@ -98,7 +89,7 @@ func (i *impl) Run() error {
 			delete(i.managers, d)
 
 		case p := <-i.processch:
-			serviceName := p.Exec
+			serviceName := p.serviceName
 			if i.targetArgs != nil && i.targetArgs.ServiceName != "" {
 				serviceName = i.targetArgs.ServiceName
 			}
@@ -106,11 +97,9 @@ func (i *impl) Run() error {
 			log.Logger.V(0).Info(
 				"Add auto instrumetors",
 				"pid",
-				p.PID,
+				p.pid,
 				"serviceName",
 				serviceName,
-				"Exec",
-				p.Exec,
 			)
 			controller, err := opentelemetry.NewController(i.ctx, serviceName, i.exporter)
 			if err != nil {
@@ -124,7 +113,7 @@ func (i *impl) Run() error {
 				continue
 			}
 
-			targetDetails, err := i.analyzer.Analyze(p.PID, instManager.GetRelevantFuncs())
+			targetDetails, err := i.analyzer.Analyze(p.pid, instManager.GetRelevantFuncs())
 			if err != nil {
 				log.Logger.Error(err, "error while analyzing target process")
 				continue
@@ -152,21 +141,8 @@ func (i *impl) findProcess() {
 			return
 		case <-i.pidTicker:
 
-			prs := goprocess.FindAll()
-			pmap := make(map[int]goprocess.P)
-			for _, p := range prs {
-				if _, ok := i.ignoreProcesses[p.Exec]; ok {
-					log.Logger.V(1).Info("ignoring process", "process", p)
-					continue
-				}
-				// filter pids based on targetArgs
-				if i.targetArgs != nil && !strings.Contains(p.Path, i.targetArgs.ExePath) {
-					continue
-				}
-				pmap[p.PID] = p
-			}
-
-			if len(pmap) == 0 {
+			pids := i.analyzer.FindAllProcesses(i.targetArgs)
+			if len(pids) == 0 {
 				for pid := range i.managers {
 					i.deadProcess <- pid
 				}
@@ -177,13 +153,16 @@ func (i *impl) findProcess() {
 			}
 
 			for pid := range i.managers {
-				if _, ok := pmap[pid]; !ok {
+				if _, ok := pids[pid]; !ok {
 					i.deadProcess <- pid
 				}
 			}
-			for p, pp := range pmap {
+			for p, s := range pids {
 				if _, ok := i.managers[p]; !ok {
-					i.processch <- &pp
+					i.processch <- &pidServiceName{
+						pid:         p,
+						serviceName: s,
+					}
 				}
 			}
 		}
