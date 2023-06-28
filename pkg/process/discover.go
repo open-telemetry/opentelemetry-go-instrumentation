@@ -46,6 +46,11 @@ func NewAnalyzer() *Analyzer {
 	ignoreProcesses["otel-go-instrumentation"] = nil
 	ignoreProcesses["gops"] = nil
 	ignoreProcesses["containerd-shim-runc-v2"] = nil
+	ignoreProcesses["coredns"] = nil
+	ignoreProcesses["kindnetd"] = nil
+	ignoreProcesses["kubelet"] = nil
+	ignoreProcesses["kube-scheduler"] = nil
+
 	return &Analyzer{
 		done:            make(chan bool, 1),
 		pidTickerChan:   time.NewTicker(2 * time.Second).C,

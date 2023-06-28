@@ -22,6 +22,7 @@ import (
 	gorillaMux "go.opentelemetry.io/auto/pkg/instrumentors/bpf/github.com/gorilla/mux"
 	"go.opentelemetry.io/auto/pkg/instrumentors/bpf/google/golang/org/grpc"
 	grpcServer "go.opentelemetry.io/auto/pkg/instrumentors/bpf/google/golang/org/grpc/server"
+	httpClient "go.opentelemetry.io/auto/pkg/instrumentors/bpf/net/http/client"
 	httpServer "go.opentelemetry.io/auto/pkg/instrumentors/bpf/net/http/server"
 	"go.opentelemetry.io/auto/pkg/instrumentors/events"
 	"go.opentelemetry.io/auto/pkg/log"
@@ -120,6 +121,7 @@ func registerInstrumentors(m *Manager) error {
 		grpc.New(),
 		grpcServer.New(),
 		httpServer.New(),
+		httpClient.New(),
 		gorillaMux.New(),
 		gin.New(),
 	}
