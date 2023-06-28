@@ -12,6 +12,7 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 
 - Add net/http client instrumentor. ([#91](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/91))
 - Add context propagation to net/http server instrumentation. ([#92](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/92))
+- Add ability to monitor multiple processes. ([#197](https://github.com/open-telemetry/opentelemetry-go-instrumentation/issues/197))
 
 ### Changed
 
