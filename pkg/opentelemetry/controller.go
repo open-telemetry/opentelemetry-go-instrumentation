@@ -19,11 +19,12 @@ import (
 	"runtime"
 	"time"
 
+	"golang.org/x/sys/unix"
+
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.18.0"
 	"go.opentelemetry.io/otel/trace"
-	"golang.org/x/sys/unix"
 
 	"go.opentelemetry.io/auto"
 	"go.opentelemetry.io/auto/pkg/instrumentors/events"
