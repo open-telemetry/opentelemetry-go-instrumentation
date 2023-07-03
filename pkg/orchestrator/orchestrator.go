@@ -101,7 +101,10 @@ func (i *impl) Run() error {
 				"serviceName",
 				serviceName,
 			)
-			controller, err := opentelemetry.NewController(i.ctx, serviceName, i.exporter)
+			controller, err := opentelemetry.NewController(i.ctx, opentelemetry.ControllerSetting{
+				ServiceName: serviceName,
+				Exporter:    i.exporter,
+			})
 			if err != nil {
 				log.Logger.Error(err, "error creating opentelemetry controller")
 				continue

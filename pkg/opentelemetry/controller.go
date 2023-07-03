@@ -19,12 +19,11 @@ import (
 	"runtime"
 	"time"
 
-	"golang.org/x/sys/unix"
-
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.18.0"
 	"go.opentelemetry.io/otel/trace"
+	"golang.org/x/sys/unix"
 
 	"go.opentelemetry.io/auto"
 	"go.opentelemetry.io/auto/pkg/instrumentors/events"
@@ -36,6 +35,12 @@ type Controller struct {
 	tracerProvider trace.TracerProvider
 	tracersMap     map[string]trace.Tracer
 	bootTime       int64
+}
+
+// ControllerSetting is a wrapper for params required to initialize Controller.
+type ControllerSetting struct {
+	ServiceName string
+	Exporter    sdktrace.SpanExporter
 }
 
 func (c *Controller) getTracer(libName string) trace.Tracer {
@@ -79,12 +84,11 @@ func (c *Controller) convertTime(t int64) time.Time {
 // NewController returns a new initialized [Controller].
 func NewController(
 	ctx context.Context,
-	serviceName string,
-	exporter sdktrace.SpanExporter,
+	settings ControllerSetting,
 ) (*Controller, error) {
 	res, err := resource.New(ctx,
 		resource.WithAttributes(
-			semconv.ServiceNameKey.String(serviceName),
+			semconv.ServiceNameKey.String(settings.ServiceName),
 			semconv.TelemetrySDKLanguageGo,
 			semconv.TelemetryAutoVersionKey.String(auto.Version()),
 		),
@@ -93,7 +97,7 @@ func NewController(
 		return nil, err
 	}
 
-	bsp := sdktrace.NewBatchSpanProcessor(exporter)
+	bsp := sdktrace.NewBatchSpanProcessor(settings.Exporter)
 	tracerProvider := sdktrace.NewTracerProvider(
 		sdktrace.WithSampler(sdktrace.AlwaysSample()),
 		sdktrace.WithResource(res),
