@@ -75,7 +75,7 @@
               ],
               "kind": 3,
               "name": "/hello-gin",
-              "parentSpanId": "xxxxx",
+              "parentSpanId": "",
               "spanId": "xxxxx",
               "status": {},
               "traceId": "xxxxx"
