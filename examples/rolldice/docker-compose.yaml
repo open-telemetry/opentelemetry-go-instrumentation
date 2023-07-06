@@ -1,0 +1,54 @@
+version: "3.9"
+
+networks:
+  default:
+    name: roll
+    driver: bridge
+
+services:
+  rolldice:
+    depends_on:
+      - jaeger
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+    pid: "host"
+    ports:
+      - "8080:8080"
+    volumes:
+      - shared-data:/app
+      - /proc:/host/proc
+  go-auto:
+    depends_on:
+      - rolldice
+    build:
+      context: ../..
+      dockerfile: Dockerfile
+    privileged: true
+    pid: "host"
+    environment:
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://jaeger:4317
+      - OTEL_GO_AUTO_TARGET_EXE=/app/main
+      - OTEL_SERVICE_NAME=rolldice
+      - OTEL_PROPAGATORS=tracecontext,baggage
+    volumes:
+      - shared-data:/app
+      - /proc:/host/proc
+
+  jaeger:
+    image: jaegertracing/all-in-one:latest
+    ports:
+      - "16686:16686"
+      - "14268:14268"
+    environment:
+      - COLLECTOR_OTLP_ENABLED=true
+      - LOG_LEVEL=debug
+    deploy:
+      resources:
+        limits:
+          memory: 300M
+    restart: unless-stopped
+
+
+volumes:
+  shared-data:

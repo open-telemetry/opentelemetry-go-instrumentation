@@ -50,6 +50,9 @@ redact_json() {
 			| .resourceSpans[].scopeSpans[].spans[].spanId|= (if
 					. // "" | test("^[A-Fa-f0-9]{16}$") then "xxxxx" else (. + "<-INVALID")
 				end)
+			| .resourceSpans[].scopeSpans[].spans[].parentSpanId|= (if
+					. // "" | test("^[A-Fa-f0-9]{16}$") then "xxxxx" else (. + "")
+				end)
 			| .resourceSpans[].scopeSpans|=sort_by(.scope.name)
 			' > ${BATS_TEST_DIRNAME}/traces.json
 }
