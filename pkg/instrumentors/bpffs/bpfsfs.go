@@ -28,10 +28,12 @@ import (
 // BPFFsPath is the system path to the BPF file-system.
 const bpfFsPath = "/sys/fs/bpf"
 
+// PathForTargetApplication returns the path to the BPF file-system for the given target.
 func PathForTargetApplication(target *process.TargetDetails) string {
 	return fmt.Sprintf("%s/%d", bpfFsPath, target.PID)
 }
 
+// Mount mounts the BPF file-system for the given target.
 func Mount(target *process.TargetDetails) error {
 	if !isBPFFSMounted() {
 		// Directory does not exist, create it and mount
@@ -59,6 +61,7 @@ func isBPFFSMounted() bool {
 	return stat.Type == unix.BPF_FS_MAGIC
 }
 
+// Cleanup removes the BPF file-system for the given target.
 func Cleanup(target *process.TargetDetails) error {
 	return os.RemoveAll(PathForTargetApplication(target))
 }
