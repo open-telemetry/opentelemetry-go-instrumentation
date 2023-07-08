@@ -15,7 +15,7 @@
 package process
 
 import (
-	"errors"
+	"fmt"
 	"os"
 )
 
@@ -26,34 +26,67 @@ const (
 	otelServiceNameEnvVar = "OTEL_SERVICE_NAME"
 )
 
+type ExeService struct {
+	ExecPath    string
+	ServiceName string
+}
+
 // TargetArgs are the binary target information.
 type TargetArgs struct {
-	ExePath     string
-	ServiceName string
+	IgnoreProcesses  map[string]any
+	IncludeProcesses map[string]ExeService
 }
 
 // Validate validates t and returns an error if not valid.
 func (t *TargetArgs) Validate() error {
-	if t.ExePath == "" {
-		return errors.New(
-			"target binary path not specified, please specify " + ExePathEnvVar + " env variable",
-		)
+	if t.MonitorAll() {
+		return nil
+	}
+	for k, v := range t.IncludeProcesses {
+		if v.ExecPath == "" || v.ServiceName == "" {
+			return fmt.Errorf("execPath or serviceName is nil for %v", k)
+		}
 	}
 
 	return nil
+}
+
+func (t *TargetArgs) MonitorAll() bool {
+	return len(t.IncludeProcesses) == 0
 }
 
 // ParseTargetArgs returns TargetArgs for the target pointed to by the
 // environment variable OTEL_GO_AUTO_TARGET_EXE.
 func ParseTargetArgs() *TargetArgs {
-	if val, exists := os.LookupEnv(ExePathEnvVar); exists {
-		result := &TargetArgs{}
-		result.ExePath = val
-		serviceName, exists := os.LookupEnv(otelServiceNameEnvVar)
-		if exists {
-			result.ServiceName = serviceName
-		}
-		return result
+	ignoreProcesses := make(map[string]any)
+	ignoreProcesses["docker"] = nil
+	ignoreProcesses["dockerd"] = nil
+	ignoreProcesses["containerd"] = nil
+	ignoreProcesses["gopls"] = nil
+	ignoreProcesses["docker-proxy"] = nil
+	ignoreProcesses["otel-go-instrumentation"] = nil
+	ignoreProcesses["gops"] = nil
+	ignoreProcesses["containerd-shim-runc-v2"] = nil
+	ignoreProcesses["coredns"] = nil
+	ignoreProcesses["kindnetd"] = nil
+	ignoreProcesses["kubelet"] = nil
+	ignoreProcesses["kube-scheduler"] = nil
+	ignoreProcesses["otelcol-contrib"] = nil
+
+	result := &TargetArgs{
+		IgnoreProcesses:  ignoreProcesses,
+		IncludeProcesses: make(map[string]ExeService),
 	}
-	return nil
+	// We are reading only one variable for backwards compatibility.
+	val, exists := os.LookupEnv(ExePathEnvVar)
+
+	if exists {
+		serviceName, _ := os.LookupEnv(otelServiceNameEnvVar)
+		result.IncludeProcesses[val] = ExeService{
+			ExecPath:    val,
+			ServiceName: serviceName,
+		}
+	}
+
+	return result
 }

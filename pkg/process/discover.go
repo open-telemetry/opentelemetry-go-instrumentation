@@ -22,7 +22,6 @@ import (
 	"path"
 	"path/filepath"
 	"strconv"
-	"strings"
 	"time"
 
 	"go.opentelemetry.io/auto/pkg/log"
@@ -30,31 +29,15 @@ import (
 
 // Analyzer is used to find actively running processes.
 type Analyzer struct {
-	done            chan bool
-	pidTickerChan   <-chan time.Time
-	ignoreProcesses map[string]any
+	done          chan bool
+	pidTickerChan <-chan time.Time
 }
 
 // NewAnalyzer returns a new [ProcessAnalyzer].
 func NewAnalyzer() *Analyzer {
-	// TODO read from env var
-	ignoreProcesses := make(map[string]any)
-	ignoreProcesses["dockerd"] = nil
-	ignoreProcesses["containerd"] = nil
-	ignoreProcesses["gopls"] = nil
-	ignoreProcesses["docker-proxy"] = nil
-	ignoreProcesses["otel-go-instrumentation"] = nil
-	ignoreProcesses["gops"] = nil
-	ignoreProcesses["containerd-shim-runc-v2"] = nil
-	ignoreProcesses["coredns"] = nil
-	ignoreProcesses["kindnetd"] = nil
-	ignoreProcesses["kubelet"] = nil
-	ignoreProcesses["kube-scheduler"] = nil
-
 	return &Analyzer{
-		done:            make(chan bool, 1),
-		pidTickerChan:   time.NewTicker(2 * time.Second).C,
-		ignoreProcesses: ignoreProcesses,
+		done:          make(chan bool, 1),
+		pidTickerChan: time.NewTicker(2 * time.Second).C,
 	}
 }
 
@@ -64,13 +47,13 @@ func (a *Analyzer) Close() {
 }
 
 // FindAllProcesses returns all go processes by reading `/proc/`.
-func (a *Analyzer) FindAllProcesses(target *TargetArgs) map[int]string {
+func (a *Analyzer) FindAllProcesses(target *TargetArgs) map[int]ExeService {
 	proc, err := os.Open("/proc")
 	if err != nil {
 		return nil
 	}
 
-	pids := make(map[int]string)
+	pids := make(map[int]ExeService)
 	for {
 		dirs, err := proc.Readdir(15)
 		if err == io.EOF {
@@ -110,17 +93,33 @@ func (a *Analyzer) FindAllProcesses(target *TargetArgs) map[int]string {
 
 			exe := filepath.Base(exeFullPath)
 
-			if _, ok := a.ignoreProcesses[exe]; ok {
+			if _, ok := target.IgnoreProcesses[exe]; ok {
 				continue
 			}
-			if target != nil && !strings.Contains(string(exeFullPath), target.ExePath) {
+
+			if v, ok := target.IncludeProcesses[exeFullPath]; ok {
+				pids[pid] = v
+			}
+
+			// if found all included processes.
+			if len(target.IncludeProcesses) > 0 && len(pids) == len(target.IncludeProcesses) {
+				break
+			}
+
+			// when include is defined, don't add anything else.
+			if len(target.IncludeProcesses) > 0 {
+				log.Logger.V(0).Info("breaking as include is defined")
 				continue
 			}
+
 			if !a.isGo(pid) {
 				continue
 			}
 
-			pids[pid] = exe
+			pids[pid] = ExeService{
+				ExecPath:    exe,
+				ServiceName: exe,
+			}
 		}
 	}
 

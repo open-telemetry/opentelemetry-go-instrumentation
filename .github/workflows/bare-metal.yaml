@@ -1,0 +1,48 @@
+name: e2e-tests-bare-metal
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - 'v[0-9]+.[0-9]+.[0-9]+*'
+  pull_request:
+jobs:
+  bare-metal-test:
+    strategy:
+      matrix:
+        k8s-version: ["v1.26.0"]
+        library: ["nethttp"]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v3
+      - name: Setup Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: "1.20"
+      - name: Setup BATS
+        uses: mig4/setup-bats@v1
+      - name: run collector
+        run: |
+          docker run  -d -v ${PWD}/.github/workflows/e2e/bare-metal/collector-config.yml:/etc/config.yaml -v /tmp:/tmp -p 4317:4317  otel/opentelemetry-collector-contrib  --config /etc/config.yaml
+      - name: Build auto-instrumentation
+        run: |
+          IMG=otel-go-instrumentation:latest make docker-build
+      - name: run auto-instrumentation
+        run: |
+          docker run -d -e OTEL_EXPORTER_OTLP_ENDPOINT="http://172.17.0.1:4317"  --privileged --pid=host  otel-go-instrumentation
+      - name: Build sample app
+        run: |
+          cd test/e2e/${{ matrix.library }}
+          go build .
+          cd ../../..
+      - name: run app
+        run: |
+          ./test/e2e/${{matrix.library}}/${{matrix.library}}
+      - name: copy traces
+        run: |
+          cp /tmp/trace.json ./test/e2e/${{ matrix.library }}/traces-orig.json
+          rm -f ./test/e2e/${{ matrix.library }}/traces.json
+      - name: verify output and redact to traces.json
+        run: |
+          bats ./test/e2e/${{ matrix.library }}/verify.bats

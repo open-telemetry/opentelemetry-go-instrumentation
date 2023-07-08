@@ -33,8 +33,8 @@ type Interface interface {
 }
 
 type pidServiceName struct {
-	pid         int
-	serviceName string
+	process.ExeService
+	pid int
 }
 
 type impl struct {
@@ -89,20 +89,14 @@ func (i *impl) Run() error {
 			delete(i.managers, d)
 
 		case p := <-i.processch:
-			serviceName := p.serviceName
-			if i.targetArgs != nil && i.targetArgs.ServiceName != "" {
-				serviceName = i.targetArgs.ServiceName
-			}
 
 			log.Logger.V(0).Info(
 				"Add auto instrumetors",
-				"pid",
-				p.pid,
-				"serviceName",
-				serviceName,
+				"process",
+				p,
 			)
 			controller, err := opentelemetry.NewController(i.ctx, opentelemetry.ControllerSetting{
-				ServiceName: serviceName,
+				ServiceName: p.ServiceName,
 				Exporter:    i.exporter,
 			})
 			if err != nil {
@@ -163,8 +157,8 @@ func (i *impl) findProcess() {
 			for p, s := range pids {
 				if _, ok := i.managers[p]; !ok {
 					i.processch <- &pidServiceName{
-						pid:         p,
-						serviceName: s,
+						pid:        p,
+						ExeService: s,
 					}
 				}
 			}

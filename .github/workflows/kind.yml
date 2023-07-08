@@ -1,5 +1,4 @@
-name: e2e-tests
-
+name: e2e-tests-side-car
 on:
   push:
     branches:
@@ -7,7 +6,6 @@ on:
     tags:
       - 'v[0-9]+.[0-9]+.[0-9]+*'
   pull_request:
-
 jobs:
   kubernetes-test:
     strategy:
@@ -52,19 +50,19 @@ jobs:
       - name: Add Dependencies
         shell: bash
         run: |
-            helm repo add open-telemetry https://open-telemetry.github.io/opentelemetry-helm-charts
+          helm repo add open-telemetry https://open-telemetry.github.io/opentelemetry-helm-charts
       - uses: actions/checkout@v3
         with:
           repository: 'open-telemetry/opentelemetry-helm-charts'
           path: opentelemetry-helm-charts
       - name: Helm install collector
-        run: helm install test -f .github/workflows/e2e/k8s/collector-helm-values.yml opentelemetry-helm-charts/charts/opentelemetry-collector
+        run: helm install test -f .github/workflows/e2e/k8s-side-car/collector-helm-values.yml opentelemetry-helm-charts/charts/opentelemetry-collector
       - name: check collector status
         run: |
           kubectl wait --for=condition=Ready --timeout=60s pod/test-opentelemetry-collector-0
       - name: start sample job
         run: |
-          kubectl -n default create -f .github/workflows/e2e/k8s/sample-job.yml
+          kubectl -n default create -f .github/workflows/e2e/k8s-side-car/sample-job.yml
       - name: check job status
         run: |
           kubectl wait --for=condition=Complete --timeout=60s job/sample-job
