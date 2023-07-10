@@ -1,4 +1,4 @@
-name: e2e-tests-side-car
+name: e2e-tests
 on:
   push:
     branches:
@@ -12,6 +12,7 @@ jobs:
       matrix:
         k8s-version: ["v1.26.0"]
         library: ["gorillamux", "nethttp", "gin"]
+        mode: ["sidecar", "deployment"]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repo
@@ -56,13 +57,13 @@ jobs:
           repository: 'open-telemetry/opentelemetry-helm-charts'
           path: opentelemetry-helm-charts
       - name: Helm install collector
-        run: helm install test -f .github/workflows/e2e/k8s-side-car/collector-helm-values.yml opentelemetry-helm-charts/charts/opentelemetry-collector
+        run: helm install test -f .github/workflows/e2e/k8s/${{ matrix.mode }}/collector-helm-values.yml opentelemetry-helm-charts/charts/opentelemetry-collector
       - name: check collector status
         run: |
           kubectl wait --for=condition=Ready --timeout=60s pod/test-opentelemetry-collector-0
       - name: start sample job
         run: |
-          kubectl -n default create -f .github/workflows/e2e/k8s-side-car/sample-job.yml
+          kubectl -n default create -f .github/workflows/e2e/k8s/${{ matrix.mode }}/sample-job.yml
       - name: check job status
         run: |
           kubectl wait --for=condition=Complete --timeout=60s job/sample-job

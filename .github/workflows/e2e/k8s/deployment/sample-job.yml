@@ -1,4 +1,28 @@
-# https://kubernetes.io/docs/concepts/workloads/pods/
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: sample-job
+  namespace: default
+spec:
+  template:
+    metadata:
+      annotations:
+        workload: job
+      labels:
+        app: sample
+    spec:
+      hostPID: true
+      restartPolicy: Never
+      schedulerName: default-scheduler
+      securityContext: {}
+      terminationGracePeriodSeconds: 30
+      containers:
+      - name: sample-app
+        image: sample-app
+        imagePullPolicy: IfNotPresent
+        command: ["/bin/sh", "-c"]
+        args: ["/sample-app/main"]
+---
 apiVersion: v1
 kind: Pod
 metadata:
