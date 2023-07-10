@@ -41,6 +41,7 @@ jobs:
           ./test/e2e/${{matrix.library}}/${{matrix.library}}
       - name: copy traces
         run: |
+          sudo chmod 666 /tmp/trace.json
           cp /tmp/trace.json ./test/e2e/${{ matrix.library }}/traces-orig.json
           rm -f ./test/e2e/${{ matrix.library }}/traces.json
       - name: verify output and redact to traces.json
