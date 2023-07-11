@@ -8,7 +8,7 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 
 ## [Unreleased]
 
-## [v0.2.2-alpha] - 2023-07-06
+## [v0.2.2-alpha] - 2023-07-11
 
 ### Added
 
