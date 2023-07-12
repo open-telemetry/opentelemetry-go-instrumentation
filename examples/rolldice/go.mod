@@ -1,4 +1,4 @@
-module go.openetelemetry.io/auto/examples/rolldice
+module go.opentelemetry.io/auto/examples/rolldice
 
 go 1.20
 
