@@ -26,33 +26,27 @@ const (
 	otelServiceNameEnvVar = "OTEL_SERVICE_NAME"
 )
 
-type ExeService struct {
-	ExecPath    string
-	ServiceName string
-}
-
 // TargetArgs are the binary target information.
 type TargetArgs struct {
-	IgnoreProcesses  map[string]any
-	IncludeProcesses map[string]ExeService
+	IgnoreProcesses map[string]any
+	ExecPath        string
+	ServiceName     string
+	MonitorAll      bool
 }
 
 // Validate validates t and returns an error if not valid.
 func (t *TargetArgs) Validate() error {
-	if t.MonitorAll() {
+	if t.MonitorAll {
 		return nil
 	}
-	for k, v := range t.IncludeProcesses {
-		if v.ExecPath == "" || v.ServiceName == "" {
-			return fmt.Errorf("execPath or serviceName is nil for %v", k)
-		}
+	if t.ExecPath == "" {
+		return fmt.Errorf("execPath is nil")
+	}
+	if t.ServiceName == "" {
+		return fmt.Errorf("serviceName is nil")
 	}
 
 	return nil
-}
-
-func (t *TargetArgs) MonitorAll() bool {
-	return len(t.IncludeProcesses) == 0
 }
 
 // ParseTargetArgs returns TargetArgs for the target pointed to by the
@@ -74,18 +68,17 @@ func ParseTargetArgs() *TargetArgs {
 	ignoreProcesses["otelcol-contrib"] = nil
 
 	result := &TargetArgs{
-		IgnoreProcesses:  ignoreProcesses,
-		IncludeProcesses: make(map[string]ExeService),
+		IgnoreProcesses: ignoreProcesses,
 	}
 	// We are reading only one variable for backwards compatibility.
 	val, exists := os.LookupEnv(ExePathEnvVar)
 
 	if exists {
 		serviceName, _ := os.LookupEnv(otelServiceNameEnvVar)
-		result.IncludeProcesses[val] = ExeService{
-			ExecPath:    val,
-			ServiceName: serviceName,
-		}
+		result.ExecPath = val
+		result.ServiceName = serviceName
+	} else {
+		result.MonitorAll = true
 	}
 
 	return result

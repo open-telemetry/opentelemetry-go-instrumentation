@@ -11,7 +11,7 @@ jobs:
     strategy:
       matrix:
         k8s-version: ["v1.26.0"]
-        library: ["nethttp"]
+        library: ["gorillamux", "nethttp", "gin"]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repo
@@ -38,6 +38,7 @@ jobs:
           cd ../../..
       - name: run app
         run: |
+          export OTEL_SERVICE_NAME=sample-app
           ./test/e2e/${{matrix.library}}/${{matrix.library}}
       - name: copy traces
         run: |

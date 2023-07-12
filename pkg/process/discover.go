@@ -18,10 +18,12 @@ import (
 	"debug/elf"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"time"
 
 	"go.opentelemetry.io/auto/pkg/log"
@@ -47,13 +49,13 @@ func (a *Analyzer) Close() {
 }
 
 // FindAllProcesses returns all go processes by reading `/proc/`.
-func (a *Analyzer) FindAllProcesses(target *TargetArgs) map[int]ExeService {
+func (a *Analyzer) FindAllProcesses(target *TargetArgs) map[int]string {
 	proc, err := os.Open("/proc")
 	if err != nil {
 		return nil
 	}
 
-	pids := make(map[int]ExeService)
+	pids := make(map[int]string)
 	for {
 		dirs, err := proc.Readdir(15)
 		if err == io.EOF {
@@ -90,36 +92,31 @@ func (a *Analyzer) FindAllProcesses(target *TargetArgs) map[int]ExeService {
 				}
 				exeFullPath = string(cmdline)
 			}
-
 			exe := filepath.Base(exeFullPath)
 
 			if _, ok := target.IgnoreProcesses[exe]; ok {
 				continue
 			}
-
-			if v, ok := target.IncludeProcesses[exeFullPath]; ok {
-				pids[pid] = v
-			}
-
-			// if found all included processes.
-			if len(target.IncludeProcesses) > 0 && len(pids) == len(target.IncludeProcesses) {
+			if !target.MonitorAll && strings.Contains(exeFullPath, target.ExecPath) {
+				pids[pid] = target.ServiceName
 				break
-			}
-
-			// when include is defined, don't add anything else.
-			if len(target.IncludeProcesses) > 0 {
-				log.Logger.V(0).Info("breaking as include is defined")
-				continue
 			}
 
 			if !a.isGo(pid) {
 				continue
 			}
-
-			pids[pid] = ExeService{
-				ExecPath:    exe,
-				ServiceName: exe,
+			serviceName := exe
+			envs, err := getEnvVars(pid)
+			if err != nil {
+				log.Logger.V(1).Error(err, "reading envs ", "pid", pid)
+				pids[pid] = serviceName
+				continue
 			}
+
+			if v, ok := envs[otelServiceNameEnvVar]; ok {
+				serviceName = v
+			}
+			pids[pid] = serviceName
 		}
 	}
 
@@ -143,4 +140,24 @@ func (a *Analyzer) isGo(pid int) bool {
 	_, _, err = a.getModuleDetails(elfF)
 
 	return err == nil
+}
+
+func getEnvVars(pid int) (map[string]string, error) {
+	bytes, err := ioutil.ReadFile(fmt.Sprintf("/proc/%d/environ", pid))
+	if err != nil {
+		return nil, err
+	}
+
+	// /proc/<pid>/environ file in Linux, environment variables are stored in a null byte separated format.
+	envs := strings.Split(string(bytes), "\x00")
+	envMap := make(map[string]string, len(envs))
+
+	for _, s := range envs {
+		split := strings.SplitN(s, "=", 2) // Split by first "=" character
+		if len(split) == 2 {
+			envMap[split[0]] = split[1]
+		}
+	}
+
+	return envMap, nil
 }

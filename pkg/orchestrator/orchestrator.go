@@ -33,8 +33,8 @@ type Interface interface {
 }
 
 type pidServiceName struct {
-	process.ExeService
-	pid int
+	serviceName string
+	pid         int
 }
 
 type impl struct {
@@ -96,7 +96,7 @@ func (i *impl) Run() error {
 				p,
 			)
 			controller, err := opentelemetry.NewController(i.ctx, opentelemetry.ControllerSetting{
-				ServiceName: p.ServiceName,
+				ServiceName: p.serviceName,
 				Exporter:    i.exporter,
 			})
 			if err != nil {
@@ -157,8 +157,8 @@ func (i *impl) findProcess() {
 			for p, s := range pids {
 				if _, ok := i.managers[p]; !ok {
 					i.processch <- &pidServiceName{
-						pid:        p,
-						ExeService: s,
+						pid:         p,
+						serviceName: s,
 					}
 				}
 			}

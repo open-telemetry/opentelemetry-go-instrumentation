@@ -17,11 +17,14 @@ spec:
       securityContext: {}
       terminationGracePeriodSeconds: 30
       containers:
-      - name: sample-app
-        image: sample-app
-        imagePullPolicy: IfNotPresent
-        command: ["/bin/sh", "-c"]
-        args: ["/sample-app/main"]
+        - name: sample-app
+          image: sample-app
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: OTEL_SERVICE_NAME
+              value: "sample-app"
+          command: ["/bin/sh", "-c"]
+          args: ["/sample-app/main"]
 ---
 apiVersion: v1
 kind: Pod
@@ -37,12 +40,8 @@ spec:
       image: otel-go-instrumentation
       imagePullPolicy: IfNotPresent
       env:
-        - name: OTEL_GO_AUTO_TARGET_EXE
-          value: /sample-app/main
         - name: OTEL_EXPORTER_OTLP_ENDPOINT
           value: "http://test-opentelemetry-collector:4317"
-        - name: OTEL_SERVICE_NAME
-          value: "sample-app"
         - name: OTEL_PROPAGATORS
           value: "tracecontext,baggage"
       resources: {}
