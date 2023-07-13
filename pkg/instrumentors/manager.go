@@ -24,6 +24,7 @@ import (
 	grpcServer "go.opentelemetry.io/auto/pkg/instrumentors/bpf/google/golang/org/grpc/server"
 	httpClient "go.opentelemetry.io/auto/pkg/instrumentors/bpf/net/http/client"
 	httpServer "go.opentelemetry.io/auto/pkg/instrumentors/bpf/net/http/server"
+	dbSql "go.opentelemetry.io/auto/pkg/instrumentors/bpf/database/sql"
 	"go.opentelemetry.io/auto/pkg/instrumentors/events"
 	"go.opentelemetry.io/auto/pkg/log"
 	"go.opentelemetry.io/auto/pkg/opentelemetry"
@@ -117,6 +118,7 @@ func registerInstrumentors(m *Manager) error {
 		httpClient.New(),
 		gorillaMux.New(),
 		gin.New(),
+		dbSql.New(),
 	}
 
 	for _, i := range insts {
