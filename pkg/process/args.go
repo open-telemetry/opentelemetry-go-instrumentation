@@ -28,10 +28,9 @@ const (
 
 // TargetArgs are the binary target information.
 type TargetArgs struct {
-	IgnoreProcesses map[string]any
-	ExecPath        string
-	ServiceName     string
-	MonitorAll      bool
+	ExecPath    string
+	ServiceName string
+	MonitorAll  bool
 }
 
 // Validate validates t and returns an error if not valid.
@@ -52,24 +51,7 @@ func (t *TargetArgs) Validate() error {
 // ParseTargetArgs returns TargetArgs for the target pointed to by the
 // environment variable OTEL_GO_AUTO_TARGET_EXE.
 func ParseTargetArgs() *TargetArgs {
-	ignoreProcesses := make(map[string]any)
-	ignoreProcesses["docker"] = nil
-	ignoreProcesses["dockerd"] = nil
-	ignoreProcesses["containerd"] = nil
-	ignoreProcesses["gopls"] = nil
-	ignoreProcesses["docker-proxy"] = nil
-	ignoreProcesses["otel-go-instrumentation"] = nil
-	ignoreProcesses["gops"] = nil
-	ignoreProcesses["containerd-shim-runc-v2"] = nil
-	ignoreProcesses["coredns"] = nil
-	ignoreProcesses["kindnetd"] = nil
-	ignoreProcesses["kubelet"] = nil
-	ignoreProcesses["kube-scheduler"] = nil
-	ignoreProcesses["otelcol-contrib"] = nil
-
-	result := &TargetArgs{
-		IgnoreProcesses: ignoreProcesses,
-	}
+	result := &TargetArgs{}
 	// We are reading only one variable for backwards compatibility.
 	val, exists := os.LookupEnv(ExePathEnvVar)
 

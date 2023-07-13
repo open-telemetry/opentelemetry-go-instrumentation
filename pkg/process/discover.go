@@ -21,7 +21,6 @@ import (
 	"io/ioutil"
 	"os"
 	"path"
-	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -92,11 +91,7 @@ func (a *Analyzer) FindAllProcesses(target *TargetArgs) map[int]string {
 				}
 				exeFullPath = string(cmdline)
 			}
-			exe := filepath.Base(exeFullPath)
 
-			if _, ok := target.IgnoreProcesses[exe]; ok {
-				continue
-			}
 			if !target.MonitorAll && strings.Contains(exeFullPath, target.ExecPath) {
 				pids[pid] = target.ServiceName
 				break
@@ -105,18 +100,15 @@ func (a *Analyzer) FindAllProcesses(target *TargetArgs) map[int]string {
 			if !a.isGo(pid) {
 				continue
 			}
-			serviceName := exe
 			envs, err := getEnvVars(pid)
 			if err != nil {
 				log.Logger.V(1).Error(err, "reading envs ", "pid", pid)
-				pids[pid] = serviceName
 				continue
 			}
 
 			if v, ok := envs[otelServiceNameEnvVar]; ok {
-				serviceName = v
+				pids[pid] = v
 			}
-			pids[pid] = serviceName
 		}
 	}
 

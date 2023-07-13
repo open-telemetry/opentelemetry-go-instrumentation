@@ -92,8 +92,10 @@ func (i *impl) Run() error {
 
 			log.Logger.V(0).Info(
 				"Add auto instrumetors",
-				"process",
-				p,
+				"pid",
+				p.pid,
+				"serviceName",
+				p.serviceName,
 			)
 			controller, err := opentelemetry.NewController(i.ctx, opentelemetry.ControllerSetting{
 				ServiceName: p.serviceName,
