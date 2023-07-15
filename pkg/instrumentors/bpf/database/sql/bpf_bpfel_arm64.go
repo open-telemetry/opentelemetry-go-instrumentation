@@ -18,6 +18,15 @@ type bpfSpanContext struct {
 	SpanID  [8]uint8
 }
 
+type bpfSqlRequestT struct {
+	StartTime uint64
+	EndTime   uint64
+	Query     [100]int8
+	Sc        bpfSpanContext
+	Psc       bpfSpanContext
+	_         [4]byte
+}
+
 // loadBpf returns the embedded CollectionSpec for bpf.
 func loadBpf() (*ebpf.CollectionSpec, error) {
 	reader := bytes.NewReader(_BpfBytes)
@@ -67,8 +76,10 @@ type bpfProgramSpecs struct {
 //
 // It can be passed ebpf.CollectionSpec.Assign.
 type bpfMapSpecs struct {
-	AllocMap        *ebpf.MapSpec `ebpf:"alloc_map"`
-	SpansInProgress *ebpf.MapSpec `ebpf:"spans_in_progress"`
+	AllocMap           *ebpf.MapSpec `ebpf:"alloc_map"`
+	ContextToSqlEvents *ebpf.MapSpec `ebpf:"context_to_sql_events"`
+	Events             *ebpf.MapSpec `ebpf:"events"`
+	SpansInProgress    *ebpf.MapSpec `ebpf:"spans_in_progress"`
 }
 
 // bpfObjects contains all objects after they have been loaded into the kernel.
@@ -90,13 +101,17 @@ func (o *bpfObjects) Close() error {
 //
 // It can be passed to loadBpfObjects or ebpf.CollectionSpec.LoadAndAssign.
 type bpfMaps struct {
-	AllocMap        *ebpf.Map `ebpf:"alloc_map"`
-	SpansInProgress *ebpf.Map `ebpf:"spans_in_progress"`
+	AllocMap           *ebpf.Map `ebpf:"alloc_map"`
+	ContextToSqlEvents *ebpf.Map `ebpf:"context_to_sql_events"`
+	Events             *ebpf.Map `ebpf:"events"`
+	SpansInProgress    *ebpf.Map `ebpf:"spans_in_progress"`
 }
 
 func (m *bpfMaps) Close() error {
 	return _BpfClose(
 		m.AllocMap,
+		m.ContextToSqlEvents,
+		m.Events,
 		m.SpansInProgress,
 	)
 }

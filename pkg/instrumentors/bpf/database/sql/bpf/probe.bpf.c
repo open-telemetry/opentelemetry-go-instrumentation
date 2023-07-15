@@ -5,52 +5,56 @@
 
 char __license[] SEC("license") = "Dual MIT/GPL";
 
-#define MAX_PATH_SIZE 100
-#define MAX_METHOD_SIZE 10
-#define W3C_KEY_LENGTH 11
-#define W3C_VAL_LENGTH 55
+#define MAX_QUERY_SIZE 100
 #define MAX_CONCURRENT 50
 
 struct sql_request_t {
     u64 start_time;
     u64 end_time;
-    char method[MAX_METHOD_SIZE];
-    char path[MAX_PATH_SIZE];
+    char query[MAX_QUERY_SIZE];
     struct span_context sc;
     struct span_context psc;
 };
 
-// struct {
-// 	__uint(type, BPF_MAP_TYPE_HASH);
-// 	__type(key, void*);
-// 	__type(value, struct http_request_t);
-// 	__uint(max_entries, MAX_CONCURRENT);
-// } context_to_http_events SEC(".maps");
+struct {
+	__uint(type, BPF_MAP_TYPE_HASH);
+	__type(key, void*);
+	__type(value, struct sql_request_t);
+	__uint(max_entries, MAX_CONCURRENT);
+} context_to_sql_events SEC(".maps");
 
-// struct {
-// 	__uint(type, BPF_MAP_TYPE_PERCPU_ARRAY);
-// 	__uint(key_size, sizeof(u32));
-// 	__uint(value_size, sizeof(struct map_bucket));
-// 	__uint(max_entries, 1);
-// } golang_mapbucket_storage_map SEC(".maps");
+struct {
+	__uint(type, BPF_MAP_TYPE_PERF_EVENT_ARRAY);
+} events SEC(".maps");
 
-
-// struct {
-// 	__uint(type, BPF_MAP_TYPE_PERF_EVENT_ARRAY);
-// } events SEC(".maps");
-
-// Injected in init
-// volatile const u64 method_ptr_pos;
-// volatile const u64 url_ptr_pos;
-// volatile const u64 path_ptr_pos;
-// volatile const u64 headers_ptr_pos;
-// volatile const u64 ctx_ptr_pos;
 
 // This instrumentation attaches uprobe to the following function:
 // func (c *Conn) QueryContext(ctx context.Context, query string, args ...any)
 SEC("uprobe/QueryContext")
 int uprobe_Query_Context(struct pt_regs *ctx) {
     bpf_printk("uprobe_Query_Context !!\n");
+    // argument positions
+    u64 query_str_ptr_pos = 4;
+    u64 query_str_len_pos = 5;
+
+    struct sql_request_t sql_request = {0};
+    sql_request.start_time = bpf_ktime_get_ns();
+
+    bpf_printk("arg 1: 0x%lx", get_argument(ctx, 1));
+    bpf_printk("arg 2: 0x%lx", get_argument(ctx, 2));
+    bpf_printk("arg 3: 0x%lx", get_argument(ctx, 3));
+    bpf_printk("arg 4: 0x%lx", get_argument(ctx, 4));
+    bpf_printk("arg 5: 0x%lx", get_argument(ctx, 5));
+
+    // Read Query string
+    void *query_str_ptr = get_argument(ctx, query_str_ptr_pos);
+    u64 query_str_len = (u64)get_argument(ctx, query_str_len_pos);
+    u64 query_size = MAX_QUERY_SIZE < query_str_len ? MAX_QUERY_SIZE : query_str_len;
+    bpf_probe_read(sql_request.query, query_size, query_str_ptr);
+    bpf_printk("query size: %d", query_size);
+    bpf_printk("query_str_len: %d", query_str_len);
+    bpf_printk("query string: %s", sql_request.query);
+
     return 0;
 }
 

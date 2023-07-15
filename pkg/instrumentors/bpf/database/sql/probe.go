@@ -19,7 +19,6 @@ import (
 	// "encoding/binary"
 	// "errors"
 	//"os"
-	"fmt"
 	"time" // todo: remove
 
 	"go.opentelemetry.io/auto/pkg/instrumentors/bpffs"
@@ -75,13 +74,13 @@ func (h *Instrumentor) FuncNames() []string {
 
 // Load loads all instrumentation offsets.
 func (h *Instrumentor) Load(ctx *context.InstrumentorContext) error {
-	spec, err := loadBpf()
+	spec, err := ctx.Injector.Inject(loadBpf, "go", ctx.TargetDetails.GoVersion.Original(), nil, true)
 	if err != nil {
 		return err
 	}
-	fmt.Printf("hi33")
+
 	h.bpfObjects = &bpfObjects{}
-	fmt.Printf("hi34")
+
 	err = spec.LoadAndAssign(h.bpfObjects, &ebpf.CollectionOptions{
 		Maps: ebpf.MapOptions{
 			PinPath: bpffs.BPFFsPath,
@@ -95,7 +94,6 @@ func (h *Instrumentor) Load(ctx *context.InstrumentorContext) error {
 	offset, err := ctx.TargetDetails.GetFunctionOffset(h.FuncNames()[0])
 
 	if err != nil {
-		fmt.Printf("hi1")
 		return err
 	}
 
@@ -104,7 +102,6 @@ func (h *Instrumentor) Load(ctx *context.InstrumentorContext) error {
 	})
 
 	if err != nil {
-		fmt.Printf("hi2")
 		return err
 	}
 
@@ -113,7 +110,6 @@ func (h *Instrumentor) Load(ctx *context.InstrumentorContext) error {
 	retOffsets, err := ctx.TargetDetails.GetFunctionReturns(h.FuncNames()[0])
 
 	if err != nil {
-		fmt.Printf("hi3")
 		return err
 	}
 
@@ -122,7 +118,6 @@ func (h *Instrumentor) Load(ctx *context.InstrumentorContext) error {
 			Address: ret,
 		})
 		if err != nil {
-			fmt.Printf("hi4")
 			return err
 		}
 		h.returnProbs = append(h.returnProbs, retProbe)
