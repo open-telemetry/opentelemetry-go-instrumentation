@@ -76,11 +76,13 @@ type bpfProgramSpecs struct {
 //
 // It can be passed ebpf.CollectionSpec.Assign.
 type bpfMapSpecs struct {
-	AllocMap             *ebpf.MapSpec `ebpf:"alloc_map"`
-	ContextToGrpcEvents  *ebpf.MapSpec `ebpf:"context_to_grpc_events"`
-	Events               *ebpf.MapSpec `ebpf:"events"`
-	SpansInProgress      *ebpf.MapSpec `ebpf:"spans_in_progress"`
-	StreamidToGrpcEvents *ebpf.MapSpec `ebpf:"streamid_to_grpc_events"`
+	AllocMap                    *ebpf.MapSpec `ebpf:"alloc_map"`
+	ContextToGrpcEvents         *ebpf.MapSpec `ebpf:"context_to_grpc_events"`
+	Events                      *ebpf.MapSpec `ebpf:"events"`
+	GolangMapbucketStorageMap   *ebpf.MapSpec `ebpf:"golang_mapbucket_storage_map"`
+	ParentSpanContextStorageMap *ebpf.MapSpec `ebpf:"parent_span_context_storage_map"`
+	SpansInProgress             *ebpf.MapSpec `ebpf:"spans_in_progress"`
+	StreamidToGrpcEvents        *ebpf.MapSpec `ebpf:"streamid_to_grpc_events"`
 }
 
 // bpfObjects contains all objects after they have been loaded into the kernel.
@@ -102,11 +104,13 @@ func (o *bpfObjects) Close() error {
 //
 // It can be passed to loadBpfObjects or ebpf.CollectionSpec.LoadAndAssign.
 type bpfMaps struct {
-	AllocMap             *ebpf.Map `ebpf:"alloc_map"`
-	ContextToGrpcEvents  *ebpf.Map `ebpf:"context_to_grpc_events"`
-	Events               *ebpf.Map `ebpf:"events"`
-	SpansInProgress      *ebpf.Map `ebpf:"spans_in_progress"`
-	StreamidToGrpcEvents *ebpf.Map `ebpf:"streamid_to_grpc_events"`
+	AllocMap                    *ebpf.Map `ebpf:"alloc_map"`
+	ContextToGrpcEvents         *ebpf.Map `ebpf:"context_to_grpc_events"`
+	Events                      *ebpf.Map `ebpf:"events"`
+	GolangMapbucketStorageMap   *ebpf.Map `ebpf:"golang_mapbucket_storage_map"`
+	ParentSpanContextStorageMap *ebpf.Map `ebpf:"parent_span_context_storage_map"`
+	SpansInProgress             *ebpf.Map `ebpf:"spans_in_progress"`
+	StreamidToGrpcEvents        *ebpf.Map `ebpf:"streamid_to_grpc_events"`
 }
 
 func (m *bpfMaps) Close() error {
@@ -114,6 +118,8 @@ func (m *bpfMaps) Close() error {
 		m.AllocMap,
 		m.ContextToGrpcEvents,
 		m.Events,
+		m.GolangMapbucketStorageMap,
+		m.ParentSpanContextStorageMap,
 		m.SpansInProgress,
 		m.StreamidToGrpcEvents,
 	)
