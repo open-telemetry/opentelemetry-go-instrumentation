@@ -1,0 +1,36 @@
+// Copyright The OpenTelemetry Authors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+#ifndef HTTP_TYPES_H
+#define HTTP_TYPES_H
+
+#include "common.h"
+#include "span_context.h"
+
+char __license[] SEC("license") = "Dual MIT/GPL";
+
+#define METHOD_MAX_LEN 7
+#define PATH_MAX_LEN 100
+
+struct http_request_t
+{
+    u64 start_time;
+    u64 end_time;
+    char method[METHOD_MAX_LEN];
+    char path[PATH_MAX_LEN];
+    struct span_context sc;
+    struct span_context psc;
+};
+
+#endif

@@ -14,31 +14,24 @@
 
 #include "arguments.h"
 #include "span_context.h"
+#include "http_types.h"
 #include "go_context.h"
 
 char __license[] SEC("license") = "Dual MIT/GPL";
 
-#define PATH_MAX_LEN 100
-#define METHOD_MAX_LEN 7
 #define MAX_CONCURRENT 50
 
-struct http_request_t {
-    u64 start_time;
-    u64 end_time;
-    char method[METHOD_MAX_LEN];
-    char path[PATH_MAX_LEN];
-    struct span_context sc;
-};
-
 // map key: pointer to the goroutine that handles the request
-struct {
+struct
+{
     __uint(type, BPF_MAP_TYPE_HASH);
     __type(key, void *);
     __type(value, struct http_request_t);
     __uint(max_entries, MAX_CONCURRENT);
 } context_to_http_events SEC(".maps");
 
-struct {
+struct
+{
     __uint(type, BPF_MAP_TYPE_PERF_EVENT_ARRAY);
 } events SEC(".maps");
 
@@ -47,6 +40,7 @@ volatile const u64 method_ptr_pos;
 volatile const u64 url_ptr_pos;
 volatile const u64 path_ptr_pos;
 volatile const u64 ctx_ptr_pos;
+volatile const u64 headers_ptr_pos;
 
 // This instrumentation attaches uprobe to the following function:
 // func (engine *Engine) ServeHTTP(w http.ResponseWriter, r *http.Request)
@@ -82,8 +76,20 @@ int uprobe_GinEngine_ServeHTTP(struct pt_regs *ctx) {
     // Get goroutine pointer
     void *goroutine = get_goroutine_address(ctx, ctx_ptr_pos);
 
+    // Get or create span context
+    struct span_context *parent_ctx = extract_context_from_req_headers(req_ptr + headers_ptr_pos);
+    if (parent_ctx != NULL)
+    {
+        httpReq.psc = *parent_ctx;
+        copy_byte_arrays(httpReq.psc.TraceID, httpReq.sc.TraceID, TRACE_ID_SIZE);
+        generate_random_bytes(httpReq.sc.SpanID, SPAN_ID_SIZE);
+    }
+    else
+    {
+        httpReq.sc = generate_span_context();
+    }
+
     // Write event
-    httpReq.sc = generate_span_context();
     bpf_map_update_elem(&context_to_http_events, &goroutine, &httpReq, 0);
     bpf_map_update_elem(&spans_in_progress, &goroutine, &httpReq.sc, 0);
     return 0;

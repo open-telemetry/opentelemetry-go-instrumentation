@@ -98,6 +98,11 @@ func (g *Instrumentor) Load(ctx *context.InstrumentorContext) error {
 			StructName: "net/url.URL",
 			Field:      "Path",
 		},
+		{
+			VarName:    "headers_ptr_pos",
+			StructName: "net/http.Request",
+			Field:      "Header",
+		},
 	}, false)
 
 	if err != nil {
