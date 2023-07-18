@@ -18,8 +18,6 @@
 #include "common.h"
 #include "span_context.h"
 
-char __license[] SEC("license") = "Dual MIT/GPL";
-
 #define METHOD_MAX_LEN 7
 #define PATH_MAX_LEN 100
 
