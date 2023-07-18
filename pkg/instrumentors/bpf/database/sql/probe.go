@@ -15,25 +15,25 @@
 package sql
 
 import (
-	// "bytes"
-	// "encoding/binary"
-	// "errors"
-	//"os"
-	"time" // todo: remove
+	"bytes"
+	"encoding/binary"
+	"errors"
+	"os"
 
 	"go.opentelemetry.io/auto/pkg/instrumentors/bpffs"
 
 	"github.com/cilium/ebpf"
 	"github.com/cilium/ebpf/link"
-	//"github.com/cilium/ebpf/perf"
-	//"golang.org/x/sys/unix"
+	"github.com/cilium/ebpf/perf"
+	"golang.org/x/sys/unix"
 
 	//"go.opentelemetry.io/auto/pkg/inject"
 	"go.opentelemetry.io/auto/pkg/instrumentors/context"
 	"go.opentelemetry.io/auto/pkg/instrumentors/events"
 	"go.opentelemetry.io/auto/pkg/log"
-	//"go.opentelemetry.io/otel/attribute"
-	//"go.opentelemetry.io/otel/trace"
+	semconv "go.opentelemetry.io/otel/semconv/v1.7.0"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
 )
 
 //go:generate go run github.com/cilium/ebpf/cmd/bpf2go -target amd64,arm64 -cc clang -cflags $CFLAGS bpf ./bpf/probe.bpf.c
@@ -43,8 +43,7 @@ import (
 type Event struct {
 	StartTime         uint64
 	EndTime           uint64
-	Method            [10]byte
-	Path              [100]byte
+	Query             [100]byte
 	SpanContext       context.EBPFSpanContext
 	ParentSpanContext context.EBPFSpanContext
 }
@@ -54,7 +53,7 @@ type Instrumentor struct {
 	bpfObjects   *bpfObjects
 	uprobes      []link.Link
 	returnProbs  []link.Link
-	//eventsReader *perf.Reader
+	eventsReader *perf.Reader
 }
 
 // New returns a new [Instrumentor].
@@ -123,11 +122,11 @@ func (h *Instrumentor) Load(ctx *context.InstrumentorContext) error {
 		h.returnProbs = append(h.returnProbs, retProbe)
 	}
 
-	// rd, err := perf.NewReader(h.bpfObjects.Events, os.Getpagesize())
-	// if err != nil {
-	// 	return err
-	// }
-	// h.eventsReader = rd
+	rd, err := perf.NewReader(h.bpfObjects.Events, os.Getpagesize())
+	if err != nil {
+		return err
+	}
+	h.eventsReader = rd
 
 	return nil
 }
@@ -135,37 +134,77 @@ func (h *Instrumentor) Load(ctx *context.InstrumentorContext) error {
 // Run runs the events processing loop.
 func (h *Instrumentor) Run(eventsChan chan<- *events.Event) {
 	logger := log.Logger.WithName("database/sql/sql-instrumentor")
-	logger.V(0).Info("Inside function")
-	//var event Event
+	var event Event
 	for {
-		time.Sleep(3 * time.Second)
-		// record, err := h.eventsReader.Read()
-		// if err != nil {
-		// 	if errors.Is(err, perf.ErrClosed) {
-		// 		return
-		// 	}
-		// 	logger.Error(err, "error reading from perf reader")
-		// 	continue
-		// }
+		record, err := h.eventsReader.Read()
+		if err != nil {
+			if errors.Is(err, perf.ErrClosed) {
+				return
+			}
+			logger.Error(err, "error reading from perf reader")
+			continue
+		}
 
-		// if record.LostSamples != 0 {
-		// 	logger.V(0).Info("perf event ring buffer full", "dropped", record.LostSamples)
-		// 	continue
-		// }
+		if record.LostSamples != 0 {
+			logger.V(0).Info("perf event ring buffer full", "dropped", record.LostSamples)
+			continue
+		}
 
-		// if err := binary.Read(bytes.NewBuffer(record.RawSample), binary.LittleEndian, &event); err != nil {
-		// 	logger.Error(err, "error parsing perf event")
-		// 	continue
-		// }
+		if err := binary.Read(bytes.NewBuffer(record.RawSample), binary.LittleEndian, &event); err != nil {
+			logger.Error(err, "error parsing perf event")
+			continue
+		}
+		
+		// TODO : remove this debug logging
+		logger.V(0).Info(string(event.Query[:]))
+
+		eventsChan <- h.convertEvent(&event)
+	}
+}
+
+func (h *Instrumentor) convertEvent(e *Event) *events.Event {
+	query := unix.ByteSliceToString(e.Query[:])
+
+	sc := trace.NewSpanContext(trace.SpanContextConfig{
+		TraceID:    e.SpanContext.TraceID,
+		SpanID:     e.SpanContext.SpanID,
+		TraceFlags: trace.FlagsSampled,
+	})
+
+	var pscPtr *trace.SpanContext
+	if e.ParentSpanContext.TraceID.IsValid() {
+		psc := trace.NewSpanContext(trace.SpanContextConfig{
+			TraceID:    e.ParentSpanContext.TraceID,
+			SpanID:     e.ParentSpanContext.SpanID,
+			TraceFlags: trace.FlagsSampled,
+			Remote:     true,
+		})
+		pscPtr = &psc
+	} else {
+		pscPtr = nil
+	}
+
+	return &events.Event{
+		Library:     h.LibraryName(),
+		// TODO : something better to puth in Name
+		Name:        "DB",
+		Kind:        trace.SpanKindClient,
+		StartTime:   int64(e.StartTime),
+		EndTime:     int64(e.EndTime),
+		SpanContext: &sc,
+		Attributes: []attribute.KeyValue{
+			semconv.DBStatementKey.String(query),
+		},
+		ParentSpanContext: pscPtr,
 	}
 }
 
 // Close stops the Instrumentor.
 func (h *Instrumentor) Close() {
 	log.Logger.V(0).Info("closing database/sql/sql instrumentor")
-	// if h.eventsReader != nil {
-	// 	h.eventsReader.Close()
-	// }
+	if h.eventsReader != nil {
+		h.eventsReader.Close()
+	}
 
 	for _, r := range h.uprobes {
 		r.Close()
