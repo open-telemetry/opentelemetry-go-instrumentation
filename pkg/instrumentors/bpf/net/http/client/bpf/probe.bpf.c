@@ -197,7 +197,6 @@ int uprobe_HttpClient_Do(struct pt_regs *ctx) {
     }
 
     bpf_map_update_elem(&context_to_http_events, &goroutine, &httpReq, 0);
-    bpf_map_update_elem(&spans_in_progress, &goroutine, &httpReq.sc, 0);
 
     return 0;
 }
@@ -216,7 +215,6 @@ int uprobe_HttpClient_Do_Returns(struct pt_regs *ctx) {
     bpf_perf_event_output(ctx, &events, BPF_F_CURRENT_CPU, &httpReq, sizeof(httpReq));
 
     bpf_map_delete_elem(&context_to_http_events, &goroutine);
-    bpf_map_delete_elem(&spans_in_progress, &goroutine);
 
     return 0;
 }
