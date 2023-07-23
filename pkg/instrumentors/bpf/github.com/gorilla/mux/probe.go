@@ -107,7 +107,7 @@ func (g *Instrumentor) Load(ctx *context.InstrumentorContext) error {
 	g.bpfObjects = &bpfObjects{}
 	err = utils.LoadEBPFObjects(spec, g.bpfObjects, &ebpf.CollectionOptions{
 		Maps: ebpf.MapOptions{
-			PinPath: bpffs.BPFFsPath,
+			PinPath: bpffs.PathForTargetApplication(ctx.TargetDetails),
 		},
 	})
 	if err != nil {
