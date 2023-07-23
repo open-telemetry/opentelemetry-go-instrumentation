@@ -37,7 +37,7 @@ func NewServer() *Server {
 }
 
 func (s *Server) rolldice(w http.ResponseWriter, _ *http.Request) {
-	n := s.rand.Intn(6)
+	n := s.rand.Intn(6) + 1
 	logger.Info("rolldice called", zap.Int("dice", n))
 	fmt.Fprintf(w, "%v", n)
 }
