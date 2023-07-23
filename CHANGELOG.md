@@ -8,6 +8,10 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 
 ## [Unreleased]
 
+### Fixed
+
+- Fix context propagation across different goroutines. ([#118](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/118))
+
 ## [v0.2.2-alpha] - 2023-07-12
 
 ### Added
@@ -23,10 +27,6 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 - Update generated offsets. ([#186](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/186))
 - Reduce Docker image size by using different base image. ([#182](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/182))
 - Support for multiple processes in BPF FS. ([#211](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/211))
-
-### Fixed
-
-- Fix context propagation across different goroutines. ([#118](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/118))
 
 ## [v0.2.1-alpha] - 2023-05-15
 
