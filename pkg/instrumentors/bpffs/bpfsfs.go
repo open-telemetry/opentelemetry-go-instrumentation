@@ -47,6 +47,7 @@ func Mount(target *process.TargetDetails) error {
 		}
 	}
 
+	// create directory with read, write and execute permissions
 	return os.Mkdir(PathForTargetApplication(target), 0755)
 }
 
