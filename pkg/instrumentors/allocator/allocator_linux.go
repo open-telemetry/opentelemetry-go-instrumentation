@@ -15,10 +15,6 @@
 package allocator
 
 import (
-	"os"
-
-	"golang.org/x/sys/unix"
-
 	"go.opentelemetry.io/auto/pkg/instrumentors/bpffs"
 	"go.opentelemetry.io/auto/pkg/instrumentors/context"
 	"go.opentelemetry.io/auto/pkg/log"
@@ -42,24 +38,10 @@ func (a *Allocator) Load(ctx *context.InstrumentorContext) error {
 	}
 	logger.V(0).Info("Loading allocator")
 
-	err := a.mountBPFFs()
+	err := bpffs.Mount(ctx.TargetDetails)
 	if err != nil {
 		return err
 	}
 
 	return nil
-}
-
-func (a *Allocator) mountBPFFs() error {
-	_, err := os.Stat(bpffs.BPFFsPath)
-	if err != nil {
-		if !os.IsNotExist(err) {
-			return err
-		}
-		if err := os.MkdirAll(bpffs.BPFFsPath, 0755); err != nil {
-			return err
-		}
-	}
-
-	return unix.Mount(bpffs.BPFFsPath, bpffs.BPFFsPath, "bpf", 0, "")
 }
