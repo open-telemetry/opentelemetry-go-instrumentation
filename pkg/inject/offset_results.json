@@ -104,7 +104,7 @@
       "hf": {
         "versions": {
           "oldest": "1.3.0",
-          "newest": "1.56.0-dev"
+          "newest": "1.58.0-dev"
         },
         "offsets": [
           {
@@ -116,7 +116,7 @@
       "streamID": {
         "versions": {
           "oldest": "1.3.0",
-          "newest": "1.56.0-dev"
+          "newest": "1.58.0-dev"
         },
         "offsets": [
           {
@@ -130,7 +130,7 @@
       "nextID": {
         "versions": {
           "oldest": "1.3.0",
-          "newest": "1.56.0-dev"
+          "newest": "1.58.0-dev"
         },
         "offsets": [
           {
