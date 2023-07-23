@@ -132,7 +132,7 @@ int uprobe_ClientConn_Invoke(struct pt_regs *ctx)
 
     // Write event
     bpf_map_update_elem(&grpc_events, &key, &grpcReq, 0);
-    track_running_span(context_ptr_val, &grpcReq.sc);
+    start_tracking_span(context_ptr_val, &grpcReq.sc);
     return 0;
 }
 

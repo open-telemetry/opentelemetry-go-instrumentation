@@ -195,7 +195,7 @@ int uprobe_HttpClient_Do(struct pt_regs *ctx) {
 
     // Write event
     bpf_map_update_elem(&http_events, &key, &httpReq, 0);
-    track_running_span(context_ptr_val, &httpReq.sc);
+    start_tracking_span(context_ptr_val, &httpReq.sc);
     return 0;
 }
 

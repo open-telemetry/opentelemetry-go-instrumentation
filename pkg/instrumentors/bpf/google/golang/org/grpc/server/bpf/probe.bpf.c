@@ -112,7 +112,7 @@ int uprobe_server_handleStream(struct pt_regs *ctx)
 
     // Write event
     bpf_map_update_elem(&grpc_events, &key, &grpcReq, 0);
-    track_running_span(ctx_iface, &grpcReq.sc);
+    start_tracking_span(ctx_iface, &grpcReq.sc);
     return 0;
 }
 

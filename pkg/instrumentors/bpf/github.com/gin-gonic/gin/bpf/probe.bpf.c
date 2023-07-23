@@ -86,7 +86,7 @@ int uprobe_GinEngine_ServeHTTP(struct pt_regs *ctx) {
     // Write event
     httpReq.sc = generate_span_context();
     bpf_map_update_elem(&http_events, &key, &httpReq, 0);
-    track_running_span(req_ctx_ptr, &httpReq.sc);
+    start_tracking_span(req_ctx_ptr, &httpReq.sc);
     return 0;
 }
 
