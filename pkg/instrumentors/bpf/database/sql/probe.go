@@ -154,9 +154,6 @@ func (h *Instrumentor) Run(eventsChan chan<- *events.Event) {
 			logger.Error(err, "error parsing perf event")
 			continue
 		}
-		
-		// TODO : remove this debug logging
-		logger.V(0).Info(string(event.Query[:]))
 
 		eventsChan <- h.convertEvent(&event)
 	}

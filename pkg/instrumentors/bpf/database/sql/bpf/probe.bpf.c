@@ -46,10 +46,6 @@ int uprobe_Query_Context(struct pt_regs *ctx) {
     u64 query_str_len = (u64)get_argument(ctx, query_str_len_pos);
     u64 query_size = MAX_QUERY_SIZE < query_str_len ? MAX_QUERY_SIZE : query_str_len;
     bpf_probe_read(sql_request.query, query_size, query_str_ptr);
-    // TODO : remove debug prints
-    bpf_printk("query size: %d", query_size);
-    bpf_printk("query_str_len: %d", query_str_len);
-    bpf_printk("query string: %s", sql_request.query);
 
     // Get goroutine as the key fro the SQL request context
     void *goroutine = get_goroutine_address(ctx, context_ptr_pos);
