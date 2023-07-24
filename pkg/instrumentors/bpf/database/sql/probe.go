@@ -82,7 +82,7 @@ func (h *Instrumentor) Load(ctx *context.InstrumentorContext) error {
 
 	err = spec.LoadAndAssign(h.bpfObjects, &ebpf.CollectionOptions{
 		Maps: ebpf.MapOptions{
-			PinPath: bpffs.BPFFsPath,
+			PinPath: bpffs.PathForTargetApplication(ctx.TargetDetails),
 		},
 	})
 
