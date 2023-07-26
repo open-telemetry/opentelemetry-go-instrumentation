@@ -63,12 +63,12 @@ func New() *Instrumentor {
 
 // LibraryName returns the database/sql/ package name.
 func (h *Instrumentor) LibraryName() string {
-	return "database/sql/sql"
+	return "database/sql"
 }
 
-// FuncNames returns the function names from "database/sql/" that are instrumented.
+// FuncNames returns the function names from "database/sql" that are instrumented.
 func (h *Instrumentor) FuncNames() []string {
-	return []string{"database/sql.(*Conn).QueryContext"}
+	return []string{"database/sql.(*DB).queryDC"}
 }
 
 // Load loads all instrumentation offsets.
@@ -96,7 +96,7 @@ func (h *Instrumentor) Load(ctx *context.InstrumentorContext) error {
 		return err
 	}
 
-	up, err := ctx.Executable.Uprobe("", h.bpfObjects.UprobeQueryContext, &link.UprobeOptions{
+	up, err := ctx.Executable.Uprobe("", h.bpfObjects.UprobeQueryDC, &link.UprobeOptions{
 		Address: offset,
 	})
 
@@ -113,7 +113,7 @@ func (h *Instrumentor) Load(ctx *context.InstrumentorContext) error {
 	}
 
 	for _, ret := range retOffsets {
-		retProbe, err := ctx.Executable.Uprobe("", h.bpfObjects.UuprobeQueryContextReturns, &link.UprobeOptions{
+		retProbe, err := ctx.Executable.Uprobe("", h.bpfObjects.UuprobeQueryDC_Returns, &link.UprobeOptions{
 			Address: ret,
 		})
 		if err != nil {
@@ -183,7 +183,6 @@ func (h *Instrumentor) convertEvent(e *Event) *events.Event {
 
 	return &events.Event{
 		Library:     h.LibraryName(),
-		// TODO : something better to puth in Name
 		Name:        "DB",
 		Kind:        trace.SpanKindClient,
 		StartTime:   int64(e.StartTime),

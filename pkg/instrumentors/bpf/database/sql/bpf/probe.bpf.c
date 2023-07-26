@@ -29,14 +29,13 @@ struct {
 
 
 // This instrumentation attaches uprobe to the following function:
-// func (c *Conn) QueryContext(ctx context.Context, query string, args ...any)
-SEC("uprobe/QueryContext")
-int uprobe_Query_Context(struct pt_regs *ctx) {
-    bpf_printk("uprobe_Query_Context !!\n");
+// func (db *DB) queryDC(ctx, txctx context.Context, dc *driverConn, releaseConn func(error), query string, args []any)
+SEC("uprobe/queryDC")
+int uprobe_queryDC(struct pt_regs *ctx) {
     // argument positions
     u64 context_ptr_pos = 3;
-    u64 query_str_ptr_pos = 4;
-    u64 query_str_len_pos = 5;
+    u64 query_str_ptr_pos = 8;
+    u64 query_str_len_pos = 9;
 
     struct sql_request_t sql_request = {0};
     sql_request.start_time = bpf_ktime_get_ns();
@@ -68,16 +67,13 @@ int uprobe_Query_Context(struct pt_regs *ctx) {
 }
 
 // This instrumentation attaches uprobe to the following function:
-// func (c *Conn) QueryContext(ctx context.Context, query string, args ...any)
-SEC("uprobe/QueryContext")
-int uuprobe_Query_Context_Returns(struct pt_regs *ctx) {
-    bpf_printk("uuprobe_Query_Context_Returns !!\n");
-
+// func (db *DB) queryDC(ctx, txctx context.Context, dc *driverConn, releaseConn func(error), query string, args []any)
+SEC("uprobe/queryDC")
+int uuprobe_QueryDC_Returns(struct pt_regs *ctx) {
     u64 context_ptr_pos = 3;
     void *goroutine = get_goroutine_address(ctx, context_ptr_pos);
     void *sqlReq_ptr = bpf_map_lookup_elem(&context_to_sql_events, &goroutine);
 
-    // TODO : is this copy necessery (why not to cast sqlReq_ptr ?)
     struct sql_request_t sqlReq = {0};
     bpf_probe_read(&sqlReq, sizeof(sqlReq), sqlReq_ptr);
     sqlReq.end_time = bpf_ktime_get_ns();
