@@ -23,3 +23,6 @@
 otel-go-instrumentation
 launcher/
 opentelemetry-helm-charts/
+
+# don't track temp e2e trace json files
+test/**/traces-orig.json

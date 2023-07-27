@@ -15,20 +15,20 @@
 package allocator
 
 import (
-	"os"
-
 	"go.opentelemetry.io/auto/pkg/instrumentors/bpffs"
 	"go.opentelemetry.io/auto/pkg/instrumentors/context"
 	"go.opentelemetry.io/auto/pkg/log"
-	"golang.org/x/sys/unix"
 )
 
+// Allocator handles the allocation of the BPF file-system.
 type Allocator struct{}
 
+// New returns a new [Allocator].
 func New() *Allocator {
 	return &Allocator{}
 }
 
+// Load loads the BPF file-system.
 func (a *Allocator) Load(ctx *context.InstrumentorContext) error {
 	logger := log.Logger.WithName("allocator")
 	if ctx.TargetDetails.AllocationDetails != nil {
@@ -38,25 +38,10 @@ func (a *Allocator) Load(ctx *context.InstrumentorContext) error {
 	}
 	logger.V(0).Info("Loading allocator")
 
-	err := a.mountBpfFS()
+	err := bpffs.Mount(ctx.TargetDetails)
 	if err != nil {
 		return err
 	}
 
 	return nil
-}
-
-func (a *Allocator) mountBpfFS() error {
-	_, err := os.Stat(bpffs.BpfFsPath)
-	if err != nil {
-		if os.IsNotExist(err) {
-			if err := os.MkdirAll(bpffs.BpfFsPath, 0755); err != nil {
-				return err
-			}
-		} else {
-			return err
-		}
-	}
-
-	return unix.Mount(bpffs.BpfFsPath, bpffs.BpfFsPath, "bpf", 0, "")
 }

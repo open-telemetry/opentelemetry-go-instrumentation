@@ -13,6 +13,7 @@
 // limitations under the License.
 
 #include "common.h"
+#include "bpf_tracing.h"
 #include "bpf_helpers.h"
 #include <stdbool.h>
 
@@ -24,23 +25,23 @@ void *get_argument_by_reg(struct pt_regs *ctx, int index)
     switch (index)
     {
     case 1:
-        return (void *)(ctx->rax);
+        return (void *)GO_PARAM1(ctx);
     case 2:
-        return (void *)(ctx->rbx);
+        return (void *)GO_PARAM2(ctx);
     case 3:
-        return (void *)(ctx->rcx);
+        return (void *)GO_PARAM3(ctx);
     case 4:
-        return (void *)(ctx->rdi);
+        return (void *)GO_PARAM4(ctx);
     case 5:
-        return (void *)(ctx->rsi);
+        return (void *)GO_PARAM5(ctx);
     case 6:
-        return (void *)(ctx->r8);
+        return (void *)GO_PARAM6(ctx);
     case 7:
-        return (void *)(ctx->r9);
+        return (void *)GO_PARAM7(ctx);
     case 8:
-        return (void *)(ctx->r10);
+        return (void *)GO_PARAM8(ctx);
     case 9:
-        return (void *)(ctx->r11);
+        return (void *)GO_PARAM9(ctx);
     default:
         return NULL;
     }
@@ -49,7 +50,7 @@ void *get_argument_by_reg(struct pt_regs *ctx, int index)
 void *get_argument_by_stack(struct pt_regs *ctx, int index)
 {
     void *ptr = 0;
-    bpf_probe_read(&ptr, sizeof(ptr), (void *)(ctx->rsp + (index * 8)));
+    bpf_probe_read(&ptr, sizeof(ptr), (void *)(PT_REGS_SP(ctx) + (index * 8)));
     return ptr;
 }
 
@@ -63,8 +64,12 @@ void *get_argument(struct pt_regs *ctx, int index)
     return get_argument_by_stack(ctx, index);
 }
 
-// In x86, current goroutine is pointed by r14, according to
-// https://go.googlesource.com/go/+/refs/heads/dev.regabi/src/cmd/compile/internal-abi.md#amd64-architecture
-inline void *get_goroutine_address(struct pt_regs *ctx) {
-    return (void *)(ctx->r14);
+inline void *get_goroutine_address(struct pt_regs *ctx, int go_ctx_index)
+{
+    if (is_registers_abi)
+    {
+        return (void *)GOROUTINE(ctx);
+    }
+
+    return get_argument_by_stack(ctx, go_ctx_index);
 }

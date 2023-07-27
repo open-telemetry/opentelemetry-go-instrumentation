@@ -19,9 +19,11 @@ import (
 	"os/exec"
 )
 
+// ShellToUse is the shell flavor used to run commands.
 const ShellToUse = "bash"
 
-func RunCommand(command string, dir string) (error, string, string) {
+// RunCommand runs command in dir.
+func RunCommand(command string, dir string) (string, string, error) {
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
 	cmd := exec.Command(ShellToUse, "-c", command)
@@ -32,5 +34,5 @@ func RunCommand(command string, dir string) (error, string, string) {
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
 	err := cmd.Run()
-	return err, stdout.String(), stderr.String()
+	return stdout.String(), stderr.String(), err
 }

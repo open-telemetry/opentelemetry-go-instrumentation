@@ -34,6 +34,7 @@ var (
 	goMain string
 )
 
+// DownloadBinary downloads the module with modName at version.
 func DownloadBinary(modName string, version string) (string, string, error) {
 	dir, err := ioutil.TempDir("", appName)
 	if err != nil {
@@ -52,12 +53,12 @@ func DownloadBinary(modName string, version string) (string, string, error) {
 		return "", "", err
 	}
 
-	err, _, _ = utils.RunCommand("go mod tidy -compat=1.17", dir)
+	_, _, err = utils.RunCommand("go mod tidy -compat=1.17", dir)
 	if err != nil {
 		return "", "", err
 	}
 
-	err, _, _ = utils.RunCommand("GOOS=linux GOARCH=amd64 go build", dir)
+	_, _, err = utils.RunCommand("GOOS=linux GOARCH=amd64 go build", dir)
 	if err != nil {
 		return "", "", err
 	}
