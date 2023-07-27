@@ -74,11 +74,11 @@ verify-licenses: generate $(GOLICENSES)
 DEPENDABOT_CONFIG = .github/dependabot.yml
 .PHONY: dependabot-check
 dependabot-check: | $(DBOTCONF)
-	@$(DBOTCONF) verify $(DEPENDABOT_CONFIG) || echo "(run: make dependabot-generate)"
+	@$(DBOTCONF) --ignore "/LICENSES" verify $(DEPENDABOT_CONFIG) || echo "(run: make dependabot-generate)"
 
 .PHONY: dependabot-generate
 dependabot-generate: | $(DBOTCONF)
-	@$(DBOTCONF) generate > $(DEPENDABOT_CONFIG)
+	@$(DBOTCONF) --ignore "/LICENSES" generate > $(DEPENDABOT_CONFIG)
 
 .PHONY: license-header-check
 license-header-check:

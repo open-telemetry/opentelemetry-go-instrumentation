@@ -4,7 +4,7 @@ go 1.18
 
 require (
 	github.com/google/go-licenses v1.6.0
-	go.opentelemetry.io/build-tools/dbotconf v0.7.0
+	go.opentelemetry.io/build-tools/dbotconf v0.10.0
 )
 
 require (
@@ -23,11 +23,11 @@ require (
 	github.com/src-d/gcfg v1.4.0 // indirect
 	github.com/xanzy/ssh-agent v0.2.1 // indirect
 	go.opencensus.io v0.23.0 // indirect
-	go.opentelemetry.io/build-tools v0.7.0 // indirect
+	go.opentelemetry.io/build-tools v0.10.0 // indirect
 	golang.org/x/crypto v0.1.0 // indirect
-	golang.org/x/mod v0.10.0 // indirect
+	golang.org/x/mod v0.12.0 // indirect
 	golang.org/x/net v0.5.0 // indirect
-	golang.org/x/sys v0.7.0 // indirect
+	golang.org/x/sys v0.10.0 // indirect
 	golang.org/x/text v0.6.0 // indirect
 	golang.org/x/tools v0.5.0 // indirect
 	gopkg.in/src-d/go-billy.v4 v4.3.2 // indirect
