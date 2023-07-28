@@ -103,7 +103,7 @@ func (h *Instrumentor) Load(ctx *context.InstrumentorContext) error {
 			StructName: "net/http.Request",
 			Field:      "Header",
 		},
-	}, false)
+	}, nil, false)
 
 	if err != nil {
 		return err

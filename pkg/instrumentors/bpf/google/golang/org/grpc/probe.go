@@ -89,7 +89,7 @@ func (g *Instrumentor) Load(ctx *context.InstrumentorContext) error {
 			StructName: "google.golang.org/grpc.ClientConn",
 			Field:      "target",
 		},
-	}, true)
+	}, nil, true)
 
 	if err != nil {
 		return err

@@ -19,7 +19,9 @@ import (
 	"encoding/binary"
 	"errors"
 	"os"
+	"strconv"
 
+	"go.opentelemetry.io/auto/pkg/inject"
 	"go.opentelemetry.io/auto/pkg/instrumentors/bpffs"
 
 	"github.com/cilium/ebpf"
@@ -29,6 +31,7 @@ import (
 
 	"go.opentelemetry.io/auto/pkg/instrumentors/context"
 	"go.opentelemetry.io/auto/pkg/instrumentors/events"
+	"go.opentelemetry.io/auto/pkg/instrumentors/utils"
 	"go.opentelemetry.io/auto/pkg/log"
 	"go.opentelemetry.io/otel/attribute"
 	semconv "go.opentelemetry.io/otel/semconv/v1.18.0"
@@ -55,6 +58,10 @@ type Instrumentor struct {
 	eventsReader *perf.Reader
 }
 
+// ExePathEnvVar is the environment variable key whose value points to the
+// instrumented executable.
+const IncludeSQLQUeryEnvVar = "OTEL_GO_AUTO_INCLUDE_SQL_QUERY"
+
 // New returns a new [Instrumentor].
 func New() *Instrumentor {
 	return &Instrumentor{}
@@ -72,14 +79,19 @@ func (h *Instrumentor) FuncNames() []string {
 
 // Load loads all instrumentation offsets.
 func (h *Instrumentor) Load(ctx *context.InstrumentorContext) error {
-	spec, err := ctx.Injector.Inject(loadBpf, "go", ctx.TargetDetails.GoVersion.Original(), nil, true)
+	spec, err := ctx.Injector.Inject(loadBpf, "go", ctx.TargetDetails.GoVersion.Original(), nil, []*inject.FlagField{
+		{
+			VarName: "should_include_query",
+			Value:   shouldIncludeSQLQuery(),
+		}}, true)
+
 	if err != nil {
 		return err
 	}
 
 	h.bpfObjects = &bpfObjects{}
 
-	err = spec.LoadAndAssign(h.bpfObjects, &ebpf.CollectionOptions{
+	err = utils.LoadEBPFObjects(spec, h.bpfObjects, &ebpf.CollectionOptions{
 		Maps: ebpf.MapOptions{
 			PinPath: bpffs.PathForTargetApplication(ctx.TargetDetails),
 		},
@@ -212,4 +224,17 @@ func (h *Instrumentor) Close() {
 	if h.bpfObjects != nil {
 		h.bpfObjects.Close()
 	}
+}
+
+// IncludeSQLQUeryEnvVar returns if the user has configured SQL queries to be included.
+func shouldIncludeSQLQuery() bool {
+	val, exists := os.LookupEnv(IncludeSQLQUeryEnvVar)
+	if exists {
+		boolVal, err := strconv.ParseBool(val)
+		if err == nil {
+			return boolVal
+		}
+	}
+
+	return false
 }
