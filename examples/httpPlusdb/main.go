@@ -15,14 +15,15 @@
 package main
 
 import (
+	"database/sql"
 	"fmt"
 	"net/http"
-	"database/sql"
+
 	_ "github.com/mattn/go-sqlite3"
 	"go.uber.org/zap"
 )
 
-const sql_query = "SELECT * FROM contacts"
+const sqlQuery = "SELECT * FROM contacts"
 
 // Server is Http server that exposes multiple endpoints.
 type Server struct {
@@ -50,7 +51,7 @@ func (s *Server) queryDb(w http.ResponseWriter, req *http.Request) {
 		panic(err)
 	}
 
-	rows, err := conn.QueryContext(req.Context(), sql_query)
+	rows, err := conn.QueryContext(req.Context(), sqlQuery)
 	if err != nil {
 		panic(err)
 	}
@@ -58,15 +59,15 @@ func (s *Server) queryDb(w http.ResponseWriter, req *http.Request) {
 	logger.Info("queryDb called")
 	for rows.Next() {
 		var id int
-		var first_name string
-		var last_name string
+		var firstName string
+		var lastName string
 		var email string
 		var phone string
-		err := rows.Scan(&id, &first_name, &last_name, &email, &phone)
+		err := rows.Scan(&id, &firstName, &lastName, &email, &phone)
 		if err != nil {
 			panic(err)
 		}
-		fmt.Fprintf(w, "ID: %d, first_name: %s, last_name: %s, email: %s, phone: %s\n", id, first_name, last_name, email, phone)
+		fmt.Fprintf(w, "ID: %d, firstName: %s, lastName: %s, email: %s, phone: %s\n", id, firstName, lastName, email, phone)
 	}
 }
 
