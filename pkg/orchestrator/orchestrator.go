@@ -22,6 +22,7 @@ import (
 
 	"go.opentelemetry.io/auto/pkg/errors"
 	"go.opentelemetry.io/auto/pkg/instrumentors"
+	"go.opentelemetry.io/auto/pkg/instrumentors/bpffs"
 	"go.opentelemetry.io/auto/pkg/log"
 	"go.opentelemetry.io/auto/pkg/opentelemetry"
 	"go.opentelemetry.io/auto/pkg/process"
@@ -85,6 +86,12 @@ func (i *impl) Run() error {
 			log.Logger.Info("process died cleaning up", "pid", d)
 			if m, ok := i.managers[d]; ok {
 				m.Close()
+			}
+			err := bpffs.Cleanup(&process.TargetDetails{
+				PID: d,
+			})
+			if err != nil {
+				log.Logger.V(0).Error(err, "unable to clean bpffs", "pid", d)
 			}
 			delete(i.managers, d)
 
