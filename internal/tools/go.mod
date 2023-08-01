@@ -5,7 +5,7 @@ go 1.18
 require (
 	github.com/golangci/golangci-lint v1.53.3
 	github.com/google/go-licenses v1.6.0
-	go.opentelemetry.io/build-tools/multimod v0.9.0
+	go.opentelemetry.io/build-tools/multimod v0.10.0
 )
 
 require (
@@ -55,7 +55,7 @@ require (
 	github.com/go-critic/go-critic v0.8.1 // indirect
 	github.com/go-git/gcfg v1.5.1-0.20230307220236-3a3c6141e376 // indirect
 	github.com/go-git/go-billy/v5 v5.4.1 // indirect
-	github.com/go-git/go-git/v5 v5.7.0 // indirect
+	github.com/go-git/go-git/v5 v5.8.0 // indirect
 	github.com/go-logr/logr v1.2.4 // indirect
 	github.com/go-toolsmith/astcast v1.1.0 // indirect
 	github.com/go-toolsmith/astcopy v1.1.0 // indirect
@@ -184,7 +184,7 @@ require (
 	github.com/ykadowak/zerologlint v0.1.2 // indirect
 	gitlab.com/bosi/decorder v0.2.3 // indirect
 	go.opencensus.io v0.24.0 // indirect
-	go.opentelemetry.io/build-tools v0.9.0 // indirect
+	go.opentelemetry.io/build-tools v0.10.0 // indirect
 	go.tmz.dev/musttag v0.7.0 // indirect
 	go.uber.org/atomic v1.9.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
