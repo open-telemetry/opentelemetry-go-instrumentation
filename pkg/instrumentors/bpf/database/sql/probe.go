@@ -58,9 +58,8 @@ type Instrumentor struct {
 	eventsReader *perf.Reader
 }
 
-// ExePathEnvVar is the environment variable key whose value points to the
-// instrumented executable.
-const IncludeSQLQUeryEnvVar = "OTEL_GO_AUTO_INCLUDE_SQL_QUERY"
+// IncludeDBStatementEnvVar is the environment variable to opt-in for sql query inclusion in the trace.
+const IncludeDBStatementEnvVar = "OTEL_GO_AUTO_INCLUDE_DB_STATEMENT"
 
 // New returns a new [Instrumentor].
 func New() *Instrumentor {
@@ -81,8 +80,8 @@ func (h *Instrumentor) FuncNames() []string {
 func (h *Instrumentor) Load(ctx *context.InstrumentorContext) error {
 	spec, err := ctx.Injector.Inject(loadBpf, "go", ctx.TargetDetails.GoVersion.Original(), nil, []*inject.FlagField{
 		{
-			VarName: "should_include_query",
-			Value:   shouldIncludeSQLQuery(),
+			VarName: "should_include_db_statement",
+			Value:   shouldIncludeDBStatement(),
 		}}, true)
 
 	if err != nil {
@@ -226,9 +225,9 @@ func (h *Instrumentor) Close() {
 	}
 }
 
-// IncludeSQLQUeryEnvVar returns if the user has configured SQL queries to be included.
-func shouldIncludeSQLQuery() bool {
-	val, exists := os.LookupEnv(IncludeSQLQUeryEnvVar)
+// shouldIncludeDBStatement returns if the user has configured SQL queries to be included.
+func shouldIncludeDBStatement() bool {
+	val, exists := os.LookupEnv(IncludeDBStatementEnvVar)
 	if exists {
 		boolVal, err := strconv.ParseBool(val)
 		if err == nil {

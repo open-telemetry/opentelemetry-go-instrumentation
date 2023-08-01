@@ -28,7 +28,7 @@ struct {
 } events SEC(".maps");
 
 // Injected in init
-volatile const bool should_include_query;
+volatile const bool should_include_db_statement;
 
 // This instrumentation attaches uprobe to the following function:
 // func (db *DB) queryDC(ctx, txctx context.Context, dc *driverConn, releaseConn func(error), query string, args []any)
@@ -42,7 +42,7 @@ int uprobe_queryDC(struct pt_regs *ctx) {
     struct sql_request_t sql_request = {0};
     sql_request.start_time = bpf_ktime_get_ns();
 
-    if (should_include_query) {
+    if (should_include_db_statement) {
         // Read Query string
         void *query_str_ptr = get_argument(ctx, query_str_ptr_pos);
         u64 query_str_len = (u64)get_argument(ctx, query_str_len_pos);
