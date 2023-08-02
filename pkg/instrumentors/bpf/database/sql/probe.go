@@ -227,8 +227,8 @@ func (h *Instrumentor) Close() {
 
 // shouldIncludeDBStatement returns if the user has configured SQL queries to be included.
 func shouldIncludeDBStatement() bool {
-	val, exists := os.LookupEnv(IncludeDBStatementEnvVar)
-	if exists {
+	val := os.Getenv(IncludeDBStatementEnvVar)
+	if val != "" {
 		boolVal, err := strconv.ParseBool(val)
 		if err == nil {
 			return boolVal
