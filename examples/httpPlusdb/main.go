@@ -18,21 +18,60 @@ import (
 	"database/sql"
 	"fmt"
 	"net/http"
+	"os"
 
 	_ "github.com/mattn/go-sqlite3"
 	"go.uber.org/zap"
 )
 
 const sqlQuery = "SELECT * FROM contacts"
+const dbName = "test.db"
+const tableDefinition = `CREATE TABLE contacts (
+							contact_id INTEGER PRIMARY KEY,
+							first_name TEXT NOT NULL,
+							last_name TEXT NOT NULL,
+							email TEXT NOT NULL UNIQUE,
+							phone TEXT NOT NULL UNIQUE);`
+const tableInsertion = `INSERT INTO 'contacts'
+						('first_name', 'last_name', 'email', 'phone') VALUES
+						('Moshe', 'Levi', 'moshe@gmail.com', '052-1234567');`
 
 // Server is Http server that exposes multiple endpoints.
 type Server struct {
 	db *sql.DB
 }
 
-// NewServer creates a server struct after initialing rand.
+// Create the db file.
+func CreateDb() {
+	file, err := os.Create(dbName)
+	if err != nil {
+		panic(err)
+	}
+	err = file.Close()
+	if err != nil {
+		panic(err)
+	}
+}
+
+// NewServer creates a server struct after creating the DB and initializing it
+// and creating a table named 'contacts' and adding a single row to it.
 func NewServer() *Server {
-	database, err := sql.Open("sqlite3", "test.db")
+	CreateDb()
+
+	database, err := sql.Open("sqlite3", dbName)
+
+	if err != nil {
+		panic(err)
+	}
+
+	_, err = database.Exec(tableDefinition)
+
+	if err != nil {
+		panic(err)
+	}
+
+	_, err = database.Exec(tableInsertion)
+
 	if err != nil {
 		panic(err)
 	}
