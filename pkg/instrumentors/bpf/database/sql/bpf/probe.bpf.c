@@ -73,7 +73,7 @@ int uprobe_queryDC(struct pt_regs *ctx) {
 // This instrumentation attaches uprobe to the following function:
 // func (db *DB) queryDC(ctx, txctx context.Context, dc *driverConn, releaseConn func(error), query string, args []any)
 SEC("uprobe/queryDC")
-int uuprobe_QueryDC_Returns(struct pt_regs *ctx) {
+int uprobe_queryDC_Returns(struct pt_regs *ctx) {
     u64 context_ptr_pos = 3;
     void *goroutine = get_goroutine_address(ctx, context_ptr_pos);
     void *sqlReq_ptr = bpf_map_lookup_elem(&context_to_sql_events, &goroutine);

@@ -67,8 +67,8 @@ type bpfSpecs struct {
 //
 // It can be passed ebpf.CollectionSpec.Assign.
 type bpfProgramSpecs struct {
-	UprobeQueryDC          *ebpf.ProgramSpec `ebpf:"uprobe_queryDC"`
-	UuprobeQueryDC_Returns *ebpf.ProgramSpec `ebpf:"uuprobe_QueryDC_Returns"`
+	UprobeQueryDC         *ebpf.ProgramSpec `ebpf:"uprobe_queryDC"`
+	UprobeQueryDC_Returns *ebpf.ProgramSpec `ebpf:"uprobe_queryDC_Returns"`
 }
 
 // bpfMapSpecs contains maps before they are loaded into the kernel.
@@ -119,14 +119,14 @@ func (m *bpfMaps) Close() error {
 //
 // It can be passed to loadBpfObjects or ebpf.CollectionSpec.LoadAndAssign.
 type bpfPrograms struct {
-	UprobeQueryDC          *ebpf.Program `ebpf:"uprobe_queryDC"`
-	UuprobeQueryDC_Returns *ebpf.Program `ebpf:"uuprobe_QueryDC_Returns"`
+	UprobeQueryDC         *ebpf.Program `ebpf:"uprobe_queryDC"`
+	UprobeQueryDC_Returns *ebpf.Program `ebpf:"uprobe_queryDC_Returns"`
 }
 
 func (p *bpfPrograms) Close() error {
 	return _BpfClose(
 		p.UprobeQueryDC,
-		p.UuprobeQueryDC_Returns,
+		p.UprobeQueryDC_Returns,
 	)
 }
 

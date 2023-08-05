@@ -123,7 +123,7 @@ func (h *Instrumentor) Load(ctx *context.InstrumentorContext) error {
 	}
 
 	for _, ret := range retOffsets {
-		retProbe, err := ctx.Executable.Uprobe("", h.bpfObjects.UuprobeQueryDC_Returns, &link.UprobeOptions{
+		retProbe, err := ctx.Executable.Uprobe("", h.bpfObjects.UprobeQueryDC_Returns, &link.UprobeOptions{
 			Address: ret,
 		})
 		if err != nil {
