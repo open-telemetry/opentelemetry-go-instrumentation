@@ -94,12 +94,12 @@ docker-offsets:
 update-licenses: generate $(GOLICENSES)
 	rm -rf LICENSES
 	$(GOLICENSES) save ./cli/ --save_path LICENSES
-	cp -R ./include/libbpf ./LICENSES
+	cp -R ./bpf/include/libbpf ./LICENSES
 
 .PHONY: verify-licenses
 verify-licenses: generate $(GOLICENSES)
 	$(GOLICENSES) save ./cli --save_path temp
-	cp -R ./include/libbpf ./temp; \
+	cp -R ./bpf/include/libbpf ./temp; \
     if diff temp LICENSES > /dev/null; then \
       echo "Passed"; \
       rm -rf temp; \
