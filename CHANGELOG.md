@@ -11,7 +11,7 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 ### Fixed
 
 - Fix context propagation across different goroutines. ([#118](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/118))
-- Consolidate HTTP server instrumentations to use single bpf probe implementation ([#249]https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/249)
+- Consolidate HTTP server instrumentations to use single bpf probe implementation ([#249](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/249))
 
 ## [v0.2.2-alpha] - 2023-07-12
 
