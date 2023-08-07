@@ -15,6 +15,7 @@
 #include "arguments.h"
 #include "go_types.h"
 #include "span_context.h"
+#include "go_context.h"
 
 char __license[] SEC("license") = "Dual MIT/GPL";
 
@@ -40,7 +41,7 @@ struct
     __type(key, void *);
     __type(value, struct grpc_request_t);
     __uint(max_entries, MAX_CONCURRENT);
-} context_to_grpc_events SEC(".maps");
+} grpc_events SEC(".maps");
 
 struct
 {
@@ -104,33 +105,32 @@ int uprobe_server_handleStream(struct pt_regs *ctx)
     method_size = method_size < method_len ? method_size : method_len;
     bpf_probe_read(&grpcReq.method, method_size, method_ptr);
 
-    // Write event
+    // Get key
     void *ctx_iface = 0;
     bpf_probe_read(&ctx_iface, sizeof(ctx_iface), (void *)(stream_ptr + stream_ctx_pos));
-    void *ctx_instance = 0;
-    bpf_probe_read(&ctx_instance, sizeof(ctx_instance), (void *)(ctx_iface + 8));
-    bpf_map_update_elem(&context_to_grpc_events, &ctx_instance, &grpcReq, 0);
-    bpf_map_update_elem(&spans_in_progress, &ctx_instance, &grpcReq.sc, 0);
+    void *key = get_consistent_key(ctx, (void *)(stream_ptr + stream_ctx_pos));
+
+    // Write event
+    bpf_map_update_elem(&grpc_events, &key, &grpcReq, 0);
+    start_tracking_span(ctx_iface, &grpcReq.sc);
     return 0;
 }
 
 SEC("uprobe/server_handleStream")
-int uprobe_server_handleStream_Returns(struct pt_regs *ctx) {
+int uprobe_server_handleStream_Returns(struct pt_regs *ctx)
+{
     u64 stream_pos = 4;
     void *stream_ptr = get_argument(ctx, stream_pos);
-    void *ctx_iface = 0;
-    bpf_probe_read(&ctx_iface, sizeof(ctx_iface), (void *)(stream_ptr + stream_ctx_pos));
-    void *ctx_instance = 0;
-    bpf_probe_read(&ctx_instance, sizeof(ctx_instance), (void *)(ctx_iface + 8));
+    void *key = get_consistent_key(ctx, (void *)(stream_ptr + stream_ctx_pos));
 
-    void *grpcReq_ptr = bpf_map_lookup_elem(&context_to_grpc_events, &ctx_instance);
+    void *grpcReq_ptr = bpf_map_lookup_elem(&grpc_events, &key);
     struct grpc_request_t grpcReq = {};
     bpf_probe_read(&grpcReq, sizeof(grpcReq), grpcReq_ptr);
 
     grpcReq.end_time = bpf_ktime_get_ns();
     bpf_perf_event_output(ctx, &events, BPF_F_CURRENT_CPU, &grpcReq, sizeof(grpcReq));
-    bpf_map_delete_elem(&context_to_grpc_events, &ctx_instance);
-    bpf_map_delete_elem(&spans_in_progress, &ctx_instance);
+    bpf_map_delete_elem(&grpc_events, &key);
+    stop_tracking_span(&grpcReq.sc);
     return 0;
 }
 
