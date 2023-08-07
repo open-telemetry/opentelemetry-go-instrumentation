@@ -30,13 +30,12 @@ struct http_request_t {
     struct span_context sc;
 };
 
-// map key: pointer to the goroutine that handles the request
 struct {
     __uint(type, BPF_MAP_TYPE_HASH);
     __type(key, void *);
     __type(value, struct http_request_t);
     __uint(max_entries, MAX_CONCURRENT);
-} context_to_http_events SEC(".maps");
+} http_events SEC(".maps");
 
 struct {
     __uint(type, BPF_MAP_TYPE_PERF_EVENT_ARRAY);
@@ -79,28 +78,32 @@ int uprobe_GorillaMux_ServeHTTP(struct pt_regs *ctx) {
     path_size = path_size < path_len ? path_size : path_len;
     bpf_probe_read(&httpReq.path, path_size, path_ptr);
 
-    // Get goroutine pointer
-    void *goroutine = get_goroutine_address(ctx, ctx_ptr_pos);
+    // Get key
+    void *req_ctx_ptr = 0;
+    bpf_probe_read(&req_ctx_ptr, sizeof(req_ctx_ptr), (void *)(req_ptr + ctx_ptr_pos));
+    void *key = get_consistent_key(ctx, (void *)(req_ptr + ctx_ptr_pos));
 
     // Write event
     httpReq.sc = generate_span_context();
-    bpf_map_update_elem(&context_to_http_events, &goroutine, &httpReq, 0);
-    bpf_map_update_elem(&spans_in_progress, &goroutine, &httpReq.sc, 0);
+    bpf_map_update_elem(&http_events, &key, &httpReq, 0);
+    start_tracking_span(req_ctx_ptr, &httpReq.sc);
     return 0;
 }
 
 SEC("uprobe/GorillaMux_ServeHTTP")
 int uprobe_GorillaMux_ServeHTTP_Returns(struct pt_regs *ctx) {
     u64 request_pos = 4;
-    void *goroutine = get_goroutine_address(ctx, ctx_ptr_pos);
     void* req_ptr = get_argument(ctx, request_pos);
 
-    void* httpReq_ptr = bpf_map_lookup_elem(&context_to_http_events, &goroutine);
+    // Get key
+    void *key = get_consistent_key(ctx, (void *)(req_ptr + ctx_ptr_pos));
+
+    void *httpReq_ptr = bpf_map_lookup_elem(&http_events, &key);
     struct http_request_t httpReq = {};
     bpf_probe_read(&httpReq, sizeof(httpReq), httpReq_ptr);
     httpReq.end_time = bpf_ktime_get_ns();
     bpf_perf_event_output(ctx, &events, BPF_F_CURRENT_CPU, &httpReq, sizeof(httpReq));
-    bpf_map_delete_elem(&context_to_http_events, &goroutine);
-    bpf_map_delete_elem(&spans_in_progress, &goroutine);
+    bpf_map_delete_elem(&http_events, &key);
+    stop_tracking_span(&httpReq.sc);
     return 0;
 }

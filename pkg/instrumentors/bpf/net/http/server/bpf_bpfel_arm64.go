@@ -77,11 +77,12 @@ type bpfProgramSpecs struct {
 // It can be passed ebpf.CollectionSpec.Assign.
 type bpfMapSpecs struct {
 	AllocMap                    *ebpf.MapSpec `ebpf:"alloc_map"`
-	ContextToHttpEvents         *ebpf.MapSpec `ebpf:"context_to_http_events"`
 	Events                      *ebpf.MapSpec `ebpf:"events"`
 	GolangMapbucketStorageMap   *ebpf.MapSpec `ebpf:"golang_mapbucket_storage_map"`
+	HttpEvents                  *ebpf.MapSpec `ebpf:"http_events"`
 	ParentSpanContextStorageMap *ebpf.MapSpec `ebpf:"parent_span_context_storage_map"`
-	SpansInProgress             *ebpf.MapSpec `ebpf:"spans_in_progress"`
+	TrackedSpans                *ebpf.MapSpec `ebpf:"tracked_spans"`
+	TrackedSpansBySc            *ebpf.MapSpec `ebpf:"tracked_spans_by_sc"`
 }
 
 // bpfObjects contains all objects after they have been loaded into the kernel.
@@ -104,21 +105,23 @@ func (o *bpfObjects) Close() error {
 // It can be passed to loadBpfObjects or ebpf.CollectionSpec.LoadAndAssign.
 type bpfMaps struct {
 	AllocMap                    *ebpf.Map `ebpf:"alloc_map"`
-	ContextToHttpEvents         *ebpf.Map `ebpf:"context_to_http_events"`
 	Events                      *ebpf.Map `ebpf:"events"`
 	GolangMapbucketStorageMap   *ebpf.Map `ebpf:"golang_mapbucket_storage_map"`
+	HttpEvents                  *ebpf.Map `ebpf:"http_events"`
 	ParentSpanContextStorageMap *ebpf.Map `ebpf:"parent_span_context_storage_map"`
-	SpansInProgress             *ebpf.Map `ebpf:"spans_in_progress"`
+	TrackedSpans                *ebpf.Map `ebpf:"tracked_spans"`
+	TrackedSpansBySc            *ebpf.Map `ebpf:"tracked_spans_by_sc"`
 }
 
 func (m *bpfMaps) Close() error {
 	return _BpfClose(
 		m.AllocMap,
-		m.ContextToHttpEvents,
 		m.Events,
 		m.GolangMapbucketStorageMap,
+		m.HttpEvents,
 		m.ParentSpanContextStorageMap,
-		m.SpansInProgress,
+		m.TrackedSpans,
+		m.TrackedSpansBySc,
 	)
 }
 

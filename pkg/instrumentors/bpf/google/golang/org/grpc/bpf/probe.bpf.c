@@ -46,7 +46,15 @@ struct
     __type(key, void *);
     __type(value, struct grpc_request_t);
     __uint(max_entries, MAX_CONCURRENT);
-} context_to_grpc_events SEC(".maps");
+} grpc_events SEC(".maps");
+
+struct
+{
+    __uint(type, BPF_MAP_TYPE_HASH);
+    __type(key, u32);
+    __type(value, struct span_context);
+    __uint(max_entries, MAX_CONCURRENT);
+} streamid_to_span_contexts SEC(".maps");
 
 struct headers_buff
 {
@@ -68,6 +76,9 @@ struct
 
 // Injected in init
 volatile const u64 clientconn_target_ptr_pos;
+volatile const u64 httpclient_nextid_pos;
+volatile const u64 headerFrame_streamid_pos;
+volatile const u64 headerFrame_hf_pos;
 
 // This instrumentation attaches uprobe to the following function:
 // func (cc *ClientConn) Invoke(ctx context.Context, method string, args, reply interface{}, opts ...CallOption) error
@@ -100,78 +111,14 @@ int uprobe_ClientConn_Invoke(struct pt_regs *ctx)
     target_size = target_size < target_len ? target_size : target_len;
     bpf_probe_read(&grpcReq.target, target_size, target_ptr);
 
-    // Write event
-    void *context_ptr = get_argument(ctx, context_pos);
-    bpf_map_update_elem(&context_to_grpc_events, &context_ptr, &grpcReq, 0);
-    return 0;
-}
-
-SEC("uprobe/ClientConn_Invoke")
-int uprobe_ClientConn_Invoke_Returns(struct pt_regs *ctx)
-{
-    u64 context_pos = 3;
-    void *context_ptr = get_argument(ctx, context_pos);
-    void *grpcReq_ptr = bpf_map_lookup_elem(&context_to_grpc_events, &context_ptr);
-    struct grpc_request_t grpcReq = {};
-    bpf_probe_read(&grpcReq, sizeof(grpcReq), grpcReq_ptr);
-
-    grpcReq.end_time = bpf_ktime_get_ns();
-    bpf_perf_event_output(ctx, &events, BPF_F_CURRENT_CPU, &grpcReq, sizeof(grpcReq));
-    bpf_map_delete_elem(&context_to_grpc_events, &context_ptr);
-
-    return 0;
-}
-
-// func (t *http2Client) createHeaderFields(ctx context.Context, callHdr *CallHdr) ([]hpack.HeaderField, error)
-SEC("uprobe/Http2Client_createHeaderFields")
-int uprobe_Http2Client_CreateHeaderFields(struct pt_regs *ctx)
-{
-    // Read slice
-    s32 context_pointer_pos = 3;
-    struct go_slice slice = {};
-    struct go_slice_user_ptr slice_user_ptr = {};
-    if (is_registers_abi)
-    {
-        slice.array = (void *)GO_PARAM1(ctx);
-        slice.len = (s32)GO_PARAM2(ctx);
-        slice.cap = (s32)GO_PARAM3(ctx);
-        slice_user_ptr.array = (void *)&GO_PARAM1(ctx);
-        slice_user_ptr.len = (void *)&GO_PARAM2(ctx);
-        slice_user_ptr.cap = (void *)&GO_PARAM3(ctx);
-    }
-    else
-    {
-        u64 slice_pointer_pos = 5;
-        s32 slice_len_pos = 6;
-        s32 slice_cap_pos = 7;
-        slice.array = get_argument(ctx, slice_pointer_pos);
-        slice.len = (long)get_argument(ctx, slice_len_pos);
-        slice.cap = (long)get_argument(ctx, slice_cap_pos);
-        slice_user_ptr.array = (void *)(PT_REGS_SP(ctx) + (slice_pointer_pos * 8));
-        slice_user_ptr.len = (void *)(PT_REGS_SP(ctx) + (slice_len_pos * 8));
-        slice_user_ptr.cap = (void *)(PT_REGS_SP(ctx) + (slice_cap_pos * 8));
-    }
-    char key[11] = "traceparent";
-    struct go_string key_str = write_user_go_string(key, sizeof(key));
-    if (key_str.len == 0) {
-        bpf_printk("write failed, aborting ebpf probe");
-        return 0;
-    }
-
-    // Get grpc request struct
-    void *context_ptr = 0;
-    bpf_probe_read(&context_ptr, sizeof(context_ptr), (void *)(PT_REGS_SP(ctx) + (context_pointer_pos * 8)));
-    void *parent_ctx = find_context_in_map(context_ptr, &context_to_grpc_events);
-    void *grpcReq_ptr = bpf_map_lookup_elem(&context_to_grpc_events, &parent_ctx);
-    struct grpc_request_t grpcReq = {};
-    bpf_probe_read(&grpcReq, sizeof(grpcReq), grpcReq_ptr);
-
     // Get parent if exists
-    void *parent_span_ctx = find_context_in_map(context_ptr, &spans_in_progress);
+    void *context_ptr = get_argument(ctx, context_pos);
+    void *context_ptr_val = 0;
+    bpf_probe_read(&context_ptr_val, sizeof(context_ptr_val), context_ptr);
+    struct span_context *parent_span_ctx = get_parent_span_context(context_ptr_val);
     if (parent_span_ctx != NULL)
     {
-        void *psc_ptr = bpf_map_lookup_elem(&spans_in_progress, &parent_span_ctx);
-        bpf_probe_read(&grpcReq.psc, sizeof(grpcReq.psc), psc_ptr);
+        bpf_probe_read(&grpcReq.psc, sizeof(grpcReq.psc), parent_span_ctx);
         copy_byte_arrays(grpcReq.psc.TraceID, grpcReq.sc.TraceID, TRACE_ID_SIZE);
         generate_random_bytes(grpcReq.sc.SpanID, SPAN_ID_SIZE);
     }
@@ -180,15 +127,92 @@ int uprobe_Http2Client_CreateHeaderFields(struct pt_regs *ctx)
         grpcReq.sc = generate_span_context();
     }
 
+    // Get key
+    void *key = get_consistent_key(ctx, context_ptr);
+
+    // Write event
+    bpf_map_update_elem(&grpc_events, &key, &grpcReq, 0);
+    start_tracking_span(context_ptr_val, &grpcReq.sc);
+    return 0;
+}
+
+SEC("uprobe/ClientConn_Invoke")
+int uprobe_ClientConn_Invoke_Returns(struct pt_regs *ctx)
+{
+    u64 context_pos = 3;
+    void *context_ptr = get_argument(ctx, context_pos);
+    void *key = get_consistent_key(ctx, context_ptr);
+    void *grpcReq_ptr = bpf_map_lookup_elem(&grpc_events, &key);
+    struct grpc_request_t grpcReq = {};
+    bpf_probe_read(&grpcReq, sizeof(grpcReq), grpcReq_ptr);
+
+    grpcReq.end_time = bpf_ktime_get_ns();
+    bpf_perf_event_output(ctx, &events, BPF_F_CURRENT_CPU, &grpcReq, sizeof(grpcReq));
+    bpf_map_delete_elem(&grpc_events, &key);
+    stop_tracking_span(&grpcReq.sc);
+    return 0;
+}
+
+// func (l *loopyWriter) headerHandler(h *headerFrame) error
+SEC("uprobe/loopyWriter_headerHandler")
+int uprobe_LoopyWriter_HeaderHandler(struct pt_regs *ctx)
+{
+    void *headerFrame_ptr = get_argument(ctx, 2);
+    u32 stream_id = 0;
+    bpf_probe_read(&stream_id, sizeof(stream_id), (void *)(headerFrame_ptr + (headerFrame_streamid_pos)));
+    void *sc_ptr = bpf_map_lookup_elem(&streamid_to_span_contexts, &stream_id);
+    if (sc_ptr == NULL)
+    {
+        return 0;
+    }
+
+    bpf_map_delete_elem(&streamid_to_span_contexts, &stream_id);
+    struct go_slice slice = {};
+    struct go_slice_user_ptr slice_user_ptr = {};
+    slice_user_ptr.array = (void *)(headerFrame_ptr + (headerFrame_hf_pos));
+    slice_user_ptr.len = (void *)(headerFrame_ptr + (headerFrame_hf_pos + 8));
+    slice_user_ptr.cap = (void *)(headerFrame_ptr + (headerFrame_hf_pos + 16));
+    bpf_probe_read(&slice.array, sizeof(slice.array), slice_user_ptr.array);
+    bpf_probe_read(&slice.len, sizeof(slice.len), slice_user_ptr.len);
+    bpf_probe_read(&slice.cap, sizeof(slice.cap), slice_user_ptr.cap);
+
+    struct span_context current_span_context = {};
+    bpf_probe_read(&current_span_context, sizeof(current_span_context), sc_ptr);
+
+    char tp_key[11] = "traceparent";
+    struct go_string key_str = write_user_go_string(tp_key, sizeof(tp_key));
+    if (key_str.len == 0) {
+        bpf_printk("write failed, aborting ebpf probe");
+        return 0;
+    }
+
     // Write headers
     char val[SPAN_CONTEXT_STRING_SIZE];
-    span_context_to_w3c_string(&grpcReq.sc, val);
+    span_context_to_w3c_string(&current_span_context, val);
     struct go_string val_str = write_user_go_string(val, sizeof(val));
     struct hpack_header_field hf = {};
     hf.name = key_str;
     hf.value = val_str;
     append_item_to_slice(&slice, &hf, sizeof(hf), &slice_user_ptr, &headers_buff_map);
-    bpf_map_update_elem(&context_to_grpc_events, &parent_ctx, &grpcReq, 0);
+    return 0;
+}
+
+SEC("uprobe/http2Client_NewStream")
+// func (t *http2Client) NewStream(ctx context.Context, callHdr *CallHdr) (*Stream, error)
+int uprobe_http2Client_NewStream(struct pt_regs *ctx)
+{
+    void *context_ptr = get_argument(ctx, 3);
+    void *context_ptr_val = 0;
+    bpf_probe_read(&context_ptr_val, sizeof(context_ptr_val), context_ptr);
+
+    void *httpclient_ptr = get_argument(ctx, 1);
+    u32 nextid = 0;
+    bpf_probe_read(&nextid, sizeof(nextid), (void *)(httpclient_ptr + (httpclient_nextid_pos)));
+
+    struct span_context *current_span_context = get_parent_span_context(context_ptr_val);
+    if (current_span_context != NULL) {
+        bpf_map_update_elem(&streamid_to_span_contexts, &nextid, current_span_context, 0);
+    }
 
     return 0;
 }
