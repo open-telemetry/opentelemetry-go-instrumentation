@@ -21,7 +21,7 @@ struct {
 	__type(key, void*);
 	__type(value, struct sql_request_t);
 	__uint(max_entries, MAX_CONCURRENT);
-} context_to_sql_events SEC(".maps");
+} sql_events SEC(".maps");
 
 struct {
 	__uint(type, BPF_MAP_TYPE_PERF_EVENT_ARRAY);
@@ -50,11 +50,11 @@ int uprobe_queryDC(struct pt_regs *ctx) {
         bpf_probe_read(sql_request.query, query_size, query_str_ptr);
     }
 
-    // Get goroutine as the key fro the SQL request context
-    void *goroutine = get_goroutine_address(ctx, context_ptr_pos);
-
     // Get parent if exists
-    struct span_context *span_ctx = bpf_map_lookup_elem(&spans_in_progress, &goroutine);
+    void *context_ptr = get_argument(ctx, context_ptr_pos);
+    void *context_ptr_val = 0;
+    bpf_probe_read(&context_ptr_val, sizeof(context_ptr_val), context_ptr);
+    struct span_context *span_ctx = get_parent_span_context(context_ptr_val);
     if (span_ctx != NULL) {
         // Set the parent context
         bpf_probe_read(&sql_request.psc, sizeof(sql_request.psc), span_ctx);
@@ -64,9 +64,11 @@ int uprobe_queryDC(struct pt_regs *ctx) {
         sql_request.sc = generate_span_context();
     }
 
-    bpf_map_update_elem(&context_to_sql_events, &goroutine, &sql_request, 0);
-    // TODO : is this realy necessery if this is a leaf
-    bpf_map_update_elem(&spans_in_progress, &goroutine, &sql_request.sc, 0);
+    // Get key
+    void *key = get_consistent_key(ctx, context_ptr);
+
+    bpf_map_update_elem(&sql_events, &key, &sql_request, 0);
+    start_tracking_span(context_ptr_val, &sql_request.sc);
     return 0;
 }
 
@@ -75,16 +77,19 @@ int uprobe_queryDC(struct pt_regs *ctx) {
 SEC("uprobe/queryDC")
 int uprobe_queryDC_Returns(struct pt_regs *ctx) {
     u64 context_ptr_pos = 3;
-    void *goroutine = get_goroutine_address(ctx, context_ptr_pos);
-    void *sqlReq_ptr = bpf_map_lookup_elem(&context_to_sql_events, &goroutine);
+    // Find the corresponding sql event we return from
+    void *context_ptr = get_argument(ctx, context_ptr_pos);
+    void *key = get_consistent_key(ctx, context_ptr);
+    void *sqlReq_ptr = bpf_map_lookup_elem(&sql_events, &key);
 
     struct sql_request_t sqlReq = {0};
     bpf_probe_read(&sqlReq, sizeof(sqlReq), sqlReq_ptr);
     sqlReq.end_time = bpf_ktime_get_ns();
 
+    // Send event
     bpf_perf_event_output(ctx, &events, BPF_F_CURRENT_CPU, &sqlReq, sizeof(sqlReq));
-
-    bpf_map_delete_elem(&context_to_sql_events, &goroutine);
-    bpf_map_delete_elem(&spans_in_progress, &goroutine);
+    // Clean the sql event
+    bpf_map_delete_elem(&sql_events, &key);
+    stop_tracking_span(&sqlReq.sc);
     return 0;
 }

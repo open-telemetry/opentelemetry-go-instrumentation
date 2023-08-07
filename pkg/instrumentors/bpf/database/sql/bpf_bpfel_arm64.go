@@ -75,10 +75,11 @@ type bpfProgramSpecs struct {
 //
 // It can be passed ebpf.CollectionSpec.Assign.
 type bpfMapSpecs struct {
-	AllocMap           *ebpf.MapSpec `ebpf:"alloc_map"`
-	ContextToSqlEvents *ebpf.MapSpec `ebpf:"context_to_sql_events"`
-	Events             *ebpf.MapSpec `ebpf:"events"`
-	SpansInProgress    *ebpf.MapSpec `ebpf:"spans_in_progress"`
+	AllocMap         *ebpf.MapSpec `ebpf:"alloc_map"`
+	Events           *ebpf.MapSpec `ebpf:"events"`
+	SqlEvents        *ebpf.MapSpec `ebpf:"sql_events"`
+	TrackedSpans     *ebpf.MapSpec `ebpf:"tracked_spans"`
+	TrackedSpansBySc *ebpf.MapSpec `ebpf:"tracked_spans_by_sc"`
 }
 
 // bpfObjects contains all objects after they have been loaded into the kernel.
@@ -100,18 +101,20 @@ func (o *bpfObjects) Close() error {
 //
 // It can be passed to loadBpfObjects or ebpf.CollectionSpec.LoadAndAssign.
 type bpfMaps struct {
-	AllocMap           *ebpf.Map `ebpf:"alloc_map"`
-	ContextToSqlEvents *ebpf.Map `ebpf:"context_to_sql_events"`
-	Events             *ebpf.Map `ebpf:"events"`
-	SpansInProgress    *ebpf.Map `ebpf:"spans_in_progress"`
+	AllocMap         *ebpf.Map `ebpf:"alloc_map"`
+	Events           *ebpf.Map `ebpf:"events"`
+	SqlEvents        *ebpf.Map `ebpf:"sql_events"`
+	TrackedSpans     *ebpf.Map `ebpf:"tracked_spans"`
+	TrackedSpansBySc *ebpf.Map `ebpf:"tracked_spans_by_sc"`
 }
 
 func (m *bpfMaps) Close() error {
 	return _BpfClose(
 		m.AllocMap,
-		m.ContextToSqlEvents,
 		m.Events,
-		m.SpansInProgress,
+		m.SqlEvents,
+		m.TrackedSpans,
+		m.TrackedSpansBySc,
 	)
 }
 
