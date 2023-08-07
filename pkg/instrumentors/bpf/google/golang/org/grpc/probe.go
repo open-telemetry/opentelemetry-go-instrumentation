@@ -53,11 +53,9 @@ type Event struct {
 
 // Instrumentor is the gRPC client instrumentor.
 type Instrumentor struct {
-	bpfObjects        *bpfObjects
-	uprobe            link.Link
-	returnProbs       []link.Link
-	writeHeadersProbe []link.Link
-	eventsReader      *perf.Reader
+	bpfObjects   *bpfObjects
+	uprobes      []link.Link
+	eventsReader *perf.Reader
 }
 
 // New returns a new [Instrumentor].
@@ -74,7 +72,8 @@ func (g *Instrumentor) LibraryName() string {
 // instrumented.
 func (g *Instrumentor) FuncNames() []string {
 	return []string{"google.golang.org/grpc.(*ClientConn).Invoke",
-		"google.golang.org/grpc/internal/transport.(*http2Client).createHeaderFields"}
+		"google.golang.org/grpc/internal/transport.(*http2Client).NewStream",
+		"google.golang.org/grpc/internal/transport.(*loopyWriter).headerHandler"}
 }
 
 // Load loads all instrumentation offsets.
@@ -88,6 +87,21 @@ func (g *Instrumentor) Load(ctx *context.InstrumentorContext) error {
 			VarName:    "clientconn_target_ptr_pos",
 			StructName: "google.golang.org/grpc.ClientConn",
 			Field:      "target",
+		},
+		{
+			VarName:    "httpclient_nextid_pos",
+			StructName: "google.golang.org/grpc/internal/transport.http2Client",
+			Field:      "nextID",
+		},
+		{
+			VarName:    "headerFrame_hf_pos",
+			StructName: "google.golang.org/grpc/internal/transport.headerFrame",
+			Field:      "hf",
+		},
+		{
+			VarName:    "headerFrame_streamid_pos",
+			StructName: "google.golang.org/grpc/internal/transport.headerFrame",
+			Field:      "streamID",
 		},
 	}, true)
 
@@ -118,7 +132,8 @@ func (g *Instrumentor) Load(ctx *context.InstrumentorContext) error {
 		return err
 	}
 
-	g.uprobe = up
+	g.uprobes = append(g.uprobes, up)
+
 	retOffsets, err := ctx.TargetDetails.GetFunctionReturns(g.FuncNames()[0])
 	if err != nil {
 		return err
@@ -131,31 +146,42 @@ func (g *Instrumentor) Load(ctx *context.InstrumentorContext) error {
 		if err != nil {
 			return err
 		}
-		g.returnProbs = append(g.returnProbs, retProbe)
+		g.uprobes = append(g.uprobes, retProbe)
 	}
+
+	// SendMsg probe
+	sendMsgOffset, err := ctx.TargetDetails.GetFunctionOffset(g.FuncNames()[1])
+	if err != nil {
+		return err
+	}
+	sendMsgProbe, err := ctx.Executable.Uprobe("", g.bpfObjects.UprobeHttp2ClientNewStream, &link.UprobeOptions{
+		Address: sendMsgOffset,
+	})
+	if err != nil {
+		return err
+	}
+	g.uprobes = append(g.uprobes, sendMsgProbe)
+
+	// Write headers probe
+	whOffset, err := ctx.TargetDetails.GetFunctionOffset(g.FuncNames()[2])
+	if err != nil {
+		return err
+	}
+
+	whProbe, err := ctx.Executable.Uprobe("", g.bpfObjects.UprobeLoopyWriterHeaderHandler, &link.UprobeOptions{
+		Address: whOffset,
+	})
+	if err != nil {
+		return err
+	}
+
+	g.uprobes = append(g.uprobes, whProbe)
 
 	rd, err := perf.NewReader(g.bpfObjects.Events, os.Getpagesize())
 	if err != nil {
 		return err
 	}
 	g.eventsReader = rd
-
-	// Write headers probe
-	whOffsets, err := ctx.TargetDetails.GetFunctionReturns(g.FuncNames()[1])
-	if err != nil {
-		return err
-	}
-	for _, whOffset := range whOffsets {
-		whProbe, err := ctx.Executable.Uprobe("", g.bpfObjects.UprobeHttp2ClientCreateHeaderFields, &link.UprobeOptions{
-			Address: whOffset,
-		})
-		if err != nil {
-			return err
-		}
-
-		g.writeHeadersProbe = append(g.writeHeadersProbe, whProbe)
-	}
-
 	return nil
 }
 
@@ -242,15 +268,7 @@ func (g *Instrumentor) Close() {
 		g.eventsReader.Close()
 	}
 
-	if g.uprobe != nil {
-		g.uprobe.Close()
-	}
-
-	for _, r := range g.returnProbs {
-		r.Close()
-	}
-
-	for _, r := range g.writeHeadersProbe {
+	for _, r := range g.uprobes {
 		r.Close()
 	}
 

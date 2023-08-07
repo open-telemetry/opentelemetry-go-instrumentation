@@ -99,6 +99,11 @@ func (h *Instrumentor) Load(ctx *context.InstrumentorContext) error {
 			Field:      "Path",
 		},
 		{
+			VarName:    "ctx_ptr_pos",
+			StructName: "net/http.Request",
+			Field:      "ctx",
+		},
+		{
 			VarName:    "headers_ptr_pos",
 			StructName: "net/http.Request",
 			Field:      "Header",

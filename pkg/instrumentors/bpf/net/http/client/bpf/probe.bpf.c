@@ -25,7 +25,7 @@ struct {
 	__type(key, void*);
 	__type(value, struct http_request_t);
 	__uint(max_entries, MAX_CONCURRENT);
-} context_to_http_events SEC(".maps");
+} http_events SEC(".maps");
 
 struct {
 	__uint(type, BPF_MAP_TYPE_PERCPU_ARRAY);
@@ -33,7 +33,6 @@ struct {
 	__uint(value_size, sizeof(struct map_bucket));
 	__uint(max_entries, 1);
 } golang_mapbucket_storage_map SEC(".maps");
-
 
 struct {
 	__uint(type, BPF_MAP_TYPE_PERF_EVENT_ARRAY);
@@ -54,8 +53,10 @@ static __always_inline long inject_header(void* headers_ptr, struct span_context
 
     // Currently only maps with less than 8 keys are supported for injection
     if (map_keyvalue_count >= 8) {
+        bpf_printk("Map size is bigger than 8, skipping context propagation");
         return 0;
     }
+
     long res;
     if (map_keyvalue_count == 0) {
         u32 map_id = 0;
@@ -67,22 +68,21 @@ static __always_inline long inject_header(void* headers_ptr, struct span_context
         res = bpf_probe_write_user(headers_ptr + 16, &bucket_ptr, sizeof(bucket_ptr));
 
         if(res < 0) {
+            bpf_printk("Failed to write bucket ptr, return code: %d", res);
             return -1;
         }
 
     }
 
     void *map_keyvalues_ptr = NULL;
-
     bpf_probe_read(&map_keyvalues_ptr, sizeof(map_keyvalues_ptr), headers_ptr + 16);
-
     void *injected_key_ptr = map_keyvalues_ptr + 8 + (16 * map_keyvalue_count);
-
     char traceparent_tophash = 0xee;
     void *tophashes_ptr = map_keyvalues_ptr +  map_keyvalue_count;
     res = bpf_probe_write_user(tophashes_ptr, &traceparent_tophash, 1);
 
     if(res < 0) {
+        bpf_printk("Failed to write tophash, return code: %d", res);
         return -1;
     }
 
@@ -90,7 +90,6 @@ static __always_inline long inject_header(void* headers_ptr, struct span_context
     void *ptr = write_target_data(key, W3C_KEY_LENGTH);
 
     res = bpf_probe_write_user(injected_key_ptr, &ptr, sizeof(ptr));
-
     if(res < 0) {
         return -1;
     }
@@ -103,11 +102,7 @@ static __always_inline long inject_header(void* headers_ptr, struct span_context
     }
 
     void *injected_value_ptr = injected_key_ptr + (16 * (8 - map_keyvalue_count)) + 24 * map_keyvalue_count;
-
-
-
     char val[W3C_VAL_LENGTH];
-
     span_context_to_w3c_string(propagated_ctx, val);
 
     ptr = write_target_data(val, sizeof(val));
@@ -146,20 +141,19 @@ static __always_inline long inject_header(void* headers_ptr, struct span_context
 // func net/http/client.Do(req *Request)
 SEC("uprobe/HttpClient")
 int uprobe_HttpClient_Do(struct pt_regs *ctx) {
-
     struct http_request_t httpReq = {};
     httpReq.start_time = bpf_ktime_get_ns();
-
 
     u64 request_pos = 2;
     void *req_ptr = get_argument(ctx, request_pos);
 
-    // Get Request.ctx
-    void *goroutine = get_goroutine_address(ctx, ctx_ptr_pos);
     // Get parent if exists
-    struct span_context *span_ctx = bpf_map_lookup_elem(&spans_in_progress, &goroutine);
-    if (span_ctx != NULL) {
-        bpf_probe_read(&httpReq.psc, sizeof(httpReq.psc), span_ctx);
+    void *context_ptr = (void *)(req_ptr+ctx_ptr_pos);
+    void *context_ptr_val = 0;
+    bpf_probe_read(&context_ptr_val, sizeof(context_ptr_val), context_ptr);
+    struct span_context *parent_span_ctx = get_parent_span_context(context_ptr_val);
+    if (parent_span_ctx != NULL) {
+        bpf_probe_read(&httpReq.psc, sizeof(httpReq.psc), parent_span_ctx);
         copy_byte_arrays(httpReq.psc.TraceID, httpReq.sc.TraceID, TRACE_ID_SIZE);
         generate_random_bytes(httpReq.sc.SpanID, SPAN_ID_SIZE);
     } else {
@@ -196,9 +190,12 @@ int uprobe_HttpClient_Do(struct pt_regs *ctx) {
         bpf_printk("uprobe_HttpClient_Do: Failed to inject header");
     }
 
-    bpf_map_update_elem(&context_to_http_events, &goroutine, &httpReq, 0);
-    bpf_map_update_elem(&spans_in_progress, &goroutine, &httpReq.sc, 0);
+    // Get key
+    void *key = get_consistent_key(ctx, context_ptr);
 
+    // Write event
+    bpf_map_update_elem(&http_events, &key, &httpReq, 0);
+    start_tracking_span(context_ptr_val, &httpReq.sc);
     return 0;
 }
 
@@ -207,16 +204,17 @@ int uprobe_HttpClient_Do(struct pt_regs *ctx) {
 SEC("uprobe/HttpClient")
 int uprobe_HttpClient_Do_Returns(struct pt_regs *ctx) {
     u64 request_pos = 2;
-    void *req_ptr = get_argument_by_stack(ctx, request_pos);
-    void *goroutine = get_goroutine_address(ctx, ctx_ptr_pos);
-    void *httpReq_ptr = bpf_map_lookup_elem(&context_to_http_events, &goroutine);
+    void *req_ptr = get_argument(ctx, request_pos);
+    void *context_ptr = (void *)(req_ptr+ctx_ptr_pos);
+    void *key = get_consistent_key(ctx, context_ptr);
+    void *httpReq_ptr = bpf_map_lookup_elem(&http_events, &key);
     struct http_request_t httpReq = {};
     bpf_probe_read(&httpReq, sizeof(httpReq), httpReq_ptr);
+
     httpReq.end_time = bpf_ktime_get_ns();
     bpf_perf_event_output(ctx, &events, BPF_F_CURRENT_CPU, &httpReq, sizeof(httpReq));
-
-    bpf_map_delete_elem(&context_to_http_events, &goroutine);
-    bpf_map_delete_elem(&spans_in_progress, &goroutine);
+    bpf_map_delete_elem(&http_events, &key);
+    stop_tracking_span(&httpReq.sc);
 
     return 0;
 }

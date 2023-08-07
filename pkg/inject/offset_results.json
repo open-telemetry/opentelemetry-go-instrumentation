@@ -100,11 +100,75 @@
         ]
       }
     },
+    "google.golang.org/grpc/internal/transport.headerFrame": {
+      "hf": {
+        "versions": {
+          "oldest": "1.3.0",
+          "newest": "1.58.0-dev"
+        },
+        "offsets": [
+          {
+            "offset": 8,
+            "since": "v1.3.0"
+          }
+        ]
+      },
+      "streamID": {
+        "versions": {
+          "oldest": "1.3.0",
+          "newest": "1.58.0-dev"
+        },
+        "offsets": [
+          {
+            "offset": 0,
+            "since": "v1.3.0"
+          }
+        ]
+      }
+    },
+    "google.golang.org/grpc/internal/transport.http2Client": {
+      "nextID": {
+        "versions": {
+          "oldest": "1.3.0",
+          "newest": "1.58.0-dev"
+        },
+        "offsets": [
+          {
+            "offset": 412,
+            "since": "v1.3.0"
+          },
+          {
+            "offset": 356,
+            "since": "v1.15.0"
+          },
+          {
+            "offset": 348,
+            "since": "v1.24.0"
+          },
+          {
+            "offset": 340,
+            "since": "v1.35.0"
+          },
+          {
+            "offset": 348,
+            "since": "v1.48.0"
+          },
+          {
+            "offset": 340,
+            "since": "v1.51.0"
+          },
+          {
+            "offset": 412,
+            "since": "v1.52.0"
+          }
+        ]
+      }
+    },
     "net/http.Request": {
       "Header": {
         "versions": {
           "oldest": "1.12.0",
-          "newest": "1.20.6"
+          "newest": "1.20.7"
         },
         "offsets": [
           {
@@ -116,7 +180,7 @@
       "Method": {
         "versions": {
           "oldest": "1.12.0",
-          "newest": "1.20.6"
+          "newest": "1.20.7"
         },
         "offsets": [
           {
@@ -128,7 +192,7 @@
       "RemoteAddr": {
         "versions": {
           "oldest": "1.12.0",
-          "newest": "1.20.6"
+          "newest": "1.20.7"
         },
         "offsets": [
           {
@@ -140,7 +204,7 @@
       "URL": {
         "versions": {
           "oldest": "1.12.0",
-          "newest": "1.20.6"
+          "newest": "1.20.7"
         },
         "offsets": [
           {
@@ -152,7 +216,7 @@
       "ctx": {
         "versions": {
           "oldest": "1.12.0",
-          "newest": "1.20.6"
+          "newest": "1.20.7"
         },
         "offsets": [
           {
@@ -166,7 +230,7 @@
       "Path": {
         "versions": {
           "oldest": "1.12.0",
-          "newest": "1.20.6"
+          "newest": "1.20.7"
         },
         "offsets": [
           {
@@ -180,7 +244,7 @@
       "goid": {
         "versions": {
           "oldest": "1.12.0",
-          "newest": "1.20.6"
+          "newest": "1.20.7"
         },
         "offsets": [
           {
