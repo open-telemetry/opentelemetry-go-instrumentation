@@ -9,10 +9,8 @@ ALL_GO_MOD_DIRS := $(shell find . -type f -name 'go.mod' ! -path './LICENSES/*' 
 OTEL_GO_MOD_DIRS := $(filter-out $(TOOLS_MOD_DIR), $(ALL_GO_MOD_DIRS))
 
 # Build the list of include directories to compile the bpf program
-CFLAGS += -I${REPODIR}/bpf/include
-CFLAGS += -I${REPODIR}/bpf/include/libbpf
-
-BPF_PROBES := $(REPODIR)/bpf
+BPF_INCLUDE += -I${REPODIR}/bpf/include
+BPF_INCLUDE += -I${REPODIR}/bpf/include/libbpf
 
 .DEFAULT_GOAL := precommit
 
@@ -50,8 +48,8 @@ test/%:
 	cd $(shell dirname $(GO_MOD)) && go test -v ./...
 
 .PHONY: generate
-generate: export CFLAGS := $(CFLAGS)
-generate: export BPF_PROBES := $(BPF_PROBES)
+generate: export CFLAGS := $(BPF_INCLUDE)
+generate: export BPF_PROBES := $(REPODIR)/bpf
 generate: go-mod-tidy
 generate:
 	go generate ./...
