@@ -38,18 +38,19 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
-//go:generate go run github.com/cilium/ebpf/cmd/bpf2go -target amd64,arm64 -cc clang -cflags $CFLAGS bpf ./bpf/probe.bpf.c
+//go:generate go run github.com/cilium/ebpf/cmd/bpf2go -target amd64,arm64 -cc clang -cflags $CFLAGS bpf $BPF_PROBES/http_server.c
 
 const instrumentedPkg = "github.com/gin-gonic/gin"
 
 // Event represents an event in the gin-gonic/gin server during an HTTP
 // request-response.
 type Event struct {
-	StartTime   uint64
-	EndTime     uint64
-	Method      [7]byte
-	Path        [100]byte
-	SpanContext context.EBPFSpanContext
+	StartTime         uint64
+	EndTime           uint64
+	Method            [7]byte
+	Path              [100]byte
+	SpanContext       context.EBPFSpanContext
+	ParentSpanContext context.EBPFSpanContext
 }
 
 // Instrumentor is the gin-gonic/gin instrumentor.
@@ -104,6 +105,11 @@ func (h *Instrumentor) Load(ctx *context.InstrumentorContext) error {
 			StructName: "net/http.Request",
 			Field:      "ctx",
 		},
+		{
+			VarName:    "headers_ptr_pos",
+			StructName: "net/http.Request",
+			Field:      "Header",
+		},
 	}, false)
 
 	if err != nil {
@@ -146,7 +152,7 @@ func (h *Instrumentor) registerProbes(ctx *context.InstrumentorContext, funcName
 		return
 	}
 
-	up, err := ctx.Executable.Uprobe("", h.bpfObjects.UprobeGinEngineServeHTTP, &link.UprobeOptions{
+	up, err := ctx.Executable.Uprobe("", h.bpfObjects.UprobeServerMuxServeHTTP, &link.UprobeOptions{
 		Address: offset,
 	})
 	if err != nil {
@@ -158,7 +164,7 @@ func (h *Instrumentor) registerProbes(ctx *context.InstrumentorContext, funcName
 	h.uprobes = append(h.uprobes, up)
 
 	for _, ret := range retOffsets {
-		retProbe, err := ctx.Executable.Uprobe("", h.bpfObjects.UprobeGinEngineServeHTTP_Returns, &link.UprobeOptions{
+		retProbe, err := ctx.Executable.Uprobe("", h.bpfObjects.UprobeServerMuxServeHTTP_Returns, &link.UprobeOptions{
 			Address: ret,
 		})
 		if err != nil {
@@ -207,16 +213,29 @@ func (h *Instrumentor) convertEvent(e *Event) *events.Event {
 		TraceFlags: trace.FlagsSampled,
 	})
 
+	var pscPtr *trace.SpanContext
+	if e.ParentSpanContext.TraceID.IsValid() {
+		psc := trace.NewSpanContext(trace.SpanContextConfig{
+			TraceID:    e.ParentSpanContext.TraceID,
+			SpanID:     e.ParentSpanContext.SpanID,
+			TraceFlags: trace.FlagsSampled,
+			Remote:     true,
+		})
+		pscPtr = &psc
+	} else {
+		pscPtr = nil
+	}
+
 	return &events.Event{
 		Library: h.LibraryName(),
 		// Do not include the high-cardinality path here (there is no
-		// templatized path manifest to reference, given we are instrumenting
-		// Engine.ServeHTTP which is not passed a Gin Context).
-		Name:        method,
-		Kind:        trace.SpanKindServer,
-		StartTime:   int64(e.StartTime),
-		EndTime:     int64(e.EndTime),
-		SpanContext: &sc,
+		// templatized path manifest to reference).
+		Name:              method,
+		Kind:              trace.SpanKindServer,
+		StartTime:         int64(e.StartTime),
+		EndTime:           int64(e.EndTime),
+		SpanContext:       &sc,
+		ParentSpanContext: pscPtr,
 		Attributes: []attribute.KeyValue{
 			semconv.HTTPMethodKey.String(method),
 			semconv.HTTPTargetKey.String(path),

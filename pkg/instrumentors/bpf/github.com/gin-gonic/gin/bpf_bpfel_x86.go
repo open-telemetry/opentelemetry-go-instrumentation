@@ -18,6 +18,7 @@ type bpfHttpRequestT struct {
 	Method    [7]int8
 	Path      [100]int8
 	Sc        bpfSpanContext
+	Psc       bpfSpanContext
 	_         [5]byte
 }
 
@@ -67,18 +68,21 @@ type bpfSpecs struct {
 //
 // It can be passed ebpf.CollectionSpec.Assign.
 type bpfProgramSpecs struct {
-	UprobeGinEngineServeHTTP         *ebpf.ProgramSpec `ebpf:"uprobe_GinEngine_ServeHTTP"`
-	UprobeGinEngineServeHTTP_Returns *ebpf.ProgramSpec `ebpf:"uprobe_GinEngine_ServeHTTP_Returns"`
+	UprobeServerMuxServeHTTP         *ebpf.ProgramSpec `ebpf:"uprobe_ServerMux_ServeHTTP"`
+	UprobeServerMuxServeHTTP_Returns *ebpf.ProgramSpec `ebpf:"uprobe_ServerMux_ServeHTTP_Returns"`
 }
 
 // bpfMapSpecs contains maps before they are loaded into the kernel.
 //
 // It can be passed ebpf.CollectionSpec.Assign.
 type bpfMapSpecs struct {
-	Events           *ebpf.MapSpec `ebpf:"events"`
-	HttpEvents       *ebpf.MapSpec `ebpf:"http_events"`
-	TrackedSpans     *ebpf.MapSpec `ebpf:"tracked_spans"`
-	TrackedSpansBySc *ebpf.MapSpec `ebpf:"tracked_spans_by_sc"`
+	AllocMap                    *ebpf.MapSpec `ebpf:"alloc_map"`
+	Events                      *ebpf.MapSpec `ebpf:"events"`
+	GolangMapbucketStorageMap   *ebpf.MapSpec `ebpf:"golang_mapbucket_storage_map"`
+	HttpEvents                  *ebpf.MapSpec `ebpf:"http_events"`
+	ParentSpanContextStorageMap *ebpf.MapSpec `ebpf:"parent_span_context_storage_map"`
+	TrackedSpans                *ebpf.MapSpec `ebpf:"tracked_spans"`
+	TrackedSpansBySc            *ebpf.MapSpec `ebpf:"tracked_spans_by_sc"`
 }
 
 // bpfObjects contains all objects after they have been loaded into the kernel.
@@ -100,16 +104,22 @@ func (o *bpfObjects) Close() error {
 //
 // It can be passed to loadBpfObjects or ebpf.CollectionSpec.LoadAndAssign.
 type bpfMaps struct {
-	Events           *ebpf.Map `ebpf:"events"`
-	HttpEvents       *ebpf.Map `ebpf:"http_events"`
-	TrackedSpans     *ebpf.Map `ebpf:"tracked_spans"`
-	TrackedSpansBySc *ebpf.Map `ebpf:"tracked_spans_by_sc"`
+	AllocMap                    *ebpf.Map `ebpf:"alloc_map"`
+	Events                      *ebpf.Map `ebpf:"events"`
+	GolangMapbucketStorageMap   *ebpf.Map `ebpf:"golang_mapbucket_storage_map"`
+	HttpEvents                  *ebpf.Map `ebpf:"http_events"`
+	ParentSpanContextStorageMap *ebpf.Map `ebpf:"parent_span_context_storage_map"`
+	TrackedSpans                *ebpf.Map `ebpf:"tracked_spans"`
+	TrackedSpansBySc            *ebpf.Map `ebpf:"tracked_spans_by_sc"`
 }
 
 func (m *bpfMaps) Close() error {
 	return _BpfClose(
+		m.AllocMap,
 		m.Events,
+		m.GolangMapbucketStorageMap,
 		m.HttpEvents,
+		m.ParentSpanContextStorageMap,
 		m.TrackedSpans,
 		m.TrackedSpansBySc,
 	)
@@ -119,14 +129,14 @@ func (m *bpfMaps) Close() error {
 //
 // It can be passed to loadBpfObjects or ebpf.CollectionSpec.LoadAndAssign.
 type bpfPrograms struct {
-	UprobeGinEngineServeHTTP         *ebpf.Program `ebpf:"uprobe_GinEngine_ServeHTTP"`
-	UprobeGinEngineServeHTTP_Returns *ebpf.Program `ebpf:"uprobe_GinEngine_ServeHTTP_Returns"`
+	UprobeServerMuxServeHTTP         *ebpf.Program `ebpf:"uprobe_ServerMux_ServeHTTP"`
+	UprobeServerMuxServeHTTP_Returns *ebpf.Program `ebpf:"uprobe_ServerMux_ServeHTTP_Returns"`
 }
 
 func (p *bpfPrograms) Close() error {
 	return _BpfClose(
-		p.UprobeGinEngineServeHTTP,
-		p.UprobeGinEngineServeHTTP_Returns,
+		p.UprobeServerMuxServeHTTP,
+		p.UprobeServerMuxServeHTTP_Returns,
 	)
 }
 
