@@ -109,6 +109,18 @@ func main() {
 				StructName: "golang.org/x/net/http2.FrameHeader",
 				Field:      "StreamID",
 			},
+			{
+				StructName: "google.golang.org/grpc/internal/transport.http2Client",
+				Field:      "nextID",
+			},
+			{
+				StructName: "google.golang.org/grpc/internal/transport.headerFrame",
+				Field:      "streamID",
+			},
+			{
+				StructName: "google.golang.org/grpc/internal/transport.headerFrame",
+				Field:      "hf",
+			},
 		})
 
 	if err != nil {
