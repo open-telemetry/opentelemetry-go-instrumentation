@@ -8,7 +8,15 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 
 ## [Unreleased]
 
+### Added
+
 - Add ability to monitor multiple processes. ([#197](https://github.com/open-telemetry/opentelemetry-go-instrumentation/issues/197))
+
+### Changed
+
+- `pkg/instrumentors` Manager struct method  FilterUnusedInstrumentors is made private.
+- `pkg/opentelemtry/` NewController method now accepts ControllerSettings param.
+- `pkg/process/` Analyzer struct `Close` method is removed.
 
 ### Fixed
 

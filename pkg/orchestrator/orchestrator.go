@@ -28,17 +28,13 @@ import (
 	"go.opentelemetry.io/auto/pkg/process"
 )
 
-// Interface defines orchestrator interface.
-type Interface interface {
-	Run() error
-}
-
 type pidServiceName struct {
 	serviceName string
 	pid         int
 }
 
-type impl struct {
+// Service is responsible for managing all instrumentation.
+type Service struct {
 	ctx         context.Context
 	analyzer    *process.Analyzer
 	targetArgs  *process.TargetArgs
@@ -49,13 +45,13 @@ type impl struct {
 	pidTicker   <-chan time.Time
 }
 
-// New creates a new Implementation of orchestrator Interface.
+// New creates a new Implementation of orchestrator Service.
 func New(
 	ctx context.Context,
 	targetArgs *process.TargetArgs,
 	exporter sdktrace.SpanExporter,
-) (Interface, error) {
-	return &impl{
+) (*Service, error) {
+	return &Service{
 		ctx:         ctx,
 		analyzer:    process.NewAnalyzer(),
 		targetArgs:  targetArgs,
@@ -67,24 +63,24 @@ func New(
 	}, nil
 }
 
-func (i *impl) Run() error {
-	go i.findProcess()
+// Run manages the lifecycle of instrumentors for a go process.
+func (s *Service) Run() error {
+	go s.findProcess()
 	for {
 		select {
-		case <-i.ctx.Done():
-			log.Logger.Info("Got SIGTERM cleaning up")
+		case <-s.ctx.Done():
 
-			for _, m := range i.managers {
+			for _, m := range s.managers {
 				m.Close()
 			}
 
-			close(i.deadProcess)
-			close(i.processch)
+			close(s.deadProcess)
+			close(s.processch)
 
 			return nil
-		case d := <-i.deadProcess:
+		case d := <-s.deadProcess:
 			log.Logger.Info("process died cleaning up", "pid", d)
-			if m, ok := i.managers[d]; ok {
+			if m, ok := s.managers[d]; ok {
 				m.Close()
 			}
 			err := bpffs.Cleanup(&process.TargetDetails{
@@ -93,9 +89,9 @@ func (i *impl) Run() error {
 			if err != nil {
 				log.Logger.V(0).Error(err, "unable to clean bpffs", "pid", d)
 			}
-			delete(i.managers, d)
+			delete(s.managers, d)
 
-		case p := <-i.processch:
+		case p := <-s.processch:
 
 			log.Logger.V(0).Info(
 				"Add auto instrumetors",
@@ -104,9 +100,9 @@ func (i *impl) Run() error {
 				"serviceName",
 				p.serviceName,
 			)
-			controller, err := opentelemetry.NewController(i.ctx, opentelemetry.ControllerSetting{
+			controller, err := opentelemetry.NewController(s.ctx, opentelemetry.ControllerSetting{
 				ServiceName: p.serviceName,
-				Exporter:    i.exporter,
+				Exporter:    s.exporter,
 			})
 			if err != nil {
 				log.Logger.Error(err, "error creating opentelemetry controller")
@@ -119,7 +115,7 @@ func (i *impl) Run() error {
 				continue
 			}
 
-			targetDetails, err := i.analyzer.Analyze(p.pid, instManager.GetRelevantFuncs())
+			targetDetails, err := s.analyzer.Analyze(p.pid, instManager.GetRelevantFuncs())
 			if err != nil {
 				log.Logger.Error(err, "error while analyzing target process")
 				continue
@@ -127,7 +123,7 @@ func (i *impl) Run() error {
 			log.Logger.V(0).Info("target process analysis completed", "pid", targetDetails.PID,
 				"go_version", targetDetails.GoVersion, "dependencies", targetDetails.Libraries,
 				"total_functions_found", len(targetDetails.Functions))
-			i.managers[targetDetails.PID] = instManager
+			s.managers[targetDetails.PID] = instManager
 			go func() {
 				log.Logger.V(0).Info("invoking instrumentors")
 
@@ -140,34 +136,38 @@ func (i *impl) Run() error {
 	}
 }
 
-func (i *impl) findProcess() {
+func (s *Service) findProcess() {
 	for {
 		select {
-		case <-i.ctx.Done():
+		case <-s.ctx.Done():
 			return
-		case <-i.pidTicker:
+		case <-s.pidTicker:
 
-			pids := i.analyzer.FindAllProcesses(i.targetArgs)
+			pids, err := s.analyzer.FindAllProcesses(s.targetArgs)
+			if err != nil {
+				log.Logger.Error(err, "FindAllProcesses failed")
+				continue
+			}
 			if len(pids) == 0 {
-				for pid := range i.managers {
-					i.deadProcess <- pid
+				for pid := range s.managers {
+					s.deadProcess <- pid
 				}
 
-				log.Logger.V(0).
+				log.Logger.V(1).
 					Info("No go process not found yet, trying again in 2 seconds")
 				continue
 			}
 
-			for pid := range i.managers {
+			for pid := range s.managers {
 				if _, ok := pids[pid]; !ok {
-					i.deadProcess <- pid
+					s.deadProcess <- pid
 				}
 			}
-			for p, s := range pids {
-				if _, ok := i.managers[p]; !ok {
-					i.processch <- &pidServiceName{
+			for p, serviceName := range pids {
+				if _, ok := s.managers[p]; !ok {
+					s.processch <- &pidServiceName{
 						pid:         p,
-						serviceName: s,
+						serviceName: serviceName,
 					}
 				}
 			}

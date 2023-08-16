@@ -99,16 +99,11 @@ func NewTracedProgram(pid int, logger logr.Logger) (*TracedProgram, error) {
 					retryCount[tid]++
 				}
 				if retryCount[tid] < threadRetryLimit {
-					logger.Info(
+					logger.Error(err,
 						"retry attaching thread",
-						"tid",
-						tid,
-						"retryCount",
-						retryCount[tid],
-						"limit",
-						threadRetryLimit,
-						"error",
-						err,
+						"tid", tid,
+						"retryCount", retryCount[tid],
+						"limit", threadRetryLimit,
 					)
 					continue
 				}
@@ -217,13 +212,5 @@ func (p *TracedProgram) Step() error {
 
 // Mmap runs mmap syscall.
 func (p *TracedProgram) Mmap(length uint64, fd uint64) (uint64, error) {
-	return p.Syscall(
-		syscall.SYS_MMAP,
-		0,
-		length,
-		syscall.PROT_READ|syscall.PROT_WRITE|syscall.PROT_EXEC,
-		syscall.MAP_ANON|syscall.MAP_PRIVATE|syscall.MAP_POPULATE,
-		fd,
-		0,
-	)
+	return p.Syscall(syscall.SYS_MMAP, 0, length, syscall.PROT_READ|syscall.PROT_WRITE|syscall.PROT_EXEC, syscall.MAP_ANON|syscall.MAP_PRIVATE|syscall.MAP_POPULATE, fd, 0)
 }

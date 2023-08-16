@@ -19,9 +19,9 @@ import (
 	"os"
 )
 
-// ExePathEnvVar is the environment variable key whose value points to the
-// instrumented executable.
 const (
+	// ExePathEnvVar is the environment variable key whose value points to the
+	// instrumented executable.
 	ExePathEnvVar         = "OTEL_GO_AUTO_TARGET_EXE"
 	otelServiceNameEnvVar = "OTEL_SERVICE_NAME"
 )

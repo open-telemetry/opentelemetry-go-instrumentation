@@ -93,12 +93,12 @@ func (m *Manager) load(target *process.TargetDetails) error {
 		}
 	}
 
-	log.Logger.V(0).
-		Info("loaded instrumentors to memory", "total_instrumentors", len(m.instrumentors))
+	log.Logger.V(0).Info("loaded instrumentors to memory", "total_instrumentors", len(m.instrumentors))
 	return nil
 }
 
 func (m *Manager) cleanup() {
+	close(m.incomingEvents)
 	for _, i := range m.instrumentors {
 		i.Close()
 	}

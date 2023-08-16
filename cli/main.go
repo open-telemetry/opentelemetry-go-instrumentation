@@ -35,10 +35,8 @@ import (
 )
 
 var (
-	// Controller-local reference to the auto-instrumentation release version.
-	releaseVersion = auto.Version()
 	// Start of this auto-instrumentation's exporter User-Agent header, e.g. ""OTel-Go-Auto-Instrumentation/1.2.3".
-	baseUserAgent = fmt.Sprintf("OTel-Go-Auto-Instrumentation/%s", releaseVersion)
+	baseUserAgent = fmt.Sprintf("OTel-Go-Auto-Instrumentation/%s", auto.Version())
 	// Information about the runtime environment for inclusion in User-Agent, e.g. "go/1.18.2 (linux/amd64)".
 	runtimeInfo = fmt.Sprintf(
 		"%s (%s/%s)",

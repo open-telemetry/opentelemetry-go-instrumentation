@@ -48,10 +48,10 @@ func (a *Analyzer) Close() {
 }
 
 // FindAllProcesses returns all go processes by reading `/proc/`.
-func (a *Analyzer) FindAllProcesses(target *TargetArgs) map[int]string {
+func (a *Analyzer) FindAllProcesses(target *TargetArgs) (map[int]string, error) {
 	proc, err := os.Open("/proc")
 	if err != nil {
-		return nil
+		return nil, err
 	}
 
 	pids := make(map[int]string)
@@ -61,8 +61,7 @@ func (a *Analyzer) FindAllProcesses(target *TargetArgs) map[int]string {
 			break
 		}
 		if err != nil {
-			log.Logger.V(1).Error(err, "unable to read /proc")
-			return nil
+			return pids, err
 		}
 
 		for _, di := range dirs {
@@ -77,8 +76,7 @@ func (a *Analyzer) FindAllProcesses(target *TargetArgs) map[int]string {
 
 			pid, err := strconv.Atoi(dname)
 			if err != nil {
-				log.Logger.V(1).Error(err, "creating pid")
-				return nil
+				return pids, err
 			}
 
 			exeFullPath, err := os.Readlink(path.Join("/proc", dname, "exe"))
@@ -86,8 +84,7 @@ func (a *Analyzer) FindAllProcesses(target *TargetArgs) map[int]string {
 				// Read link may fail if target process runs not as root
 				cmdline, err := os.ReadFile(path.Join("/proc", dname, "cmdline"))
 				if err != nil {
-					log.Logger.V(1).Error(err, "reading cmdline")
-					return nil
+					return pids, err
 				}
 				exeFullPath = string(cmdline)
 			}
@@ -102,7 +99,7 @@ func (a *Analyzer) FindAllProcesses(target *TargetArgs) map[int]string {
 			}
 			envs, err := getEnvVars(pid)
 			if err != nil {
-				log.Logger.V(1).Error(err, "reading envs ", "pid", pid)
+				log.Logger.V(0).Error(err, "reading envs ", "pid", pid)
 				continue
 			}
 
@@ -112,11 +109,10 @@ func (a *Analyzer) FindAllProcesses(target *TargetArgs) map[int]string {
 		}
 	}
 
-	return pids
+	return pids, nil
 }
 
 func (a *Analyzer) isGo(pid int) bool {
-	// TODO
 	f, err := os.Open(fmt.Sprintf("/proc/%d/exe", pid))
 	if err != nil {
 		return false
