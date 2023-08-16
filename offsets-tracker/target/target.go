@@ -57,6 +57,7 @@ type VersionedResult struct {
 // Data represents the target Go module data.
 type Data struct {
 	name                string
+	isGoStdlib          bool
 	versionsStrategy    VersionsStrategy
 	binaryFetchStrategy BinaryFetchStrategy
 	versionConstraint   *version.Constraints
@@ -64,12 +65,13 @@ type Data struct {
 }
 
 // New returns a new Data.
-func New(name string, fileName string) *Data {
+func New(name string, fileName string, isStdlib bool) *Data {
 	return &Data{
 		name:                name,
 		versionsStrategy:    GoListVersionsStrategy,
 		binaryFetchStrategy: WrapAsGoAppBinaryFetchStrategy,
 		cache:               cache.NewCache(fileName),
+		isGoStdlib:          isStdlib,
 	}
 }
 
@@ -197,7 +199,7 @@ func (t *Data) findVersions() ([]string, error) {
 func (t *Data) downloadBinary(modName string, version string) (string, string, error) {
 	switch t.binaryFetchStrategy {
 	case WrapAsGoAppBinaryFetchStrategy:
-		return downloader.DownloadBinary(modName, version)
+		return downloader.DownloadBinary(modName, version, t.isGoStdlib)
 	case DownloadPreCompiledBinaryFetchStrategy:
 		return downloader.DownloadBinaryFromRemote(modName, version)
 	}
