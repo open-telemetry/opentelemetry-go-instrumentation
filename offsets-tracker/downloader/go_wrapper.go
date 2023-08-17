@@ -38,6 +38,7 @@ var (
 )
 
 // DownloadBinary downloads the module with modName at version.
+// revive:disable-next-line:flag-parameter
 func DownloadBinary(modName string, version string, isGoStandartLib bool) (string, string, error) {
 	dir, err := os.MkdirTemp("", appName)
 	if err != nil {

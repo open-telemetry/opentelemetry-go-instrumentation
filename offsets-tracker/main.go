@@ -55,7 +55,11 @@ func main() {
 			},
 		})
 
-	stdLibNetHttpOffsets, err := target.New("net/http", *outputFile, true).
+	if err != nil {
+		log.Fatalf("error while fetching offsets for \"runtime\": %v\n", err)
+	}
+
+	stdLibNetHTTPOffsets, err := target.New("net/http", *outputFile, true).
 		FindVersionsBy(target.GoDevFileVersionsStrategy).
 		DownloadBinaryBy(target.WrapAsGoAppBinaryFetchStrategy).
 		VersionConstraint(&minimunGoVersion).
@@ -82,7 +86,11 @@ func main() {
 			},
 		})
 
-	stdLibNetUrlOffsets, err := target.New("net/url", *outputFile, true).
+	if err != nil {
+		log.Fatalf("error while fetching offsets for \"net/http\": %v\n", err)
+	}
+
+	stdLibNetURLOffsets, err := target.New("net/url", *outputFile, true).
 		FindVersionsBy(target.GoDevFileVersionsStrategy).
 		DownloadBinaryBy(target.WrapAsGoAppBinaryFetchStrategy).
 		VersionConstraint(&minimunGoVersion).
@@ -94,7 +102,7 @@ func main() {
 		})
 
 	if err != nil {
-		log.Fatalf("error while fetching offsets: %v\n", err)
+		log.Fatalf("error while fetching offsets for \"net/url\": %v\n", err)
 	}
 
 	grpcOffsets, err := target.New("google.golang.org/grpc", *outputFile, false).
@@ -142,7 +150,7 @@ func main() {
 	}
 
 	fmt.Println("Done collecting offsets, writing results to file ...")
-	err = writer.WriteResults(*outputFile, stdLibRuntimeOffsets, stdLibNetHttpOffsets, stdLibNetUrlOffsets, grpcOffsets)
+	err = writer.WriteResults(*outputFile, stdLibRuntimeOffsets, stdLibNetHTTPOffsets, stdLibNetURLOffsets, grpcOffsets)
 	if err != nil {
 		log.Fatalf("error while writing results to file: %v\n", err)
 	}
