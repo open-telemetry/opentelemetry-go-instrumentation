@@ -15,9 +15,10 @@ import (
 type bpfHttpRequestT struct {
 	StartTime uint64
 	EndTime   uint64
+	Sc        bpfSpanContext
+	Psc       bpfSpanContext
 	Method    [7]int8
 	Path      [100]int8
-	Sc        bpfSpanContext
 	_         [5]byte
 }
 

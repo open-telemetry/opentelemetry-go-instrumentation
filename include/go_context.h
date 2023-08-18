@@ -12,6 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#ifndef _GO_CONTEXT_H_
+#define _GO_CONTEXT_H_
+
 #include "bpf_helpers.h"
 
 #define MAX_DISTANCE 10
@@ -84,3 +87,5 @@ static __always_inline void stop_tracking_span(struct span_context *sc) {
     bpf_map_delete_elem(&tracked_spans, &ctx);
     bpf_map_delete_elem(&tracked_spans_by_sc, sc);
 }
+
+#endif

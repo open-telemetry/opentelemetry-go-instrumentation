@@ -16,6 +16,7 @@
 #include "go_types.h"
 #include "span_context.h"
 #include "go_context.h"
+#include "uprobe.h"
 
 char __license[] SEC("license") = "Dual MIT/GPL";
 
@@ -28,11 +29,8 @@ char __license[] SEC("license") = "Dual MIT/GPL";
 
 struct grpc_request_t
 {
-    u64 start_time;
-    u64 end_time;
+    BASE_SPAN_PROPERTIES
     char method[MAX_SIZE];
-    struct span_context sc;
-    struct span_context psc;
 };
 
 struct
@@ -116,23 +114,7 @@ int uprobe_server_handleStream(struct pt_regs *ctx)
     return 0;
 }
 
-SEC("uprobe/server_handleStream")
-int uprobe_server_handleStream_Returns(struct pt_regs *ctx)
-{
-    u64 stream_pos = 4;
-    void *stream_ptr = get_argument(ctx, stream_pos);
-    void *key = get_consistent_key(ctx, (void *)(stream_ptr + stream_ctx_pos));
-
-    void *grpcReq_ptr = bpf_map_lookup_elem(&grpc_events, &key);
-    struct grpc_request_t grpcReq = {};
-    bpf_probe_read(&grpcReq, sizeof(grpcReq), grpcReq_ptr);
-
-    grpcReq.end_time = bpf_ktime_get_ns();
-    bpf_perf_event_output(ctx, &events, BPF_F_CURRENT_CPU, &grpcReq, sizeof(grpcReq));
-    bpf_map_delete_elem(&grpc_events, &key);
-    stop_tracking_span(&grpcReq.sc);
-    return 0;
-}
+UPROBE_RETURN(server_handleStream, struct grpc_request_t, 4, stream_ctx_pos, grpc_events, events)
 
 // func (d *decodeState) decodeHeader(frame *http2.MetaHeadersFrame) error
 SEC("uprobe/decodeState_decodeHeader")
