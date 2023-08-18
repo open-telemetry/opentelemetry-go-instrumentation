@@ -42,8 +42,8 @@ import (
 // request-response.
 type Event struct {
 	context.BaseSpanProperties
-	Method            [10]byte
-	Path              [100]byte
+	Method [10]byte
+	Path   [100]byte
 }
 
 // Instrumentor is the net/http instrumentor.

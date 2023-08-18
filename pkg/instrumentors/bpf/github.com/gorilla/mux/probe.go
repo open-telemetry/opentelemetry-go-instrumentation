@@ -45,8 +45,8 @@ const instrumentedPkg = "github.com/gorilla/mux"
 // request-response.
 type Event struct {
 	context.BaseSpanProperties
-	Method      [7]byte
-	Path        [100]byte
+	Method [7]byte
+	Path   [100]byte
 }
 
 // Instrumentor is the gorilla/mux instrumentor.
