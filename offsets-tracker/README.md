@@ -69,6 +69,7 @@ offsets-tracker wraps every Go module version as a Go application that depends o
 Those applications are the result of [generating template files](./downloader/wrapper) with the appropriate version.
 
 In the case of the Go standard library, the offsets-tracker creates a dummy application that depends on the specific library. For example
+
 ```go
 import (
   _ "net/http"
