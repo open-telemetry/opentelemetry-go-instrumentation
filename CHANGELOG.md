@@ -27,7 +27,7 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 - Update generated offsets. ([#186](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/186))
 - Reduce Docker image size by using different base image. ([#182](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/182))
 - Support for multiple processes in BPF FS. ([#211](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/211))
-- Fix offset tracker to build binaries for go stdlib as well ([#256]https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/256)
+- Fix offset tracker to build binaries for go stdlib as well. DownloadBinary() now has an additional flag indicating whether it'll build a dummy app for go stdlib or not - this will cause a different go.mod file to be used. ([#256]https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/256)
 
 ## [v0.2.1-alpha] - 2023-05-15
 
