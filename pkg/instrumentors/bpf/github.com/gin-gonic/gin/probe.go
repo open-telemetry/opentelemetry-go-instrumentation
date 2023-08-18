@@ -45,11 +45,9 @@ const instrumentedPkg = "github.com/gin-gonic/gin"
 // Event represents an event in the gin-gonic/gin server during an HTTP
 // request-response.
 type Event struct {
-	StartTime   uint64
-	EndTime     uint64
+	context.BaseSpanProperties
 	Method      [7]byte
 	Path        [100]byte
-	SpanContext context.EBPFSpanContext
 }
 
 // Instrumentor is the gin-gonic/gin instrumentor.

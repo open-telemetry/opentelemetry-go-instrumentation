@@ -41,12 +41,9 @@ import (
 // Event represents an event in an HTTP server during an HTTP
 // request-response.
 type Event struct {
-	StartTime         uint64
-	EndTime           uint64
+	context.BaseSpanProperties
 	Method            [10]byte
 	Path              [100]byte
-	SpanContext       context.EBPFSpanContext
-	ParentSpanContext context.EBPFSpanContext
 }
 
 // Instrumentor is the net/http instrumentor.
