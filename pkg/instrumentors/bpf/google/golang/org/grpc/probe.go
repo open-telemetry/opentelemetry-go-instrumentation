@@ -43,12 +43,9 @@ import (
 
 // Event represents an event in the gRPC client during a gRPC request.
 type Event struct {
-	StartTime         uint64
-	EndTime           uint64
-	Method            [50]byte
-	Target            [50]byte
-	SpanContext       context.EBPFSpanContext
-	ParentSpanContext context.EBPFSpanContext
+	context.BaseSpanProperties
+	Method [50]byte
+	Target [50]byte
 }
 
 // Instrumentor is the gRPC client instrumentor.

@@ -2,6 +2,7 @@
 #include "span_context.h"
 #include "go_context.h"
 #include "go_types.h"
+#include "uprobe.h"
 
 char __license[] SEC("license") = "Dual MIT/GPL";
 
@@ -12,12 +13,9 @@ char __license[] SEC("license") = "Dual MIT/GPL";
 #define MAX_CONCURRENT 50
 
 struct http_request_t {
-    u64 start_time;
-    u64 end_time;
+    BASE_SPAN_PROPERTIES
     char method[MAX_METHOD_SIZE];
     char path[MAX_PATH_SIZE];
-    struct span_context sc;
-    struct span_context psc;
 };
 
 struct {
@@ -139,7 +137,7 @@ static __always_inline long inject_header(void* headers_ptr, struct span_context
 
 // This instrumentation attaches uprobe to the following function:
 // func net/http/client.Do(req *Request)
-SEC("uprobe/HttpClient")
+SEC("uprobe/HttpClient_Do")
 int uprobe_HttpClient_Do(struct pt_regs *ctx) {
     struct http_request_t httpReq = {};
     httpReq.start_time = bpf_ktime_get_ns();
@@ -201,20 +199,4 @@ int uprobe_HttpClient_Do(struct pt_regs *ctx) {
 
 // This instrumentation attaches uretprobe to the following function:
 // func net/http/client.Do(req *Request)
-SEC("uprobe/HttpClient")
-int uprobe_HttpClient_Do_Returns(struct pt_regs *ctx) {
-    u64 request_pos = 2;
-    void *req_ptr = get_argument(ctx, request_pos);
-    void *context_ptr = (void *)(req_ptr+ctx_ptr_pos);
-    void *key = get_consistent_key(ctx, context_ptr);
-    void *httpReq_ptr = bpf_map_lookup_elem(&http_events, &key);
-    struct http_request_t httpReq = {};
-    bpf_probe_read(&httpReq, sizeof(httpReq), httpReq_ptr);
-
-    httpReq.end_time = bpf_ktime_get_ns();
-    bpf_perf_event_output(ctx, &events, BPF_F_CURRENT_CPU, &httpReq, sizeof(httpReq));
-    bpf_map_delete_elem(&http_events, &key);
-    stop_tracking_span(&httpReq.sc);
-
-    return 0;
-}
+UPROBE_RETURN(HttpClient_Do, struct http_request_t, 2, ctx_ptr_pos, http_events, events)

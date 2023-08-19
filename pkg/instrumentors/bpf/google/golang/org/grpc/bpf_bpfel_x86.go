@@ -15,10 +15,10 @@ import (
 type bpfGrpcRequestT struct {
 	StartTime uint64
 	EndTime   uint64
-	Method    [50]int8
-	Target    [50]int8
 	Sc        bpfSpanContext
 	Psc       bpfSpanContext
+	Method    [50]int8
+	Target    [50]int8
 	_         [4]byte
 }
 
