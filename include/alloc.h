@@ -12,6 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#ifndef _ALLOC_H_
+#define _ALLOC_H_
+
 #include "bpf_helpers.h"
 
 #define MAX_ENTRIES 50
@@ -119,3 +122,5 @@ static __always_inline void *write_target_data(void *data, s32 size)
         return NULL;
     }
 }
+
+#endif

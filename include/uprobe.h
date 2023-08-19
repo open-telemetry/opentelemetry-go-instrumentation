@@ -12,6 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#ifndef _UPROBE_H_
+#define _UPROBE_H_
+
 #include "common.h"
 #include "span_context.h"
 #include "go_context.h"
@@ -43,3 +46,5 @@ int uprobe_##name##_Returns(struct pt_regs *ctx) {                              
     stop_tracking_span(&tmpReq.sc);                                                                        \
     return 0;                                                                                              \
 }
+
+#endif
