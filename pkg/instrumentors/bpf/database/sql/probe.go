@@ -40,14 +40,13 @@ import (
 
 //go:generate go run github.com/cilium/ebpf/cmd/bpf2go -target amd64,arm64 -cc clang -cflags $CFLAGS bpf ./bpf/probe.bpf.c
 
+const instrumentedPkg = "database/sql"
+
 // Event represents an event in an SQL database
 // request-response.
 type Event struct {
-	StartTime         uint64
-	EndTime           uint64
-	Query             [100]byte
-	SpanContext       context.EBPFSpanContext
-	ParentSpanContext context.EBPFSpanContext
+	context.BaseSpanProperties
+	Query [100]byte
 }
 
 // Instrumentor is the database/sql instrumentor.
@@ -68,7 +67,7 @@ func New() *Instrumentor {
 
 // LibraryName returns the database/sql/ package name.
 func (h *Instrumentor) LibraryName() string {
-	return "database/sql"
+	return instrumentedPkg
 }
 
 // FuncNames returns the function names from "database/sql" that are instrumented.

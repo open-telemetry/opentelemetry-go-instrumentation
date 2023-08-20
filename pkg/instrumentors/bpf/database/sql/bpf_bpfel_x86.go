@@ -20,9 +20,9 @@ type bpfSpanContext struct {
 type bpfSqlRequestT struct {
 	StartTime uint64
 	EndTime   uint64
-	Query     [100]int8
 	Sc        bpfSpanContext
 	Psc       bpfSpanContext
+	Query     [100]int8
 	_         [4]byte
 }
 
