@@ -36,13 +36,15 @@ func TestInstrumentorConvertEvent(t *testing.T) {
 
 	i := New()
 	got := i.convertEvent(&Event{
-		StartTime: uint64(start.UnixNano()),
-		EndTime:   uint64(end.UnixNano()),
+		BaseSpanProperties: context.BaseSpanProperties{
+			StartTime:   uint64(start.UnixNano()),
+			EndTime:     uint64(end.UnixNano()),
+			SpanContext: context.EBPFSpanContext{TraceID: traceID, SpanID: spanID},
+		},
 		// "GET"
 		Method: [7]byte{0x47, 0x45, 0x54},
 		// "/foo/bar"
-		Path:        [100]byte{0x2f, 0x66, 0x6f, 0x6f, 0x2f, 0x62, 0x61, 0x72},
-		SpanContext: context.EBPFSpanContext{TraceID: traceID, SpanID: spanID},
+		Path: [100]byte{0x2f, 0x66, 0x6f, 0x6f, 0x2f, 0x62, 0x61, 0x72},
 	})
 
 	sc := trace.NewSpanContext(trace.SpanContextConfig{

@@ -16,6 +16,14 @@ package context
 
 import "go.opentelemetry.io/otel/trace"
 
+// BaseSpanProperties contains the basic attributes filled by all instrumentors.
+type BaseSpanProperties struct {
+	StartTime         uint64
+	EndTime           uint64
+	SpanContext       EBPFSpanContext
+	ParentSpanContext EBPFSpanContext
+}
+
 // EBPFSpanContext is the the span context representation within the eBPF
 // instrumentation system.
 type EBPFSpanContext struct {

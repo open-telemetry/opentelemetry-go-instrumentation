@@ -18,7 +18,7 @@ import (
 	_ "embed"
 	"fmt"
 	"io/fs"
-	"io/ioutil"
+	"os"
 	"path"
 
 	"go.opentelemetry.io/auto/offsets-tracker/utils"
@@ -30,25 +30,35 @@ var (
 	//go:embed wrapper/go.mod.txt
 	goMod string
 
+	//go:embed wrapper/go.modstd.txt
+	goModStdLib string
+
 	//go:embed wrapper/main.go.txt
 	goMain string
 )
 
 // DownloadBinary downloads the module with modName at version.
-func DownloadBinary(modName string, version string) (string, string, error) {
-	dir, err := ioutil.TempDir("", appName)
+// revive:disable-next-line:flag-parameter
+func DownloadBinary(modName string, version string, isGoStandartLib bool) (string, string, error) {
+	dir, err := os.MkdirTemp("", appName)
 	if err != nil {
 		return "", "", err
 	}
 
-	goModContent := fmt.Sprintf(goMod, modName, version)
-	err = ioutil.WriteFile(path.Join(dir, "go.mod"), []byte(goModContent), fs.ModePerm)
+	var goModContent string
+	if isGoStandartLib {
+		goModContent = fmt.Sprintf(goModStdLib, version)
+	} else {
+		goModContent = fmt.Sprintf(goMod, modName, version)
+	}
+
+	err = os.WriteFile(path.Join(dir, "go.mod"), []byte(goModContent), fs.ModePerm)
 	if err != nil {
 		return "", "", err
 	}
 
 	goMainContent := fmt.Sprintf(goMain, modName)
-	err = ioutil.WriteFile(path.Join(dir, "main.go"), []byte(goMainContent), fs.ModePerm)
+	err = os.WriteFile(path.Join(dir, "main.go"), []byte(goMainContent), fs.ModePerm)
 	if err != nil {
 		return "", "", err
 	}
@@ -58,7 +68,7 @@ func DownloadBinary(modName string, version string) (string, string, error) {
 		return "", "", err
 	}
 
-	_, _, err = utils.RunCommand("GOOS=linux GOARCH=amd64 go build", dir)
+	_, _, err = utils.RunCommand(fmt.Sprintf("GOOS=linux GOARCH=amd64 go build -o %s", appName), dir)
 	if err != nil {
 		return "", "", err
 	}
