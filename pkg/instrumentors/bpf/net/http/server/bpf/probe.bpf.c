@@ -16,6 +16,7 @@
 #include "span_context.h"
 #include "go_context.h"
 #include "go_types.h"
+#include "uprobe.h"
 
 char __license[] SEC("license") = "Dual MIT/GPL";
 
@@ -28,12 +29,9 @@ char __license[] SEC("license") = "Dual MIT/GPL";
 
 struct http_request_t
 {
-    u64 start_time;
-    u64 end_time;
+    BASE_SPAN_PROPERTIES
     char method[METHOD_MAX_LEN];
     char path[PATH_MAX_LEN];
-    struct span_context sc;
-    struct span_context psc;
 };
 
 struct
@@ -224,19 +222,4 @@ int uprobe_ServerMux_ServeHTTP(struct pt_regs *ctx)
     return 0;
 }
 
-SEC("uprobe/ServerMux_ServeHTTP")
-int uprobe_ServerMux_ServeHTTP_Returns(struct pt_regs *ctx)
-{
-    u64 request_pos = 4;
-    void *req_ptr = get_argument(ctx, request_pos);
-    void *key = get_consistent_key(ctx, (void *)(req_ptr + ctx_ptr_pos));
-
-    void *httpReq_ptr = bpf_map_lookup_elem(&http_events, &key);
-    struct http_request_t httpReq = {};
-    bpf_probe_read(&httpReq, sizeof(httpReq), httpReq_ptr);
-    httpReq.end_time = bpf_ktime_get_ns();
-    bpf_perf_event_output(ctx, &events, BPF_F_CURRENT_CPU, &httpReq, sizeof(httpReq));
-    bpf_map_delete_elem(&http_events, &key);
-    stop_tracking_span(&httpReq.sc);
-    return 0;
-}
+UPROBE_RETURN(ServerMux_ServeHTTP, struct http_request_t, 4, ctx_ptr_pos, http_events, events)

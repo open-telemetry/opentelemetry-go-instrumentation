@@ -12,6 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#ifndef _ARGUMENTS_H_
+#define _ARGUMENTS_H_
+
 #include "common.h"
 #include "bpf_tracing.h"
 #include "bpf_helpers.h"
@@ -81,3 +84,5 @@ static __always_inline void *get_consistent_key(struct pt_regs *ctx, void *conte
     bpf_probe_read(&ctx_ptr, sizeof(ctx_ptr), contextContext);
     return ctx_ptr;
 }
+
+#endif
