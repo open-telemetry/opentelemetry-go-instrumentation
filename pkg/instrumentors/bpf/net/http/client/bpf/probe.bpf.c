@@ -33,6 +33,13 @@ struct {
 } golang_mapbucket_storage_map SEC(".maps");
 
 struct {
+	__uint(type, BPF_MAP_TYPE_PERCPU_ARRAY);
+	__uint(key_size, sizeof(u32));
+	__uint(value_size, sizeof(struct http_request_t));
+	__uint(max_entries, 1);
+} http_request_storage_map SEC(".maps");
+
+struct {
 	__uint(type, BPF_MAP_TYPE_PERF_EVENT_ARRAY);
 } events SEC(".maps");
 
@@ -139,8 +146,12 @@ static __always_inline long inject_header(void* headers_ptr, struct span_context
 // func net/http/client.Do(req *Request)
 SEC("uprobe/HttpClient_Do")
 int uprobe_HttpClient_Do(struct pt_regs *ctx) {
-    struct http_request_t httpReq = {};
-    httpReq.start_time = bpf_ktime_get_ns();
+    u32 http_request_storage_key = 0;
+    struct http_request_t *httpReq = bpf_map_lookup_elem(&http_request_storage_map, &http_request_storage_key);
+    if (!httpReq) {
+        return 0;
+    }
+    httpReq->start_time = bpf_ktime_get_ns();
 
     u64 request_pos = 2;
     void *req_ptr = get_argument(ctx, request_pos);
@@ -150,21 +161,21 @@ int uprobe_HttpClient_Do(struct pt_regs *ctx) {
     void *context_ptr_val = 0;
     bpf_probe_read(&context_ptr_val, sizeof(context_ptr_val), context_ptr);
     struct span_context *parent_span_ctx = get_parent_span_context(context_ptr_val);
-    if (parent_span_ctx != NULL) {
-        bpf_probe_read(&httpReq.psc, sizeof(httpReq.psc), parent_span_ctx);
-        copy_byte_arrays(httpReq.psc.TraceID, httpReq.sc.TraceID, TRACE_ID_SIZE);
-        generate_random_bytes(httpReq.sc.SpanID, SPAN_ID_SIZE);
+     if (parent_span_ctx != NULL) {
+        bpf_probe_read(&httpReq->psc, sizeof(httpReq->psc), parent_span_ctx);
+        copy_byte_arrays(httpReq->psc.TraceID, httpReq->sc.TraceID, TRACE_ID_SIZE);
+        generate_random_bytes(httpReq->sc.SpanID, SPAN_ID_SIZE);
     } else {
-        httpReq.sc = generate_span_context();
+        httpReq->sc = generate_span_context();
     }
 
     void *method_ptr = 0;
     bpf_probe_read(&method_ptr, sizeof(method_ptr), (void *)(req_ptr+method_ptr_pos));
     u64 method_len = 0;
     bpf_probe_read(&method_len, sizeof(method_len), (void *)(req_ptr+(method_ptr_pos+8)));
-    u64 method_size = sizeof(httpReq.method);
+    u64 method_size = sizeof(httpReq->method);
     method_size = method_size < method_len ? method_size : method_len;
-    bpf_probe_read(&httpReq.method, method_size, method_ptr);
+    bpf_probe_read(&httpReq->method, method_size, method_ptr);
 
     // get path from Request.URL
     void *url_ptr = 0;
@@ -174,16 +185,16 @@ int uprobe_HttpClient_Do(struct pt_regs *ctx) {
 
     u64 path_len = 0;
     bpf_probe_read(&path_len, sizeof(path_len), (void *)(url_ptr+(path_ptr_pos+8)));
-    u64 path_size = sizeof(httpReq.path);
+    u64 path_size = sizeof(httpReq->path);
     path_size = path_size < path_len ? path_size : path_len;
-    bpf_probe_read(&httpReq.path, path_size, path_ptr);
+    bpf_probe_read(&httpReq->path, path_size, path_ptr);
 
     // get headers from Request
     void *headers_ptr = 0;
     bpf_probe_read(&headers_ptr, sizeof(headers_ptr), (void *)(req_ptr+headers_ptr_pos));
     u64 map_keyvalue_count = 0;
     bpf_probe_read(&map_keyvalue_count, sizeof(map_keyvalue_count), headers_ptr);
-    long res = inject_header(headers_ptr, &httpReq.sc);
+    long res = inject_header(headers_ptr, &httpReq->sc);
     if (res < 0) {
         bpf_printk("uprobe_HttpClient_Do: Failed to inject header");
     }
@@ -193,7 +204,7 @@ int uprobe_HttpClient_Do(struct pt_regs *ctx) {
 
     // Write event
     bpf_map_update_elem(&http_events, &key, &httpReq, 0);
-    start_tracking_span(context_ptr_val, &httpReq.sc);
+    start_tracking_span(context_ptr_val, &httpReq->sc);
     return 0;
 }
 

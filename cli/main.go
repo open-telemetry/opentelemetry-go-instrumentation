@@ -76,6 +76,14 @@ func main() {
 		log.Logger.Error(err, "error while analyzing target process")
 		return
 	}
+
+	allocDetails, err := processAnalyzer.AllocateMemory(targetDetails)
+	if err != nil {
+		log.Logger.Error(err, "error while allocating memory")
+		return
+	}
+	targetDetails.AllocationDetails = allocDetails
+
 	log.Logger.V(0).Info("target process analysis completed", "pid", targetDetails.PID,
 		"go_version", targetDetails.GoVersion, "dependencies", targetDetails.Libraries,
 		"total_functions_found", len(targetDetails.Functions))

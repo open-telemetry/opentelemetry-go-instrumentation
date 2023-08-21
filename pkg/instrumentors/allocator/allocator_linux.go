@@ -18,6 +18,7 @@ import (
 	"go.opentelemetry.io/auto/pkg/instrumentors/bpffs"
 	"go.opentelemetry.io/auto/pkg/instrumentors/context"
 	"go.opentelemetry.io/auto/pkg/log"
+	"go.opentelemetry.io/auto/pkg/process"
 )
 
 // Allocator handles the allocation of the BPF file-system.
@@ -44,4 +45,9 @@ func (a *Allocator) Load(ctx *context.InstrumentorContext) error {
 	}
 
 	return nil
+}
+
+// Call bpffs cleanup.
+func (a *Allocator) Cleanup(target *process.TargetDetails) error {
+	return bpffs.Cleanup(target)
 }

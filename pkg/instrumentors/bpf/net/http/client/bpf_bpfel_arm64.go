@@ -76,10 +76,12 @@ type bpfProgramSpecs struct {
 //
 // It can be passed ebpf.CollectionSpec.Assign.
 type bpfMapSpecs struct {
+	AlignmentBuffer           *ebpf.MapSpec `ebpf:"alignment_buffer"`
 	AllocMap                  *ebpf.MapSpec `ebpf:"alloc_map"`
 	Events                    *ebpf.MapSpec `ebpf:"events"`
 	GolangMapbucketStorageMap *ebpf.MapSpec `ebpf:"golang_mapbucket_storage_map"`
 	HttpEvents                *ebpf.MapSpec `ebpf:"http_events"`
+	HttpRequestStorageMap     *ebpf.MapSpec `ebpf:"http_request_storage_map"`
 	TrackedSpans              *ebpf.MapSpec `ebpf:"tracked_spans"`
 	TrackedSpansBySc          *ebpf.MapSpec `ebpf:"tracked_spans_by_sc"`
 }
@@ -103,20 +105,24 @@ func (o *bpfObjects) Close() error {
 //
 // It can be passed to loadBpfObjects or ebpf.CollectionSpec.LoadAndAssign.
 type bpfMaps struct {
+	AlignmentBuffer           *ebpf.Map `ebpf:"alignment_buffer"`
 	AllocMap                  *ebpf.Map `ebpf:"alloc_map"`
 	Events                    *ebpf.Map `ebpf:"events"`
 	GolangMapbucketStorageMap *ebpf.Map `ebpf:"golang_mapbucket_storage_map"`
 	HttpEvents                *ebpf.Map `ebpf:"http_events"`
+	HttpRequestStorageMap     *ebpf.Map `ebpf:"http_request_storage_map"`
 	TrackedSpans              *ebpf.Map `ebpf:"tracked_spans"`
 	TrackedSpansBySc          *ebpf.Map `ebpf:"tracked_spans_by_sc"`
 }
 
 func (m *bpfMaps) Close() error {
 	return _BpfClose(
+		m.AlignmentBuffer,
 		m.AllocMap,
 		m.Events,
 		m.GolangMapbucketStorageMap,
 		m.HttpEvents,
+		m.HttpRequestStorageMap,
 		m.TrackedSpans,
 		m.TrackedSpansBySc,
 	)

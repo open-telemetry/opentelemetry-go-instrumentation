@@ -19,7 +19,7 @@
 
 #define MAX_ENTRIES 50
 #define MAX_BUFFER_SIZE 1024
-#define MIN_BUFFER_SIZE 1
+#define MIN_BUFFER_SIZE 8
 
 // Injected in init
 volatile const u32 total_cpus;
@@ -34,6 +34,15 @@ struct
     __uint(max_entries, MAX_ENTRIES);
     __uint(pinning, LIBBPF_PIN_BY_NAME);
 } alloc_map SEC(".maps");
+
+// Buffer for aligned data
+struct
+{
+    __uint(type, BPF_MAP_TYPE_PERCPU_ARRAY);
+    __uint(key_size, sizeof(u32));
+    __uint(value_size, MAX_BUFFER_SIZE);
+    __uint(max_entries, 1);
+} alignment_buffer SEC(".maps");
 
 static __always_inline u64 get_area_start()
 {
@@ -90,6 +99,29 @@ static __always_inline void *write_target_data(void *data, s32 size)
         return NULL;
     }
 
+     // Add padding to align to 8 bytes
+    if (size % 8 != 0) {
+        size += 8 - (size % 8);
+
+        // Write to the buffer
+        u32 key = 0;
+        void *buffer = bpf_map_lookup_elem(&alignment_buffer, &key);
+        if (buffer == NULL) {
+            bpf_printk("failed to get alignment buffer");
+            return NULL;
+        }
+
+        // Copy size bytes from data to buffer
+        size = bound_number(size, MIN_BUFFER_SIZE, MAX_BUFFER_SIZE);
+        long success = bpf_probe_read(buffer, size, data);
+        if (success != 0) {
+            bpf_printk("failed to copy data to alignment buffer");
+            return NULL;
+        }
+
+        data = buffer;
+    }
+
     u64 start = get_area_start();
     u64 end = get_area_end(start);
     if (end - start < size)
@@ -102,25 +134,30 @@ static __always_inline void *write_target_data(void *data, s32 size)
 
     void *target = (void *)start;
     size = bound_number(size, MIN_BUFFER_SIZE, MAX_BUFFER_SIZE);
+
+    u64 distance_from_start_addr = (u64)target - start_addr;
+    u64 distance_from_next_page = 4096 - (distance_from_start_addr % 4096);
+    if (distance_from_next_page < size)
+    {
+        target += distance_from_next_page + 1;
+    } else if (distance_from_next_page == 4096) {
+        target += 1;
+    }
+
     long success = bpf_probe_write_user(target, data, size);
     if (success == 0)
     {
         s32 start_index = 0;
         u64 updated_start = start + size;
 
-        // align updated_start to 8 bytes
-        if (updated_start % 8 != 0) {
-            updated_start += 8 - (updated_start % 8);
-        }
-
         bpf_map_update_elem(&alloc_map, &start_index, &updated_start, BPF_ANY);
         return target;
     }
     else
     {
-        bpf_printk("failed to write to userspace, error code: %d, addr: %lx, size: %d", success, target, size);
-        return NULL;
+        bpf_printk("failed to write to userspace, error code: %d, addr: %lx, next_page_distance: %d", success, target, distance_from_next_page);
     }
+    return NULL;
 }
 
 #endif

@@ -54,6 +54,14 @@ struct map_bucket {
     void *overflow;
 };
 
+// In Go, interfaces are represented as a pair of pointers: a pointer to the
+// interface data, and a pointer to the interface table.
+// See: runtime.iface in https://golang.org/src/runtime/runtime2.go
+static __always_inline void *get_go_interface_instance(void *iface)
+{
+    return (void *)(iface + 8);
+}
+
 static __always_inline struct go_string write_user_go_string(char *str, u32 len)
 {
     // Copy chars to userspace

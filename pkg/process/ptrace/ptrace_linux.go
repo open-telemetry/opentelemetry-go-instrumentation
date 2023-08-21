@@ -21,11 +21,22 @@ import (
 	"strings"
 	"syscall"
 
+	"go.opentelemetry.io/auto/pkg/log"
+
+	"github.com/hashicorp/go-version"
+
+	"go.opentelemetry.io/auto/pkg/instrumentors/utils"
+
 	"github.com/go-logr/logr"
 	"github.com/pkg/errors"
 )
 
 const waitPidErrorMessage = "waitpid ret value: %d"
+
+const (
+	MadvPopulateRead  = 0x16 // MADV_POPULATE_READ
+	MadvPopulateWrite = 0x17 // MADV_POPULATE_WRITE
+)
 
 var threadRetryLimit = 10
 
@@ -208,5 +219,23 @@ func (p *TracedProgram) Step() error {
 
 // Mmap runs mmap syscall.
 func (p *TracedProgram) Mmap(length uint64, fd uint64) (uint64, error) {
-	return p.Syscall(syscall.SYS_MMAP, 0, length, syscall.PROT_READ|syscall.PROT_WRITE|syscall.PROT_EXEC, syscall.MAP_ANON|syscall.MAP_PRIVATE|syscall.MAP_POPULATE, fd, 0)
+	return p.Syscall(syscall.SYS_MMAP, 0, length, syscall.PROT_READ|syscall.PROT_WRITE, syscall.MAP_ANON|syscall.MAP_PRIVATE|syscall.MAP_POPULATE|syscall.MAP_LOCKED, fd, 0)
+}
+
+// Madvise runs madvise syscall.
+func (p *TracedProgram) Madvise(addr uint64, length uint64) error {
+	advice := uint64(syscall.MADV_WILLNEED)
+	ver, err := utils.GetLinuxKernelVersion()
+	if err != nil {
+		return errors.WithStack(err)
+	}
+
+	minVersion := version.Must(version.NewVersion("5.14"))
+	log.Logger.V(0).Info("Detected linux kernel version", "version", ver)
+	if ver.GreaterThanOrEqual(minVersion) {
+		advice = syscall.MADV_WILLNEED | MadvPopulateWrite | MadvPopulateRead
+	}
+
+	_, err = p.Syscall(syscall.SYS_MADVISE, addr, length, advice, 0, 0, 0)
+	return err
 }

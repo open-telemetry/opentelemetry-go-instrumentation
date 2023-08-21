@@ -47,7 +47,7 @@ func (m *Manager) Run(target *process.TargetDetails) error {
 		case <-m.done:
 			log.Logger.V(0).Info("shutting down all instrumentors due to signal")
 			m.cleanup()
-			return nil
+			return m.allocator.Cleanup(target)
 		case e := <-m.incomingEvents:
 			m.otelController.Trace(e)
 		}

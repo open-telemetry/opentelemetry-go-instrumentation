@@ -19,17 +19,12 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"runtime"
 
 	"github.com/hashicorp/go-version"
 
 	"go.opentelemetry.io/auto/pkg/log"
 	"go.opentelemetry.io/auto/pkg/process/ptrace"
-)
-
-const (
-	// The concurrent trace & span ID pairs lookup size in bytes. Currently set to 24mb.
-	// TODO: Review map size.
-	mapSize = 25165824
 )
 
 // TargetDetails are the details about a target function.
@@ -104,7 +99,30 @@ func (a *Analyzer) remoteMmap(pid int, mapSize uint64) (uint64, error) {
 		return 0, err
 	}
 
+	err = program.Madvise(addr, mapSize)
+	if err != nil {
+		log.Logger.Error(err, "Failed to madvise", "pid", pid)
+		return 0, err
+	}
+
 	return addr, nil
+}
+
+// AllocateMemory allocates memory in the target process.
+func (a *Analyzer) AllocateMemory(target *TargetDetails) (*AllocationDetails, error) {
+	mapSize := uint64(os.Getpagesize() * runtime.NumCPU() * 50)
+	addr, err := a.remoteMmap(target.PID, mapSize)
+	if err != nil {
+		log.Logger.Error(err, "Failed to mmap")
+		return nil, err
+	}
+
+	log.Logger.V(0).Info("mmaped remote memory", "start_addr", fmt.Sprintf("%X", addr),
+		"end_addr", fmt.Sprintf("%X", addr+mapSize))
+	return &AllocationDetails{
+		StartAddr: addr,
+		EndAddr:   addr + mapSize,
+	}, nil
 }
 
 // Analyze returns the target details for an actively running process.
@@ -131,22 +149,6 @@ func (a *Analyzer) Analyze(pid int, relevantFuncs map[string]interface{}) (*Targ
 	result.GoVersion = goVersion
 	result.Libraries = modules
 
-	addr, err := a.remoteMmap(pid, mapSize)
-	if err != nil {
-		log.Logger.Error(err, "Failed to mmap")
-		return nil, err
-	}
-	log.Logger.V(0).Info("mmaped remote memory", "start_addr", fmt.Sprintf("%X", addr),
-		"end_addr", fmt.Sprintf("%X", addr+mapSize))
-
-	result.AllocationDetails = &AllocationDetails{
-		StartAddr: addr,
-		EndAddr:   addr + mapSize,
-	}
-
-	if err != nil {
-		return nil, err
-	}
 	symbols, err := elfF.Symbols()
 	if err != nil {
 		return nil, err

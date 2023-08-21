@@ -16,6 +16,7 @@
 #include "span_context.h"
 #include "go_context.h"
 #include "uprobe.h"
+#include "go_types.h"
 
 char __license[] SEC("license") = "Dual MIT/GPL";
 
@@ -79,11 +80,24 @@ int uprobe_GorillaMux_ServeHTTP(struct pt_regs *ctx) {
 
     // Get key
     void *req_ctx_ptr = 0;
-    bpf_probe_read(&req_ctx_ptr, sizeof(req_ctx_ptr), (void *)(req_ptr + ctx_ptr_pos));
+    void *ctx_address = get_go_interface_instance(req_ptr + ctx_ptr_pos);
+    bpf_probe_read(&req_ctx_ptr, sizeof(req_ctx_ptr), ctx_address);
     void *key = get_consistent_key(ctx, (void *)(req_ptr + ctx_ptr_pos));
 
+    // Propagate context
+    struct span_context *parent_ctx = get_parent_span_context(ctx_address);
+    if (parent_ctx != NULL)
+    {
+        httpReq.psc = *parent_ctx;
+        copy_byte_arrays(httpReq.psc.TraceID, httpReq.sc.TraceID, TRACE_ID_SIZE);
+        generate_random_bytes(httpReq.sc.SpanID, SPAN_ID_SIZE);
+    }
+    else
+    {
+        httpReq.sc = generate_span_context();
+    }
+
     // Write event
-    httpReq.sc = generate_span_context();
     bpf_map_update_elem(&http_events, &key, &httpReq, 0);
     start_tracking_span(req_ctx_ptr, &httpReq.sc);
     return 0;
