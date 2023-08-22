@@ -12,6 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#ifndef _SPAN_CONTEXT_H_
+#define _SPAN_CONTEXT_H_
+
 #include "utils.h"
 
 #define SPAN_CONTEXT_STRING_SIZE 55
@@ -63,3 +66,5 @@ static __always_inline void w3c_string_to_span_context(char *str, struct span_co
     hex_string_to_bytes(str + trace_id_start_pos, TRACE_ID_STRING_SIZE, ctx->TraceID);
     hex_string_to_bytes(str + span_id_start_pod, SPAN_ID_STRING_SIZE, ctx->SpanID);
 }
+
+#endif

@@ -45,11 +45,9 @@ const instrumentedPkg = "github.com/gin-gonic/gin"
 // Event represents an event in the gin-gonic/gin server during an HTTP
 // request-response.
 type Event struct {
-	StartTime   uint64
-	EndTime     uint64
-	Method      [7]byte
-	Path        [100]byte
-	SpanContext context.EBPFSpanContext
+	context.BaseSpanProperties
+	Method [7]byte
+	Path   [100]byte
 }
 
 // Instrumentor is the gin-gonic/gin instrumentor.
@@ -99,12 +97,7 @@ func (h *Instrumentor) Load(ctx *context.InstrumentorContext) error {
 			StructName: "net/url.URL",
 			Field:      "Path",
 		},
-		{
-			VarName:    "ctx_ptr_pos",
-			StructName: "net/http.Request",
-			Field:      "ctx",
-		},
-	}, false)
+	}, nil, false)
 
 	if err != nil {
 		return err

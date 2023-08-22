@@ -90,7 +90,7 @@ offsets:
 
 .PHONY: docker-offsets
 docker-offsets:
-	docker run --rm -v $(shell pwd):/app golang:1.20 /bin/sh -c "cd ../app && make offsets"
+	docker run --rm -v $(shell pwd):/app golang:1.21 /bin/sh -c "cd ../app && make offsets"
 
 .PHONY: update-licenses
 update-licenses: generate $(GOLICENSES)
@@ -130,10 +130,11 @@ license-header-check:
 	           exit 1; \
 	   fi
 
-.PHONY: fixture-nethttp fixture-gorillamux fixture-gin
+.PHONY: fixture-nethttp fixture-gorillamux fixture-gin fixture-databasesql
 fixture-nethttp: fixtures/nethttp
 fixture-gorillamux: fixtures/gorillamux
 fixture-gin: fixtures/gin
+fixture-databasesql: fixtures/databasesql
 fixtures/%: LIBRARY=$*
 fixtures/%:
 	$(MAKE) docker-build

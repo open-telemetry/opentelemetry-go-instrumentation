@@ -18,6 +18,7 @@ import (
 	"fmt"
 
 	"go.opentelemetry.io/auto/pkg/instrumentors/allocator"
+	dbSql "go.opentelemetry.io/auto/pkg/instrumentors/bpf/database/sql"
 	"go.opentelemetry.io/auto/pkg/instrumentors/bpf/github.com/gin-gonic/gin"
 	gorillaMux "go.opentelemetry.io/auto/pkg/instrumentors/bpf/github.com/gorilla/mux"
 	"go.opentelemetry.io/auto/pkg/instrumentors/bpf/google/golang/org/grpc"
@@ -117,6 +118,7 @@ func registerInstrumentors(m *Manager) error {
 		httpClient.New(),
 		gorillaMux.New(),
 		gin.New(),
+		dbSql.New(),
 	}
 
 	for _, i := range insts {

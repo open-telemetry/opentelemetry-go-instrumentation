@@ -44,11 +44,9 @@ const instrumentedPkg = "github.com/gorilla/mux"
 // Event represents an event in the gorilla/mux server during an HTTP
 // request-response.
 type Event struct {
-	StartTime   uint64
-	EndTime     uint64
-	Method      [7]byte
-	Path        [100]byte
-	SpanContext context.EBPFSpanContext
+	context.BaseSpanProperties
+	Method [7]byte
+	Path   [100]byte
 }
 
 // Instrumentor is the gorilla/mux instrumentor.
@@ -98,7 +96,7 @@ func (g *Instrumentor) Load(ctx *context.InstrumentorContext) error {
 			StructName: "net/url.URL",
 			Field:      "Path",
 		},
-	}, false)
+	}, nil, false)
 
 	if err != nil {
 		return err

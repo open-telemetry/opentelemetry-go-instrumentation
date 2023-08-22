@@ -41,12 +41,9 @@ import (
 // Event represents an event in an HTTP server during an HTTP
 // request-response.
 type Event struct {
-	StartTime         uint64
-	EndTime           uint64
-	Method            [10]byte
-	Path              [100]byte
-	SpanContext       context.EBPFSpanContext
-	ParentSpanContext context.EBPFSpanContext
+	context.BaseSpanProperties
+	Method [10]byte
+	Path   [100]byte
 }
 
 // Instrumentor is the net/http instrumentor.
@@ -100,7 +97,7 @@ func (h *Instrumentor) Load(ctx *context.InstrumentorContext) error {
 			StructName: "net/http.Request",
 			Field:      "ctx",
 		},
-	}, true)
+	}, nil, true)
 
 	if err != nil {
 		return err

@@ -12,6 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#ifndef _GO_TYPES_H
+#define _GO_TYPES_H
+
 #include "alloc.h"
 #include "bpf_helpers.h"
 
@@ -122,3 +125,5 @@ static __always_inline void append_item_to_slice(struct go_slice *slice, void *n
     slice->len++;
     long success = bpf_probe_write_user(slice_user_ptr->len, &slice->len, sizeof(slice->len));
 }
+
+#endif

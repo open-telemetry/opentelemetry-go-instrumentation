@@ -26,3 +26,6 @@ opentelemetry-helm-charts/
 
 # don't track temp e2e trace json files
 test/**/traces-orig.json
+
+# ignore db files created by the example or tests
+*.db

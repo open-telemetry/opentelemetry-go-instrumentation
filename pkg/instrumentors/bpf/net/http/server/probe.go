@@ -44,12 +44,9 @@ const instrumentedPkg = "net/http"
 // Event represents an event in an HTTP server during an HTTP
 // request-response.
 type Event struct {
-	StartTime         uint64
-	EndTime           uint64
-	Method            [7]byte
-	Path              [100]byte
-	SpanContext       context.EBPFSpanContext
-	ParentSpanContext context.EBPFSpanContext
+	context.BaseSpanProperties
+	Method [7]byte
+	Path   [100]byte
 }
 
 // Instrumentor is the net/http instrumentor.
@@ -108,7 +105,7 @@ func (h *Instrumentor) Load(ctx *context.InstrumentorContext) error {
 			StructName: "net/http.Request",
 			Field:      "Header",
 		},
-	}, false)
+	}, nil, false)
 
 	if err != nil {
 		return err
