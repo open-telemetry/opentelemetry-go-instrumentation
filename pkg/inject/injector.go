@@ -67,8 +67,14 @@ type StructField struct {
 	Field      string
 }
 
+// FlagField is used for configuring the ebpf programs by injecting boolean values.
+type FlagField struct {
+	VarName string
+	Value   bool
+}
+
 // Inject injects instrumentation for the provided library data type.
-func (i *Injector) Inject(loadBpf loadBpfFunc, library string, libVersion string, fields []*StructField, initAlloc bool) (*ebpf.CollectionSpec, error) {
+func (i *Injector) Inject(loadBpf loadBpfFunc, library string, libVersion string, fields []*StructField, flagFields []*FlagField, initAlloc bool) (*ebpf.CollectionSpec, error) {
 	spec, err := loadBpf()
 	if err != nil {
 		return nil, err
@@ -88,6 +94,11 @@ func (i *Injector) Inject(loadBpf loadBpfFunc, library string, libVersion string
 	if err := i.addCommonInjections(injectedVars, initAlloc); err != nil {
 		return nil, fmt.Errorf("adding instrumenter injections: %w", err)
 	}
+
+	if err := i.addConfigInjections(injectedVars, flagFields); err != nil {
+		return nil, fmt.Errorf("adding flags injections: %w", err)
+	}
+
 	log.Logger.V(0).Info("Injecting variables", "vars", injectedVars)
 	if len(injectedVars) > 0 {
 		err = spec.RewriteConstants(injectedVars)
@@ -108,6 +119,13 @@ func (i *Injector) addCommonInjections(varsMap map[string]interface{}, initAlloc
 		varsMap["total_cpus"] = i.TotalCPUs
 		varsMap["start_addr"] = i.AllocationDetails.StartAddr
 		varsMap["end_addr"] = i.AllocationDetails.EndAddr
+	}
+	return nil
+}
+
+func (i *Injector) addConfigInjections(varsMap map[string]interface{}, flagFields []*FlagField) error {
+	for _, dm := range flagFields {
+		varsMap[dm.VarName] = dm.Value
 	}
 	return nil
 }

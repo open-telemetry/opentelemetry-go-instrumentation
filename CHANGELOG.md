@@ -8,6 +8,9 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 
 ## [Unreleased]
 
+### Added
+- Add database/sql instrumentation ([#240](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/240))
+
 ### Changed
 
 - The function signature of `"go.opentelemetry.io/auto/offsets-tracker/downloader".DownloadBinary` has changed.

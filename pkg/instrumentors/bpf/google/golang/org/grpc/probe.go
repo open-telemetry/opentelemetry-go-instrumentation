@@ -100,7 +100,7 @@ func (g *Instrumentor) Load(ctx *context.InstrumentorContext) error {
 			StructName: "google.golang.org/grpc/internal/transport.headerFrame",
 			Field:      "streamID",
 		},
-	}, true)
+	}, nil, true)
 
 	if err != nil {
 		return err

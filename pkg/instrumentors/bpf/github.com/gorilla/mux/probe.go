@@ -96,7 +96,7 @@ func (g *Instrumentor) Load(ctx *context.InstrumentorContext) error {
 			StructName: "net/url.URL",
 			Field:      "Path",
 		},
-	}, false)
+	}, nil, false)
 
 	if err != nil {
 		return err

@@ -104,7 +104,7 @@ func (g *Instrumentor) Load(ctx *context.InstrumentorContext) error {
 			StructName: "golang.org/x/net/http2.FrameHeader",
 			Field:      "StreamID",
 		},
-	}, true)
+	}, nil, true)
 
 	if err != nil {
 		return err

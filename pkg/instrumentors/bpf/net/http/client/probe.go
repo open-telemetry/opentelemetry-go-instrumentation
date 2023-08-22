@@ -97,7 +97,7 @@ func (h *Instrumentor) Load(ctx *context.InstrumentorContext) error {
 			StructName: "net/http.Request",
 			Field:      "ctx",
 		},
-	}, true)
+	}, nil, true)
 
 	if err != nil {
 		return err
