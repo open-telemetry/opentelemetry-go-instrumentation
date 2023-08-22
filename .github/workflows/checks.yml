@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
 
 env:
-  GO_VERSION: "1.20"
+  GO_VERSION: "1.21"
 
 jobs:
   check-links:
@@ -28,7 +28,7 @@ jobs:
       - name: Install Go
         uses: actions/setup-go@v4.0.0
         with:
-          go-version: ${{ env.DEFAULT_GO_VERSION }}
+          go-version: ${{ env.GO_VERSION }}
       - name: Checkout Repo
         uses: actions/checkout@v3.5.0
       - name: Module cache
@@ -52,6 +52,29 @@ jobs:
         run: make license-header-check go-mod-tidy golangci-lint
       - name: Check clean repository
         run: make check-clean-work-tree
+  compatibility-test:
+    strategy:
+      matrix:
+        go-version: ["1.21", "1.20"]
+        os: [ubuntu-latest]
+        # GitHub Actions does not support arm* architectures on default
+        # runners. It is possible to accomplish this with a self-hosted runner
+        # if we want to add this in the future:
+        # https://docs.github.com/en/actions/hosting-your-own-runners/using-self-hosted-runners-in-a-workflow
+        arch: [amd64]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v3
+      - name: Setup Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: ${{ matrix.go-version }}
+          cache-dependency-path: "**/go.sum"
+      - name: Run tests
+        env:
+          GOARCH: ${{ matrix.arch }}
+        run: make test
   verify-licenses:
     runs-on: ubuntu-22.04
     steps:
@@ -60,7 +83,7 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v4.0.0
         with:
-          go-version: ${{ env.DEFAULT_GO_VERSION }}
+          go-version: ${{ env.GO_VERSION }}
       - name: Install build dependencies
         run: sudo apt-get update && sudo apt-get install -y clang llvm libbpf-dev
       - run: make verify-licenses
