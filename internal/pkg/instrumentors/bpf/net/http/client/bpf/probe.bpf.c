@@ -73,7 +73,7 @@ static __always_inline long inject_header(void* headers_ptr, struct span_context
         void *bucket_ptr = write_target_data(bucket_map_value, sizeof(struct map_bucket));
         map_header.buckets = bucket_ptr;
     } else {
-        // There is at least 1 key-value pair, hence the bucket poiner from the user is valid
+        // There is at least 1 key-value pair, hence the bucket pointer from the user is valid
         // Read the user's bucket to the eBPF map entry
         bpf_probe_read_user(bucket_map_value, sizeof(struct map_bucket), map_header.buckets);
     }
@@ -96,14 +96,13 @@ static __always_inline long inject_header(void* headers_ptr, struct span_context
     }
 
     // The go string pointing to the above val
-    struct go_string header_value = {};
-    header_value.str = ptr;
-    header_value.len = W3C_VAL_LENGTH;
+    struct go_string header_value = {.len = W3C_VAL_LENGTH, .str = ptr};
     ptr = write_target_data((void*)&header_value, sizeof(header_value));
     if(ptr == NULL) {
         return -1;
     }
 
+    // Last, go_slice pointing to the above go_string
     bucket_map_value->values[curr_keyvalue_count] = (struct go_slice) {.array = ptr, .cap = 1, .len = 1};
 
     map_header.map_keyvalue_count++;
