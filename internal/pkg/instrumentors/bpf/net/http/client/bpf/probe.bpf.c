@@ -91,7 +91,7 @@ static __always_inline long inject_header(void* headers_ptr, struct span_context
     char val[W3C_VAL_LENGTH];
     span_context_to_w3c_string(propagated_ctx, val);
     ptr = write_target_data(val, sizeof(val));
-        if(ptr == NULL) {
+    if(ptr == NULL) {
         return -1;
     }
 

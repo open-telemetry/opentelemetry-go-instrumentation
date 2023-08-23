@@ -58,7 +58,7 @@ struct map_bucket {
 struct go_map_header {
     u64 map_keyvalue_count;
     u8 flags;
-    u8 log2_map_keyvalue_count;
+    u8 log2_bucket_count;
     u16 noverflow;
     u32 hash0;
     void* buckets;
