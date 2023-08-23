@@ -216,7 +216,6 @@ int uprobe_ServerMux_ServeHTTP(struct pt_regs *ctx)
     void *key = get_consistent_key(ctx, (void *)(req_ptr + ctx_ptr_pos));
 
     // Write event
-    httpReq.sc = generate_span_context();
     bpf_map_update_elem(&http_events, &key, &httpReq, 0);
     start_tracking_span(req_ctx_ptr, &httpReq.sc);
     return 0;

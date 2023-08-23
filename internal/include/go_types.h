@@ -54,6 +54,17 @@ struct map_bucket {
     void *overflow;
 };
 
+// A header for a Go map. Defined in go/src/runtime/map.go
+struct go_map_header {
+    u64 map_keyvalue_count;
+    u8 flags;
+    u8 log2_map_keyvalue_count;
+    u16 noverflow;
+    u32 hash0;
+    void* buckets;
+    // More fiels which we don't care about
+};
+
 static __always_inline struct go_string write_user_go_string(char *str, u32 len)
 {
     // Copy chars to userspace

@@ -75,3 +75,11 @@ static __always_inline void copy_byte_arrays(unsigned char *src, unsigned char *
         dst[i] = src[i];
     }
 }
+
+static __always_inline void bpf_memset(unsigned char *dst, u32 size, unsigned char value)
+{
+    for (int i = 0; i < size; i++)
+    {
+        dst[i] = value;
+    }
+}
