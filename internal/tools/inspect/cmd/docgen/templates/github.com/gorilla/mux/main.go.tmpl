@@ -1,0 +1,10 @@
+package main
+
+import "github.com/gorilla/mux"
+
+func main() {
+	r := &mux.Router{}
+	for {
+		r.ServeHTTP(nil, nil)
+	}
+}
