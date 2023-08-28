@@ -7,6 +7,6 @@ WORKDIR /app
 COPY . .
 RUN make build
 
-FROM gcr.io/distroless/base-debian12@sha256:8b29f842aa1448074ceccc3697c5dc13dabbd200ae0aefad196adc31f797034e
+FROM gcr.io/distroless/base-debian12@sha256:c7bc12a0d98616d80a82e3557de99880d9b6b10a31e281e5174709c95609ae79
 COPY --from=builder /app/otel-go-instrumentation /
 CMD ["/otel-go-instrumentation"]
