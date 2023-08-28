@@ -1,4 +1,4 @@
-FROM debian:11 as builder
+FROM debian:12 as builder
 ARG TARGETARCH
 RUN apt-get update && apt-get install -y curl clang gcc llvm make libbpf-dev -y
 RUN curl -LO https://go.dev/dl/go1.20.linux-${TARGETARCH}.tar.gz && tar -C /usr/local -xzf go*.linux-${TARGETARCH}.tar.gz
