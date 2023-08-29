@@ -16,9 +16,11 @@ package versions
 
 import (
 	"encoding/json"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"strings"
+
+	"github.com/hashicorp/go-version"
 )
 
 const (
@@ -30,16 +32,16 @@ type goDevResponse struct {
 	Stable  bool   `json:"stable"`
 }
 
-// FindVersionsFromGoWebsite returns all known Go versions from the Go package
-// mirror at https://go.dev/dl/.
-func FindVersionsFromGoWebsite() ([]string, error) {
+// Go returns all known Go versions from the Go package mirror at
+// https://go.dev/dl/.
+func Go(constraints ...string) ([]string, error) {
 	res, err := http.Get(jsonURL)
 	if err != nil {
 		return nil, err
 	}
 	defer res.Body.Close()
 
-	data, err := ioutil.ReadAll(res.Body)
+	data, err := io.ReadAll(res.Body)
 	if err != nil {
 		return nil, err
 	}
@@ -58,5 +60,37 @@ func FindVersionsFromGoWebsite() ([]string, error) {
 		}
 	}
 
-	return versions, nil
+	return constrain(versions, constraints)
+}
+
+func constrain(vers []string, constrains []string) ([]string, error) {
+	var cnsts []version.Constraints
+	for _, c := range constrains {
+		parsed, err := version.NewConstraint(c)
+		if err != nil {
+			return nil, err
+		}
+		cnsts = append(cnsts, parsed)
+	}
+
+	valid := func(v *version.Version) bool {
+		for _, c := range cnsts {
+			if !c.Check(v) {
+				return false
+			}
+		}
+		return true
+	}
+
+	var fltr []string
+	for _, ver := range vers {
+		v, err := version.NewVersion(ver)
+		if err != nil {
+			return nil, err
+		}
+		if valid(v) {
+			fltr = append(fltr, ver)
+		}
+	}
+	return fltr, nil
 }

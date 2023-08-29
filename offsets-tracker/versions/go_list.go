@@ -15,30 +15,38 @@
 package versions
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
-
-	"go.opentelemetry.io/auto/offsets-tracker/utils"
+	"os/exec"
 )
+
+const shell = "bash"
 
 type goListResponse struct {
 	Path     string   `json:"Path"`
 	Versions []string `json:"versions"`
 }
 
-// FindVersionsUsingGoList returns all locally known version of module with
+// List returns all locally known version of module with
 // moduleName.
-func FindVersionsUsingGoList(moduleName string) ([]string, error) {
-	stdout, _, err := utils.RunCommand(fmt.Sprintf("go list -m -json -versions %s", moduleName), "")
-	if err != nil {
-		return nil, err
-	}
+func List(moduleName string) func() ([]string, error) {
+	return func() ([]string, error) {
+		command := fmt.Sprintf("go list -m -json -versions %s", moduleName)
+		cmd := exec.Command(shell, "-c", command)
 
-	resp := goListResponse{}
-	err = json.Unmarshal([]byte(stdout), &resp)
-	if err != nil {
-		return nil, err
-	}
+		var stdout bytes.Buffer
+		cmd.Stdout = &stdout
 
-	return resp.Versions, nil
+		if err := cmd.Run(); err != nil {
+			return nil, err
+		}
+
+		resp := goListResponse{}
+		if err := json.NewDecoder(&stdout).Decode(&resp); err != nil {
+			return nil, err
+		}
+
+		return resp.Versions, nil
+	}
 }

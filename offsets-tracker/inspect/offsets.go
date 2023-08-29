@@ -12,27 +12,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package utils
+package inspect
 
-import (
-	"bytes"
-	"os/exec"
-)
+import "go.opentelemetry.io/auto/offsets-tracker/binary"
 
-// ShellToUse is the shell flavor used to run commands.
-const ShellToUse = "bash"
+// Offsets are all the offsets for a module.
+type Offsets struct {
+	ModuleName       string
+	ResultsByVersion []*VersionedResult
+}
 
-// RunCommand runs command in dir.
-func RunCommand(command string, dir string) (string, string, error) {
-	var stdout bytes.Buffer
-	var stderr bytes.Buffer
-	cmd := exec.Command(ShellToUse, "-c", command)
-	if dir != "" {
-		cmd.Dir = dir
-	}
-
-	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
-	err := cmd.Run()
-	return stdout.String(), stderr.String(), err
+// VersionedResult is the offset for a version of a module.
+type VersionedResult struct {
+	Version    string
+	OffsetData *binary.Result
 }

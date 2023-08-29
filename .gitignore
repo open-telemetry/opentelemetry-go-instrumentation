@@ -29,3 +29,5 @@ test/**/traces-orig.json
 
 # ignore db files created by the example or tests
 *.db
+
+.offset-tracker
