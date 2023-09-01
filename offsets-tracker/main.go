@@ -16,155 +16,144 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"log"
 	"os"
 
-	"github.com/go-logr/stdr"
+	"github.com/hashicorp/go-version"
+
 	"go.opentelemetry.io/auto/offsets-tracker/binary"
-	"go.opentelemetry.io/auto/offsets-tracker/cache"
-	"go.opentelemetry.io/auto/offsets-tracker/inspect"
-	"go.opentelemetry.io/auto/offsets-tracker/versions"
+	"go.opentelemetry.io/auto/offsets-tracker/target"
 	"go.opentelemetry.io/auto/offsets-tracker/writer"
 )
 
 const (
 	defaultOutputFile = "/tmp/offset_results.json"
-
-	minGoVersion     = "1.12"
-	defaultGoVersion = "1.21"
 )
 
-var (
-	// outputFile is the output file path flag value.
-	outputFile string
-
-	// storage is place where Go binaries are stored.
-	storage string
-)
-
-func init() {
+func main() {
 	outputFilename := defaultOutputFile
 	if len(os.Getenv("OFFSETS_OUTPUT_FILE")) > 0 {
 		outputFilename = os.Getenv("OFFSETS_OUTPUT_FILE")
 	}
-	flag.StringVar(&outputFile, "output", outputFilename, "output file")
-
-	flag.StringVar(&storage, "storage", "./.offset-tracker", "tooling directory")
-
+	outputFile := flag.String("output", outputFilename, "output file")
 	flag.Parse()
-}
 
-func main() {
-	l := stdr.New(log.New(os.Stderr, "", log.LstdFlags|log.Lshortfile))
-	c := cache.Load(outputFile)
-
-	i, err := inspect.New(l, c, storage)
+	minimunGoVersion, err := version.NewConstraint(">= 1.12")
 	if err != nil {
-		l.Error(err, "failed to setup inspector")
-		os.Exit(1)
+		log.Fatalf("error in parsing version constraint: %v\n", err)
 	}
 
-	var offsets []*inspect.Offsets
+	stdLibRuntimeOffsets, err := target.New("runtime", *outputFile, true).
+		FindVersionsBy(target.GoDevFileVersionsStrategy).
+		DownloadBinaryBy(target.WrapAsGoAppBinaryFetchStrategy).
+		VersionConstraint(&minimunGoVersion).
+		FindOffsets([]*binary.DataMember{
+			{
+				StructName: "runtime.g",
+				Field:      "goid",
+			},
+		})
 
-	o, err := i.StdlibOffsets(
-		"runtime",
-		"templates/runtime/*.tmpl",
-		[]*binary.DataMember{{
-			StructName: "runtime.g",
-			Field:      "goid",
-		}},
-	)
 	if err != nil {
-		l.Error(err, "failed to fetch runtime offsets")
-	} else {
-		offsets = append(offsets, o...)
+		log.Fatalf("error while fetching offsets for \"runtime\": %v\n", err)
 	}
 
-	o, err = i.StdlibOffsets(
-		"net/http",
-		"templates/net/http/*.tmpl",
-		[]*binary.DataMember{{
-			StructName: "net/http.Request",
-			Field:      "Method",
-		}, {
-			StructName: "net/http.Request",
-			Field:      "URL",
-		}, {
-			StructName: "net/http.Request",
-			Field:      "RemoteAddr",
-		}, {
-			StructName: "net/http.Request",
-			Field:      "Header",
-		}, {
-			StructName: "net/http.Request",
-			Field:      "ctx",
-		}},
-	)
+	stdLibNetHTTPOffsets, err := target.New("net/http", *outputFile, true).
+		FindVersionsBy(target.GoDevFileVersionsStrategy).
+		DownloadBinaryBy(target.WrapAsGoAppBinaryFetchStrategy).
+		VersionConstraint(&minimunGoVersion).
+		FindOffsets([]*binary.DataMember{
+			{
+				StructName: "net/http.Request",
+				Field:      "Method",
+			},
+			{
+				StructName: "net/http.Request",
+				Field:      "URL",
+			},
+			{
+				StructName: "net/http.Request",
+				Field:      "RemoteAddr",
+			},
+			{
+				StructName: "net/http.Request",
+				Field:      "Header",
+			},
+			{
+				StructName: "net/http.Request",
+				Field:      "ctx",
+			},
+		})
+
 	if err != nil {
-		l.Error(err, "failed to fetch net/http offsets")
-	} else {
-		offsets = append(offsets, o...)
+		log.Fatalf("error while fetching offsets for \"net/http\": %v\n", err)
 	}
 
-	o, err = i.StdlibOffsets(
-		"net/url",
-		"templates/net/http/*.tmpl",
-		[]*binary.DataMember{{
-			StructName: "net/url.URL",
-			Field:      "Path",
-		}},
-	)
+	stdLibNetURLOffsets, err := target.New("net/url", *outputFile, true).
+		FindVersionsBy(target.GoDevFileVersionsStrategy).
+		DownloadBinaryBy(target.WrapAsGoAppBinaryFetchStrategy).
+		VersionConstraint(&minimunGoVersion).
+		FindOffsets([]*binary.DataMember{
+			{
+				StructName: "net/url.URL",
+				Field:      "Path",
+			},
+		})
+
 	if err != nil {
-		l.Error(err, "failed to fetch net/url offsets")
-	} else {
-		offsets = append(offsets, o...)
+		log.Fatalf("error while fetching offsets for \"net/url\": %v\n", err)
 	}
 
-	o, err = i.Offsets(
-		"google.golang.org/grpc",
-		"templates/google.golang.org/grpc/*.tmpl",
-		versions.List("google.golang.org/grpc"),
-		[]*binary.DataMember{{
-			StructName: "google.golang.org/grpc/internal/transport.Stream",
-			Field:      "method",
-		}, {
-			StructName: "google.golang.org/grpc/internal/transport.Stream",
-			Field:      "id",
-		}, {
-			StructName: "google.golang.org/grpc/internal/transport.Stream",
-			Field:      "ctx",
-		}, {
-			StructName: "google.golang.org/grpc.ClientConn",
-			Field:      "target",
-		}, {
-			StructName: "golang.org/x/net/http2.MetaHeadersFrame",
-			Field:      "Fields",
-		}, {
-			StructName: "golang.org/x/net/http2.FrameHeader",
-			Field:      "StreamID",
-		}, {
-			StructName: "google.golang.org/grpc/internal/transport.http2Client",
-			Field:      "nextID",
-		}, {
-			StructName: "google.golang.org/grpc/internal/transport.headerFrame",
-			Field:      "streamID",
-		}, {
-			StructName: "google.golang.org/grpc/internal/transport.headerFrame",
-			Field:      "hf",
-		}},
-	)
+	grpcOffsets, err := target.New("google.golang.org/grpc", *outputFile, false).
+		FindOffsets([]*binary.DataMember{
+			{
+				StructName: "google.golang.org/grpc/internal/transport.Stream",
+				Field:      "method",
+			},
+			{
+				StructName: "google.golang.org/grpc/internal/transport.Stream",
+				Field:      "id",
+			},
+			{
+				StructName: "google.golang.org/grpc/internal/transport.Stream",
+				Field:      "ctx",
+			},
+			{
+				StructName: "google.golang.org/grpc.ClientConn",
+				Field:      "target",
+			},
+			{
+				StructName: "golang.org/x/net/http2.MetaHeadersFrame",
+				Field:      "Fields",
+			},
+			{
+				StructName: "golang.org/x/net/http2.FrameHeader",
+				Field:      "StreamID",
+			},
+			{
+				StructName: "google.golang.org/grpc/internal/transport.http2Client",
+				Field:      "nextID",
+			},
+			{
+				StructName: "google.golang.org/grpc/internal/transport.headerFrame",
+				Field:      "streamID",
+			},
+			{
+				StructName: "google.golang.org/grpc/internal/transport.headerFrame",
+				Field:      "hf",
+			},
+		})
+
 	if err != nil {
-		l.Error(err, "failed to fetch net/url offsets")
-	} else {
-		offsets = append(offsets, o...)
+		log.Fatalf("error while fetching offsets: %v\n", err)
 	}
 
-	if len(offsets) > 0 {
-		l.Info("writing offsets", "dest", outputFile)
-		err = writer.WriteResults(outputFile, offsets...)
-		if err != nil {
-			l.Error(err, "failed to write offsets", "dest", outputFile)
-			os.Exit(1)
-		}
+	fmt.Println("Done collecting offsets, writing results to file ...")
+	err = writer.WriteResults(*outputFile, stdLibRuntimeOffsets, stdLibNetHTTPOffsets, stdLibNetURLOffsets, grpcOffsets)
+	if err != nil {
+		log.Fatalf("error while writing results to file: %v\n", err)
 	}
+
+	fmt.Println("Done!")
 }

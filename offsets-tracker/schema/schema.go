@@ -22,7 +22,7 @@ type TrackedOffsets struct {
 }
 
 // TrackedStruct maps fields names to the tracked fields offsets.
-type TrackedStruct map[string][]TrackedField
+type TrackedStruct map[string]TrackedField
 
 // TrackedField are the field offsets for a tracked struct.
 type TrackedField struct {

@@ -17,7 +17,7 @@ package cache
 import (
 	"encoding/json"
 	"fmt"
-	"io"
+	"io/ioutil"
 	"log"
 	"os"
 
@@ -33,13 +33,8 @@ type Cache struct {
 	data *schema.TrackedOffsets
 }
 
-// New returns an empty, ready to use, [Cache].
-func New() *Cache {
-	return &Cache{data: &schema.TrackedOffsets{}}
-}
-
-// Load returns a new [Cache].
-func Load(prevOffsetFile string) *Cache {
+// NewCache returns a new [Cache].
+func NewCache(prevOffsetFile string) *Cache {
 	f, err := os.Open(prevOffsetFile)
 	if err != nil {
 		fmt.Println("could not find existing offset file, cache will be empty")
@@ -47,7 +42,7 @@ func Load(prevOffsetFile string) *Cache {
 	}
 
 	defer f.Close()
-	data, err := io.ReadAll(f)
+	data, err := ioutil.ReadAll(f)
 	if err != nil {
 		log.Printf("error reading existing offsets file: %v. Ignoring existing file.\n", err)
 		return nil
@@ -80,26 +75,18 @@ func (c *Cache) IsAllInCache(version string, dataMembers []*binary.DataMember) (
 		if !ok {
 			return nil, false
 		}
-
-		var found bool
-		for _, f := range field {
-			if !versions.Between(version, f.Versions.Oldest, f.Versions.Newest) {
-				continue
-			}
-
-			off, ok := searchOffset(f, version)
-			if !ok {
-				continue
-			}
-			results = append(results, &binary.DataMemberOffset{
-				DataMember: dm,
-				Offset:     off,
-			})
-			found = true
-		}
-		if !found {
+		if !versions.Between(version, field.Versions.Oldest, field.Versions.Newest) {
 			return nil, false
 		}
+
+		off, ok := searchOffset(field, version)
+		if !ok {
+			return nil, false
+		}
+		results = append(results, &binary.DataMemberOffset{
+			DataMember: dm,
+			Offset:     off,
+		})
 	}
 	return results, true
 }

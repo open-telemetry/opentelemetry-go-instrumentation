@@ -25,13 +25,13 @@ import (
 
 	"github.com/hashicorp/go-version"
 
-	"go.opentelemetry.io/auto/offsets-tracker/inspect"
 	"go.opentelemetry.io/auto/offsets-tracker/schema"
+	"go.opentelemetry.io/auto/offsets-tracker/target"
 	"go.opentelemetry.io/auto/offsets-tracker/versions"
 )
 
 // WriteResults writes results to fileName.
-func WriteResults(fileName string, results ...*inspect.Offsets) error {
+func WriteResults(fileName string, results ...*target.Result) error {
 	offsets := schema.TrackedOffsets{
 		Data: map[string]schema.TrackedStruct{},
 	}
@@ -53,7 +53,7 @@ func WriteResults(fileName string, results ...*inspect.Offsets) error {
 	return os.WriteFile(fileName, prettyJSON.Bytes(), fs.ModePerm)
 }
 
-func convertResult(r *inspect.Offsets, offsets *schema.TrackedOffsets) {
+func convertResult(r *target.Result, offsets *schema.TrackedOffsets) {
 	offsetsMap := make(map[string][]schema.VersionedOffset)
 	for _, vr := range r.ResultsByVersion {
 		for _, od := range vr.OffsetData.DataMembers {
@@ -102,13 +102,13 @@ func convertResult(r *inspect.Offsets, offsets *schema.TrackedOffsets) {
 			offsets.Data[parts[0]] = strFields
 		}
 		hl := fieldVersionsMap[key]
-		strFields[parts[1]] = append(strFields[parts[1]], schema.TrackedField{
+		strFields[parts[1]] = schema.TrackedField{
 			Offsets: offs,
 			Versions: schema.VersionInfo{
 				Oldest: hl.lo.String(),
 				Newest: hl.hi.String(),
 			},
-		})
+		}
 	}
 }
 
