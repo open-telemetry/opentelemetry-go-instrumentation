@@ -81,32 +81,19 @@ func (s *storage) download(dest, ver string) error {
 		return err
 	}
 
-	s.log.Info("downloading Go binary", "version", ver)
 	url := fmt.Sprintf(goBinaryURL, ver)
-	req, err := http.NewRequest(http.MethodGet, url, http.NoBody)
-	if err != nil {
-		return err
-	}
-	req.Header.Add("Accept-Encoding", "gzip")
-
 	s.log.Info("downloading Go binary", "version", ver, "url", url)
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := http.Get(url)
 	if err != nil {
 		return err
 	}
 	defer resp.Body.Close()
 
-	var r io.ReadCloser
-	switch resp.Header.Get("Content-Encoding") {
-	case "gzip":
-		r, err = gzip.NewReader(resp.Body)
-		if err != nil {
-			return err
-		}
-		defer r.Close()
-	default:
-		r = resp.Body
+	r, err := gzip.NewReader(resp.Body)
+	if err != nil {
+		return err
 	}
+	defer r.Close()
 
 	return s.untar(tar.NewReader(r), dest, 1)
 }
