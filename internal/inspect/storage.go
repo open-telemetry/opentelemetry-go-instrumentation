@@ -120,7 +120,7 @@ func (s *storage) untar(r *tar.Reader, dest string, strip int) error {
 		n := name(h.Name)
 		switch h.Typeflag {
 		case tar.TypeDir:
-			if err := os.Mkdir(n, h.FileInfo().Mode()); err != nil {
+			if err := os.MkdirAll(n, h.FileInfo().Mode()); err != nil {
 				return err
 			}
 		case tar.TypeReg:
