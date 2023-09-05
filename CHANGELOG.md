@@ -9,8 +9,8 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 ## [Unreleased]
 
 ### Added
-
 - Add ability to monitor multiple processes. ([#197](https://github.com/open-telemetry/opentelemetry-go-instrumentation/issues/197))
+- Add database/sql instrumentation ([#240](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/240))
 
 ### Changed
 
@@ -30,6 +30,13 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 
 - Fix context propagation across different goroutines. ([#118](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/118))
 - The offset tracker can once again build binaries for the Go stdlib. ([#256](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/256))
+
+### Deprecated
+
+- The `go.opentelemetry.io/auto/pkg/instrumentors/bpf/github.com/gorilla/mux` package is deprecated.
+  It will be removed in the following release. ([#262](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/262))
+- The `go.opentelemetry.io/auto/test/e2e/gorillamux` module is deprecated.
+  It will be removed in the following release. ([#262](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/262))
 
 ## [v0.2.2-alpha] - 2023-07-12
 

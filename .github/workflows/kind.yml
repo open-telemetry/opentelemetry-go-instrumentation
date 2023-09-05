@@ -11,7 +11,7 @@ jobs:
     strategy:
       matrix:
         k8s-version: ["v1.26.0"]
-        library: ["gorillamux", "nethttp", "gin"]
+        library: ["gorillamux", "nethttp", "gin", "databasesql"]
         mode: ["sidecar", "deployment"]
     runs-on: ubuntu-latest
     steps:

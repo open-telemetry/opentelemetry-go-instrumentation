@@ -12,6 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package mux provides an instrumentation probe for the github.com/gorilla/mux
+// package.
+//
+// Deprecated: This package will be removed in the next release.
 package mux
 
 import (
@@ -96,7 +100,7 @@ func (g *Instrumentor) Load(ctx *context.InstrumentorContext) error {
 			StructName: "net/url.URL",
 			Field:      "Path",
 		},
-	}, false)
+	}, nil, false)
 
 	if err != nil {
 		return err

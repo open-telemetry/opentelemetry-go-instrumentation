@@ -121,10 +121,11 @@ license-header-check:
 	           exit 1; \
 	   fi
 
-.PHONY: fixture-nethttp fixture-gorillamux fixture-gin
+.PHONY: fixture-nethttp fixture-gorillamux fixture-gin fixture-databasesql
 fixture-nethttp: fixtures/nethttp
 fixture-gorillamux: fixtures/gorillamux
 fixture-gin: fixtures/gin
+fixture-databasesql: fixtures/databasesql
 fixtures/%: LIBRARY=$*
 fixtures/%:
 	$(MAKE) docker-build
