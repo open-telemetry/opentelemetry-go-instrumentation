@@ -14,9 +14,10 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 
 ### Changed
 
-- `pkg/instrumentors` Manager struct method  FilterUnusedInstrumentors is made private.
-- `pkg/opentelemtry/` NewController method now accepts ControllerSettings param.
-- `pkg/process/` Analyzer struct `Close` method is removed.
+- The `FilterUnusedInstrumentors` method of  `"go.opentelemetry.io/auto/pkg/instrumentors".Manager` is removed. ([#208](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/208))
+- The function signature of `"go.opentelemetry.io/auto/pkg/opentelemtry".NewController` has changed.
+  It now accepts `context.Context` and `ControllerSettings` parameters. ([#208](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/208))
+- The `Close` method of `"go.opentelemetry.io/auto/pkg/process".Analyzer` is removed. ([#208](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/208))
 - The function signature of `"go.opentelemetry.io/auto/offsets-tracker/downloader".DownloadBinary` has changed.
   It now has an additional flag indicating whether it'll build a dummy app for Go stdlib packages or not. ([#256](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/256))
 - The function signature of `"go.opentelemetry.io/auto/offsets-tracker/target".New` has changed.
