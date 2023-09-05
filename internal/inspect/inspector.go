@@ -15,17 +15,10 @@
 package inspect
 
 import (
-	"bytes"
 	"context"
-	"debug/elf"
-	"embed"
 	"errors"
 	"fmt"
 	"os"
-	"os/exec"
-	"path/filepath"
-	"strings"
-	"text/template"
 
 	"github.com/go-logr/logr"
 	"github.com/hashicorp/go-version"
@@ -43,19 +36,10 @@ const (
 	defaultGoVersion = "1.21.0"
 
 	defaultNWorkers = 20
-
-	shell = "bash"
 )
 
-var (
-	// goVersions are the versions of Go supported.
-	goVersions []*version.Version
-
-	//go:embed templates/google.golang.org/grpc/*.tmpl
-	//go:embed templates/net/http/*.tmpl
-	//go:embed templates/runtime/*.tmpl
-	rootFS embed.FS
-)
+// goVersions are the versions of Go supported.
+var goVersions []*version.Version
 
 func init() {
 	var err error
@@ -67,12 +51,12 @@ func init() {
 }
 
 type manifest struct {
+	Renderer Renderer
 	// TODO: replace with appBuilder func() (string, error)
-	TmplSrc string
-	GoVer   string
-	GoPath  string
-	AppVer  *version.Version
-	Fields  []StructField
+	GoVer  string
+	GoPath string
+	AppVer *version.Version
+	Fields []StructField
 }
 
 type Inspector struct {
@@ -81,6 +65,7 @@ type Inspector struct {
 	log     logr.Logger
 	cache   *cache.Cache
 	storage *storage
+	builder *builder
 
 	manifests []manifest
 }
@@ -104,10 +89,11 @@ func New(l logr.Logger, c *cache.Cache, storage string) (*Inspector, error) {
 		log:      l,
 		cache:    c,
 		storage:  s,
+		builder:  newBuilder(l),
 	}, nil
 }
 
-func (i *Inspector) Inspect3rdParty(tmplSrc string, vFn func() ([]*version.Version, error), fields []StructField) error {
+func (i *Inspector) Inspect3rdParty(r Renderer, vFn func() ([]*version.Version, error), fields []StructField) error {
 	vers, err := vFn()
 	if err != nil {
 		return err
@@ -120,17 +106,17 @@ func (i *Inspector) Inspect3rdParty(tmplSrc string, vFn func() ([]*version.Versi
 
 	for _, v := range vers {
 		i.manifests = append(i.manifests, manifest{
-			TmplSrc: tmplSrc,
-			GoVer:   defaultGoVersion,
-			GoPath:  goPath,
-			AppVer:  v,
-			Fields:  fields,
+			Renderer: r,
+			GoVer:    defaultGoVersion,
+			GoPath:   goPath,
+			AppVer:   v,
+			Fields:   fields,
 		})
 	}
 	return nil
 }
 
-func (i *Inspector) InspectStdlib(tmplSrc string, fields []StructField) error {
+func (i *Inspector) InspectStdlib(r Renderer, fields []StructField) error {
 	for _, v := range goVersions {
 		goPath, err := i.storage.getGo(v.Original())
 		if err != nil {
@@ -138,19 +124,14 @@ func (i *Inspector) InspectStdlib(tmplSrc string, fields []StructField) error {
 		}
 
 		i.manifests = append(i.manifests, manifest{
-			TmplSrc: tmplSrc,
-			GoVer:   v.Original(),
-			GoPath:  goPath,
-			AppVer:  v,
-			Fields:  fields,
+			Renderer: r,
+			GoVer:    v.Original(),
+			GoPath:   goPath,
+			AppVer:   v,
+			Fields:   fields,
 		})
 	}
 	return nil
-}
-
-type result struct {
-	manifest manifest
-	sfos     []structFieldOffset
 }
 
 func (i *Inspector) Do(ctx context.Context) (*schema.TrackedOffsets, error) {
@@ -226,17 +207,15 @@ func (i *Inspector) do(m manifest) ([]structFieldOffset, error) {
 	}
 	defer os.RemoveAll(d)
 
-	i.log.Info("rendering application", "src", m.TmplSrc, "dest", d, "version", m.AppVer)
 	data := struct{ Version string }{Version: "v" + m.AppVer.String()}
-	if err = render(m.TmplSrc, d, data); err != nil {
+	if err = m.Renderer.Render(d, data); err != nil {
 		return nil, err
 	}
 
-	exec, err := i.build(m.AppVer.Original(), m.GoPath, d)
+	app, err := i.builder.Build(d, m.GoPath, m.AppVer)
 	if errors.Is(err, errBuild) {
-		i.log.Error(err, "skipping offsets", "src", m.TmplSrc, "Go", m.GoVer, "version", m.AppVer)
 		for _, f := range uncached {
-			// Signal these fields were not found.
+			i.log.Error(err, "skipping", "field", f, "Go", m.GoVer, "version", m.AppVer)
 			out = append(out, structFieldOffset{
 				StructField: f,
 				Version:     m.AppVer,
@@ -247,13 +226,10 @@ func (i *Inspector) do(m manifest) ([]structFieldOffset, error) {
 	} else if err != nil {
 		return nil, err
 	}
+	defer app.Close()
 
 	for _, f := range uncached {
-		sfo, err := i.analyze(m.AppVer, exec, f)
-		if err != nil {
-			return nil, err
-		}
-		out = append(out, sfo)
+		out = append(out, app.Analyze(f))
 	}
 
 	return out, nil
@@ -267,57 +243,6 @@ func (i *Inspector) cached(ver *version.Version, sf StructField) (structFieldOff
 	return sfo, ok
 }
 
-func (i *Inspector) analyze(ver *version.Version, exec string, sf StructField) (structFieldOffset, error) {
-	i.log.Info("analyzing app binary", "package", sf.Package, "binary", exec, "version", ver)
-
-	elfF, err := elf.Open(exec)
-	if err != nil {
-		return structFieldOffset{}, err
-	}
-	defer elfF.Close()
-
-	dwarfData, err := elfF.DWARF()
-	if err != nil {
-		return structFieldOffset{}, err
-	}
-
-	return sf.offset(ver, dwarfData), nil
-}
-
-var errBuild = errors.New("failed to build")
-
-func (i *Inspector) build(ver, goBin, dir string) (string, error) {
-	goModTidy := goBin + " mod tidy -compat=1.17"
-	i.log.Info("running go mod tidy", "dir", dir, "cmd", goModTidy)
-	stdout, stderr, err := run(goModTidy, dir)
-	if err != nil {
-		i.log.Error(
-			err, "failed to tidy application",
-			"cmd", goModTidy,
-			"STDOUT", stdout,
-			"STDERR", stderr,
-		)
-		return "", err
-	}
-
-	app := fmt.Sprintf("app%s", ver)
-	build := goBin + " build -o " + app
-	i.log.Info("building application", "dir", dir, "cmd", build)
-	stdout, stderr, err = run(build, dir)
-	if err != nil {
-		i.log.V(5).Info(
-			"failed to build application",
-			"cmd", build,
-			"STDOUT", stdout,
-			"STDERR", stderr,
-			"err", err,
-		)
-		return "", errBuild
-	}
-
-	return filepath.Join(dir, app), nil
-}
-
 func (i *Inspector) logResults(results []structFieldOffset) {
 	for _, r := range results {
 		if r.Offset < 0 {
@@ -326,41 +251,4 @@ func (i *Inspector) logResults(results []structFieldOffset) {
 			i.log.Info("offsets found", "name", r.structName(), "version", r.Version)
 		}
 	}
-}
-
-// render renders all templates to the dest directory using the data.
-func render(src, dest string, data interface{}) error {
-	tmpls, err := template.ParseFS(rootFS, src)
-	if err != nil {
-		return err
-	}
-	for _, tmpl := range tmpls.Templates() {
-		target := filepath.Join(dest, strings.TrimSuffix(tmpl.Name(), ".tmpl"))
-		wr, err := os.Create(target)
-		if err != nil {
-			return err
-		}
-
-		err = tmpl.Execute(wr, data)
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-// run runs command in dir.
-func run(command string, dir string) (string, string, error) {
-	var stdout bytes.Buffer
-	var stderr bytes.Buffer
-	cmd := exec.Command(shell, "-c", command)
-	if dir != "" {
-		cmd.Dir = dir
-	}
-
-	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
-	err := cmd.Run()
-	return stdout.String(), stderr.String(), err
 }

@@ -62,93 +62,86 @@ func main() {
 	}
 	i.NWorkers = runtime.NumCPU()
 
-	err = i.InspectStdlib(
-		"templates/runtime/*.tmpl",
-		[]inspect.StructField{{
-			Package: "runtime",
-			Struct:  "g",
-			Field:   "goid",
-		}},
-	)
+	r := inspect.NewRenderer(l, "templates/runtime/*.tmpl", inspect.DefaultFS)
+	err = i.InspectStdlib(r, []inspect.StructField{{
+		Package: "runtime",
+		Struct:  "g",
+		Field:   "goid",
+	}})
 	if err != nil {
 		l.Error(err, "failed to add runtime manifest")
 		os.Exit(1)
 	}
 
-	err = i.InspectStdlib(
-		"templates/net/http/*.tmpl",
-		[]inspect.StructField{{
-			Package: "net/http",
-			Struct:  "Request",
-			Field:   "Method",
-		}, {
-			Package: "net/http",
-			Struct:  "Request",
-			Field:   "URL",
-		}, {
-			Package: "net/http",
-			Struct:  "Request",
-			Field:   "RemoteAddr",
-		}, {
-			Package: "net/http",
-			Struct:  "Request",
-			Field:   "Header",
-		}, {
-			Package: "net/http",
-			Struct:  "Request",
-			Field:   "ctx",
-		}, {
-			Package: "net/url",
-			Struct:  "URL",
-			Field:   "Path",
-		}},
-	)
+	r = inspect.NewRenderer(l, "templates/net/http/*.tmpl", inspect.DefaultFS)
+	err = i.InspectStdlib(r, []inspect.StructField{{
+		Package: "net/http",
+		Struct:  "Request",
+		Field:   "Method",
+	}, {
+		Package: "net/http",
+		Struct:  "Request",
+		Field:   "URL",
+	}, {
+		Package: "net/http",
+		Struct:  "Request",
+		Field:   "RemoteAddr",
+	}, {
+		Package: "net/http",
+		Struct:  "Request",
+		Field:   "Header",
+	}, {
+		Package: "net/http",
+		Struct:  "Request",
+		Field:   "ctx",
+	}, {
+		Package: "net/url",
+		Struct:  "URL",
+		Field:   "Path",
+	}})
 	if err != nil {
 		l.Error(err, "failed to add net manifest")
 		os.Exit(1)
 	}
 
-	err = i.Inspect3rdParty(
-		"templates/google.golang.org/grpc/*.tmpl",
-		versions.List("google.golang.org/grpc"),
-		[]inspect.StructField{{
-			Package: "google.golang.org/grpc/internal/transport",
-			Struct:  "Stream",
-			Field:   "method",
-		}, {
-			Package: "google.golang.org/grpc/internal/transport",
-			Struct:  "Stream",
-			Field:   "id",
-		}, {
-			Package: "google.golang.org/grpc/internal/transport",
-			Struct:  "Stream",
-			Field:   "ctx",
-		}, {
-			Package: "google.golang.org/grpc",
-			Struct:  "ClientConn",
-			Field:   "target",
-		}, {
-			Package: "golang.org/x/net/http2",
-			Struct:  "MetaHeadersFrame",
-			Field:   "Fields",
-		}, {
-			Package: "golang.org/x/net/http2",
-			Struct:  "FrameHeader",
-			Field:   "StreamID",
-		}, {
-			Package: "google.golang.org/grpc/internal/transport",
-			Struct:  "http2Client",
-			Field:   "nextID",
-		}, {
-			Package: "google.golang.org/grpc/internal/transport",
-			Struct:  "headerFrame",
-			Field:   "streamID",
-		}, {
-			Package: "google.golang.org/grpc/internal/transport",
-			Struct:  "headerFrame",
-			Field:   "hf",
-		}},
-	)
+	r = inspect.NewRenderer(l, "templates/google.golang.org/grpc/*.tmpl", inspect.DefaultFS)
+	err = i.Inspect3rdParty(r, versions.List("google.golang.org/grpc"), []inspect.StructField{{
+		Package: "google.golang.org/grpc/internal/transport",
+		Struct:  "Stream",
+		Field:   "method",
+	}, {
+		Package: "google.golang.org/grpc/internal/transport",
+		Struct:  "Stream",
+		Field:   "id",
+	}, {
+		Package: "google.golang.org/grpc/internal/transport",
+		Struct:  "Stream",
+		Field:   "ctx",
+	}, {
+		Package: "google.golang.org/grpc",
+		Struct:  "ClientConn",
+		Field:   "target",
+	}, {
+		Package: "golang.org/x/net/http2",
+		Struct:  "MetaHeadersFrame",
+		Field:   "Fields",
+	}, {
+		Package: "golang.org/x/net/http2",
+		Struct:  "FrameHeader",
+		Field:   "StreamID",
+	}, {
+		Package: "google.golang.org/grpc/internal/transport",
+		Struct:  "http2Client",
+		Field:   "nextID",
+	}, {
+		Package: "google.golang.org/grpc/internal/transport",
+		Struct:  "headerFrame",
+		Field:   "streamID",
+	}, {
+		Package: "google.golang.org/grpc/internal/transport",
+		Struct:  "headerFrame",
+		Field:   "hf",
+	}})
 	if err != nil {
 		l.Error(err, "failed to add google.golang.org/grpc manifest")
 		os.Exit(1)
