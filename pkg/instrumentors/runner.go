@@ -15,19 +15,20 @@
 package instrumentors
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/cilium/ebpf/link"
 	"github.com/cilium/ebpf/rlimit"
 
 	"go.opentelemetry.io/auto/pkg/inject"
-	"go.opentelemetry.io/auto/pkg/instrumentors/context"
+	iCtx "go.opentelemetry.io/auto/pkg/instrumentors/context"
 	"go.opentelemetry.io/auto/pkg/log"
 	"go.opentelemetry.io/auto/pkg/process"
 )
 
 // Run runs the event processing loop for all managed Instrumentors.
-func (m *Manager) Run(target *process.TargetDetails) error {
+func (m *Manager) Run(ctx context.Context, target *process.TargetDetails) error {
 	if len(m.instrumentors) == 0 {
 		log.Logger.V(0).Info("there are no available instrumentations for target process")
 		return nil
@@ -44,6 +45,10 @@ func (m *Manager) Run(target *process.TargetDetails) error {
 
 	for {
 		select {
+		case <-ctx.Done():
+			m.Close()
+			m.cleanup()
+			return ctx.Err()
 		case <-m.done:
 			log.Logger.V(0).Info("shutting down all instrumentors due to signal")
 			m.cleanup()
@@ -69,7 +74,7 @@ func (m *Manager) load(target *process.TargetDetails) error {
 	if err != nil {
 		return err
 	}
-	ctx := &context.InstrumentorContext{
+	ctx := &iCtx.InstrumentorContext{
 		TargetDetails: target,
 		Executable:    exe,
 		Injector:      injector,
