@@ -23,8 +23,8 @@ import (
 	"strings"
 	"time"
 
-	"go.opentelemetry.io/auto/pkg/errors"
-	"go.opentelemetry.io/auto/pkg/log"
+	"go.opentelemetry.io/auto/internal/pkg/errors"
+	"go.opentelemetry.io/auto/internal/pkg/log"
 )
 
 // Analyzer is used to find actively running processes.

@@ -1,4 +1,4 @@
-module go.opentelemetry.io/auto/test/e2e/gin
+module go.opentelemetry.io/auto/internal/test/e2e/gin
 
 go 1.20
 

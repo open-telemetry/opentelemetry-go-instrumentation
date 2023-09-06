@@ -17,18 +17,18 @@ package instrumentors
 import (
 	"fmt"
 
-	"go.opentelemetry.io/auto/pkg/instrumentors/allocator"
-	dbSql "go.opentelemetry.io/auto/pkg/instrumentors/bpf/database/sql"
-	"go.opentelemetry.io/auto/pkg/instrumentors/bpf/github.com/gin-gonic/gin"
-	gorillaMux "go.opentelemetry.io/auto/pkg/instrumentors/bpf/github.com/gorilla/mux" // nolint:staticcheck  // TODO: remove in #263
-	"go.opentelemetry.io/auto/pkg/instrumentors/bpf/google/golang/org/grpc"
-	grpcServer "go.opentelemetry.io/auto/pkg/instrumentors/bpf/google/golang/org/grpc/server"
-	httpClient "go.opentelemetry.io/auto/pkg/instrumentors/bpf/net/http/client"
-	httpServer "go.opentelemetry.io/auto/pkg/instrumentors/bpf/net/http/server"
-	"go.opentelemetry.io/auto/pkg/instrumentors/events"
-	"go.opentelemetry.io/auto/pkg/log"
-	"go.opentelemetry.io/auto/pkg/opentelemetry"
-	"go.opentelemetry.io/auto/pkg/process"
+	"go.opentelemetry.io/auto/internal/pkg/instrumentors/allocator"
+	dbSql "go.opentelemetry.io/auto/internal/pkg/instrumentors/bpf/database/sql"
+	"go.opentelemetry.io/auto/internal/pkg/instrumentors/bpf/github.com/gin-gonic/gin"
+	gorillaMux "go.opentelemetry.io/auto/internal/pkg/instrumentors/bpf/github.com/gorilla/mux" // nolint:staticcheck  // TODO: remove in #263
+	"go.opentelemetry.io/auto/internal/pkg/instrumentors/bpf/google/golang/org/grpc"
+	grpcServer "go.opentelemetry.io/auto/internal/pkg/instrumentors/bpf/google/golang/org/grpc/server"
+	httpClient "go.opentelemetry.io/auto/internal/pkg/instrumentors/bpf/net/http/client"
+	httpServer "go.opentelemetry.io/auto/internal/pkg/instrumentors/bpf/net/http/server"
+	"go.opentelemetry.io/auto/internal/pkg/instrumentors/events"
+	"go.opentelemetry.io/auto/internal/pkg/log"
+	"go.opentelemetry.io/auto/internal/pkg/opentelemetry"
+	"go.opentelemetry.io/auto/internal/pkg/process"
 )
 
 var (

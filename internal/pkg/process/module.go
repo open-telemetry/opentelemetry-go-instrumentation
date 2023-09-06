@@ -24,7 +24,7 @@ import (
 
 	"github.com/hashicorp/go-version"
 
-	"go.opentelemetry.io/auto/pkg/log"
+	"go.opentelemetry.io/auto/internal/pkg/log"
 )
 
 // The build info blob left by the linker is identified by

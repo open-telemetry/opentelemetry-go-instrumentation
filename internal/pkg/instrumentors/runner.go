@@ -20,10 +20,10 @@ import (
 	"github.com/cilium/ebpf/link"
 	"github.com/cilium/ebpf/rlimit"
 
-	"go.opentelemetry.io/auto/pkg/inject"
-	"go.opentelemetry.io/auto/pkg/instrumentors/context"
-	"go.opentelemetry.io/auto/pkg/log"
-	"go.opentelemetry.io/auto/pkg/process"
+	"go.opentelemetry.io/auto/internal/pkg/inject"
+	"go.opentelemetry.io/auto/internal/pkg/instrumentors/context"
+	"go.opentelemetry.io/auto/internal/pkg/log"
+	"go.opentelemetry.io/auto/internal/pkg/process"
 )
 
 // Run runs the event processing loop for all managed Instrumentors.

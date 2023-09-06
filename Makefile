@@ -9,8 +9,8 @@ ALL_GO_MOD_DIRS := $(shell find . -type f -name 'go.mod' ! -path './LICENSES/*' 
 OTEL_GO_MOD_DIRS := $(filter-out $(TOOLS_MOD_DIR), $(ALL_GO_MOD_DIRS))
 
 # Build the list of include directories to compile the bpf program
-BPF_INCLUDE += -I${REPODIR}/include/libbpf
-BPF_INCLUDE += -I${REPODIR}/include
+BPF_INCLUDE += -I${REPODIR}/internal/include/libbpf
+BPF_INCLUDE += -I${REPODIR}/internal/include
 
 .DEFAULT_GOAL := precommit
 

@@ -15,8 +15,8 @@
 package instrumentors
 
 import (
-	"go.opentelemetry.io/auto/pkg/instrumentors/context"
-	"go.opentelemetry.io/auto/pkg/instrumentors/events"
+	"go.opentelemetry.io/auto/internal/pkg/instrumentors/context"
+	"go.opentelemetry.io/auto/internal/pkg/instrumentors/events"
 )
 
 // Instrumentor provides instrumentation for a Go package.

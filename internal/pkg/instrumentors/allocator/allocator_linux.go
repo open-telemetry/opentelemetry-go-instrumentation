@@ -15,9 +15,9 @@
 package allocator
 
 import (
-	"go.opentelemetry.io/auto/pkg/instrumentors/bpffs"
-	"go.opentelemetry.io/auto/pkg/instrumentors/context"
-	"go.opentelemetry.io/auto/pkg/log"
+	"go.opentelemetry.io/auto/internal/pkg/instrumentors/bpffs"
+	"go.opentelemetry.io/auto/internal/pkg/instrumentors/context"
+	"go.opentelemetry.io/auto/internal/pkg/log"
 )
 
 // Allocator handles the allocation of the BPF file-system.

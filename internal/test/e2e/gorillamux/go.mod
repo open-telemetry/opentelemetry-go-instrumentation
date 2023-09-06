@@ -1,5 +1,5 @@
 // Deprecated: This module will be removed in the next release.
-module go.opentelemetry.io/auto/test/e2e/gorillamux
+module go.opentelemetry.io/auto/internal/test/e2e/gorillamux
 
 go 1.20
 

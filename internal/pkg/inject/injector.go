@@ -24,8 +24,8 @@ import (
 
 	"github.com/cilium/ebpf"
 
-	"go.opentelemetry.io/auto/pkg/log"
-	"go.opentelemetry.io/auto/pkg/process"
+	"go.opentelemetry.io/auto/internal/pkg/log"
+	"go.opentelemetry.io/auto/internal/pkg/process"
 )
 
 var (

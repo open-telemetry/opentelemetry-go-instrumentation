@@ -22,8 +22,8 @@ import (
 
 	"github.com/hashicorp/go-version"
 
-	"go.opentelemetry.io/auto/pkg/log"
-	"go.opentelemetry.io/auto/pkg/process/ptrace"
+	"go.opentelemetry.io/auto/internal/pkg/log"
+	"go.opentelemetry.io/auto/internal/pkg/process/ptrace"
 )
 
 const (
