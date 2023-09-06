@@ -71,6 +71,8 @@ jobs:
         with:
           go-version: ${{ matrix.go-version }}
           cache-dependency-path: "**/go.sum"
+      - name: Install build dependencies
+        run: sudo apt-get update && sudo apt-get install -y clang llvm
       - name: Run tests
         env:
           GOARCH: ${{ matrix.arch }}
