@@ -20,7 +20,6 @@ package instrumentors
 import (
 	"fmt"
 
-	dbSql "go.opentelemetry.io/auto/internal/pkg/instrumentors/bpf/database/sql"
 	"go.opentelemetry.io/auto/pkg/instrumentors/allocator"                                    // nolint:staticcheck  // Atomic deprecation.
 	"go.opentelemetry.io/auto/pkg/instrumentors/bpf/github.com/gin-gonic/gin"                 // nolint:staticcheck  // Atomic deprecation.
 	gorillaMux "go.opentelemetry.io/auto/pkg/instrumentors/bpf/github.com/gorilla/mux"        // nolint:staticcheck  // TODO: remove in #263
@@ -121,7 +120,6 @@ func registerInstrumentors(m *Manager) error {
 		httpClient.New(),
 		gorillaMux.New(),
 		gin.New(),
-		dbSql.New(),
 	}
 
 	for _, i := range insts {
