@@ -28,9 +28,9 @@ import (
 
 	"github.com/hashicorp/go-version"
 
-	"go.opentelemetry.io/auto/offsets-tracker/schema"
-	"go.opentelemetry.io/auto/offsets-tracker/target"
-	"go.opentelemetry.io/auto/offsets-tracker/versions"
+	"go.opentelemetry.io/auto/offsets-tracker/schema"   // nolint:staticcheck  // atomic deprecation.
+	"go.opentelemetry.io/auto/offsets-tracker/target"   // nolint:staticcheck  // atomic deprecation.
+	"go.opentelemetry.io/auto/offsets-tracker/versions" // nolint:staticcheck  // atomic deprecation.
 )
 
 // WriteResults writes results to fileName.
