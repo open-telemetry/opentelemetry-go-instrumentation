@@ -12,6 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package downloader provides downloading utilities.
+//
+// Deprecated: This package is no longer supported.
 package downloader
 
 import (

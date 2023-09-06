@@ -12,6 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package utils provides a wrapper around "os/exec".
+//
+// Deprecated: This package is no longer supported.
 package utils
 
 import (

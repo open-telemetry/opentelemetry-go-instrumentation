@@ -1,5 +1,7 @@
 # offsets-tracker
 
+**Deprecated**: This module is no longer supported.
+
 This project tracks offsets of fields inside of Go structs across versions.
 
 This tracking is needed in order to create a  [stable eBPF based instrumentation](https://github.com/keyval-dev/opentelemetry-go-instrumentation/blob/master/docs/how-it-works.md#instrumentation-stability).
