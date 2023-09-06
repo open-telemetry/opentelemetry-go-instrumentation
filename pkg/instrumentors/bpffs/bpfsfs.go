@@ -21,11 +21,11 @@ import (
 	"fmt"
 	"os"
 
-	"go.opentelemetry.io/auto/pkg/log"
+	"go.opentelemetry.io/auto/pkg/log" // nolint:staticcheck  // Atomic deprecation.
 
 	"golang.org/x/sys/unix"
 
-	"go.opentelemetry.io/auto/pkg/process"
+	"go.opentelemetry.io/auto/pkg/process" // nolint:staticcheck  // Atomic deprecation.
 )
 
 // BPFFsPath is the system path to the BPF file-system.

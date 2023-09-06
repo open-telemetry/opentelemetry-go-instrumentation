@@ -27,8 +27,8 @@ import (
 
 	"github.com/cilium/ebpf"
 
-	"go.opentelemetry.io/auto/pkg/log"
-	"go.opentelemetry.io/auto/pkg/process"
+	"go.opentelemetry.io/auto/pkg/log"     // nolint:staticcheck  // Atomic deprecation.
+	"go.opentelemetry.io/auto/pkg/process" // nolint:staticcheck  // Atomic deprecation.
 )
 
 var (

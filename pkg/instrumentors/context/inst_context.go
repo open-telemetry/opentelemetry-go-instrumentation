@@ -20,8 +20,8 @@ package context
 import (
 	"github.com/cilium/ebpf/link"
 
-	"go.opentelemetry.io/auto/pkg/inject"
-	"go.opentelemetry.io/auto/pkg/process"
+	"go.opentelemetry.io/auto/pkg/inject"  // nolint:staticcheck  // Atomic deprecation.
+	"go.opentelemetry.io/auto/pkg/process" // nolint:staticcheck  // Atomic deprecation.
 )
 
 // InstrumentorContext holds the state of the auto-instrumentation system.

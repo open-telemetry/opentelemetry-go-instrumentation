@@ -18,9 +18,9 @@
 package allocator
 
 import (
-	"go.opentelemetry.io/auto/pkg/instrumentors/bpffs"
-	"go.opentelemetry.io/auto/pkg/instrumentors/context"
-	"go.opentelemetry.io/auto/pkg/log"
+	"go.opentelemetry.io/auto/pkg/instrumentors/bpffs"   // nolint:staticcheck  // Atomic deprecation.
+	"go.opentelemetry.io/auto/pkg/instrumentors/context" // nolint:staticcheck  // Atomic deprecation.
+	"go.opentelemetry.io/auto/pkg/log"                   // nolint:staticcheck  // Atomic deprecation.
 )
 
 // Allocator handles the allocation of the BPF file-system.

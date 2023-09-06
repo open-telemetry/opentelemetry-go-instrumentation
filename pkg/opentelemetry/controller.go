@@ -29,8 +29,8 @@ import (
 	"google.golang.org/grpc"
 
 	"go.opentelemetry.io/auto"
-	"go.opentelemetry.io/auto/pkg/instrumentors/events"
-	"go.opentelemetry.io/auto/pkg/log"
+	"go.opentelemetry.io/auto/pkg/instrumentors/events" // nolint:staticcheck  // Atomic deprecation.
+	"go.opentelemetry.io/auto/pkg/log"                  // nolint:staticcheck  // Atomic deprecation.
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
 	"go.opentelemetry.io/otel/sdk/resource"

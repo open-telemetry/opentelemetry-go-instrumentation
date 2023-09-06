@@ -27,7 +27,7 @@ import (
 
 	"github.com/hashicorp/go-version"
 
-	"go.opentelemetry.io/auto/pkg/log"
+	"go.opentelemetry.io/auto/pkg/log" // nolint:staticcheck  // Atomic deprecation.
 )
 
 // The build info blob left by the linker is identified by
