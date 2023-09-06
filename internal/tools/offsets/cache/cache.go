@@ -23,9 +23,9 @@ import (
 
 	"github.com/hashicorp/go-version"
 
-	"go.opentelemetry.io/auto/offsets-tracker/binary"
-	"go.opentelemetry.io/auto/offsets-tracker/schema"
-	"go.opentelemetry.io/auto/offsets-tracker/versions"
+	"go.opentelemetry.io/auto/internal/tools/offsets/binary"
+	"go.opentelemetry.io/auto/internal/tools/offsets/schema"
+	"go.opentelemetry.io/auto/internal/tools/offsets/versions"
 )
 
 // Cache holds already seen offsets.

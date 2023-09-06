@@ -20,10 +20,10 @@ import (
 
 	"github.com/hashicorp/go-version"
 
-	"go.opentelemetry.io/auto/offsets-tracker/binary"
-	"go.opentelemetry.io/auto/offsets-tracker/cache"
-	"go.opentelemetry.io/auto/offsets-tracker/downloader"
-	"go.opentelemetry.io/auto/offsets-tracker/versions"
+	"go.opentelemetry.io/auto/internal/tools/offsets/binary"
+	"go.opentelemetry.io/auto/internal/tools/offsets/cache"
+	"go.opentelemetry.io/auto/internal/tools/offsets/downloader"
+	"go.opentelemetry.io/auto/internal/tools/offsets/versions"
 )
 
 // VersionsStrategy is a strategy used when determining the version of a Go

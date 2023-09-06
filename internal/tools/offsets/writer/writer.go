@@ -25,9 +25,9 @@ import (
 
 	"github.com/hashicorp/go-version"
 
-	"go.opentelemetry.io/auto/offsets-tracker/schema"
-	"go.opentelemetry.io/auto/offsets-tracker/target"
-	"go.opentelemetry.io/auto/offsets-tracker/versions"
+	"go.opentelemetry.io/auto/internal/tools/offsets/schema"
+	"go.opentelemetry.io/auto/internal/tools/offsets/target"
+	"go.opentelemetry.io/auto/internal/tools/offsets/versions"
 )
 
 // WriteResults writes results to fileName.

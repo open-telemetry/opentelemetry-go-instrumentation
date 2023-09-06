@@ -1,10 +1,10 @@
-# offsets-tracker
+# offsets
 
-This project tracks offsets of fields inside of Go structs across versions.
+This project tracks `offsets` of fields inside of Go structs across versions.
 
 This tracking is needed in order to create a  [stable eBPF based instrumentation](https://github.com/keyval-dev/opentelemetry-go-instrumentation/blob/master/docs/how-it-works.md#instrumentation-stability).
 
-Calculating offsets is accomplished by creating a binary file containing the relevant struct and analyzing its DWARF information.
+Calculating `offsets` is accomplished by creating a binary file containing the relevant struct and analyzing its DWARF information.
 ## Tracking targets
 
 The `main.go` file specifies all the tracking targets.
@@ -23,7 +23,7 @@ target.New("go").
 
 ## Output
 
-offsets-tracker writes all the tracked offsets into a file named `offset_results.json`.
+`offsets` writes all the tracked `offsets` into a file named `offset_results.json`.
 For example, here is the tracking of `method` field inside `transport.Stream` struct in the `google.golang.org/grpc` module:
 ```go
 {
@@ -57,18 +57,18 @@ For example, here is the tracking of `method` field inside `transport.Stream` st
 
 ## Versions Discovery
 
-By default, offsets-tracker finds available versions by executing `go list -versions <target-name>`.
+By default, `offsets` finds available versions by executing `go list -versions <target-name>`.
 
 Unfortunately, Go standard library versions are not discoverable via `go list`. 
-In order to discover Go versions, the offsets-tracker fetch the versions published at `https://go.dev/dl`.
+In order to discover Go versions, the `offsets` fetch the versions published at `https://go.dev/dl`.
 Fetching `go.dev` for discovering versions can be enabled by setting`.FindVersionsBy(target.GoDevFileVersionsStrategy)` when registering a new target.
 
 ## Download Strategy
 
-offsets-tracker wraps every Go module version as a Go application that depends on that module.
+`offsets` wraps every Go module version as a Go application that depends on that module.
 Those applications are the result of [generating template files](./downloader/wrapper) with the appropriate version.
 
-In the case of the Go standard library, the offsets-tracker creates a dummy application that depends on the specific library. For example
+In the case of the Go standard library, the `offsets` creates a dummy application that depends on the specific library. For example
 
 ```go
 import (
@@ -78,7 +78,7 @@ import (
 
 ## Version Constraints
 
-offsets-tracker downloads and compiles every version found in the previous step by default.
+`offsets` downloads and compiles every version found in the previous step by default.
 Some targets do not require support for very old versions. Add the following to limit the version scope:
 ```go
 minimunGoVersion, err := version.NewConstraint(">= 1.12")
