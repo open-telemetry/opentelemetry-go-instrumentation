@@ -12,6 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package allocator provides allocation functionality for unix systems.
+//
+// Deprecated: This package is no longer supported.
 package allocator
 
 import (

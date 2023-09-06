@@ -12,6 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package gin provides an instrumentor for the github.com/gin-gonic/gin
+// package.
+//
+// Deprecated: This package is no longer supported.
 package gin
 
 import (

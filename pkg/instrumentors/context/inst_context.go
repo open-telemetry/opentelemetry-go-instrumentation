@@ -12,6 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package context provides context utilities.
+//
+// Deprecated: This package is no longer supported.
 package context
 
 import (

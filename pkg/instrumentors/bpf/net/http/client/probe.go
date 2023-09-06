@@ -12,6 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package client provides an instrumentor for the client in the net/http
+// package.
+//
+// Deprecated: This package is no longer supported.
 package client
 
 import (

@@ -12,6 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package grpc provides an instrumentor for the client in the
+// google.golang.org/grpc package.
+//
+// Deprecated: This package is no longer supported.
 package grpc
 
 import (

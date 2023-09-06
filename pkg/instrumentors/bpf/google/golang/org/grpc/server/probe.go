@@ -12,6 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package server provides an instrumentor for the server in the
+// google.golang.org/grpc package.
+//
+// Deprecated: This package is no longer supported.
 package server
 
 import (

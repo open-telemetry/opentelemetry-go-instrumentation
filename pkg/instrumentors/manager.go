@@ -12,6 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package instrumentors provides instrumentors that instrument Go packages.
+//
+// Deprecated: This package is no longer supported.
 package instrumentors
 
 import (

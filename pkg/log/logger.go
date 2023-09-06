@@ -12,6 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package log provides a unified logger.
+//
+// Deprecated: This package is no longer supported.
 package log
 
 import (
