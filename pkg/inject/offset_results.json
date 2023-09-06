@@ -172,7 +172,7 @@
       "Header": {
         "versions": {
           "oldest": "1.12.0",
-          "newest": "1.21.0"
+          "newest": "1.21.1"
         },
         "offsets": [
           {
@@ -184,7 +184,7 @@
       "Method": {
         "versions": {
           "oldest": "1.12.0",
-          "newest": "1.21.0"
+          "newest": "1.21.1"
         },
         "offsets": [
           {
@@ -196,7 +196,7 @@
       "RemoteAddr": {
         "versions": {
           "oldest": "1.12.0",
-          "newest": "1.21.0"
+          "newest": "1.21.1"
         },
         "offsets": [
           {
@@ -208,7 +208,7 @@
       "URL": {
         "versions": {
           "oldest": "1.12.0",
-          "newest": "1.21.0"
+          "newest": "1.21.1"
         },
         "offsets": [
           {
@@ -220,7 +220,7 @@
       "ctx": {
         "versions": {
           "oldest": "1.12.0",
-          "newest": "1.21.0"
+          "newest": "1.21.1"
         },
         "offsets": [
           {
@@ -248,7 +248,7 @@
       "goid": {
         "versions": {
           "oldest": "1.12.0",
-          "newest": "1.21.0"
+          "newest": "1.21.1"
         },
         "offsets": [
           {
