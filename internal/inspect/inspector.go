@@ -30,8 +30,6 @@ import (
 )
 
 const (
-	defaultStoragePath = "./.offset-tracker"
-
 	// TODO: minGoVersion     = "1.12"
 	minGoVersion        = "1.20"
 	defaultGoVersionStr = "1.21.0"
