@@ -22,9 +22,11 @@ import (
 	"sort"
 
 	"github.com/hashicorp/go-version"
+
 	"go.opentelemetry.io/auto/internal/inspect/schema"
 )
 
+// StructField defines a field of a struct from package.
 type StructField struct {
 	Package string
 	Struct  string
@@ -118,15 +120,13 @@ func indexFields(offsets map[StructField][]offset) map[StructField][]field {
 	fields := make(map[StructField][]field)
 	for sf, offs := range offsets {
 		r := new(versionRange)
-		var (
-			collapsed []offset
-			last      *offset
-		)
+		last := -1
+		var collapsed []offset
 
 		sort.Slice(offs, func(i, j int) bool {
 			return offs[i].Since.LessThan(offs[j].Since)
 		})
-		for _, off := range offs {
+		for i, off := range offs {
 			if off.Value < 0 {
 				if !r.empty() && len(collapsed) > 0 {
 					fields[sf] = append(fields[sf], field{
@@ -137,16 +137,16 @@ func indexFields(offsets map[StructField][]offset) map[StructField][]field {
 
 				r = new(versionRange)
 				collapsed = []offset{}
-				last = nil
+				last = -1
 				continue
 			}
 			r.update(off.Since)
 
 			// Only append if field value changed.
-			if last == nil || off.Value != last.Value {
+			if last < 0 || off.Value != offs[last].Value {
 				collapsed = append(collapsed, off)
 			}
-			last = &off
+			last = i
 		}
 		if !r.empty() && len(collapsed) > 0 {
 			fields[sf] = append(fields[sf], field{
