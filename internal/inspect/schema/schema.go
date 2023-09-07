@@ -14,6 +14,8 @@
 
 package schema
 
+import "github.com/hashicorp/go-version"
+
 // TrackedOffsets are all the tracked offsets.
 type TrackedOffsets struct {
 	// Data key: struct name, which includes the library name in external
@@ -35,12 +37,12 @@ type TrackedField struct {
 
 // VersionInfo is the span of supported versions.
 type VersionInfo struct {
-	Oldest string `json:"oldest"`
-	Newest string `json:"newest"`
+	Oldest *version.Version `json:"oldest"`
+	Newest *version.Version `json:"newest"`
 }
 
 // VersionedOffset if a offset for a version of a module.
 type VersionedOffset struct {
-	Offset uintptr `json:"offset"`
-	Since  string  `json:"since"`
+	Offset uintptr          `json:"offset"`
+	Since  *version.Version `json:"since"`
 }

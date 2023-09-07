@@ -201,8 +201,8 @@ type versionRange struct {
 
 func (r *versionRange) versionInfo() schema.VersionInfo {
 	return schema.VersionInfo{
-		Oldest: r.Oldest.Original(),
-		Newest: r.Newest.Original(),
+		Oldest: r.Oldest,
+		Newest: r.Newest,
 	}
 }
 
@@ -227,6 +227,6 @@ type offset struct {
 func (o offset) versionedOffset() schema.VersionedOffset {
 	return schema.VersionedOffset{
 		Offset: uintptr(o.Value),
-		Since:  o.Since.Original(),
+		Since:  o.Since,
 	}
 }

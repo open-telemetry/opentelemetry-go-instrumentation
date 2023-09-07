@@ -234,7 +234,7 @@ func (i *Inspector) cached(ver *version.Version, sf StructField) (structFieldOff
 	sfo := structFieldOffset{StructField: sf, Version: ver}
 
 	var ok bool
-	sfo.Offset, ok = i.cache.Get(ver.String(), sf.Package, sf.Struct, sf.Field)
+	sfo.Offset, ok = i.cache.Get(ver, sf.Package, sf.Struct, sf.Field)
 	return sfo, ok
 }
 

@@ -24,7 +24,6 @@ import (
 	"github.com/hashicorp/go-version"
 
 	"go.opentelemetry.io/auto/internal/inspect/schema"
-	"go.opentelemetry.io/auto/internal/inspect/versions"
 )
 
 // Cache holds already seen offsets.
@@ -70,7 +69,7 @@ func Load(l logr.Logger, prevOffsetFile string) *Cache {
 	}
 }
 
-func (c *Cache) Get(ver, pkg, strct, field string) (int64, bool) {
+func (c *Cache) Get(ver *version.Version, pkg, strct, field string) (int64, bool) {
 	n, ok := c.get(ver, pkg, strct, field)
 	if !ok {
 		c.log.Info(
@@ -92,7 +91,7 @@ func (c *Cache) Get(ver, pkg, strct, field string) (int64, bool) {
 	return n, ok
 }
 
-func (c *Cache) get(ver, pkg, strct, field string) (int64, bool) {
+func (c *Cache) get(ver *version.Version, pkg, strct, field string) (int64, bool) {
 	name := fmt.Sprintf("%s.%s", pkg, strct)
 	ts, ok := c.data.Data[name]
 	if !ok {
@@ -104,7 +103,7 @@ func (c *Cache) get(ver, pkg, strct, field string) (int64, bool) {
 	}
 
 	for _, f := range tf {
-		if !versions.Between(ver, f.Versions.Oldest, f.Versions.Newest) {
+		if ver.LessThan(f.Versions.Oldest) || ver.GreaterThan(f.Versions.Newest) {
 			continue
 		}
 
@@ -119,18 +118,11 @@ func (c *Cache) get(ver, pkg, strct, field string) (int64, bool) {
 
 // searchOffset searches an offset from the newest field whose version
 // is lower than or equal to the target version.
-func searchOffset(field schema.TrackedField, targetVersion string) (int64, bool) {
-	target := versions.MustParse(targetVersion)
-
+func searchOffset(field schema.TrackedField, target *version.Version) (int64, bool) {
 	// Search from the newest version
 	for o := len(field.Offsets) - 1; o >= 0; o-- {
 		od := &field.Offsets[o]
-		fieldVersion, err := version.NewVersion(od.Since)
-		if err != nil {
-			// Malformed version: return not found
-			return 0, false
-		}
-		if target.Compare(fieldVersion) >= 0 {
+		if target.Compare(od.Since) >= 0 {
 			// if target version is larger or equal than lib version:
 			// we certainly know that it is the most recent tracked offset
 			return int64(od.Offset), true
