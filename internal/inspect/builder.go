@@ -58,21 +58,6 @@ func (b *builder) Build(ctx context.Context, dir string, appV *version.Version) 
 	}
 
 	return newApp(b.log, appV, filepath.Join(dir, app))
-
-	/*
-		app := fmt.Sprintf("app%s", appV.Original())
-		cmd := []string{
-			"go", "mod", "tidy", "-compat=1.17",
-			"&&",
-			"go", "build", "-o", app,
-		}
-		err := b.run(ctx, cmd, dir)
-		if err != nil {
-			return nil, err
-		}
-
-		return newApp(b.log, appV, filepath.Join(dir, app))
-	*/
 }
 
 func (b *builder) run(ctx context.Context, cmd []string, dir string) error {
