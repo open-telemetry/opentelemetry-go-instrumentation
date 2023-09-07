@@ -22,9 +22,10 @@ import (
 	"github.com/docker/docker/client"
 	"github.com/go-logr/logr"
 	"github.com/hashicorp/go-version"
+	"golang.org/x/sync/errgroup"
+
 	"go.opentelemetry.io/auto/internal/inspect/cache"
 	"go.opentelemetry.io/auto/internal/inspect/schema"
-	"golang.org/x/sync/errgroup"
 )
 
 const defaultNWorkers = 20
@@ -36,6 +37,7 @@ type manifest struct {
 	Fields   []StructField
 }
 
+// Inspector inspects structure of Go packages.
 type Inspector struct {
 	NWorkers int
 
@@ -46,6 +48,8 @@ type Inspector struct {
 	manifests []manifest
 }
 
+// New returns an Inspector that will use the provided cache. If c is nil, a
+// new empty cache will be used.
 func New(l logr.Logger, c *cache.Cache) (*Inspector, error) {
 	if c == nil {
 		c = cache.New(l)
@@ -67,6 +71,10 @@ func New(l logr.Logger, c *cache.Cache) (*Inspector, error) {
 	}, nil
 }
 
+// Inspect3rdParty adds fields for a 3rd-party package to be a analyzed for the
+// passed vers of that package using the Renderer r to generate a token
+// program. The token program needs to contain the fields when compiled for the
+// analysis to work.
 func (i *Inspector) Inspect3rdParty(r Renderer, vers []*version.Version, fields []StructField) {
 	for _, v := range vers {
 		i.manifests = append(i.manifests, manifest{
@@ -92,6 +100,7 @@ func (i *Inspector) InspectStdlib(r Renderer, vers []*version.Version, fields []
 	}
 }
 
+// Do performs the inspections and returns all found offsets.
 func (i *Inspector) Do(ctx context.Context) (*schema.TrackedOffsets, error) {
 	g, ctx := errgroup.WithContext(ctx)
 	todo := make(chan manifest)
@@ -127,7 +136,7 @@ func (i *Inspector) Do(ctx context.Context) (*schema.TrackedOffsets, error) {
 		})
 	}
 	go func() {
-		g.Wait()
+		_ = g.Wait()
 		close(c)
 	}()
 
