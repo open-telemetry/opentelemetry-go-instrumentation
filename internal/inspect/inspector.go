@@ -199,7 +199,7 @@ func (i *Inspector) do(ctx context.Context, m manifest) ([]structFieldOffset, er
 	if err != nil {
 		return nil, err
 	}
-	//defer os.RemoveAll(d)
+	defer os.RemoveAll(d)
 
 	data := struct{ Version string }{Version: "v" + m.AppVer.String()}
 	if err = m.Renderer.Render(d, data); err != nil {
