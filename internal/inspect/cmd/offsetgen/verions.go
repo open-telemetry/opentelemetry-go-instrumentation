@@ -12,12 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package versions
+package main
 
 import (
+	"bytes"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
+	"os/exec"
 	"sort"
 	"strings"
 
@@ -25,17 +28,53 @@ import (
 )
 
 const (
+	shell = "bash"
+
 	jsonURL = "https://go.dev/dl/?mode=json&include=all"
 )
+
+type goListResponse struct {
+	Path     string   `json:"Path"`
+	Versions []string `json:"versions"`
+}
+
+// PkgVersions returns all locally known version of module with
+// moduleName.
+func PkgVersions(name string) ([]*version.Version, error) {
+	command := fmt.Sprintf("go list -m -json -versions %s", name)
+	cmd := exec.Command(shell, "-c", command)
+
+	var stdout bytes.Buffer
+	cmd.Stdout = &stdout
+
+	if err := cmd.Run(); err != nil {
+		return nil, err
+	}
+
+	resp := goListResponse{}
+	if err := json.NewDecoder(&stdout).Decode(&resp); err != nil {
+		return nil, err
+	}
+
+	out := make([]*version.Version, len(resp.Versions))
+	for i, v := range resp.Versions {
+		conv, err := version.NewVersion(v)
+		if err != nil {
+			return nil, err
+		}
+		out[i] = conv
+	}
+	return out, nil
+}
 
 type goDevResponse struct {
 	Version string `json:"version"`
 	Stable  bool   `json:"stable"`
 }
 
-// Go returns all known Go versions from the Go package mirror at
+// GoVersions returns all known GoVersions versions from the GoVersions package mirror at
 // https://go.dev/dl/.
-func Go(constraints ...string) ([]*version.Version, error) {
+func GoVersions(constraints ...string) ([]*version.Version, error) {
 	res, err := http.Get(jsonURL)
 	if err != nil {
 		return nil, err

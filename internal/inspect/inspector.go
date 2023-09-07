@@ -17,7 +17,6 @@ package inspect
 import (
 	"context"
 	"errors"
-	"fmt"
 	"os"
 
 	"github.com/docker/docker/client"
@@ -25,31 +24,10 @@ import (
 	"github.com/hashicorp/go-version"
 	"go.opentelemetry.io/auto/internal/inspect/cache"
 	"go.opentelemetry.io/auto/internal/inspect/schema"
-	"go.opentelemetry.io/auto/internal/inspect/versions"
 	"golang.org/x/sync/errgroup"
 )
 
-const (
-	// TODO: minGoVersion     = "1.12"
-	minGoVersion        = "1.20"
-	defaultGoVersionStr = "1.21.0"
-
-	defaultNWorkers = 20
-)
-
-var (
-	// goVersions are the versions of Go supported.
-	goVersions []*version.Version
-)
-
-func init() {
-	var err error
-	goVersions, err = versions.Go(">= " + minGoVersion)
-	if err != nil {
-		fmt.Printf("failed to get Go versions: %v", err)
-		os.Exit(1)
-	}
-}
+const defaultNWorkers = 20
 
 type manifest struct {
 	Renderer Renderer
@@ -89,12 +67,7 @@ func New(l logr.Logger, c *cache.Cache) (*Inspector, error) {
 	}, nil
 }
 
-func (i *Inspector) Inspect3rdParty(r Renderer, vFn func() ([]*version.Version, error), fields []StructField) error {
-	vers, err := vFn()
-	if err != nil {
-		return err
-	}
-
+func (i *Inspector) Inspect3rdParty(r Renderer, vers []*version.Version, fields []StructField) {
 	for _, v := range vers {
 		i.manifests = append(i.manifests, manifest{
 			Renderer: r,
@@ -103,11 +76,13 @@ func (i *Inspector) Inspect3rdParty(r Renderer, vFn func() ([]*version.Version, 
 			Fields:   fields,
 		})
 	}
-	return nil
 }
 
-func (i *Inspector) InspectStdlib(r Renderer, fields []StructField) error {
-	for _, v := range goVersions {
+// InspectStdlib adds fields for a stdlib package to be a analyzed for the
+// passed vers using the Renderer r to generate a token program. The token
+// program needs to contain the fields when compiled for the analysis to work.
+func (i *Inspector) InspectStdlib(r Renderer, vers []*version.Version, fields []StructField) {
+	for _, v := range vers {
 		i.manifests = append(i.manifests, manifest{
 			Renderer: r,
 			Builder:  newBuilder(i.log, i.client, v),
@@ -115,7 +90,6 @@ func (i *Inspector) InspectStdlib(r Renderer, fields []StructField) error {
 			Fields:   fields,
 		})
 	}
-	return nil
 }
 
 func (i *Inspector) Do(ctx context.Context) (*schema.TrackedOffsets, error) {

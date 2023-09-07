@@ -18,21 +18,32 @@ import (
 	"context"
 	"encoding/json"
 	"flag"
+	"fmt"
 	"log"
 	"os"
 	"os/signal"
 	"runtime"
 
 	"github.com/go-logr/stdr"
+	"github.com/hashicorp/go-version"
 	"go.opentelemetry.io/auto/internal/inspect"
 	"go.opentelemetry.io/auto/internal/inspect/cache"
-	"go.opentelemetry.io/auto/internal/inspect/versions"
 )
 
-const defaultOutputFile = "/tmp/offset_results.json"
+const (
+	defaultOutputFile = "/tmp/offset_results.json"
 
-// outputFile is the output file path flag value.
-var outputFile string
+	// TODO: minGoVersion = "1.12"
+	minGoVersion = "1.20"
+)
+
+var (
+	// outputFile is the output file path flag value.
+	outputFile string
+
+	// goVers are the versions of Go supported.
+	goVers []*version.Version
+)
 
 func init() {
 	outputFilename := defaultOutputFile
@@ -42,6 +53,13 @@ func init() {
 	flag.StringVar(&outputFile, "output", outputFilename, "output file")
 
 	flag.Parse()
+
+	var err error
+	goVers, err = GoVersions(">= " + minGoVersion)
+	if err != nil {
+		fmt.Printf("failed to get Go versions: %v", err)
+		os.Exit(1)
+	}
 }
 
 func main() {
@@ -55,19 +73,17 @@ func main() {
 	}
 	i.NWorkers = runtime.NumCPU()
 
-	r := inspect.NewRenderer(l, "templates/runtime/*.tmpl", inspect.DefaultFS)
-	err = i.InspectStdlib(r, []inspect.StructField{{
+	ren := func(src string) inspect.Renderer {
+		return inspect.NewRenderer(l, src, inspect.DefaultFS)
+	}
+
+	i.InspectStdlib(ren("templates/runtime/*.tmpl"), goVers, []inspect.StructField{{
 		Package: "runtime",
 		Struct:  "g",
 		Field:   "goid",
 	}})
-	if err != nil {
-		l.Error(err, "failed to add runtime manifest")
-		os.Exit(1)
-	}
 
-	r = inspect.NewRenderer(l, "templates/net/http/*.tmpl", inspect.DefaultFS)
-	err = i.InspectStdlib(r, []inspect.StructField{{
+	i.InspectStdlib(ren("templates/net/http/*.tmpl"), goVers, []inspect.StructField{{
 		Package: "net/http",
 		Struct:  "Request",
 		Field:   "Method",
@@ -92,13 +108,13 @@ func main() {
 		Struct:  "URL",
 		Field:   "Path",
 	}})
+
+	v, err := PkgVersions("google.golang.org/grpc")
 	if err != nil {
-		l.Error(err, "failed to add net manifest")
+		l.Error(err, "failed to \"google.golang.org/grpc\" versions")
 		os.Exit(1)
 	}
-
-	r = inspect.NewRenderer(l, "templates/google.golang.org/grpc/*.tmpl", inspect.DefaultFS)
-	err = i.Inspect3rdParty(r, versions.List("google.golang.org/grpc"), []inspect.StructField{{
+	i.Inspect3rdParty(ren("templates/google.golang.org/grpc/*.tmpl"), v, []inspect.StructField{{
 		Package: "google.golang.org/grpc/internal/transport",
 		Struct:  "Stream",
 		Field:   "method",
@@ -135,10 +151,6 @@ func main() {
 		Struct:  "headerFrame",
 		Field:   "hf",
 	}})
-	if err != nil {
-		l.Error(err, "failed to add google.golang.org/grpc manifest")
-		os.Exit(1)
-	}
 
 	// Trap Ctrl+C and call cancel on the context.
 	ctx, cancel := context.WithCancel(context.Background())
