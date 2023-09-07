@@ -18,11 +18,10 @@ import (
 	"context"
 	"os"
 
-	// TODO: Replace with internal/pkg/* once #282 is merged.
-	"go.opentelemetry.io/auto/pkg/instrumentors"
-	"go.opentelemetry.io/auto/pkg/log"
-	"go.opentelemetry.io/auto/pkg/opentelemetry"
-	"go.opentelemetry.io/auto/pkg/process"
+	"go.opentelemetry.io/auto/internal/pkg/instrumentors"
+	"go.opentelemetry.io/auto/internal/pkg/log"
+	"go.opentelemetry.io/auto/internal/pkg/opentelemetry"
+	"go.opentelemetry.io/auto/internal/pkg/process"
 )
 
 // envTargetExeKey is the key for the environment variable value pointing to the

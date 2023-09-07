@@ -9,8 +9,8 @@ ALL_GO_MOD_DIRS := $(shell find . -type f -name 'go.mod' ! -path './LICENSES/*' 
 OTEL_GO_MOD_DIRS := $(filter-out $(TOOLS_MOD_DIR), $(ALL_GO_MOD_DIRS))
 
 # Build the list of include directories to compile the bpf program
-BPF_INCLUDE += -I${REPODIR}/include/libbpf
-BPF_INCLUDE += -I${REPODIR}/include
+BPF_INCLUDE += -I${REPODIR}/internal/include/libbpf
+BPF_INCLUDE += -I${REPODIR}/internal/include
 
 .DEFAULT_GOAL := precommit
 
@@ -42,7 +42,7 @@ ALL_GO_MODS := $(shell find . -type f -name 'go.mod' ! -path '$(TOOLS_MOD_DIR)/*
 GO_MODS_TO_TEST := $(ALL_GO_MODS:%=test/%)
 
 .PHONY: test
-test: $(GO_MODS_TO_TEST)
+test: generate $(GO_MODS_TO_TEST)
 test/%: GO_MOD=$*
 test/%:
 	cd $(shell dirname $(GO_MOD)) && go test -v ./...
@@ -93,12 +93,12 @@ docker-offsets:
 update-licenses: generate $(GOLICENSES)
 	rm -rf LICENSES
 	$(GOLICENSES) save ./cli/ --save_path LICENSES
-	cp -R ./include/libbpf ./LICENSES
+	cp -R ./internal/include/libbpf ./LICENSES
 
 .PHONY: verify-licenses
 verify-licenses: generate $(GOLICENSES)
 	$(GOLICENSES) save ./cli --save_path temp
-	cp -R ./include/libbpf ./temp; \
+	cp -R ./internal/include/libbpf ./temp; \
     if diff temp LICENSES > /dev/null; then \
       echo "Passed"; \
       rm -rf temp; \

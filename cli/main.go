@@ -22,8 +22,8 @@ import (
 	"syscall"
 
 	"go.opentelemetry.io/auto"
-	"go.opentelemetry.io/auto/pkg/errors"
-	"go.opentelemetry.io/auto/pkg/log"
+	"go.opentelemetry.io/auto/internal/pkg/errors"
+	"go.opentelemetry.io/auto/internal/pkg/log"
 )
 
 func main() {
