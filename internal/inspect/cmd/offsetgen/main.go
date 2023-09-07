@@ -26,6 +26,7 @@ import (
 
 	"github.com/go-logr/stdr"
 	"github.com/hashicorp/go-version"
+
 	"go.opentelemetry.io/auto/internal/inspect"
 	"go.opentelemetry.io/auto/internal/inspect/cache"
 )
@@ -33,7 +34,7 @@ import (
 const (
 	defaultOutputFile = "/tmp/offset_results.json"
 
-	// TODO: minGoVersion = "1.12"
+	// TODO: minGoVersion = "1.12".
 	minGoVersion = "1.20"
 )
 
