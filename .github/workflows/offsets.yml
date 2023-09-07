@@ -13,7 +13,7 @@ jobs:
 
       - name: Update offsets
         run: |
-          make docker-offsets
+          make offsets
 
       - name: Create pull request
         uses: peter-evans/create-pull-request@v5
