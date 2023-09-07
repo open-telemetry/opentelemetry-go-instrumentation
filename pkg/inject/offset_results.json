@@ -1,354 +1,262 @@
 {
   "data": {
     "golang.org/x/net/http2.FrameHeader": {
-      "StreamID": [
-        {
-          "versions": {
-            "oldest": "v1.0.0",
-            "newest": "v1.0.4"
-          },
-          "offsets": [
-            {
-              "offset": 8,
-              "since": "v1.0.0"
-            }
-          ]
+      "StreamID": {
+        "versions": {
+          "oldest": "1.3.0",
+          "newest": "1.59.0-dev"
         },
-        {
-          "versions": {
-            "oldest": "v1.3.0",
-            "newest": "v1.59.0-dev"
-          },
-          "offsets": [
-            {
-              "offset": 8,
-              "since": "v1.3.0"
-            }
-          ]
-        }
-      ]
+        "offsets": [
+          {
+            "offset": 8,
+            "since": "v1.3.0"
+          }
+        ]
+      }
     },
     "golang.org/x/net/http2.MetaHeadersFrame": {
-      "Fields": [
-        {
-          "versions": {
-            "oldest": "v1.0.0",
-            "newest": "v1.0.4"
-          },
-          "offsets": [
-            {
-              "offset": 8,
-              "since": "v1.0.0"
-            }
-          ]
+      "Fields": {
+        "versions": {
+          "oldest": "1.3.0",
+          "newest": "1.59.0-dev"
         },
-        {
-          "versions": {
-            "oldest": "v1.3.0",
-            "newest": "v1.59.0-dev"
-          },
-          "offsets": [
-            {
-              "offset": 8,
-              "since": "v1.3.0"
-            }
-          ]
-        }
-      ]
+        "offsets": [
+          {
+            "offset": 8,
+            "since": "v1.3.0"
+          }
+        ]
+      }
     },
     "google.golang.org/grpc.ClientConn": {
-      "target": [
-        {
-          "versions": {
-            "oldest": "v1.0.0",
-            "newest": "v1.0.4"
-          },
-          "offsets": [
-            {
-              "offset": 24,
-              "since": "v1.0.0"
-            }
-          ]
+      "target": {
+        "versions": {
+          "oldest": "1.3.0",
+          "newest": "1.59.0-dev"
         },
-        {
-          "versions": {
-            "oldest": "v1.3.0",
-            "newest": "v1.59.0-dev"
-          },
-          "offsets": [
-            {
-              "offset": 24,
-              "since": "v1.3.0"
-            }
-          ]
-        }
-      ]
+        "offsets": [
+          {
+            "offset": 24,
+            "since": "v1.3.0"
+          }
+        ]
+      }
     },
     "google.golang.org/grpc/internal/transport.Stream": {
-      "ctx": [
-        {
-          "versions": {
-            "oldest": "v1.0.0",
-            "newest": "v1.0.4"
-          },
-          "offsets": [
-            {
-              "offset": 32,
-              "since": "v1.0.0"
-            }
-          ]
+      "ctx": {
+        "versions": {
+          "oldest": "1.3.0",
+          "newest": "1.59.0-dev"
         },
-        {
-          "versions": {
-            "oldest": "v1.3.0",
-            "newest": "v1.59.0-dev"
+        "offsets": [
+          {
+            "offset": 32,
+            "since": "v1.3.0"
           },
-          "offsets": [
-            {
-              "offset": 32,
-              "since": "v1.3.0"
-            }
-          ]
-        }
-      ],
-      "id": [
-        {
-          "versions": {
-            "oldest": "v1.0.0",
-            "newest": "v1.0.4"
+          {
+            "offset": 24,
+            "since": "v1.15.0"
           },
-          "offsets": [
-            {
-              "offset": 0,
-              "since": "v1.0.0"
-            }
-          ]
+          {
+            "offset": 32,
+            "since": "v1.25.0"
+          }
+        ]
+      },
+      "id": {
+        "versions": {
+          "oldest": "1.3.0",
+          "newest": "1.59.0-dev"
         },
-        {
-          "versions": {
-            "oldest": "v1.3.0",
-            "newest": "v1.59.0-dev"
-          },
-          "offsets": [
-            {
-              "offset": 0,
-              "since": "v1.3.0"
-            }
-          ]
-        }
-      ],
-      "method": [
-        {
-          "versions": {
-            "oldest": "v1.0.0",
-            "newest": "v1.0.4"
-          },
-          "offsets": [
-            {
-              "offset": 80,
-              "since": "v1.0.0"
-            }
-          ]
+        "offsets": [
+          {
+            "offset": 0,
+            "since": "v1.3.0"
+          }
+        ]
+      },
+      "method": {
+        "versions": {
+          "oldest": "1.3.0",
+          "newest": "1.59.0-dev"
         },
-        {
-          "versions": {
-            "oldest": "v1.3.0",
-            "newest": "v1.59.0-dev"
+        "offsets": [
+          {
+            "offset": 80,
+            "since": "v1.3.0"
           },
-          "offsets": [
-            {
-              "offset": 80,
-              "since": "v1.3.0"
-            }
-          ]
-        }
-      ]
+          {
+            "offset": 64,
+            "since": "v1.15.0"
+          },
+          {
+            "offset": 72,
+            "since": "v1.25.0"
+          },
+          {
+            "offset": 80,
+            "since": "v1.37.0"
+          }
+        ]
+      }
     },
     "google.golang.org/grpc/internal/transport.headerFrame": {
-      "hf": [
-        {
-          "versions": {
-            "oldest": "v1.0.0",
-            "newest": "v1.0.4"
-          },
-          "offsets": [
-            {
-              "offset": 8,
-              "since": "v1.0.0"
-            }
-          ]
+      "hf": {
+        "versions": {
+          "oldest": "1.3.0",
+          "newest": "1.59.0-dev"
         },
-        {
-          "versions": {
-            "oldest": "v1.3.0",
-            "newest": "v1.59.0-dev"
-          },
-          "offsets": [
-            {
-              "offset": 8,
-              "since": "v1.3.0"
-            }
-          ]
-        }
-      ],
-      "streamID": [
-        {
-          "versions": {
-            "oldest": "v1.0.0",
-            "newest": "v1.0.4"
-          },
-          "offsets": [
-            {
-              "offset": 0,
-              "since": "v1.0.0"
-            }
-          ]
+        "offsets": [
+          {
+            "offset": 8,
+            "since": "v1.3.0"
+          }
+        ]
+      },
+      "streamID": {
+        "versions": {
+          "oldest": "1.3.0",
+          "newest": "1.59.0-dev"
         },
-        {
-          "versions": {
-            "oldest": "v1.3.0",
-            "newest": "v1.59.0-dev"
-          },
-          "offsets": [
-            {
-              "offset": 0,
-              "since": "v1.3.0"
-            }
-          ]
-        }
-      ]
+        "offsets": [
+          {
+            "offset": 0,
+            "since": "v1.3.0"
+          }
+        ]
+      }
     },
     "google.golang.org/grpc/internal/transport.http2Client": {
-      "nextID": [
-        {
-          "versions": {
-            "oldest": "v1.0.0",
-            "newest": "v1.0.4"
-          },
-          "offsets": [
-            {
-              "offset": 412,
-              "since": "v1.0.0"
-            }
-          ]
+      "nextID": {
+        "versions": {
+          "oldest": "1.3.0",
+          "newest": "1.59.0-dev"
         },
-        {
-          "versions": {
-            "oldest": "v1.3.0",
-            "newest": "v1.59.0-dev"
+        "offsets": [
+          {
+            "offset": 412,
+            "since": "v1.3.0"
           },
-          "offsets": [
-            {
-              "offset": 412,
-              "since": "v1.3.0"
-            }
-          ]
-        }
-      ]
+          {
+            "offset": 356,
+            "since": "v1.15.0"
+          },
+          {
+            "offset": 348,
+            "since": "v1.24.0"
+          },
+          {
+            "offset": 340,
+            "since": "v1.35.0"
+          },
+          {
+            "offset": 348,
+            "since": "v1.48.0"
+          },
+          {
+            "offset": 340,
+            "since": "v1.51.0"
+          },
+          {
+            "offset": 412,
+            "since": "v1.52.0"
+          },
+          {
+            "offset": 404,
+            "since": "v1.59.0-dev"
+          }
+        ]
+      }
     },
     "net/http.Request": {
-      "Header": [
-        {
-          "versions": {
-            "oldest": "1.20",
-            "newest": "1.21.1"
-          },
-          "offsets": [
-            {
-              "offset": 56,
-              "since": "1.20"
-            }
-          ]
-        }
-      ],
-      "Method": [
-        {
-          "versions": {
-            "oldest": "1.20",
-            "newest": "1.21.1"
-          },
-          "offsets": [
-            {
-              "offset": 0,
-              "since": "1.20"
-            }
-          ]
-        }
-      ],
-      "RemoteAddr": [
-        {
-          "versions": {
-            "oldest": "1.20",
-            "newest": "1.21.1"
-          },
-          "offsets": [
-            {
-              "offset": 176,
-              "since": "1.20"
-            }
-          ]
-        }
-      ],
-      "URL": [
-        {
-          "versions": {
-            "oldest": "1.20",
-            "newest": "1.21.1"
-          },
-          "offsets": [
-            {
-              "offset": 16,
-              "since": "1.20"
-            }
-          ]
-        }
-      ],
-      "ctx": [
-        {
-          "versions": {
-            "oldest": "1.20",
-            "newest": "1.21.1"
-          },
-          "offsets": [
-            {
-              "offset": 232,
-              "since": "1.20"
-            }
-          ]
-        }
-      ]
+      "Header": {
+        "versions": {
+          "oldest": "1.12.0",
+          "newest": "1.21.1"
+        },
+        "offsets": [
+          {
+            "offset": 56,
+            "since": "1.12"
+          }
+        ]
+      },
+      "Method": {
+        "versions": {
+          "oldest": "1.12.0",
+          "newest": "1.21.1"
+        },
+        "offsets": [
+          {
+            "offset": 0,
+            "since": "1.12"
+          }
+        ]
+      },
+      "RemoteAddr": {
+        "versions": {
+          "oldest": "1.12.0",
+          "newest": "1.21.1"
+        },
+        "offsets": [
+          {
+            "offset": 176,
+            "since": "1.12"
+          }
+        ]
+      },
+      "URL": {
+        "versions": {
+          "oldest": "1.12.0",
+          "newest": "1.21.1"
+        },
+        "offsets": [
+          {
+            "offset": 16,
+            "since": "1.12"
+          }
+        ]
+      },
+      "ctx": {
+        "versions": {
+          "oldest": "1.12.0",
+          "newest": "1.21.1"
+        },
+        "offsets": [
+          {
+            "offset": 232,
+            "since": "1.12"
+          }
+        ]
+      }
     },
     "net/url.URL": {
-      "Path": [
-        {
-          "versions": {
-            "oldest": "1.20",
-            "newest": "1.21.1"
-          },
-          "offsets": [
-            {
-              "offset": 56,
-              "since": "1.20"
-            }
-          ]
-        }
-      ]
+      "Path": {
+        "versions": {
+          "oldest": "1.12.0",
+          "newest": "1.20.7"
+        },
+        "offsets": [
+          {
+            "offset": 56,
+            "since": "1.12"
+          }
+        ]
+      }
     },
     "runtime.g": {
-      "goid": [
-        {
-          "versions": {
-            "oldest": "1.20",
-            "newest": "1.21.1"
-          },
-          "offsets": [
-            {
-              "offset": 152,
-              "since": "1.20"
-            }
-          ]
-        }
-      ]
+      "goid": {
+        "versions": {
+          "oldest": "1.12.0",
+          "newest": "1.21.1"
+        },
+        "offsets": [
+          {
+            "offset": 152,
+            "since": "1.12"
+          }
+        ]
+      }
     }
   }
 }

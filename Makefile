@@ -83,7 +83,7 @@ docker-build:
 
 .PHONY: offsets
 offsets:
-	cd internal/inspect/cmd/offsetgen; OFFSETS_OUTPUT_FILE="../../../../pkg/inject/offset_results.json" go run main.go
+	cd internal/inspect/cmd/offsetgen; OFFSETS_OUTPUT_FILE="../../../pkg/inject/offset_results.json" go run .
 
 .PHONY: docker-offsets
 docker-offsets:
