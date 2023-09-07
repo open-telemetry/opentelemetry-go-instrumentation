@@ -20,6 +20,7 @@ import (
 	"debug/dwarf"
 	"debug/elf"
 	"fmt"
+	"io"
 	"path/filepath"
 
 	"github.com/docker/docker/api/types"
@@ -32,17 +33,17 @@ import (
 )
 
 type builder struct {
-	log   logr.Logger
-	cli   *client.Client
-	GoTag string
+	log     logr.Logger
+	cli     *client.Client
+	GoImage string
 }
 
 func newBuilder(l logr.Logger, cli *client.Client, goVer *version.Version) *builder {
-	tag := "latest"
+	img := "golang:latest"
 	if goVer != nil {
-		tag = goVer.Original()
+		img = fmt.Sprintf("golang:%s", goVer.Original())
 	}
-	return &builder{log: l, cli: cli, GoTag: tag}
+	return &builder{log: l.WithName("builder"), cli: cli, GoImage: img}
 }
 
 func (b *builder) Build(ctx context.Context, dir string, appV *version.Version) (*app, error) {
@@ -61,7 +62,7 @@ func (b *builder) Build(ctx context.Context, dir string, appV *version.Version) 
 }
 
 func (b *builder) runCmd(ctx context.Context, cmd []string, dir string) error {
-	b.log.Info("running command", "cmd", cmd, "dir", dir, "image", b.refStr())
+	b.log.Info("running command", "cmd", cmd, "dir", dir, "image", b.GoImage)
 
 	err := b.pullImage(ctx)
 	if err != nil {
@@ -76,16 +77,18 @@ func (b *builder) runCmd(ctx context.Context, cmd []string, dir string) error {
 	return b.runContainer(ctx, id)
 }
 
-func (b *builder) refStr() string {
-	return fmt.Sprintf("golang:%s", b.GoTag)
-}
-
 func (b *builder) pullImage(ctx context.Context) error {
-	rc, err := b.cli.ImagePull(ctx, b.refStr(), types.ImagePullOptions{})
-	if rc != nil {
-		rc.Close()
+	rc, err := b.cli.ImagePull(ctx, b.GoImage, types.ImagePullOptions{})
+	if err != nil {
+		return err
 	}
-	return err
+	defer rc.Close()
+
+	out := new(bytes.Buffer)
+	io.Copy(out, rc)
+	b.log.V(1).Info("pulling image", "output", out.String())
+
+	return nil
 }
 
 func (b *builder) createContainer(ctx context.Context, cmd []string, dir string) (string, error) {
@@ -93,7 +96,7 @@ func (b *builder) createContainer(ctx context.Context, cmd []string, dir string)
 	resp, err := b.cli.ContainerCreate(
 		ctx,
 		&container.Config{
-			Image:      b.refStr(),
+			Image:      b.GoImage,
 			Cmd:        cmd,
 			WorkingDir: appDir,
 			Tty:        false,

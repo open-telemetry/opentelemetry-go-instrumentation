@@ -83,7 +83,7 @@ func New(l logr.Logger, c *cache.Cache) (*Inspector, error) {
 
 	return &Inspector{
 		NWorkers: defaultNWorkers,
-		log:      l,
+		log:      l.WithName("inspector"),
 		cache:    c,
 		client:   cli,
 	}, nil
@@ -200,7 +200,7 @@ func (i *Inspector) do(ctx context.Context, m manifest) ([]structFieldOffset, er
 	buildErr := &errBuild{}
 	if errors.As(err, &buildErr) {
 		for _, f := range uncached {
-			i.log.Error(buildErr, "skipping", "field", f, "Go", m.Builder.GoTag, "version", m.AppVer)
+			i.log.Error(buildErr, "skipping", "field", f, "Go", m.Builder.GoImage, "version", m.AppVer)
 			out = append(out, structFieldOffset{
 				StructField: f,
 				Version:     m.AppVer,

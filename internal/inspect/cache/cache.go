@@ -36,7 +36,7 @@ type Cache struct {
 // New returns an empty, ready to use, [Cache].
 func New(l logr.Logger) *Cache {
 	return &Cache{
-		log:  l,
+		log:  l.WithName("cache"),
 		data: &schema.TrackedOffsets{},
 	}
 }
