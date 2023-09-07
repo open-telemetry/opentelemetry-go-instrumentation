@@ -89,6 +89,7 @@ func (b *builder) pullImage(ctx context.Context) error {
 		return err
 	}
 	if len(summaries) > 0 {
+		b.log.V(1).Info("using local image", "image", b.GoImage)
 		return nil
 	}
 
@@ -99,10 +100,9 @@ func (b *builder) pullImage(ctx context.Context) error {
 	defer rc.Close()
 
 	out := new(bytes.Buffer)
-	io.Copy(out, rc)
-	b.log.V(1).Info("pulling image", "output", out.String())
-
-	return nil
+	_, err = io.Copy(out, rc)
+	b.log.V(1).Info("pulling image", "image", b.GoImage, "output", out.String())
+	return err
 }
 
 func (b *builder) createContainer(ctx context.Context, cmd []string, dir string) (string, error) {
@@ -138,8 +138,6 @@ func (b *builder) runContainer(ctx context.Context, id string) error {
 	if err != nil {
 		return err
 	}
-	stdout, stderr := new(bytes.Buffer), new(bytes.Buffer)
-	stdcopy.StdCopy(stdout, stderr, out)
 
 	err = b.cli.ContainerStart(ctx, id, types.ContainerStartOptions{})
 	if err != nil {
@@ -156,6 +154,8 @@ func (b *builder) runContainer(ctx context.Context, id string) error {
 		}
 	case status := <-statusCh:
 		if status.StatusCode != 0 {
+			stdout, stderr := new(bytes.Buffer), new(bytes.Buffer)
+			_, _ = stdcopy.StdCopy(stdout, stderr, out)
 			return &errBuild{
 				ReturnCode: status.StatusCode,
 				Stdout:     stdout.String(),
