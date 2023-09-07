@@ -69,6 +69,9 @@ func Load(l logr.Logger, prevOffsetFile string) *Cache {
 	}
 }
 
+// Get returns the offset value and true for the field of the struct strct in
+// pkg at the provided version if it is in the cache. A value of -1 and false
+// are returned if not in the cache.
 func (c *Cache) Get(ver *version.Version, pkg, strct, field string) (int64, bool) {
 	n, ok := c.get(ver, pkg, strct, field)
 	if !ok {
