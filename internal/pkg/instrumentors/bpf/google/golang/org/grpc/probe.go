@@ -75,10 +75,7 @@ func (g *Instrumentor) FuncNames() []string {
 
 // Load loads all instrumentation offsets.
 func (g *Instrumentor) Load(ctx *context.InstrumentorContext) error {
-	libVersion, exists := ctx.TargetDetails.Libraries[g.LibraryName()]
-	if !exists {
-		libVersion = ""
-	}
+	libVersion := ctx.TargetDetails.Libraries[g.LibraryName()]
 	spec, err := ctx.Injector.Inject(loadBpf, g.LibraryName(), libVersion, []*inject.StructField{
 		{
 			VarName:    "clientconn_target_ptr_pos",

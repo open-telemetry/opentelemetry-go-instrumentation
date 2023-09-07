@@ -25,7 +25,7 @@ import (
 	"golang.org/x/sync/errgroup"
 
 	"go.opentelemetry.io/auto/internal/inspect/cache"
-	"go.opentelemetry.io/auto/internal/inspect/schema"
+	"go.opentelemetry.io/auto/internal/pkg/inject"
 )
 
 const defaultNWorkers = 20
@@ -101,7 +101,7 @@ func (i *Inspector) InspectStdlib(r Renderer, vers []*version.Version, fields []
 }
 
 // Do performs the inspections and returns all found offsets.
-func (i *Inspector) Do(ctx context.Context) (*schema.TrackedOffsets, error) {
+func (i *Inspector) Do(ctx context.Context) (*inject.TrackedOffsets, error) {
 	g, ctx := errgroup.WithContext(ctx)
 	todo := make(chan manifest)
 

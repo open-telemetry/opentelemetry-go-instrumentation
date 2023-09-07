@@ -22,22 +22,21 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/hashicorp/go-version"
-
-	"go.opentelemetry.io/auto/internal/inspect/schema"
+	"go.opentelemetry.io/auto/internal/pkg/inject"
 )
 
 // Cache holds already seen offsets.
 type Cache struct {
 	log logr.Logger
 
-	data *schema.TrackedOffsets
+	data *inject.TrackedOffsets
 }
 
 // New returns an empty, ready to use, [Cache].
 func New(l logr.Logger) *Cache {
 	return &Cache{
 		log:  l.WithName("cache"),
-		data: &schema.TrackedOffsets{},
+		data: &inject.TrackedOffsets{},
 	}
 }
 
@@ -56,7 +55,7 @@ func Load(l logr.Logger, prevOffsetFile string) *Cache {
 		return nil
 	}
 
-	var offsets schema.TrackedOffsets
+	var offsets inject.TrackedOffsets
 	err = json.Unmarshal(data, &offsets)
 	if err != nil {
 		l.Error(err, "failed to parse existing offsets")
@@ -121,7 +120,7 @@ func (c *Cache) get(ver *version.Version, pkg, strct, field string) (int64, bool
 
 // searchOffset searches an offset from the newest field whose version
 // is lower than or equal to the target version.
-func searchOffset(field schema.TrackedField, target *version.Version) (int64, bool) {
+func searchOffset(field inject.TrackedField, target *version.Version) (int64, bool) {
 	// Search from the newest version
 	for o := len(field.Offsets) - 1; o >= 0; o-- {
 		od := &field.Offsets[o]

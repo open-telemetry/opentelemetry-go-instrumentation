@@ -74,10 +74,7 @@ func (g *Instrumentor) FuncNames() []string {
 // Load loads all instrumentation offsets.
 func (g *Instrumentor) Load(ctx *context.InstrumentorContext) error {
 	targetLib := "google.golang.org/grpc"
-	libVersion, exists := ctx.TargetDetails.Libraries[targetLib]
-	if !exists {
-		libVersion = ""
-	}
+	libVersion := ctx.TargetDetails.Libraries[targetLib]
 	spec, err := ctx.Injector.Inject(loadBpf, "google.golang.org/grpc", libVersion, []*inject.StructField{
 		{
 			VarName:    "stream_method_ptr_pos",

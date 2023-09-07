@@ -17,6 +17,7 @@ package inject
 import (
 	_ "embed"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"runtime"
 
@@ -74,10 +75,14 @@ type FlagField struct {
 }
 
 // Inject injects instrumentation for the provided library data type.
-func (i *Injector) Inject(loadBpf loadBpfFunc, library string, libVersion string, fields []*StructField, flagFields []*FlagField, initAlloc bool) (*ebpf.CollectionSpec, error) {
+func (i *Injector) Inject(loadBpf loadBpfFunc, library string, libVersion *version.Version, fields []*StructField, flagFields []*FlagField, initAlloc bool) (*ebpf.CollectionSpec, error) {
 	spec, err := loadBpf()
 	if err != nil {
 		return nil, err
+	}
+
+	if libVersion == nil {
+		return nil, errors.New("empty verion")
 	}
 
 	injectedVars := make(map[string]interface{})
@@ -130,34 +135,25 @@ func (i *Injector) addConfigInjections(varsMap map[string]interface{}, flagField
 	return nil
 }
 
-func (i *Injector) getFieldOffset(structName string, fieldName string, libVersion string) (uint64, bool) {
+func (i *Injector) getFieldOffset(structName string, fieldName string, target *version.Version) (uint64, bool) {
 	strct, ok := i.data.Data[structName]
 	if !ok {
 		return 0, false
 	}
-	field, ok := strct[fieldName]
+	fields, ok := strct[fieldName]
 	if !ok {
 		return 0, false
 	}
-	target, err := version.NewVersion(libVersion)
-	if err != nil {
-		// shouldn't happen unless a bug in our code/files
-		panic(err.Error())
-	}
-
-	// Search from the newest version (last in the slice)
-	for o := len(field.Offsets) - 1; o >= 0; o-- {
-		od := &field.Offsets[o]
-		fieldVersion, err := version.NewVersion(od.Since)
-		if err != nil {
-			// shouldn't happen unless a bug in our code
-			panic(err.Error())
-		}
-		if target.Compare(fieldVersion) >= 0 {
-			// if target version is larger or equal than lib version:
-			// we certainly know that it is the most recent tracked offset
-			// matching the target libVersion
-			return od.Offset, true
+	for _, field := range fields {
+		// Search from the newest version (last in the slice)
+		for o := len(field.Offsets) - 1; o >= 0; o-- {
+			od := &field.Offsets[o]
+			if target.Compare(od.Since) >= 0 {
+				// if target version is larger or equal than lib version:
+				// we certainly know that it is the most recent tracked offset
+				// matching the target version.
+				return uint64(od.Offset), true
+			}
 		}
 	}
 

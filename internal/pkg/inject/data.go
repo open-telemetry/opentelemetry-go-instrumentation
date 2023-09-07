@@ -14,6 +14,8 @@
 
 package inject
 
+import "github.com/hashicorp/go-version"
+
 // TrackedOffsets are the offsets for all instrumented packages.
 type TrackedOffsets struct {
 	// Data key: struct name, which includes the library name in external
@@ -22,7 +24,7 @@ type TrackedOffsets struct {
 }
 
 // TrackedStruct maps fields names to the tracked fields offsets.
-type TrackedStruct map[string]TrackedField
+type TrackedStruct map[string][]TrackedField
 
 // TrackedField are the field offsets for a tracked struct.
 type TrackedField struct {
@@ -35,13 +37,13 @@ type TrackedField struct {
 
 // VersionInfo is the span of supported versions.
 type VersionInfo struct {
-	Oldest string `json:"oldest"`
-	Newest string `json:"newest"`
+	Oldest *version.Version `json:"oldest"`
+	Newest *version.Version `json:"newest"`
 }
 
 // VersionedOffset is the offset for a particular version of a data type from a
 // package.
 type VersionedOffset struct {
-	Offset uint64 `json:"offset"`
-	Since  string `json:"since"`
+	Offset uintptr          `json:"offset"`
+	Since  *version.Version `json:"since"`
 }

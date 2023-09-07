@@ -23,7 +23,7 @@ import (
 
 	"github.com/hashicorp/go-version"
 
-	"go.opentelemetry.io/auto/internal/inspect/schema"
+	"go.opentelemetry.io/auto/internal/pkg/inject"
 )
 
 // StructField defines a field of a struct from package.
@@ -101,7 +101,7 @@ type structFieldOffset struct {
 	Offset  int64
 }
 
-func trackedOffsets(results []structFieldOffset) *schema.TrackedOffsets {
+func trackedOffsets(results []structFieldOffset) *inject.TrackedOffsets {
 	return newTrackedOffsets(indexFields(indexOffsets(results)))
 }
 
@@ -158,16 +158,16 @@ func indexFields(offsets map[StructField][]offset) map[StructField][]field {
 	return fields
 }
 
-func newTrackedOffsets(fields map[StructField][]field) *schema.TrackedOffsets {
-	tracked := &schema.TrackedOffsets{
-		Data: make(map[string]schema.TrackedStruct),
+func newTrackedOffsets(fields map[StructField][]field) *inject.TrackedOffsets {
+	tracked := &inject.TrackedOffsets{
+		Data: make(map[string]inject.TrackedStruct),
 	}
 	for sf, fs := range fields {
 		for _, f := range fs {
 			key := sf.structName()
 			strct, ok := tracked.Data[key]
 			if !ok {
-				strct = make(schema.TrackedStruct)
+				strct = make(inject.TrackedStruct)
 				tracked.Data[key] = strct
 			}
 
@@ -183,13 +183,13 @@ type field struct {
 	Offs []offset
 }
 
-func (f field) trackedField() schema.TrackedField {
-	vo := make([]schema.VersionedOffset, len(f.Offs))
+func (f field) trackedField() inject.TrackedField {
+	vo := make([]inject.VersionedOffset, len(f.Offs))
 	for i := range vo {
 		vo[i] = f.Offs[i].versionedOffset()
 	}
 
-	return schema.TrackedField{
+	return inject.TrackedField{
 		Versions: f.Vers.versionInfo(),
 		Offsets:  vo,
 	}
@@ -199,8 +199,8 @@ type versionRange struct {
 	Oldest, Newest *version.Version
 }
 
-func (r *versionRange) versionInfo() schema.VersionInfo {
-	return schema.VersionInfo{
+func (r *versionRange) versionInfo() inject.VersionInfo {
+	return inject.VersionInfo{
 		Oldest: r.Oldest,
 		Newest: r.Newest,
 	}
@@ -224,8 +224,8 @@ type offset struct {
 	Since *version.Version
 }
 
-func (o offset) versionedOffset() schema.VersionedOffset {
-	return schema.VersionedOffset{
+func (o offset) versionedOffset() inject.VersionedOffset {
+	return inject.VersionedOffset{
 		Offset: uintptr(o.Value),
 		Since:  o.Since,
 	}
