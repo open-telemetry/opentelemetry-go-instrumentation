@@ -31,13 +31,8 @@ import (
 
 const defaultOutputFile = "/tmp/offset_results.json"
 
-var (
-	// outputFile is the output file path flag value.
-	outputFile string
-
-	// storage is place where Go binaries are stored.
-	storage string
-)
+// outputFile is the output file path flag value.
+var outputFile string
 
 func init() {
 	outputFilename := defaultOutputFile
@@ -46,8 +41,6 @@ func init() {
 	}
 	flag.StringVar(&outputFile, "output", outputFilename, "output file")
 
-	flag.StringVar(&storage, "storage", "./.offset-tracker", "tooling directory")
-
 	flag.Parse()
 }
 
@@ -55,7 +48,7 @@ func main() {
 	l := stdr.New(log.New(os.Stdout, "", log.Lshortfile))
 	c := cache.Load(l, outputFile)
 
-	i, err := inspect.New(l, c, storage)
+	i, err := inspect.New(l, c)
 	if err != nil {
 		l.Error(err, "failed to setup inspector")
 		os.Exit(1)

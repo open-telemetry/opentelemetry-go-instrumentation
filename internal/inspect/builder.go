@@ -16,74 +16,146 @@ package inspect
 
 import (
 	"bytes"
+	"context"
 	"debug/dwarf"
 	"debug/elf"
-	"errors"
 	"fmt"
-	"os/exec"
 	"path/filepath"
 
+	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/api/types/mount"
+	"github.com/docker/docker/client"
+	"github.com/docker/docker/pkg/stdcopy"
 	"github.com/go-logr/logr"
 	"github.com/hashicorp/go-version"
 )
 
-const shell = "bash"
-
 type builder struct {
 	log logr.Logger
+	cli *client.Client
+	Go  *version.Version
 }
 
-func newBuilder(l logr.Logger) *builder {
-	return &builder{log: l}
+func newBuilder(l logr.Logger, cli *client.Client, goVer *version.Version) *builder {
+	return &builder{log: l, cli: cli, Go: goVer}
 }
 
-var errBuild = errors.New("failed to build")
+func (b *builder) image() string {
+	return fmt.Sprintf("golang:%s", b.Go.Original())
+}
 
-func (b *builder) Build(dir, goBin string, ver *version.Version) (*app, error) {
-	// TODO: replace with docker build
-	goModTidy := goBin + " mod tidy -compat=1.17"
-	stdout, stderr, err := b.run(goModTidy, dir)
-	if err != nil {
-		b.log.Error(
-			err, "failed to tidy application",
-			"cmd", goModTidy,
-			"STDOUT", stdout,
-			"STDERR", stderr,
-		)
+func (b *builder) Build(ctx context.Context, dir string, appV *version.Version) (*app, error) {
+	goModTidy := []string{"go", "mod", "tidy", "-compat=1.17"}
+	if err := b.run(ctx, goModTidy, dir); err != nil {
 		return nil, err
 	}
 
-	app := fmt.Sprintf("app%s", ver.Original())
-	build := goBin + " build -o " + app
-	stdout, stderr, err = b.run(build, dir)
-	if err != nil {
-		b.log.V(5).Info(
-			"failed to build application",
-			"cmd", build,
-			"STDOUT", stdout,
-			"STDERR", stderr,
-			"err", err,
-		)
-		return nil, errBuild
+	app := fmt.Sprintf("app%s", appV.Original())
+	build := []string{"go", "build", "-o", app}
+	if err := b.run(ctx, build, dir); err != nil {
+		return nil, err
 	}
 
-	return newApp(b.log, ver, filepath.Join(dir, app))
+	return newApp(b.log, appV, filepath.Join(dir, app))
+
+	/*
+		app := fmt.Sprintf("app%s", appV.Original())
+		cmd := []string{
+			"go", "mod", "tidy", "-compat=1.17",
+			"&&",
+			"go", "build", "-o", app,
+		}
+		err := b.run(ctx, cmd, dir)
+		if err != nil {
+			return nil, err
+		}
+
+		return newApp(b.log, appV, filepath.Join(dir, app))
+	*/
 }
 
-// run runs cmd in dir.
-func (b *builder) run(cmd string, dir string) (string, string, error) {
-	b.log.Info("running command", "cmd", cmd, "dir", dir, "shell", shell)
-	var stdout bytes.Buffer
-	var stderr bytes.Buffer
-	c := exec.Command(shell, "-c", cmd)
-	if dir != "" {
-		c.Dir = dir
+func (b *builder) run(ctx context.Context, cmd []string, dir string) error {
+	img := b.image()
+	stdout := new(bytes.Buffer)
+	stderr := new(bytes.Buffer)
+
+	b.log.Info("running command", "cmd", cmd, "dir", dir, "image", img)
+
+	rc, err := b.cli.ImagePull(ctx, img, types.ImagePullOptions{})
+	if err != nil {
+		return err
+	}
+	rc.Close()
+
+	const appDir = "/usr/src/app"
+	resp, err := b.cli.ContainerCreate(
+		ctx,
+		&container.Config{
+			Image:      img,
+			Cmd:        cmd,
+			WorkingDir: appDir,
+			Tty:        false,
+		},
+		&container.HostConfig{
+			AutoRemove: true,
+			Mounts: []mount.Mount{{
+				Type:   mount.TypeBind,
+				Source: dir,
+				Target: appDir,
+			}},
+		},
+		nil,
+		nil,
+		"",
+	)
+	if err != nil {
+		return err
 	}
 
-	c.Stdout = &stdout
-	c.Stderr = &stderr
-	err := c.Run()
-	return stdout.String(), stderr.String(), err
+	out, err := b.cli.ContainerLogs(ctx, resp.ID, types.ContainerLogsOptions{
+		ShowStdout: true,
+		ShowStderr: true,
+	})
+	if err != nil {
+		return err
+	}
+	stdcopy.StdCopy(stdout, stderr, out)
+
+	err = b.cli.ContainerStart(ctx, resp.ID, types.ContainerStartOptions{})
+	if err != nil {
+		return err
+	}
+
+	statusCh, errCh := b.cli.ContainerWait(ctx, resp.ID, container.WaitConditionNotRunning)
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case err := <-errCh:
+		if err != nil {
+			return err
+		}
+	case status := <-statusCh:
+		if status.StatusCode != 0 {
+			return &errBuild{
+				ReturnCode: status.StatusCode,
+				Stdout:     stdout.String(),
+				Stderr:     stderr.String(),
+			}
+		}
+	}
+
+	return nil
+}
+
+type errBuild struct {
+	ReturnCode int64
+	Stdout     string
+	Stderr     string
+}
+
+func (e *errBuild) Error() string {
+	return fmt.Sprintf("failed to build: (%d) %s", e.ReturnCode, e.Stdout)
 }
 
 type app struct {
@@ -95,6 +167,7 @@ type app struct {
 }
 
 func newApp(l logr.Logger, v *version.Version, exec string) (*app, error) {
+	l.Info("loading", "bin", exec, "version", v)
 	elfF, err := elf.Open(exec)
 	if err != nil {
 		return nil, err
