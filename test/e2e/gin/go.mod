@@ -1,3 +1,4 @@
+// Deprecated: This module is no longer supported.
 module go.opentelemetry.io/auto/test/e2e/gin
 
 go 1.20

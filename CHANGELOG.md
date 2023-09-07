@@ -29,6 +29,48 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
   It will be removed in the following release. ([#262](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/262))
 - The `go.opentelemetry.io/auto/test/e2e/gorillamux` module is deprecated.
   It will be removed in the following release. ([#262](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/262))
+- The `go.opentelemetry.io/auto/pkg/inject` package is deprecated.
+  It will be removed in the following release. ([#282](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/282))
+- The `go.opentelemetry.io/auto/pkg/errors` package is deprecated.
+  It will be removed in the following release. ([#282](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/282))
+- The `go.opentelemetry.io/auto/pkg/process` package is deprecated.
+  It will be removed in the following release. ([#282](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/282))
+- The `go.opentelemetry.io/auto/pkg/process/ptrace` package is deprecated.
+  It will be removed in the following release. ([#282](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/282))
+- The `go.opentelemetry.io/auto/pkg/opentelemetry` package is deprecated.
+  It will be removed in the following release. ([#282](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/282))
+- The `go.opentelemetry.io/auto/pkg/instrumentors/bpf/net/http/client` package is deprecated.
+  It will be removed in the following release. ([#282](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/282))
+- The `go.opentelemetry.io/auto/pkg/instrumentors/bpf/net/http/server` package is deprecated.
+  It will be removed in the following release. ([#282](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/282))
+- The `go.opentelemetry.io/auto/pkg/instrumentors/bpf/github.com/gin-gonic/gin` package is deprecated.
+  It will be removed in the following release. ([#282](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/282))
+- The `go.opentelemetry.io/auto/pkg/instrumentors/bpf/github.com/gorilla/mux` package is deprecated.
+  It will be removed in the following release. ([#282](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/282))
+- The `go.opentelemetry.io/auto/pkg/instrumentors/bpf/google/golang/org/grpc` package is deprecated.
+  It will be removed in the following release. ([#282](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/282))
+- The `go.opentelemetry.io/auto/pkg/instrumentors/bpf/google/golang/org/grpc/server` package is deprecated.
+  It will be removed in the following release. ([#282](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/282))
+- The `go.opentelemetry.io/auto/pkg/instrumentors/utils` package is deprecated.
+  It will be removed in the following release. ([#282](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/282))
+- The `go.opentelemetry.io/auto/pkg/instrumentors/context` package is deprecated.
+  It will be removed in the following release. ([#282](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/282))
+- The `go.opentelemetry.io/auto/pkg/instrumentors` package is deprecated.
+  It will be removed in the following release. ([#282](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/282))
+- The `go.opentelemetry.io/auto/pkg/instrumentors/allocator` package is deprecated.
+  It will be removed in the following release. ([#282](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/282))
+- The `go.opentelemetry.io/auto/pkg/instrumentors/bpffs` package is deprecated.
+  It will be removed in the following release. ([#282](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/282))
+- The `go.opentelemetry.io/auto/pkg/instrumentors/events` package is deprecated.
+  It will be removed in the following release. ([#282](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/282))
+- The `go.opentelemetry.io/auto/pkg/log` package is deprecated.
+  It will be removed in the following release. ([#282](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/282))
+- The `go.opentelemetry.io/auto/test/e2e/gin` module is deprecated.
+  It will be removed in the following release. ([#282](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/282))
+- The `go.opentelemetry.io/auto/test/e2e/gorillamux` module is deprecated.
+  It will be removed in the following release. ([#282](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/282))
+- The `go.opentelemetry.io/auto/test/e2e/nethttp` module is deprecated.
+  It will be removed in the following release. ([#282](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/282))
 
 ## [v0.2.2-alpha] - 2023-07-12
 

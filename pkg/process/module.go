@@ -12,6 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package process provides utilities to instrument processes.
+//
+// Deprecated: This package is no longer supported.
 package process
 
 import (
@@ -24,7 +27,7 @@ import (
 
 	"github.com/hashicorp/go-version"
 
-	"go.opentelemetry.io/auto/pkg/log"
+	"go.opentelemetry.io/auto/pkg/log" // nolint:staticcheck  // Atomic deprecation.
 )
 
 // The build info blob left by the linker is identified by
