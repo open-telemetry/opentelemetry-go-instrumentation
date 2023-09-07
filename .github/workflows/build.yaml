@@ -6,7 +6,7 @@ on:
   pull_request:
 
 env:
-  GO_VERSION: "1.21"
+  GO_VERSION: "~1.21.1"
 
 jobs:
   generate-and-test:
@@ -18,6 +18,7 @@ jobs:
         uses: actions/setup-go@v4
         with:
           go-version: ${{ env.GO_VERSION }}
+          check-latest: true
           cache-dependency-path: "**/go.sum"
       - name: Install build dependencies
         run: |
@@ -48,6 +49,7 @@ jobs:
         uses: actions/setup-go@v4
         with:
           go-version: ${{ env.GO_VERSION }}
+          check-latest: true
           cache-dependency-path: "**/go.sum"
       - name: Update offsets
         run: make offsets
