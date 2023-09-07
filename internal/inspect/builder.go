@@ -32,52 +32,66 @@ import (
 )
 
 type builder struct {
-	log logr.Logger
-	cli *client.Client
-	Go  *version.Version
+	log   logr.Logger
+	cli   *client.Client
+	GoTag string
 }
 
 func newBuilder(l logr.Logger, cli *client.Client, goVer *version.Version) *builder {
-	return &builder{log: l, cli: cli, Go: goVer}
-}
-
-func (b *builder) image() string {
-	return fmt.Sprintf("golang:%s", b.Go.Original())
+	tag := "latest"
+	if goVer != nil {
+		tag = goVer.Original()
+	}
+	return &builder{log: l, cli: cli, GoTag: tag}
 }
 
 func (b *builder) Build(ctx context.Context, dir string, appV *version.Version) (*app, error) {
 	goModTidy := []string{"go", "mod", "tidy", "-compat=1.17"}
-	if err := b.run(ctx, goModTidy, dir); err != nil {
+	if err := b.runCmd(ctx, goModTidy, dir); err != nil {
 		return nil, err
 	}
 
 	app := fmt.Sprintf("app%s", appV.Original())
 	build := []string{"go", "build", "-o", app}
-	if err := b.run(ctx, build, dir); err != nil {
+	if err := b.runCmd(ctx, build, dir); err != nil {
 		return nil, err
 	}
 
 	return newApp(b.log, appV, filepath.Join(dir, app))
 }
 
-func (b *builder) run(ctx context.Context, cmd []string, dir string) error {
-	img := b.image()
-	stdout := new(bytes.Buffer)
-	stderr := new(bytes.Buffer)
+func (b *builder) runCmd(ctx context.Context, cmd []string, dir string) error {
+	b.log.Info("running command", "cmd", cmd, "dir", dir, "image", b.refStr())
 
-	b.log.Info("running command", "cmd", cmd, "dir", dir, "image", img)
-
-	rc, err := b.cli.ImagePull(ctx, img, types.ImagePullOptions{})
+	err := b.pullImage(ctx)
 	if err != nil {
 		return err
 	}
-	rc.Close()
 
+	id, err := b.createContainer(ctx, cmd, dir)
+	if err != nil {
+		return err
+	}
+
+	return b.runContainer(ctx, id)
+}
+
+func (b *builder) refStr() string {
+	return fmt.Sprintf("golang:%s", b.GoTag)
+}
+
+func (b *builder) pullImage(ctx context.Context) error {
+	rc, err := b.cli.ImagePull(ctx, b.refStr(), types.ImagePullOptions{})
+	rc.Close()
+	return err
+}
+
+func (b *builder) createContainer(ctx context.Context, cmd []string, dir string) (string, error) {
 	const appDir = "/usr/src/app"
 	resp, err := b.cli.ContainerCreate(
 		ctx,
 		&container.Config{
-			Image:      img,
+			Image:      b.refStr(),
 			Cmd:        cmd,
 			WorkingDir: appDir,
 			Tty:        false,
@@ -94,25 +108,26 @@ func (b *builder) run(ctx context.Context, cmd []string, dir string) error {
 		nil,
 		"",
 	)
-	if err != nil {
-		return err
-	}
+	return resp.ID, err
+}
 
-	out, err := b.cli.ContainerLogs(ctx, resp.ID, types.ContainerLogsOptions{
+func (b *builder) runContainer(ctx context.Context, id string) error {
+	out, err := b.cli.ContainerLogs(ctx, id, types.ContainerLogsOptions{
 		ShowStdout: true,
 		ShowStderr: true,
 	})
 	if err != nil {
 		return err
 	}
+	stdout, stderr := new(bytes.Buffer), new(bytes.Buffer)
 	stdcopy.StdCopy(stdout, stderr, out)
 
-	err = b.cli.ContainerStart(ctx, resp.ID, types.ContainerStartOptions{})
+	err = b.cli.ContainerStart(ctx, id, types.ContainerStartOptions{})
 	if err != nil {
 		return err
 	}
 
-	statusCh, errCh := b.cli.ContainerWait(ctx, resp.ID, container.WaitConditionNotRunning)
+	statusCh, errCh := b.cli.ContainerWait(ctx, id, container.WaitConditionNotRunning)
 	select {
 	case <-ctx.Done():
 		return ctx.Err()
@@ -129,7 +144,6 @@ func (b *builder) run(ctx context.Context, cmd []string, dir string) error {
 			}
 		}
 	}
-
 	return nil
 }
 

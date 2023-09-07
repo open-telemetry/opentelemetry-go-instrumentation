@@ -40,8 +40,6 @@ const (
 var (
 	// goVersions are the versions of Go supported.
 	goVersions []*version.Version
-
-	defaultGoVersion *version.Version
 )
 
 func init() {
@@ -49,12 +47,6 @@ func init() {
 	goVersions, err = versions.Go(">= " + minGoVersion)
 	if err != nil {
 		fmt.Printf("failed to get Go versions: %v", err)
-		os.Exit(1)
-	}
-
-	defaultGoVersion, err = version.NewVersion(defaultGoVersionStr)
-	if err != nil {
-		fmt.Printf("failed to parse default Go version: %v", err)
 		os.Exit(1)
 	}
 }
@@ -106,7 +98,7 @@ func (i *Inspector) Inspect3rdParty(r Renderer, vFn func() ([]*version.Version, 
 	for _, v := range vers {
 		i.manifests = append(i.manifests, manifest{
 			Renderer: r,
-			Builder:  newBuilder(i.log, i.client, defaultGoVersion),
+			Builder:  newBuilder(i.log, i.client, nil),
 			AppVer:   v,
 			Fields:   fields,
 		})
@@ -208,7 +200,7 @@ func (i *Inspector) do(ctx context.Context, m manifest) ([]structFieldOffset, er
 	buildErr := &errBuild{}
 	if errors.As(err, &buildErr) {
 		for _, f := range uncached {
-			i.log.Error(buildErr, "skipping", "field", f, "Go", m.Builder.Go, "version", m.AppVer)
+			i.log.Error(buildErr, "skipping", "field", f, "Go", m.Builder.GoTag, "version", m.AppVer)
 			out = append(out, structFieldOffset{
 				StructField: f,
 				Version:     m.AppVer,
