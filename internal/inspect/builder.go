@@ -82,7 +82,9 @@ func (b *builder) refStr() string {
 
 func (b *builder) pullImage(ctx context.Context) error {
 	rc, err := b.cli.ImagePull(ctx, b.refStr(), types.ImagePullOptions{})
-	rc.Close()
+	if rc != nil {
+		rc.Close()
+	}
 	return err
 }
 
