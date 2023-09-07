@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package sql
+package mux
 
 import (
 	"testing"
@@ -20,8 +20,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"go.opentelemetry.io/auto/pkg/instrumentors/context"
-	"go.opentelemetry.io/auto/pkg/instrumentors/events"
+	"go.opentelemetry.io/auto/internal/pkg/instrumentors/context"
+	"go.opentelemetry.io/auto/internal/pkg/instrumentors/events"
 	"go.opentelemetry.io/otel/attribute"
 	semconv "go.opentelemetry.io/otel/semconv/v1.7.0"
 	"go.opentelemetry.io/otel/trace"
@@ -41,8 +41,10 @@ func TestInstrumentorConvertEvent(t *testing.T) {
 			EndTime:     uint64(end.UnixNano()),
 			SpanContext: context.EBPFSpanContext{TraceID: traceID, SpanID: spanID},
 		},
-		// "SELECT * FROM foo"
-		Query: [100]byte{0x53, 0x45, 0x4c, 0x45, 0x43, 0x54, 0x20, 0x2a, 0x20, 0x46, 0x52, 0x4f, 0x4d, 0x20, 0x66, 0x6f, 0x6f},
+		// "GET"
+		Method: [7]byte{0x47, 0x45, 0x54},
+		// "/foo/bar"
+		Path: [100]byte{0x2f, 0x66, 0x6f, 0x6f, 0x2f, 0x62, 0x61, 0x72},
 	})
 
 	sc := trace.NewSpanContext(trace.SpanContextConfig{
@@ -52,13 +54,14 @@ func TestInstrumentorConvertEvent(t *testing.T) {
 	})
 	want := &events.Event{
 		Library:     instrumentedPkg,
-		Name:        "DB",
-		Kind:        trace.SpanKindClient,
+		Name:        "GET",
+		Kind:        trace.SpanKindServer,
 		StartTime:   int64(start.UnixNano()),
 		EndTime:     int64(end.UnixNano()),
 		SpanContext: &sc,
 		Attributes: []attribute.KeyValue{
-			semconv.DBStatementKey.String("SELECT * FROM foo"),
+			semconv.HTTPMethodKey.String("GET"),
+			semconv.HTTPTargetKey.String("/foo/bar"),
 		},
 	}
 	assert.Equal(t, want, got)
