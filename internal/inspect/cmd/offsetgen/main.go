@@ -28,7 +28,6 @@ import (
 	"github.com/hashicorp/go-version"
 
 	"go.opentelemetry.io/auto/internal/inspect"
-	"go.opentelemetry.io/auto/internal/inspect/cache"
 )
 
 const (
@@ -65,9 +64,8 @@ func init() {
 
 func main() {
 	l := stdr.New(log.New(os.Stdout, "", log.Lshortfile))
-	c := cache.Load(l, outputFile)
 
-	i, err := inspect.New(l, c)
+	i, err := inspect.New(l, outputFile)
 	if err != nil {
 		l.Error(err, "failed to setup inspector")
 		os.Exit(1)

@@ -24,7 +24,6 @@ import (
 	"github.com/hashicorp/go-version"
 	"golang.org/x/sync/errgroup"
 
-	"go.opentelemetry.io/auto/internal/inspect/cache"
 	"go.opentelemetry.io/auto/internal/pkg/inject"
 )
 
@@ -42,17 +41,19 @@ type Inspector struct {
 	NWorkers int
 
 	log    logr.Logger
-	cache  *cache.Cache
+	cache  *cache
 	client *client.Client
 
 	manifests []manifest
 }
 
-// New returns an Inspector that will use the provided cache. If c is nil, a
-// new empty cache will be used.
-func New(l logr.Logger, c *cache.Cache) (*Inspector, error) {
-	if c == nil {
-		c = cache.New(l)
+// New returns an Inspector that will use offsetFile as a cache for offsets.
+func New(l logr.Logger, offsetFile string) (*Inspector, error) {
+	logger := l.WithName("inspector")
+
+	c, err := newCache(l, offsetFile)
+	if err != nil {
+		logger.Error(err, "using empty cache")
 	}
 
 	cli, err := client.NewClientWithOpts(
@@ -65,7 +66,7 @@ func New(l logr.Logger, c *cache.Cache) (*Inspector, error) {
 
 	return &Inspector{
 		NWorkers: defaultNWorkers,
-		log:      l.WithName("inspector"),
+		log:      logger,
 		cache:    c,
 		client:   cli,
 	}, nil
@@ -142,13 +143,13 @@ func (i *Inspector) Do(ctx context.Context) (*inject.TrackedOffsets, error) {
 
 	var results []structFieldOffset
 	for r := range c {
+		i.logResults(r)
 		results = append(results, r...)
 	}
 
 	if err := g.Wait(); err != nil {
 		return nil, err
 	}
-	i.logResults(results)
 	return trackedOffsets(results), nil
 }
 
@@ -157,7 +158,7 @@ func (i *Inspector) do(ctx context.Context, m manifest) ([]structFieldOffset, er
 
 	uncached := m.Fields[:0] // Use the same backing array.
 	for _, f := range m.Fields {
-		if sfo, ok := i.cached(m.AppVer, f); ok {
+		if sfo, ok := i.cache.Get(m.AppVer, f); ok {
 			out = append(out, sfo)
 		} else {
 			uncached = append(uncached, f)
@@ -201,14 +202,6 @@ func (i *Inspector) do(ctx context.Context, m manifest) ([]structFieldOffset, er
 	}
 
 	return out, nil
-}
-
-func (i *Inspector) cached(ver *version.Version, sf StructField) (structFieldOffset, bool) {
-	sfo := structFieldOffset{StructField: sf, Version: ver}
-
-	var ok bool
-	sfo.Offset, ok = i.cache.Get(ver, sf.Package, sf.Struct, sf.Field)
-	return sfo, ok
 }
 
 func (i *Inspector) logResults(results []structFieldOffset) {
