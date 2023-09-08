@@ -17,8 +17,6 @@ package inspect
 import (
 	"bytes"
 	"context"
-	"debug/dwarf"
-	"debug/elf"
 	"fmt"
 	"io"
 	"path/filepath"
@@ -47,23 +45,21 @@ func newBuilder(l logr.Logger, cli *client.Client, goVer *version.Version) *buil
 	return &builder{log: l.WithName("builder"), cli: cli, GoImage: img}
 }
 
-func (b *builder) Build(ctx context.Context, dir string, appV *version.Version) (*app, error) {
-	goModTidy := []string{"go", "mod", "tidy", "-compat=1.17"}
-	if err := b.runCmd(ctx, goModTidy, dir); err != nil {
-		return nil, err
-	}
+func (b *builder) Build(ctx context.Context, dir string, appV *version.Version) (string, error) {
+	b.log.V(2).Info("building application...", "version", appV, "dir", dir, "image", b.GoImage)
 
 	app := fmt.Sprintf("app%s", appV.Original())
-	build := []string{"go", "build", "-o", app}
-	if err := b.runCmd(ctx, build, dir); err != nil {
-		return nil, err
+	cmd := "go mod tidy -compat=1.17 && go build -o " + app
+	if err := b.runCmd(ctx, []string{"sh", "-c", cmd}, dir); err != nil {
+		return "", err
 	}
 
-	return newApp(b.log, appV, filepath.Join(dir, app))
+	b.log.V(1).Info("built application", "version", appV, "dir", dir, "image", b.GoImage)
+	return filepath.Join(dir, app), nil
 }
 
 func (b *builder) runCmd(ctx context.Context, cmd []string, dir string) error {
-	b.log.Info("running command", "cmd", cmd, "dir", dir, "image", b.GoImage)
+	b.log.V(2).Info("running command...", "cmd", cmd, "dir", dir, "image", b.GoImage)
 
 	err := b.pullImage(ctx)
 	if err != nil {
@@ -89,7 +85,7 @@ func (b *builder) pullImage(ctx context.Context) error {
 		return err
 	}
 	if len(summaries) > 0 {
-		b.log.V(1).Info("using local image", "image", b.GoImage)
+		b.log.V(2).Info("using local image", "image", b.GoImage)
 		return nil
 	}
 
@@ -174,37 +170,4 @@ type errBuild struct {
 
 func (e *errBuild) Error() string {
 	return fmt.Sprintf("failed to build: (%d) %s", e.ReturnCode, e.Stdout)
-}
-
-type app struct {
-	log  logr.Logger
-	ver  *version.Version
-	exec string
-	bin  *elf.File
-	data *dwarf.Data
-}
-
-func newApp(l logr.Logger, v *version.Version, exec string) (*app, error) {
-	l.Info("loading", "bin", exec, "version", v)
-	elfF, err := elf.Open(exec)
-	if err != nil {
-		return nil, err
-	}
-	defer elfF.Close()
-
-	dwarfData, err := elfF.DWARF()
-	if err != nil {
-		return nil, err
-	}
-
-	return &app{log: l, ver: v, exec: exec, bin: elfF, data: dwarfData}, nil
-}
-
-func (a *app) Analyze(sf StructField) structFieldOffset {
-	a.log.Info("analyzing app binary", "package", sf.Package, "binary", a.exec, "version", a.ver)
-	return sf.offset(a.ver, a.data)
-}
-
-func (a *app) Close() error {
-	return a.bin.Close()
 }

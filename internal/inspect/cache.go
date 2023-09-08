@@ -50,7 +50,11 @@ func newCache(l logr.Logger, offsetFile string) (*cache, error) {
 	}, nil
 }
 
-func (c *cache) Get(ver *version.Version, sf StructField) (structFieldOffset, bool) {
+// Get returns the cached structFieldOffset for the StructField at the
+// specified version. If the cache does not contain a valid structFieldOffset
+// for the provided values, the returned Offset of the structFieldOffset will
+// be -1.
+func (c *cache) Get(ver *version.Version, sf StructField) structFieldOffset {
 	sfo, ok := c.get(ver, sf)
 	msg := "cache "
 	if ok {
@@ -65,7 +69,7 @@ func (c *cache) Get(ver *version.Version, sf StructField) (structFieldOffset, bo
 		"struct", sf.Struct,
 		"field", sf.Field,
 	)
-	return sfo, ok
+	return sfo
 }
 
 func (c *cache) get(ver *version.Version, sf StructField) (structFieldOffset, bool) {

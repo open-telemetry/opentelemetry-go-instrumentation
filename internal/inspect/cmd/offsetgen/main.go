@@ -40,6 +40,12 @@ const (
 var (
 	// outputFile is the output file path flag value.
 	outputFile string
+	// cacheFile is the offset cache file path flag value.
+	cacheFile string
+	// numCPU is the number of CPUs to use flag value.
+	numCPU int
+	// verbosity is the log verbosity level flag value.
+	verbosity int
 
 	// goVers are the versions of Go supported.
 	goVers []*version.Version
@@ -51,6 +57,9 @@ func init() {
 		outputFilename = os.Getenv("OFFSETS_OUTPUT_FILE")
 	}
 	flag.StringVar(&outputFile, "output", outputFilename, "output file")
+	flag.StringVar(&cacheFile, "cache", outputFilename, "offset cache")
+	flag.IntVar(&numCPU, "workers", runtime.NumCPU(), "max number of Goroutine workers")
+	flag.IntVar(&verbosity, "v", 0, "log verbosity")
 
 	flag.Parse()
 
@@ -63,14 +72,15 @@ func init() {
 }
 
 func main() {
-	l := stdr.New(log.New(os.Stdout, "", log.Lshortfile))
+	stdr.SetVerbosity(verbosity)
+	l := stdr.New(log.New(os.Stdout, "", log.LstdFlags))
 
-	i, err := inspect.New(l, outputFile)
+	i, err := inspect.New(l, cacheFile)
 	if err != nil {
 		l.Error(err, "failed to setup inspector")
 		os.Exit(1)
 	}
-	i.NWorkers = runtime.NumCPU()
+	i.NWorkers = numCPU
 
 	ren := func(src string) inspect.Renderer {
 		return inspect.NewRenderer(l, src, inspect.DefaultFS)

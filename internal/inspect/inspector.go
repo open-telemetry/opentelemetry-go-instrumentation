@@ -17,7 +17,6 @@ package inspect
 import (
 	"context"
 	"errors"
-	"os"
 
 	"github.com/docker/docker/client"
 	"github.com/go-logr/logr"
@@ -119,7 +118,7 @@ func (i *Inspector) Do(ctx context.Context) (*inject.TrackedOffsets, error) {
 	})
 
 	c := make(chan []structFieldOffset)
-	for n := 0; n < i.NWorkers; n++ {
+	for n := 0; n < max(1, i.NWorkers-1); n++ {
 		g.Go(func() error {
 			for m := range todo {
 				out, err := i.do(ctx, m)
@@ -154,51 +153,44 @@ func (i *Inspector) Do(ctx context.Context) (*inject.TrackedOffsets, error) {
 }
 
 func (i *Inspector) do(ctx context.Context, m manifest) ([]structFieldOffset, error) {
-	var out []structFieldOffset
-
-	uncached := m.Fields[:0] // Use the same backing array.
+	var (
+		missing bool
+		out     []structFieldOffset
+	)
 	for _, f := range m.Fields {
-		if sfo, ok := i.cache.Get(m.AppVer, f); ok {
-			out = append(out, sfo)
-		} else {
-			uncached = append(uncached, f)
+		sfo := i.cache.Get(m.AppVer, f)
+		out = append(out, sfo)
+		if sfo.Offset < 0 {
+			missing = true
 		}
 	}
 
-	if len(uncached) == 0 {
+	if !missing {
 		return out, nil
 	}
 
-	d, err := os.MkdirTemp("", "inspect-*")
-	if err != nil {
-		return nil, err
-	}
-	defer os.RemoveAll(d)
-
-	data := struct{ Version string }{Version: "v" + m.AppVer.String()}
-	if err = m.Renderer.Render(d, data); err != nil {
-		return nil, err
-	}
-
-	app, err := m.Builder.Build(ctx, d, m.AppVer)
+	app, err := newApp(ctx, i.log, m)
 	buildErr := &errBuild{}
 	if errors.As(err, &buildErr) {
-		for _, f := range uncached {
-			i.log.Error(buildErr, "skipping", "field", f, "Go", m.Builder.GoImage, "version", m.AppVer)
-			out = append(out, structFieldOffset{
-				StructField: f,
-				Version:     m.AppVer,
-				Offset:      -1,
-			})
-		}
+		i.log.V(1).Info(
+			"failed to build app, skipping",
+			"version", m.AppVer,
+			"src", m.Renderer.src,
+			"Go", m.Builder.GoImage,
+			"rc", buildErr.ReturnCode,
+			"stdout", buildErr.Stdout,
+			"stderr", buildErr.Stderr,
+		)
 		return out, nil
 	} else if err != nil {
 		return nil, err
 	}
 	defer app.Close()
 
-	for _, f := range uncached {
-		out = append(out, app.Analyze(f))
+	for i, f := range out {
+		if f.Offset < 0 {
+			out[i] = app.Analyze(f.StructField)
+		}
 	}
 
 	return out, nil
@@ -206,10 +198,26 @@ func (i *Inspector) do(ctx context.Context, m manifest) ([]structFieldOffset, er
 
 func (i *Inspector) logResults(results []structFieldOffset) {
 	for _, r := range results {
-		if r.Offset < 0 {
-			i.log.Info("offsets not found", "name", r.structName(), "version", r.Version)
-		} else {
-			i.log.Info("offsets found", "name", r.structName(), "version", r.Version)
+		msg := "offset "
+		kv := []interface{}{
+			"version", r.Version,
+			"package", r.Package,
+			"struct", r.Struct,
+			"field", r.Field,
 		}
+		if r.Offset < 0 {
+			msg += "not found"
+		} else {
+			msg += "found"
+			kv = append(kv, "offset", r.Offset)
+		}
+		i.log.Info(msg, kv...)
 	}
+}
+
+func max(a, b int) int {
+	if a > b {
+		return a
+	}
+	return b
 }
