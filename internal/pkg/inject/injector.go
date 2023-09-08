@@ -145,10 +145,13 @@ func (i *Injector) getFieldOffset(structName string, fieldName string, target *v
 		return 0, false
 	}
 	for _, field := range fields {
+		if target.LessThan(field.Versions.Oldest) || target.GreaterThan(field.Versions.Newest) {
+			continue
+		}
 		// Search from the newest version (last in the slice)
 		for o := len(field.Offsets) - 1; o >= 0; o-- {
 			od := &field.Offsets[o]
-			if target.Compare(od.Since) >= 0 {
+			if target.GreaterThanOrEqual(od.Since) {
 				// if target version is larger or equal than lib version:
 				// we certainly know that it is the most recent tracked offset
 				// matching the target version.
