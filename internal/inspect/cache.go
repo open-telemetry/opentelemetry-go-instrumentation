@@ -32,22 +32,17 @@ type cache struct {
 }
 
 func newCache(l logr.Logger, offsetFile string) (*cache, error) {
+	c := &cache{log: l.WithName("cache")}
+
 	f, err := os.Open(offsetFile)
 	if err != nil {
-		return nil, err
+		return c, err
 	}
 	defer f.Close()
 
-	var offsets inject.TrackedOffsets
-	err = json.NewDecoder(f).Decode(&offsets)
-	if err != nil {
-		return nil, err
-	}
-
-	return &cache{
-		log:  l.WithName("cache"),
-		data: &offsets,
-	}, nil
+	c.data = new(inject.TrackedOffsets)
+	err = json.NewDecoder(f).Decode(c.data)
+	return c, err
 }
 
 // Get returns the cached structFieldOffset for the StructField at the
