@@ -23,6 +23,31 @@ type TrackedOffsets struct {
 	Data map[string]TrackedStruct `json:"data"`
 }
 
+func (o *TrackedOffsets) GetOffset(strct, field string, ver *version.Version) (uintptr, bool) {
+	sMap, ok := o.Data[strct]
+	if !ok {
+		return 0, false
+	}
+	fMap, ok := sMap[field]
+	if !ok {
+		return 0, false
+	}
+	for _, field := range fMap {
+		if ver.LessThan(field.Versions.Oldest) || ver.GreaterThan(field.Versions.Newest) {
+			continue
+		}
+		// Search from the newest version (last in the slice)
+		for o := len(field.Offsets) - 1; o >= 0; o-- {
+			od := &field.Offsets[o]
+			if ver.GreaterThanOrEqual(od.Since) {
+				return od.Offset, true
+			}
+		}
+	}
+
+	return 0, false
+}
+
 // TrackedStruct maps fields names to the tracked fields offsets.
 type TrackedStruct map[string][]TrackedField
 

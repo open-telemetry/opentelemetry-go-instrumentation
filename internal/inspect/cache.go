@@ -74,28 +74,9 @@ func (c *cache) get(ver *version.Version, sf StructField) (structFieldOffset, bo
 		return sfo, false
 	}
 
-	ts, ok := c.data.Data[sf.structName()]
-	if !ok {
-		return sfo, false
+	o, ok := c.data.GetOffset(sf.structName(), sf.Field, ver)
+	if ok {
+		sfo.Offset = int64(o)
 	}
-	tf, ok := ts[sf.Field]
-	if !ok {
-		return sfo, false
-	}
-
-	for _, field := range tf {
-		if ver.LessThan(field.Versions.Oldest) || ver.GreaterThan(field.Versions.Newest) {
-			continue
-		}
-
-		// Search from the newest version.
-		for i := len(field.Offsets) - 1; i >= 0; i-- {
-			od := &field.Offsets[i]
-			if ver.GreaterThanOrEqual(od.Since) {
-				sfo.Offset = int64(od.Offset)
-				return sfo, true
-			}
-		}
-	}
-	return sfo, false
+	return sfo, ok
 }

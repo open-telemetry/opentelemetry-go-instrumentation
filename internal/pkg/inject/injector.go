@@ -88,7 +88,7 @@ func (i *Injector) Inject(loadBpf loadBpfFunc, library string, libVersion *versi
 	injectedVars := make(map[string]interface{})
 
 	for _, dm := range fields {
-		offset, found := i.getFieldOffset(dm.StructName, dm.Field, libVersion)
+		offset, found := i.data.GetOffset(dm.StructName, dm.Field, libVersion)
 		if !found {
 			log.Logger.V(0).Info("could not find offset", "lib", library, "version", libVersion, "struct", dm.StructName, "field", dm.Field)
 		} else {
@@ -133,32 +133,4 @@ func (i *Injector) addConfigInjections(varsMap map[string]interface{}, flagField
 		varsMap[dm.VarName] = dm.Value
 	}
 	return nil
-}
-
-func (i *Injector) getFieldOffset(structName string, fieldName string, target *version.Version) (uint64, bool) {
-	strct, ok := i.data.Data[structName]
-	if !ok {
-		return 0, false
-	}
-	fields, ok := strct[fieldName]
-	if !ok {
-		return 0, false
-	}
-	for _, field := range fields {
-		if target.LessThan(field.Versions.Oldest) || target.GreaterThan(field.Versions.Newest) {
-			continue
-		}
-		// Search from the newest version (last in the slice)
-		for o := len(field.Offsets) - 1; o >= 0; o-- {
-			od := &field.Offsets[o]
-			if target.GreaterThanOrEqual(od.Since) {
-				// if target version is larger or equal than lib version:
-				// we certainly know that it is the most recent tracked offset
-				// matching the target version.
-				return uint64(od.Offset), true
-			}
-		}
-	}
-
-	return 0, false
 }
