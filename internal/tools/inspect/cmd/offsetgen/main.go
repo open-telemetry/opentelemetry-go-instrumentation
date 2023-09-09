@@ -27,7 +27,7 @@ import (
 	"github.com/go-logr/stdr"
 	"github.com/hashicorp/go-version"
 
-	"go.opentelemetry.io/auto/internal/inspect"
+	"go.opentelemetry.io/auto/internal/tools/inspect"
 )
 
 const (
