@@ -35,8 +35,11 @@ IMG_NAME ?= otel-go-instrumentation
 GOLANGCI_LINT = $(TOOLS)/golangci-lint
 $(TOOLS)/golangci-lint: PACKAGE=github.com/golangci/golangci-lint/cmd/golangci-lint
 
+OFFSETGEN = $(TOOLS)/offsetgen
+$(TOOLS)/offsetgen: PACKAGE=go.opentelemetry.io/auto/$(TOOLS_MOD_DIR)/inspect/cmd/offsetgen
+
 .PHONY: tools
-tools: $(GOLICENSES) $(MULTIMOD) $(GOLANGCI_LINT)
+tools: $(GOLICENSES) $(MULTIMOD) $(GOLANGCI_LINT) $(OFFSETGEN)
 
 ALL_GO_MODS := $(shell find . -type f -name 'go.mod' ! -path '$(TOOLS_MOD_DIR)/*' ! -path './LICENSES/*' | sort)
 GO_MODS_TO_TEST := $(ALL_GO_MODS:%=test/%)
@@ -82,8 +85,8 @@ docker-build:
 	docker buildx build -t $(IMG_NAME) .
 
 .PHONY: offsets
-offsets:
-	cd internal/inspect/cmd/offsetgen; OFFSETS_OUTPUT_FILE="../../../pkg/inject/offset_results.json" go run .
+offsets: | $(OFFSETGEN)
+	OFFSETS_OUTPUT_FILE="$(REPODIR)/internal/pkg/inject/offset_results.json" $(OFFSETGEN)
 
 .PHONY: docker-offsets
 docker-offsets:
