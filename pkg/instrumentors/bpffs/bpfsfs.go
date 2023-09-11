@@ -12,17 +12,20 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package bpffs provides the path to bpf on unix systems.
+//
+// Deprecated: This package is no longer supported.
 package bpffs
 
 import (
 	"fmt"
 	"os"
 
-	"go.opentelemetry.io/auto/pkg/log"
+	"go.opentelemetry.io/auto/pkg/log" // nolint:staticcheck  // Atomic deprecation.
 
 	"golang.org/x/sys/unix"
 
-	"go.opentelemetry.io/auto/pkg/process"
+	"go.opentelemetry.io/auto/pkg/process" // nolint:staticcheck  // Atomic deprecation.
 )
 
 // BPFFsPath is the system path to the BPF file-system.

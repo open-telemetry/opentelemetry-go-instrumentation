@@ -12,12 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package allocator provides allocation functionality for unix systems.
+//
+// Deprecated: This package is no longer supported.
 package allocator
 
 import (
-	"go.opentelemetry.io/auto/pkg/instrumentors/bpffs"
-	"go.opentelemetry.io/auto/pkg/instrumentors/context"
-	"go.opentelemetry.io/auto/pkg/log"
+	"go.opentelemetry.io/auto/pkg/instrumentors/bpffs"   // nolint:staticcheck  // Atomic deprecation.
+	"go.opentelemetry.io/auto/pkg/instrumentors/context" // nolint:staticcheck  // Atomic deprecation.
+	"go.opentelemetry.io/auto/pkg/log"                   // nolint:staticcheck  // Atomic deprecation.
 )
 
 // Allocator handles the allocation of the BPF file-system.

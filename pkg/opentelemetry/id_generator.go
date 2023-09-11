@@ -17,7 +17,7 @@ package opentelemetry
 import (
 	"context"
 
-	"go.opentelemetry.io/auto/pkg/instrumentors/events"
+	"go.opentelemetry.io/auto/pkg/instrumentors/events" // nolint:staticcheck  // Atomic deprecation.
 	"go.opentelemetry.io/otel/trace"
 )
 
