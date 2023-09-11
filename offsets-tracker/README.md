@@ -59,10 +59,10 @@ For example, here is the tracking of `method` field inside `transport.Stream` st
 
 ## Versions Discovery
 
-By default, offsets-tracker finds availble versions by executing `go list -versions <target-name>`.
+By default, offsets-tracker finds available versions by executing `go list -versions <target-name>`.
 
 Unfortunately, Go standard library versions are not discoverable via `go list`. 
-In order to discover Go versions, offsets-tracker can fetch the versions published at `https://go.dev/dl`.
+In order to discover Go versions, the offsets-tracker fetch the versions published at `https://go.dev/dl`.
 Fetching `go.dev` for discovering versions can be enabled by setting`.FindVersionsBy(target.GoDevFileVersionsStrategy)` when registering a new target.
 
 ## Download Strategy
@@ -70,7 +70,13 @@ Fetching `go.dev` for discovering versions can be enabled by setting`.FindVersio
 offsets-tracker wraps every Go module version as a Go application that depends on that module.
 Those applications are the result of [generating template files](./downloader/wrapper) with the appropriate version.
 
-In the case of the Go standard library, offsets-tracker downloads the published binary for the specified version. 
+In the case of the Go standard library, the offsets-tracker creates a dummy application that depends on the specific library. For example
+
+```go
+import (
+  _ "net/http"
+)
+```
 
 ## Version Constraints
 
