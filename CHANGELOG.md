@@ -30,6 +30,8 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 
 ### Deprecated
 
+- The `go.opentelemetry.io/auto/offsets-tracker` module is deprecated.
+  It will be removed in the following release. ([#281](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/281))
 - The `go.opentelemetry.io/auto/pkg/instrumentors/bpf/github.com/gorilla/mux` package is deprecated.
   It will be removed in the following release. ([#262](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/262))
 - The `go.opentelemetry.io/auto/test/e2e/gorillamux` module is deprecated.

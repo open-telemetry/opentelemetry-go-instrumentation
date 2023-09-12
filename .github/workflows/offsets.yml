@@ -11,9 +11,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Setup Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: "1.21"
+          cache-dependency-path: "**/go.sum"
+
       - name: Update offsets
-        run: |
-          make docker-offsets
+        run: make offsets
 
       - name: Create pull request
         uses: peter-evans/create-pull-request@v5
