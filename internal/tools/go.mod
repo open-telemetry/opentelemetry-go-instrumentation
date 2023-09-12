@@ -5,6 +5,7 @@ go 1.18
 require (
 	github.com/golangci/golangci-lint v1.54.2
 	github.com/google/go-licenses v1.6.0
+	github.com/hashicorp/go-version v1.6.0
 	go.opentelemetry.io/build-tools/multimod v0.11.0
 )
 
@@ -89,7 +90,6 @@ require (
 	github.com/gostaticanalysis/nilerr v0.1.1 // indirect
 	github.com/hashicorp/errwrap v1.0.0 // indirect
 	github.com/hashicorp/go-multierror v1.1.1 // indirect
-	github.com/hashicorp/go-version v1.6.0 // indirect
 	github.com/hashicorp/hcl v1.0.0 // indirect
 	github.com/hexops/gotextdiff v1.0.3 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
