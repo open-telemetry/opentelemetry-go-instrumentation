@@ -12,9 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package versions provides versioning utilities.
-//
-// Deprecated: This package is no longer supported.
 package versions
 
 import "github.com/hashicorp/go-version"

@@ -17,7 +17,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repo
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: Setup Go
         uses: actions/setup-go@v4
         with:
@@ -54,7 +54,7 @@ jobs:
         shell: bash
         run: |
             helm repo add open-telemetry https://open-telemetry.github.io/opentelemetry-helm-charts
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           repository: 'open-telemetry/opentelemetry-helm-charts'
           path: opentelemetry-helm-charts

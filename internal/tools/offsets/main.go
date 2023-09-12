@@ -22,9 +22,9 @@ import (
 
 	"github.com/hashicorp/go-version"
 
-	"go.opentelemetry.io/auto/offsets-tracker/binary" // nolint:staticcheck  // atomic deprecation.
-	"go.opentelemetry.io/auto/offsets-tracker/target" // nolint:staticcheck  // atomic deprecation.
-	"go.opentelemetry.io/auto/offsets-tracker/writer" // nolint:staticcheck  // atomic deprecation.
+	"go.opentelemetry.io/auto/internal/tools/offsets/binary"
+	"go.opentelemetry.io/auto/internal/tools/offsets/target"
+	"go.opentelemetry.io/auto/internal/tools/offsets/writer"
 )
 
 const (

@@ -12,9 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package schema provides a data-model for offsets.
-//
-// Deprecated: This package is no longer supported.
 package schema
 
 // TrackedOffsets are all the tracked offsets.
