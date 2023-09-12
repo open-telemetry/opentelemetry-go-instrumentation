@@ -6,6 +6,7 @@ require (
 	github.com/golangci/golangci-lint v1.54.2
 	github.com/google/go-licenses v1.6.0
 	github.com/hashicorp/go-version v1.6.0
+	go.opentelemetry.io/build-tools/dbotconf v0.11.0
 	go.opentelemetry.io/build-tools/multimod v0.11.0
 )
 

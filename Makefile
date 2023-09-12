@@ -15,7 +15,7 @@ BPF_INCLUDE += -I${REPODIR}/internal/include
 .DEFAULT_GOAL := precommit
 
 .PHONY: precommit
-precommit: license-header-check go-mod-tidy golangci-lint-fix
+precommit: license-header-check dependabot-generate go-mod-tidy golangci-lint-fix
 
 # Tools
 $(TOOLS):
@@ -30,6 +30,9 @@ $(TOOLS)/multimod: PACKAGE=go.opentelemetry.io/build-tools/multimod
 GOLICENSES = $(TOOLS)/go-licenses
 $(TOOLS)/go-licenses: PACKAGE=github.com/google/go-licenses
 
+DBOTCONF = $(TOOLS)/dbotconf
+$(TOOLS)/dbotconf: PACKAGE=go.opentelemetry.io/build-tools/dbotconf
+
 IMG_NAME ?= otel-go-instrumentation
 
 GOLANGCI_LINT = $(TOOLS)/golangci-lint
@@ -39,7 +42,7 @@ OFFSETS = $(TOOLS)/offsets
 $(TOOLS)/offsets: PACKAGE=go.opentelemetry.io/auto/$(TOOLS_MOD_DIR)/offsets
 
 .PHONY: tools
-tools: $(GOLICENSES) $(MULTIMOD) $(GOLANGCI_LINT) $(OFFSETS)
+tools: $(GOLICENSES) $(MULTIMOD) $(GOLANGCI_LINT) $(DBOTCONF) $(OFFSETS)
 
 ALL_GO_MODS := $(shell find . -type f -name 'go.mod' ! -path '$(TOOLS_MOD_DIR)/*' ! -path './LICENSES/*' | sort)
 GO_MODS_TO_TEST := $(ALL_GO_MODS:%=test/%)
@@ -110,6 +113,15 @@ verify-licenses: generate $(GOLICENSES)
       rm -rf temp; \
       exit 1; \
     fi; \
+
+DEPENDABOT_CONFIG = .github/dependabot.yml
+.PHONY: dependabot-check
+dependabot-check: | $(DBOTCONF)
+	@$(DBOTCONF) --ignore "/LICENSES" verify $(DEPENDABOT_CONFIG) || echo "(run: make dependabot-generate)"
+
+.PHONY: dependabot-generate
+dependabot-generate: | $(DBOTCONF)
+	@$(DBOTCONF) --ignore "/LICENSES" generate > $(DEPENDABOT_CONFIG)
 
 .PHONY: license-header-check
 license-header-check:
