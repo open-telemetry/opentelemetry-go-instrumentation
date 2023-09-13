@@ -23,7 +23,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestGetFieldOffset(t *testing.T) {
+func TestGetOffset(t *testing.T) {
 	dataFile := `{
 	"data" : {
 		"struct_1" : { 
@@ -57,7 +57,7 @@ func TestGetFieldOffset(t *testing.T) {
 	assert.Falsef(t, ok, "found: %d", int(offset))
 }
 
-func TestGetFieldOffset_OffsetResultsJSON(t *testing.T) {
+func TestGetOffsetFromTracked(t *testing.T) {
 	data := &TrackedOffsets{}
 	err := json.Unmarshal([]byte(offsetsData), data)
 	require.NoError(t, err)
