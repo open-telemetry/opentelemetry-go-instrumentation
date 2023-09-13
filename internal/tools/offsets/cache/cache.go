@@ -23,14 +23,14 @@ import (
 
 	"github.com/hashicorp/go-version"
 
+	"go.opentelemetry.io/auto/internal/pkg/inject"
 	"go.opentelemetry.io/auto/internal/tools/offsets/binary"
-	"go.opentelemetry.io/auto/internal/tools/offsets/schema"
 	"go.opentelemetry.io/auto/internal/tools/offsets/versions"
 )
 
 // Cache holds already seen offsets.
 type Cache struct {
-	data *schema.TrackedOffsets
+	data *inject.TrackedOffsets
 }
 
 // NewCache returns a new [Cache].
@@ -48,7 +48,7 @@ func NewCache(prevOffsetFile string) *Cache {
 		return nil
 	}
 
-	var offsets schema.TrackedOffsets
+	var offsets inject.TrackedOffsets
 	err = json.Unmarshal(data, &offsets)
 	if err != nil {
 		log.Printf("error parsing existing offsets file: %v Ignoring existing file.\n", err)
@@ -93,7 +93,7 @@ func (c *Cache) IsAllInCache(version string, dataMembers []*binary.DataMember) (
 
 // searchOffset searches an offset from the newest field whose version
 // is lower than or equal to the target version.
-func searchOffset(field schema.TrackedField, targetVersion string) (uint64, bool) {
+func searchOffset(field inject.TrackedField, targetVersion string) (uint64, bool) {
 	target := versions.MustParse(targetVersion)
 
 	// Search from the newest version
