@@ -8,6 +8,11 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 
 ## [Unreleased]
 
+### Deprecated
+
+- The `go.opentelemetry.io/auto/examples/rolldice` module is deprecated.
+  It will be moved into the `go.opentelemetry.io/auto/examples` module in the following release. ([#304](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/304))
+
 ## [v0.3.0-alpha] - 2023-09-12
 
 ### Added
