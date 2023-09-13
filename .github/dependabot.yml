@@ -20,7 +20,7 @@ updates:
       interval: weekly
       day: sunday
   - package-ecosystem: docker
-    directory: /offsets-tracker
+    directory: /examples/httpPlusdb
     labels:
       - dependencies
       - docker
@@ -29,7 +29,7 @@ updates:
       interval: weekly
       day: sunday
   - package-ecosystem: docker
-    directory: /test/e2e/gorillamux
+    directory: /examples/rolldice
     labels:
       - dependencies
       - docker
@@ -38,7 +38,34 @@ updates:
       interval: weekly
       day: sunday
   - package-ecosystem: docker
-    directory: /test/e2e/nethttp
+    directory: /internal/test/e2e/databasesql
+    labels:
+      - dependencies
+      - docker
+      - Skip Changelog
+    schedule:
+      interval: weekly
+      day: sunday
+  - package-ecosystem: docker
+    directory: /internal/test/e2e/gin
+    labels:
+      - dependencies
+      - docker
+      - Skip Changelog
+    schedule:
+      interval: weekly
+      day: sunday
+  - package-ecosystem: docker
+    directory: /internal/test/e2e/gorillamux
+    labels:
+      - dependencies
+      - docker
+      - Skip Changelog
+    schedule:
+      interval: weekly
+      day: sunday
+  - package-ecosystem: docker
+    directory: /internal/test/e2e/nethttp
     labels:
       - dependencies
       - docker
@@ -56,34 +83,61 @@ updates:
       interval: weekly
       day: sunday
   - package-ecosystem: gomod
+    directory: /examples/httpPlusdb
+    labels:
+      - dependencies
+      - go
+      - Skip Changelog
+    schedule:
+      interval: weekly
+      day: sunday
+  - package-ecosystem: gomod
+    directory: /examples/rolldice
+    labels:
+      - dependencies
+      - go
+      - Skip Changelog
+    schedule:
+      interval: weekly
+      day: sunday
+  - package-ecosystem: gomod
+    directory: /internal/test/e2e/databasesql
+    labels:
+      - dependencies
+      - go
+      - Skip Changelog
+    schedule:
+      interval: weekly
+      day: sunday
+  - package-ecosystem: gomod
+    directory: /internal/test/e2e/gin
+    labels:
+      - dependencies
+      - go
+      - Skip Changelog
+    schedule:
+      interval: weekly
+      day: sunday
+  - package-ecosystem: gomod
+    directory: /internal/test/e2e/gorillamux
+    labels:
+      - dependencies
+      - go
+      - Skip Changelog
+    schedule:
+      interval: weekly
+      day: sunday
+  - package-ecosystem: gomod
+    directory: /internal/test/e2e/nethttp
+    labels:
+      - dependencies
+      - go
+      - Skip Changelog
+    schedule:
+      interval: weekly
+      day: sunday
+  - package-ecosystem: gomod
     directory: /internal/tools
-    labels:
-      - dependencies
-      - go
-      - Skip Changelog
-    schedule:
-      interval: weekly
-      day: sunday
-  - package-ecosystem: gomod
-    directory: /offsets-tracker
-    labels:
-      - dependencies
-      - go
-      - Skip Changelog
-    schedule:
-      interval: weekly
-      day: sunday
-  - package-ecosystem: gomod
-    directory: /test/e2e/gorillamux
-    labels:
-      - dependencies
-      - go
-      - Skip Changelog
-    schedule:
-      interval: weekly
-      day: sunday
-  - package-ecosystem: gomod
-    directory: /test/e2e/nethttp
     labels:
       - dependencies
       - go
