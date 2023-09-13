@@ -1,3 +1,4 @@
+// Deprecated: This module will be moved to go.opentelemetry.io/auto/examples.
 module go.opentelemetry.io/auto/examples/rolldice
 
 go 1.20
