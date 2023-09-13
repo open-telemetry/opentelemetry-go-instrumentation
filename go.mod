@@ -2,6 +2,21 @@ module go.opentelemetry.io/auto
 
 go 1.18
 
+retract (
+	v0.6.5 // Contains retractions only.
+	v0.6.4 // Published accidentally.
+	v0.6.3 // Published accidentally.
+	v0.6.2 // Published accidentally.
+	v0.6.1 // Published accidentally.
+	v0.6.0 // Published accidentally.
+	v0.5.4 // Published accidentally.
+	v0.5.3 // Published accidentally.
+	v0.5.2 // Published accidentally.
+	v0.5.1 // Published accidentally.
+	v0.5.0 // Published accidentally.
+	v0.0.0 // Published accidentally.
+)
+
 require (
 	github.com/cilium/ebpf v0.11.0
 	github.com/gin-gonic/gin v1.9.1
