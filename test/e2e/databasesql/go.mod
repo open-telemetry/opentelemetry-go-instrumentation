@@ -1,4 +1,4 @@
-module main
+module go.opentelemetry.io/auto/test/e2e/databasesql
 
 go 1.20
 
