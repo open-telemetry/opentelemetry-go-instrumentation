@@ -133,9 +133,8 @@ license-header-check:
 	           exit 1; \
 	   fi
 
-.PHONY: fixture-nethttp fixture-gorillamux fixture-gin fixture-databasesql
+.PHONY: fixture-nethttp fixture-gin fixture-databasesql
 fixture-nethttp: fixtures/nethttp
-fixture-gorillamux: fixtures/gorillamux
 fixture-gin: fixtures/gin
 fixture-databasesql: fixtures/databasesql
 fixtures/%: LIBRARY=$*
