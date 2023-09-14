@@ -56,7 +56,7 @@ func NewRenderer(l logr.Logger, src string, f fs.FS) Renderer {
 func (r Renderer) Render(dest string, data interface{}) error {
 	r.log.V(2).Info("rendering...", "src", r.src, "dest", dest, "data", data)
 
-	tmpls, err := template.ParseFS(DefaultFS, r.src)
+	tmpls, err := template.ParseFS(r.fs, r.src)
 	if err != nil {
 		return err
 	}
