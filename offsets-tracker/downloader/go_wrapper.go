@@ -12,6 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package downloader provides downloading utilities.
+//
+// Deprecated: This package is no longer supported.
 package downloader
 
 import (
@@ -21,7 +24,7 @@ import (
 	"os"
 	"path"
 
-	"go.opentelemetry.io/auto/offsets-tracker/utils"
+	"go.opentelemetry.io/auto/offsets-tracker/utils" // nolint:staticcheck  // atomic deprecation.
 )
 
 const appName = "testapp"

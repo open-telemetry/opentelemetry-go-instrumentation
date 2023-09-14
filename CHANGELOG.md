@@ -8,6 +8,12 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 
 ## [Unreleased]
 
+### Removed
+
+- The deprecated instrumentation support for `github.com/gorilla/mux` is removed. ([#303](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/303))
+
+## [v0.3.0-alpha] - 2023-09-12
+
 ### Added
 
 - Add database/sql instrumentation ([#240](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/240))
@@ -30,6 +36,8 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 
 ### Deprecated
 
+- The `go.opentelemetry.io/auto/offsets-tracker` module is deprecated.
+  It will be removed in the following release. ([#281](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/281))
 - The `go.opentelemetry.io/auto/pkg/instrumentors/bpf/github.com/gorilla/mux` package is deprecated.
   It will be removed in the following release. ([#262](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/262))
 - The `go.opentelemetry.io/auto/test/e2e/gorillamux` module is deprecated.
@@ -129,7 +137,8 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 
 This is the first release of OpenTelemetry Go Automatic Instrumentation.
 
-[Unreleased]: https://github.com/open-telemetry/opentelemetry-go-instrumentation/compare/v0.2.2-alpha...HEAD
+[Unreleased]: https://github.com/open-telemetry/opentelemetry-go-instrumentation/compare/v0.3.0-alpha...HEAD
+[v0.3.0-alpha]: https://github.com/open-telemetry/opentelemetry-go-instrumentation/releases/tag/v0.3.0-alpha
 [v0.2.2-alpha]: https://github.com/open-telemetry/opentelemetry-go-instrumentation/releases/tag/v0.2.2-alpha
 [v0.2.1-alpha]: https://github.com/open-telemetry/opentelemetry-go-instrumentation/releases/tag/v0.2.1-alpha
 [v0.2.0-alpha]: https://github.com/open-telemetry/opentelemetry-go-instrumentation/releases/tag/v0.2.0-alpha

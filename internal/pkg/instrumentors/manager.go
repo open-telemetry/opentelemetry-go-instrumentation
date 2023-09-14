@@ -20,9 +20,8 @@ import (
 	"go.opentelemetry.io/auto/internal/pkg/instrumentors/allocator"
 	dbSql "go.opentelemetry.io/auto/internal/pkg/instrumentors/bpf/database/sql"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentors/bpf/github.com/gin-gonic/gin"
-	gorillaMux "go.opentelemetry.io/auto/internal/pkg/instrumentors/bpf/github.com/gorilla/mux" // nolint:staticcheck  // TODO: remove in #263
-	"go.opentelemetry.io/auto/internal/pkg/instrumentors/bpf/google/golang/org/grpc"
-	grpcServer "go.opentelemetry.io/auto/internal/pkg/instrumentors/bpf/google/golang/org/grpc/server"
+	"go.opentelemetry.io/auto/internal/pkg/instrumentors/bpf/google.golang.org/grpc"
+	grpcServer "go.opentelemetry.io/auto/internal/pkg/instrumentors/bpf/google.golang.org/grpc/server"
 	httpClient "go.opentelemetry.io/auto/internal/pkg/instrumentors/bpf/net/http/client"
 	httpServer "go.opentelemetry.io/auto/internal/pkg/instrumentors/bpf/net/http/server"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentors/events"
@@ -116,7 +115,6 @@ func registerInstrumentors(m *Manager) error {
 		grpcServer.New(),
 		httpServer.New(),
 		httpClient.New(),
-		gorillaMux.New(),
 		gin.New(),
 		dbSql.New(),
 	}

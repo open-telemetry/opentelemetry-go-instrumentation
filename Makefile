@@ -15,7 +15,7 @@ BPF_INCLUDE += -I${REPODIR}/internal/include
 .DEFAULT_GOAL := precommit
 
 .PHONY: precommit
-precommit: license-header-check go-mod-tidy golangci-lint-fix
+precommit: license-header-check dependabot-generate go-mod-tidy golangci-lint-fix
 
 # Tools
 $(TOOLS):
@@ -30,6 +30,9 @@ $(TOOLS)/multimod: PACKAGE=go.opentelemetry.io/build-tools/multimod
 GOLICENSES = $(TOOLS)/go-licenses
 $(TOOLS)/go-licenses: PACKAGE=github.com/google/go-licenses
 
+DBOTCONF = $(TOOLS)/dbotconf
+$(TOOLS)/dbotconf: PACKAGE=go.opentelemetry.io/build-tools/dbotconf
+
 IMG_NAME ?= otel-go-instrumentation
 
 GOLANGCI_LINT = $(TOOLS)/golangci-lint
@@ -39,7 +42,7 @@ OFFSETGEN = $(TOOLS)/offsetgen
 $(TOOLS)/offsetgen: PACKAGE=go.opentelemetry.io/auto/$(TOOLS_MOD_DIR)/inspect/cmd/offsetgen
 
 .PHONY: tools
-tools: $(GOLICENSES) $(MULTIMOD) $(GOLANGCI_LINT) $(OFFSETGEN)
+tools: $(GOLICENSES) $(MULTIMOD) $(GOLANGCI_LINT) $(DBOTCONF) $(OFFSETGEN)
 
 ALL_GO_MODS := $(shell find . -type f -name 'go.mod' ! -path '$(TOOLS_MOD_DIR)/*' ! -path './LICENSES/*' | sort)
 GO_MODS_TO_TEST := $(ALL_GO_MODS:%=test/%)
@@ -111,6 +114,15 @@ verify-licenses: generate $(GOLICENSES)
       exit 1; \
     fi; \
 
+DEPENDABOT_CONFIG = .github/dependabot.yml
+.PHONY: dependabot-check
+dependabot-check: | $(DBOTCONF)
+	@$(DBOTCONF) --ignore "/LICENSES" verify $(DEPENDABOT_CONFIG) || echo "(run: make dependabot-generate)"
+
+.PHONY: dependabot-generate
+dependabot-generate: | $(DBOTCONF)
+	@$(DBOTCONF) --ignore "/LICENSES" generate > $(DEPENDABOT_CONFIG)
+
 .PHONY: license-header-check
 license-header-check:
 	@licRes=$$(for f in $$(find . -type f \( -iname '*.go' -o -iname '*.sh' \) ! -path '**/third_party/*' ! -path './.git/*' ! -path './LICENSES/*' ) ; do \
@@ -121,9 +133,8 @@ license-header-check:
 	           exit 1; \
 	   fi
 
-.PHONY: fixture-nethttp fixture-gorillamux fixture-gin fixture-databasesql
+.PHONY: fixture-nethttp fixture-gin fixture-databasesql
 fixture-nethttp: fixtures/nethttp
-fixture-gorillamux: fixtures/gorillamux
 fixture-gin: fixtures/gin
 fixture-databasesql: fixtures/databasesql
 fixtures/%: LIBRARY=$*

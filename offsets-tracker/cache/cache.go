@@ -12,6 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package cache provides offset caching utilities.
+//
+// Deprecated: This package is no longer supported.
 package cache
 
 import (
@@ -23,9 +26,9 @@ import (
 
 	"github.com/hashicorp/go-version"
 
-	"go.opentelemetry.io/auto/offsets-tracker/binary"
-	"go.opentelemetry.io/auto/offsets-tracker/schema"
-	"go.opentelemetry.io/auto/offsets-tracker/versions"
+	"go.opentelemetry.io/auto/offsets-tracker/binary"   // nolint:staticcheck  // atomic deprecation.
+	"go.opentelemetry.io/auto/offsets-tracker/schema"   // nolint:staticcheck  // atomic deprecation.
+	"go.opentelemetry.io/auto/offsets-tracker/versions" // nolint:staticcheck  // atomic deprecation.
 )
 
 // Cache holds already seen offsets.

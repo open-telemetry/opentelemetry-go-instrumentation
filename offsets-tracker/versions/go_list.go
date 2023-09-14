@@ -18,7 +18,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"go.opentelemetry.io/auto/offsets-tracker/utils"
+	"go.opentelemetry.io/auto/offsets-tracker/utils" // nolint:staticcheck  // atomic deprecation.
 )
 
 type goListResponse struct {

@@ -22,7 +22,7 @@ import (
 	"os"
 	"path"
 
-	"go.opentelemetry.io/auto/offsets-tracker/utils"
+	"go.opentelemetry.io/auto/offsets-tracker/utils" // nolint:staticcheck  // atomic deprecation.
 )
 
 const (

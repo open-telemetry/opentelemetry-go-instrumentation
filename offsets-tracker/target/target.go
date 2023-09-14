@@ -12,6 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package target provides Go code offset discovery utilities.
+//
+// Deprecated: This package is no longer supported.
 package target
 
 import (
@@ -20,10 +23,10 @@ import (
 
 	"github.com/hashicorp/go-version"
 
-	"go.opentelemetry.io/auto/offsets-tracker/binary"
-	"go.opentelemetry.io/auto/offsets-tracker/cache"
-	"go.opentelemetry.io/auto/offsets-tracker/downloader"
-	"go.opentelemetry.io/auto/offsets-tracker/versions"
+	"go.opentelemetry.io/auto/offsets-tracker/binary"     // nolint:staticcheck  // atomic deprecation.
+	"go.opentelemetry.io/auto/offsets-tracker/cache"      // nolint:staticcheck  // atomic deprecation.
+	"go.opentelemetry.io/auto/offsets-tracker/downloader" // nolint:staticcheck  // atomic deprecation.
+	"go.opentelemetry.io/auto/offsets-tracker/versions"   // nolint:staticcheck  // atomic deprecation.
 )
 
 // VersionsStrategy is a strategy used when determining the version of a Go

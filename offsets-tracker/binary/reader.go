@@ -12,6 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package binary provides utilities to handle binary file offset analysis.
+//
+// Deprecated: This package is no longer supported.
 package binary
 
 import (

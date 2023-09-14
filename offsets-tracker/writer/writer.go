@@ -12,6 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package writer provides offset writing utilities.
+//
+// Deprecated: This package is no longer supported.
 package writer
 
 import (
@@ -25,9 +28,9 @@ import (
 
 	"github.com/hashicorp/go-version"
 
-	"go.opentelemetry.io/auto/offsets-tracker/schema"
-	"go.opentelemetry.io/auto/offsets-tracker/target"
-	"go.opentelemetry.io/auto/offsets-tracker/versions"
+	"go.opentelemetry.io/auto/offsets-tracker/schema"   // nolint:staticcheck  // atomic deprecation.
+	"go.opentelemetry.io/auto/offsets-tracker/target"   // nolint:staticcheck  // atomic deprecation.
+	"go.opentelemetry.io/auto/offsets-tracker/versions" // nolint:staticcheck  // atomic deprecation.
 )
 
 // WriteResults writes results to fileName.
