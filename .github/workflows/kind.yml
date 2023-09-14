@@ -13,7 +13,7 @@ jobs:
     strategy:
       matrix:
         k8s-version: ["v1.26.0"]
-        library: ["gorillamux", "nethttp", "gin", "databasesql"]
+        library: ["nethttp", "gin", "databasesql"]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repo
