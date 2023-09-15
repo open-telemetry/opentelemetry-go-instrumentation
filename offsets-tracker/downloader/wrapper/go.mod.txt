@@ -1,5 +1,0 @@
-module testapp
-
-go 1.19
-
-require %s %s
