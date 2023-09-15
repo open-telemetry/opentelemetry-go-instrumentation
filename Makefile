@@ -89,7 +89,7 @@ docker-build:
 
 .PHONY: offsets
 offsets: | $(OFFSETS)
-	OFFSETS_OUTPUT_FILE="$(REPODIR)/pkg/inject/offset_results.json" $(OFFSETS)
+	OFFSETS_OUTPUT_FILE="$(REPODIR)/internal/pkg/inject/offset_results.json" $(OFFSETS)
 
 .PHONY: docker-offsets
 docker-offsets:
