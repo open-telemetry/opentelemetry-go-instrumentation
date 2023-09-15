@@ -1,7 +1,0 @@
-package main
-
-import (
-	_ "%s"
-)
-
-func main() {}

@@ -30,7 +30,7 @@ jobs:
           IMG=otel-go-instrumentation:latest make docker-build
       - name: Build sample app
         run: |
-          cd test/e2e/${{ matrix.library }}
+          cd internal/test/e2e/${{ matrix.library }}
           docker build -t sample-app:latest .
       - name: Set up Helm
         uses: azure/setup-helm@v3.5
@@ -71,8 +71,8 @@ jobs:
           kubectl wait --for=condition=Complete --timeout=60s job/sample-job
       - name: copy telemetry trace output
         run: |
-          kubectl cp -c filecp default/test-opentelemetry-collector-0:tmp/trace.json ./test/e2e/${{ matrix.library }}/traces-orig.json
-          rm -f ./test/e2e/${{ matrix.library }}/traces.json
+          kubectl cp -c filecp default/test-opentelemetry-collector-0:tmp/trace.json ./internal/test/e2e/${{ matrix.library }}/traces-orig.json
+          rm -f ./internal/test/e2e/${{ matrix.library }}/traces.json
       - name: verify output and redact to traces.json
         run: |
-          bats ./test/e2e/${{ matrix.library }}/verify.bats
+          bats ./internal/test/e2e/${{ matrix.library }}/verify.bats
