@@ -30,7 +30,7 @@ Notice that one of our design goals is to support stripped Go binaries - meaning
 
 We currently track instrumented structs inside the Go standard library and selected open source packages. This solution does not require DWARF information on the target binary and provides stability to instrumentations. Instrumentation authors can get a field location by name instead of hard coding a field offset.
 
-The offsets-tracker generates the [offset_results.json](https://github.com/open-telemetry/opentelemetry-go-instrumentation/blob/251589fa9e4b94ef632e7bc65e965fc6406842ae/internal/pkg/inject/offset_results.json) file. This file contains the offsets of the fields in the instrumented structs.
+The offsets-tracker generates the [offset_results.json](../internal/pkg/inject/offset_results.json) file. This file contains the offsets of the fields in the instrumented structs.
 
 ### Uretprobes
 
