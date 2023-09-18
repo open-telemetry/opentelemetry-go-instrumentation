@@ -137,4 +137,3 @@ func testNoOffset(t *testing.T, data *TrackedOffsets, strct, field, ver string) 
 	o, ok := data.GetOffset(strct, field, ver)
 	assert.Falsef(t, ok, "has offset, but should not: %s.%s %s: %d", strct, field, ver, o)
 }
-
