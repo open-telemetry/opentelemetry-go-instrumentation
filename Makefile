@@ -77,7 +77,7 @@ golangci-lint/%: DIR=$*
 golangci-lint/%: | $(GOLANGCI_LINT)
 	@echo 'golangci-lint $(if $(ARGS),$(ARGS) ,)$(DIR)' \
 		&& cd $(DIR) \
-		&& $(GOLANGCI_LINT) run --allow-serial-runners $(ARGS)
+		&& $(GOLANGCI_LINT) run --allow-serial-runners --timeout=2m0s $(ARGS)
 
 .PHONY: build
 build: generate
