@@ -29,12 +29,36 @@ func TestGetOffset(t *testing.T) {
 		"struct_1" : { 
 			"field_1" : {
 				"versions": {
-					"oldest": "1.18.7",
-					"newest": "1.19.7"
+					"oldest": "1.7.0",
+					"newest": "1.10.0"
 				},
 				"offsets": [
-					{ "offset": 1187, "since": "1.18.7" },
-					{ "offset": 1190, "since": "1.19.0" }
+					{ "offset": 2, "since": "1.7.0" },
+					{ "offset": 3, "since": "1.7.3" },
+					{ "offset": 4, "since": "1.8.0" },
+					{ "offset": 5, "since": "1.8.1" },
+					{ "offset": 6, "since": "1.8.2" },
+					{ "offset": 7, "since": "1.9.0" }
+				]
+			},
+			"field_2" : {
+				"versions": {
+					"oldest": "1.0.0",
+					"newest": "1.2.0"
+				},
+				"offsets": [
+					{ "offset": 200, "since": "1.0.0" }
+				]
+			}
+		},
+		"struct_2" : { 
+			"field_1" : {
+				"versions": {
+					"oldest": "1.0.0",
+					"newest": "1.15.0"
+				},
+				"offsets": [
+					{ "offset": 1000, "since": "1.0.0" }
 				]
 			}
 		}
@@ -44,17 +68,41 @@ func TestGetOffset(t *testing.T) {
 	err := json.Unmarshal([]byte(dataFile), data)
 	require.NoError(t, err)
 
-	offset, ok := data.GetOffset("struct_1", "field_1", "1.19.7")
-	assert.True(t, ok)
-	assert.Equal(t, 1190, int(offset))
-	offset, ok = data.GetOffset("struct_1", "field_1", "1.19.0")
-	assert.True(t, ok)
-	assert.Equal(t, 1190, int(offset))
-	offset, ok = data.GetOffset("struct_1", "field_1", "1.18.9")
-	assert.True(t, ok)
-	assert.Equal(t, 1187, int(offset))
-	offset, ok = data.GetOffset("struct_1", "field_1", "1.17.9")
-	assert.Falsef(t, ok, "found: %d", int(offset))
+	testNoOffset(t, data, "struct_1", "field_1", "1.5.1")
+	testNoOffset(t, data, "struct_1", "field_1", "1.6.0")
+	testHasOffset(t, data, "struct_1", "field_1", "1.7.0", 2)
+	testHasOffset(t, data, "struct_1", "field_1", "1.7.1", 2)
+	testHasOffset(t, data, "struct_1", "field_1", "1.7.2", 2)
+	testHasOffset(t, data, "struct_1", "field_1", "1.7.3", 3)
+	testHasOffset(t, data, "struct_1", "field_1", "1.7.4", 3)
+	testHasOffset(t, data, "struct_1", "field_1", "1.8.0", 4)
+	testHasOffset(t, data, "struct_1", "field_1", "1.8.1", 5)
+	testHasOffset(t, data, "struct_1", "field_1", "1.8.2", 6)
+	testHasOffset(t, data, "struct_1", "field_1", "1.8.3", 6)
+	testHasOffset(t, data, "struct_1", "field_1", "1.8.100", 6)
+	testHasOffset(t, data, "struct_1", "field_1", "1.9.0", 7)
+	testHasOffset(t, data, "struct_1", "field_1", "1.9.1", 7)
+	testHasOffset(t, data, "struct_1", "field_1", "1.10.0", 7)
+	testNoOffset(t, data, "struct_1", "field_1", "1.10.1")
+	testNoOffset(t, data, "struct_1", "field_1", "1.11.0")
+	testNoOffset(t, data, "struct_1", "field_1", "2.0.0")
+
+	// Handles multiple fields.
+	testNoOffset(t, data, "struct_1", "field_2", "0.1.0")
+	testHasOffset(t, data, "struct_1", "field_2", "1.0.0", 200)
+	testHasOffset(t, data, "struct_1", "field_2", "1.0.1", 200)
+	testHasOffset(t, data, "struct_1", "field_2", "1.1.0", 200)
+	testHasOffset(t, data, "struct_1", "field_2", "1.2.0", 200)
+	testNoOffset(t, data, "struct_1", "field_2", "1.3.0")
+
+	// No field_3 entry.
+	testNoOffset(t, data, "struct_1", "field_3", "1.0.0")
+
+	// Supports Multiple structs.
+	testHasOffset(t, data, "struct_2", "field_1", "1.1.0", 1000)
+
+	// Handles missing structs.
+	testNoOffset(t, data, "struct_3", "field_1", "1.0.0")
 }
 
 func TestGetOffsetFromTracked(t *testing.T) {
@@ -62,37 +110,31 @@ func TestGetOffsetFromTracked(t *testing.T) {
 	err := json.Unmarshal([]byte(offsetsData), data)
 	require.NoError(t, err)
 
-	offset, ok := data.GetOffset("golang.org/x/net/http2.FrameHeader", "StreamID", "1.38.5")
-	assert.True(t, ok)
-	assert.Equal(t, 8, int(offset))
+	testHasOffset(t, data, "golang.org/x/net/http2.FrameHeader", "StreamID", "1.38.5", 8)
+	testHasOffset(t, data, "google.golang.org/grpc/internal/transport.Stream", "method", "1.14.9", 80)
+	testHasOffset(t, data, "google.golang.org/grpc/internal/transport.Stream", "method", "1.15.0", 64)
+	testHasOffset(t, data, "google.golang.org/grpc/internal/transport.Stream", "method", "1.37.1", 80)
+	testHasOffset(t, data, "runtime.g", "goid", "1.20.0", 152)
+	testHasOffset(t, data, "net/http.Request", "URL", "1.20.2", 16)
+	testHasOffset(t, data, "net/url.URL", "Path", "1.20.2", 56)
 
-	offset, ok = data.GetOffset("google.golang.org/grpc/internal/transport.Stream", "method", "1.14.9")
-	assert.True(t, ok)
-	assert.Equal(t, 80, int(offset))
-
-	offset, ok = data.GetOffset("google.golang.org/grpc/internal/transport.Stream", "method", "1.15.0")
-	assert.True(t, ok)
-	assert.Equal(t, 64, int(offset))
-
-	offset, ok = data.GetOffset("google.golang.org/grpc/internal/transport.Stream", "method", "1.37.1")
-	assert.True(t, ok)
-	assert.Equal(t, 80, int(offset))
-
-	offset, ok = data.GetOffset("runtime.g", "goid", "1.20.0")
-	assert.True(t, ok)
-	assert.Equal(t, 152, int(offset))
-
-	offset, ok = data.GetOffset("net/http.Request", "URL", "1.20.2")
-	assert.True(t, ok)
-	assert.Equal(t, 16, int(offset))
-
-	offset, ok = data.GetOffset("net/url.URL", "Path", "1.20.2")
-	assert.True(t, ok)
-	assert.Equal(t, 56, int(offset))
-
-	offset, ok = data.GetOffset("net/url.URL", "Path", "1.8.0")
-	assert.Falsef(t, ok, "found: %d", int(offset))
-
-	offset, ok = data.GetOffset("net/url.URL", "Foo", "1.15.0")
-	assert.Falsef(t, ok, "found: %d", int(offset))
+	testNoOffset(t, data, "net/url.URL", "Path", "1.8.0")
+	testNoOffset(t, data, "net/url.URL", "Foo", "1.15.0")
 }
+
+func testHasOffset(t *testing.T, data *TrackedOffsets, strct, field, ver string, want uint64) {
+	t.Helper()
+
+	got, ok := data.GetOffset(strct, field, ver)
+	if assert.Truef(t, ok, "missing offset: %s.%s %s", strct, field, ver) {
+		assert.Equalf(t, want, got, "invalid offset: %s.%s %s", strct, field, ver)
+	}
+}
+
+func testNoOffset(t *testing.T, data *TrackedOffsets, strct, field, ver string) {
+	t.Helper()
+
+	o, ok := data.GetOffset(strct, field, ver)
+	assert.Falsef(t, ok, "has offset, but should not: %s.%s %s: %d", strct, field, ver, o)
+}
+
