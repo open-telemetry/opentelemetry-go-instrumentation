@@ -17,6 +17,7 @@ module-sets:
     version: v0.3.0-alpha
     modules:
       - go.opentelemetry.io/auto
+      - go.opentelemetry.io/auto/examples
       - go.opentelemetry.io/auto/examples/rolldice
 excluded-modules:
   - github.com/hashicorp/go-version
