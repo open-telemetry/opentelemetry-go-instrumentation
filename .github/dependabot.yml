@@ -74,7 +74,7 @@ updates:
       interval: weekly
       day: sunday
   - package-ecosystem: gomod
-    directory: /examples/httpPlusdb
+    directory: /examples
     labels:
       - dependencies
       - go
@@ -84,33 +84,6 @@ updates:
       day: sunday
   - package-ecosystem: gomod
     directory: /examples/rolldice
-    labels:
-      - dependencies
-      - go
-      - Skip Changelog
-    schedule:
-      interval: weekly
-      day: sunday
-  - package-ecosystem: gomod
-    directory: /internal/test/e2e/databasesql
-    labels:
-      - dependencies
-      - go
-      - Skip Changelog
-    schedule:
-      interval: weekly
-      day: sunday
-  - package-ecosystem: gomod
-    directory: /internal/test/e2e/gin
-    labels:
-      - dependencies
-      - go
-      - Skip Changelog
-    schedule:
-      interval: weekly
-      day: sunday
-  - package-ecosystem: gomod
-    directory: /internal/test/e2e/nethttp
     labels:
       - dependencies
       - go
