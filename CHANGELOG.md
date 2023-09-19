@@ -47,6 +47,9 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 
 - Add database/sql instrumentation ([#240](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/240))
 - Support Go 1.21. ([#264](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/264))
+- Add `Instrumentation` to `go.opentelemetry.io/auto` to manage and run the auto-instrumentation provided by the project. ([#284](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/284))
+  - Use the `NewInstrumentation` to create a `Instrumentation` with the desired configuration by passing zero or more `InstrumentationOption`s.
+  - Use `WithTarget` when creating an `Instrumentation` to specify its target binary.
 
 ### Changed
 
