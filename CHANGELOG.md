@@ -8,6 +8,10 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 
 ## [Unreleased]
 
+### Changed
+- Re-wrtie the inject_header function to be more readable ([#266]https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/266)
+- Fix bug in the net/http server instrumentation which always created a new span context ([#266]https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/266)
+
 ### Deprecated
 
 - The `go.opentelemetry.io/auto/examples/rolldice` module is deprecated.
@@ -60,8 +64,6 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 - Use UPROBE_RETURN to declare the common uprobe return logic (finding the corresponding context, setting up end time, and sending the event via perf buffer) ([#257]https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/257)
 - BASE_SPAN_PROPERTIES as common fields (start time, end time, SpanContext and ParentSpanContext) for all instrumentations events (consistent between C and Go structs). ([#257]https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/257)
 - Header guards in eBPF code. ([#257]https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/257)
-- Re-wrtie the inject_header function to be more readable ([#266]https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/266)
-- Fix bug in the net/http server instrumentation which always created a new span context ([#266]https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/266)
 
 ### Fixed
 
