@@ -102,13 +102,13 @@ func convertResult(r *target.Result, offsets *inject.TrackedOffsets) {
 			offsets.Data[parts[0]] = strFields
 		}
 		hl := fieldVersionsMap[key]
-		strFields[parts[1]] = inject.TrackedField{
+		strFields[parts[1]] = append(strFields[parts[1]], inject.TrackedField{
 			Offsets: offs,
 			Versions: inject.VersionInfo{
 				Oldest: hl.lo.String(),
 				Newest: hl.hi.String(),
 			},
-		}
+		})
 	}
 }
 
