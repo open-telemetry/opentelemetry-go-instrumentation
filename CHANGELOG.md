@@ -9,8 +9,8 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 ## [Unreleased]
 
 ### Changed
-- Re-wrtie the inject_header function to be more readable ([#266]https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/266)
-- Fix bug in the net/http server instrumentation which always created a new span context ([#266]https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/266)
+
+- Fix bug in the `net/http` server instrumentation which always created a new span context. ([#266]https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/266)
 
 ### Deprecated
 

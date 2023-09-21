@@ -62,7 +62,7 @@ struct go_map_header {
     u16 noverflow;
     u32 hash0;
     void* buckets;
-    // More fiels which we don't care about
+    // More fields which we don't care about.
 };
 
 static __always_inline struct go_string write_user_go_string(char *str, u32 len)
