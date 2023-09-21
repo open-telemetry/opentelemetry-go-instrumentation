@@ -57,7 +57,7 @@ func (o *TrackedOffsets) GetOffset(strct, field, ver string) (uint64, bool) {
 		}
 
 		if v.LessThan(oldest) || v.GreaterThan(newest) {
-			return 0, false
+			continue
 		}
 
 		// Search from the newest version (last in the slice).
