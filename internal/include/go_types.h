@@ -56,7 +56,7 @@ struct map_bucket {
 
 // A header for a Go map. Defined in go/src/runtime/map.go
 struct go_map_header {
-    u64 map_keyvalue_count;
+    s64 map_keyvalue_count;
     u8 flags;
     u8 log2_bucket_count;
     u16 noverflow;

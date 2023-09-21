@@ -53,10 +53,15 @@ static __always_inline long inject_header(void* headers_ptr, struct span_context
         return -1;
     }
 
-    u64 curr_keyvalue_count = map_header.map_keyvalue_count;
+    s64 curr_keyvalue_count = map_header.map_keyvalue_count;
 
     if (curr_keyvalue_count >= 8) {
         bpf_printk("Map size is bigger than 8, skipping context propagation");
+        return 0;
+    }
+
+    if (curr_keyvalue_count < 0) {
+        bpf_printk("Map size is smaller than 0, skipping context propagation");
         return 0;
     }
 
