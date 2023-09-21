@@ -16,6 +16,7 @@ package auto
 
 import (
 	"context"
+	"fmt"
 	"os"
 
 	"go.opentelemetry.io/auto/internal/pkg/instrumentors"
@@ -35,6 +36,12 @@ type Instrumentation struct {
 	analyzer *process.Analyzer
 	manager  *instrumentors.Manager
 }
+
+var (
+	// Error message returned when instrumentation is launched without a taget
+	// binary.
+	errUndefinedTarget = fmt.Errorf("undefined target Go binary, consider setting the %s environment variable pointing to the target binary to instrument", envTargetExeKey)
+)
 
 // NewInstrumentation returns a new [Instrumentation] configured with the
 // provided opts.
@@ -119,6 +126,9 @@ func (c instConfig) applyEnv() instConfig {
 }
 
 func (c instConfig) validate() error {
+	if c.target == nil {
+		return errUndefinedTarget
+	}
 	return c.target.Validate()
 }
 
