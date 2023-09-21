@@ -91,7 +91,7 @@ A PR is considered **ready to merge** when:
 
 * It has received at least one qualified approval[^1].
 
-  For complext or sensitive PRs maintainers may require more than one qualified
+  For complex or sensitive PRs maintainers may require more than one qualified
   approval.
 
 * All feedback has been addressed.
