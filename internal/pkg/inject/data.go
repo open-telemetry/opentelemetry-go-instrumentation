@@ -32,7 +32,7 @@ func (o *TrackedOffsets) GetOffset(strct, field, ver string) (uint64, bool) {
 		return 0, false
 	}
 
-	f, ok := sMap[field]
+	fields, ok := sMap[field]
 	if !ok {
 		return 0, false
 	}
@@ -43,40 +43,41 @@ func (o *TrackedOffsets) GetOffset(strct, field, ver string) (uint64, bool) {
 		panic(err.Error())
 	}
 
-	oldest, err := version.NewVersion(f.Versions.Oldest)
-	if err != nil {
-		// Shouldn't happen unless a bug in our code.
-		panic(err.Error())
-	}
-
-	newest, err := version.NewVersion(f.Versions.Newest)
-	if err != nil {
-		// Shouldn't happen unless a bug in our code.
-		panic(err.Error())
-	}
-
-	if v.LessThan(oldest) || v.GreaterThan(newest) {
-		return 0, false
-	}
-
-	// Search from the newest version (last in the slice).
-	for o := len(f.Offsets) - 1; o >= 0; o-- {
-		od := &f.Offsets[o]
-		since, err := version.NewVersion(od.Since)
+	for _, f := range fields {
+		oldest, err := version.NewVersion(f.Versions.Oldest)
 		if err != nil {
 			// Shouldn't happen unless a bug in our code.
 			panic(err.Error())
 		}
-		if v.GreaterThanOrEqual(since) {
-			return od.Offset, true
+
+		newest, err := version.NewVersion(f.Versions.Newest)
+		if err != nil {
+			// Shouldn't happen unless a bug in our code.
+			panic(err.Error())
+		}
+
+		if v.LessThan(oldest) || v.GreaterThan(newest) {
+			return 0, false
+		}
+
+		// Search from the newest version (last in the slice).
+		for o := len(f.Offsets) - 1; o >= 0; o-- {
+			od := &f.Offsets[o]
+			since, err := version.NewVersion(od.Since)
+			if err != nil {
+				// Shouldn't happen unless a bug in our code.
+				panic(err.Error())
+			}
+			if v.GreaterThanOrEqual(since) {
+				return od.Offset, true
+			}
 		}
 	}
-
 	return 0, false
 }
 
 // TrackedStruct maps fields names to the tracked fields offsets.
-type TrackedStruct map[string]TrackedField
+type TrackedStruct map[string][]TrackedField
 
 // TrackedField are the field offsets for a tracked struct.
 type TrackedField struct {
