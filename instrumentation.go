@@ -38,7 +38,7 @@ type Instrumentation struct {
 }
 
 var (
-	// Error message returned when instrumentation is launched without a taget
+	// Error message returned when instrumentation is launched without a target
 	// binary.
 	errUndefinedTarget = fmt.Errorf("undefined target Go binary, consider setting the %s environment variable pointing to the target binary to instrument", envTargetExeKey)
 )
