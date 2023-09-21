@@ -21,16 +21,13 @@ import (
 	"log"
 	"os"
 
-	"github.com/hashicorp/go-version"
-
+	"go.opentelemetry.io/auto/internal/pkg/inject"
 	"go.opentelemetry.io/auto/internal/tools/offsets/binary"
-	"go.opentelemetry.io/auto/internal/tools/offsets/schema"
-	"go.opentelemetry.io/auto/internal/tools/offsets/versions"
 )
 
 // Cache holds already seen offsets.
 type Cache struct {
-	data *schema.TrackedOffsets
+	data *inject.TrackedOffsets
 }
 
 // NewCache returns a new [Cache].
@@ -48,7 +45,7 @@ func NewCache(prevOffsetFile string) *Cache {
 		return nil
 	}
 
-	var offsets schema.TrackedOffsets
+	var offsets inject.TrackedOffsets
 	err = json.Unmarshal(data, &offsets)
 	if err != nil {
 		log.Printf("error parsing existing offsets file: %v Ignoring existing file.\n", err)
@@ -65,21 +62,7 @@ func NewCache(prevOffsetFile string) *Cache {
 func (c *Cache) IsAllInCache(version string, dataMembers []*binary.DataMember) ([]*binary.DataMemberOffset, bool) {
 	var results []*binary.DataMemberOffset
 	for _, dm := range dataMembers {
-		// first, look for the field and check that the target version is in
-		// chache.
-		strct, ok := c.data.Data[dm.StructName]
-		if !ok {
-			return nil, false
-		}
-		field, ok := strct[dm.Field]
-		if !ok {
-			return nil, false
-		}
-		if !versions.Between(version, field.Versions.Oldest, field.Versions.Newest) {
-			return nil, false
-		}
-
-		off, ok := searchOffset(field, version)
+		off, ok := c.data.GetOffset(dm.StructName, dm.Field, version)
 		if !ok {
 			return nil, false
 		}
@@ -89,27 +72,4 @@ func (c *Cache) IsAllInCache(version string, dataMembers []*binary.DataMember) (
 		})
 	}
 	return results, true
-}
-
-// searchOffset searches an offset from the newest field whose version
-// is lower than or equal to the target version.
-func searchOffset(field schema.TrackedField, targetVersion string) (uint64, bool) {
-	target := versions.MustParse(targetVersion)
-
-	// Search from the newest version
-	for o := len(field.Offsets) - 1; o >= 0; o-- {
-		od := &field.Offsets[o]
-		fieldVersion, err := version.NewVersion(od.Since)
-		if err != nil {
-			// Malformed version: return not found
-			return 0, false
-		}
-		if target.Compare(fieldVersion) >= 0 {
-			// if target version is larger or equal than lib version:
-			// we certainly know that it is the most recent tracked offset
-			return od.Offset, true
-		}
-	}
-
-	return 0, false
 }
