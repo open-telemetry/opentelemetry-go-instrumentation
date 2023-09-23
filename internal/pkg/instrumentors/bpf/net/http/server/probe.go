@@ -105,6 +105,11 @@ func (h *Instrumentor) Load(ctx *context.InstrumentorContext) error {
 			StructName: "net/http.Request",
 			Field:      "Header",
 		},
+		{
+			VarName:    "buckets_ptr_pos",
+			StructName: "runtime.hmap",
+			Field:      "buckets",
+		},
 	}, nil, false)
 
 	if err != nil {
