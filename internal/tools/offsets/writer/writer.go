@@ -25,15 +25,15 @@ import (
 
 	"github.com/hashicorp/go-version"
 
-	"go.opentelemetry.io/auto/internal/tools/offsets/schema"
+	"go.opentelemetry.io/auto/internal/pkg/inject"
 	"go.opentelemetry.io/auto/internal/tools/offsets/target"
 	"go.opentelemetry.io/auto/internal/tools/offsets/versions"
 )
 
 // WriteResults writes results to fileName.
 func WriteResults(fileName string, results ...*target.Result) error {
-	offsets := schema.TrackedOffsets{
-		Data: map[string]schema.TrackedStruct{},
+	offsets := inject.TrackedOffsets{
+		Data: map[string]inject.TrackedStruct{},
 	}
 	for _, r := range results {
 		convertResult(r, &offsets)
@@ -53,12 +53,12 @@ func WriteResults(fileName string, results ...*target.Result) error {
 	return os.WriteFile(fileName, prettyJSON.Bytes(), fs.ModePerm)
 }
 
-func convertResult(r *target.Result, offsets *schema.TrackedOffsets) {
-	offsetsMap := make(map[string][]schema.VersionedOffset)
+func convertResult(r *target.Result, offsets *inject.TrackedOffsets) {
+	offsetsMap := make(map[string][]inject.VersionedOffset)
 	for _, vr := range r.ResultsByVersion {
 		for _, od := range vr.OffsetData.DataMembers {
 			key := fmt.Sprintf("%s,%s", od.StructName, od.Field)
-			offsetsMap[key] = append(offsetsMap[key], schema.VersionedOffset{
+			offsetsMap[key] = append(offsetsMap[key], inject.VersionedOffset{
 				Offset: od.Offset,
 				Since:  vr.Version,
 			})
@@ -79,8 +79,8 @@ func convertResult(r *target.Result, offsets *schema.TrackedOffsets) {
 		})
 
 		hilo := hiLoSemVers{}
-		var om []schema.VersionedOffset
-		var last schema.VersionedOffset
+		var om []inject.VersionedOffset
+		var last inject.VersionedOffset
 		for n, off := range offs {
 			hilo.updateModuleVersion(off.Since)
 			// only append versions that changed the field value from its predecessor
@@ -98,13 +98,13 @@ func convertResult(r *target.Result, offsets *schema.TrackedOffsets) {
 		parts := strings.Split(key, ",")
 		strFields, ok := offsets.Data[parts[0]]
 		if !ok {
-			strFields = schema.TrackedStruct{}
+			strFields = inject.TrackedStruct{}
 			offsets.Data[parts[0]] = strFields
 		}
 		hl := fieldVersionsMap[key]
-		strFields[parts[1]] = schema.TrackedField{
+		strFields[parts[1]] = inject.TrackedField{
 			Offsets: offs,
-			Versions: schema.VersionInfo{
+			Versions: inject.VersionInfo{
 				Oldest: hl.lo.String(),
 				Newest: hl.hi.String(),
 			},

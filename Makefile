@@ -12,6 +12,11 @@ OTEL_GO_MOD_DIRS := $(filter-out $(TOOLS_MOD_DIR), $(ALL_GO_MOD_DIRS))
 BPF_INCLUDE += -I${REPODIR}/internal/include/libbpf
 BPF_INCLUDE += -I${REPODIR}/internal/include
 
+# Go default variables
+GOCMD?= go
+GOOS=linux
+CGO_ENABLED=1
+
 .DEFAULT_GOAL := precommit
 
 .PHONY: precommit
@@ -22,7 +27,7 @@ $(TOOLS):
 	@mkdir -p $@
 $(TOOLS)/%: | $(TOOLS)
 	cd $(TOOLS_MOD_DIR) && \
-	go build -o $@ $(PACKAGE)
+	$(GOCMD) build -o $@ $(PACKAGE)
 
 MULTIMOD = $(TOOLS)/multimod
 $(TOOLS)/multimod: PACKAGE=go.opentelemetry.io/build-tools/multimod
@@ -51,13 +56,13 @@ GO_MODS_TO_TEST := $(ALL_GO_MODS:%=test/%)
 test: generate $(GO_MODS_TO_TEST)
 test/%: GO_MOD=$*
 test/%:
-	cd $(shell dirname $(GO_MOD)) && go test -v ./...
+	cd $(shell dirname $(GO_MOD)) && $(GOCMD) test -v ./...
 
 .PHONY: generate
 generate: export CFLAGS := $(BPF_INCLUDE)
 generate: go-mod-tidy
 generate:
-	go generate ./...
+	$(GOCMD) generate ./...
 
 .PHONY: docker-generate
 docker-generate:
@@ -67,7 +72,7 @@ docker-generate:
 go-mod-tidy: $(ALL_GO_MOD_DIRS:%=go-mod-tidy/%)
 go-mod-tidy/%: DIR=$*
 go-mod-tidy/%:
-	@cd $(DIR) && go mod tidy -compat=1.20
+	@cd $(DIR) && $(GOCMD) mod tidy -compat=1.20
 
 .PHONY: golangci-lint golangci-lint-fix
 golangci-lint-fix: ARGS=--fix
@@ -81,7 +86,7 @@ golangci-lint/%: | $(GOLANGCI_LINT)
 
 .PHONY: build
 build: generate
-	GOOS=linux go build -o otel-go-instrumentation cli/main.go
+	$(GOCMD) build -o otel-go-instrumentation cli/main.go
 
 .PHONY: docker-build
 docker-build:

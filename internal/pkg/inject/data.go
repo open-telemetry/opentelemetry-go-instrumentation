@@ -14,11 +14,65 @@
 
 package inject
 
+import "github.com/hashicorp/go-version"
+
 // TrackedOffsets are the offsets for all instrumented packages.
 type TrackedOffsets struct {
 	// Data key: struct name, which includes the library name in external
 	// libraries.
 	Data map[string]TrackedStruct `json:"data"`
+}
+
+// GetOffset returns the struct field offset for at the specified version ver
+// and true if o contains that offset. A value of 0 and false will be returned
+// if o does not contain the offset.
+func (o *TrackedOffsets) GetOffset(strct, field, ver string) (uint64, bool) {
+	sMap, ok := o.Data[strct]
+	if !ok {
+		return 0, false
+	}
+
+	f, ok := sMap[field]
+	if !ok {
+		return 0, false
+	}
+
+	v, err := version.NewVersion(ver)
+	if err != nil {
+		// Shouldn't happen unless a bug in our code.
+		panic(err.Error())
+	}
+
+	oldest, err := version.NewVersion(f.Versions.Oldest)
+	if err != nil {
+		// Shouldn't happen unless a bug in our code.
+		panic(err.Error())
+	}
+
+	newest, err := version.NewVersion(f.Versions.Newest)
+	if err != nil {
+		// Shouldn't happen unless a bug in our code.
+		panic(err.Error())
+	}
+
+	if v.LessThan(oldest) || v.GreaterThan(newest) {
+		return 0, false
+	}
+
+	// Search from the newest version (last in the slice).
+	for o := len(f.Offsets) - 1; o >= 0; o-- {
+		od := &f.Offsets[o]
+		since, err := version.NewVersion(od.Since)
+		if err != nil {
+			// Shouldn't happen unless a bug in our code.
+			panic(err.Error())
+		}
+		if v.GreaterThanOrEqual(since) {
+			return od.Offset, true
+		}
+	}
+
+	return 0, false
 }
 
 // TrackedStruct maps fields names to the tracked fields offsets.

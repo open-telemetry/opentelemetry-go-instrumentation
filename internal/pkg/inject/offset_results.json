@@ -234,7 +234,7 @@
       "Path": {
         "versions": {
           "oldest": "1.12.0",
-          "newest": "1.20.7"
+          "newest": "1.21.1"
         },
         "offsets": [
           {
