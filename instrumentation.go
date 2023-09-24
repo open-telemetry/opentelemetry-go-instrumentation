@@ -25,9 +25,13 @@ import (
 	"go.opentelemetry.io/auto/internal/pkg/process"
 )
 
-// envTargetExeKey is the key for the environment variable value pointing to the
-// target binary to instrument.
-const envTargetExeKey = "OTEL_GO_AUTO_TARGET_EXE"
+const (
+	// envTargetExeKey is the key for the environment variable value pointing to the
+	// target binary to instrument.
+	envTargetExeKey = "OTEL_GO_AUTO_TARGET_EXE"
+	// envServiceName is the key for the envoriment variable value containing the service name.
+	envServiceNameKey = "OTEL_SERVICE_NAME"
+)
 
 // Instrumentation manages and controls all OpenTelemetry Go
 // auto-instrumentation.
@@ -41,6 +45,8 @@ var (
 	// Error message returned when instrumentation is launched without a target
 	// binary.
 	errUndefinedTarget = fmt.Errorf("undefined target Go binary, consider setting the %s environment variable pointing to the target binary to instrument", envTargetExeKey)
+	// Error message returned when no service name is specified.
+	errUndefinedServiceName = fmt.Errorf("undefined service name, consider setting %s", envServiceNameKey)
 )
 
 // NewInstrumentation returns a new [Instrumentation] configured with the
@@ -57,7 +63,7 @@ func NewInstrumentation(opts ...InstrumentationOption) (*Instrumentation, error)
 		return nil, err
 	}
 
-	ctrl, err := opentelemetry.NewController(Version())
+	ctrl, err := opentelemetry.NewController(Version(), c.serviceName)
 	if err != nil {
 		return nil, err
 	}
@@ -106,7 +112,8 @@ type InstrumentationOption interface {
 }
 
 type instConfig struct {
-	target *process.TargetArgs
+	target      *process.TargetArgs
+	serviceName string
 }
 
 func newInstConfig(opts []InstrumentationOption) instConfig {
@@ -122,12 +129,18 @@ func (c instConfig) applyEnv() instConfig {
 	if v, ok := os.LookupEnv(envTargetExeKey); ok {
 		c.target = &process.TargetArgs{ExePath: v}
 	}
+	if v, ok := os.LookupEnv(envServiceNameKey); ok {
+		c.serviceName = v
+	}
 	return c
 }
 
 func (c instConfig) validate() error {
 	if c.target == nil {
 		return errUndefinedTarget
+	}
+	if c.serviceName == "" {
+		return errUndefinedServiceName
 	}
 	return c.target.Validate()
 }
@@ -149,4 +162,33 @@ func WithTarget(path string) InstrumentationOption {
 		c.target = &process.TargetArgs{ExePath: path}
 		return c
 	})
+}
+
+// WithServiceName returns an [InstrumentationOption] defining the service name
+//
+// If multiple of these options are provided to an [Instrumentation], the last
+// one will be used.
+//
+// If OTEL_SERVICE_NAME is defined it will take precedence over any value
+// passed here.
+func WithServiceName(serviceName string) InstrumentationOption {
+	return fnOpt(func(c instConfig) instConfig {
+		c.serviceName = serviceName
+		return c
+	})
+}
+
+// WithPID returns an [InstrumentationOption] corresponding to the executable
+// used by the provided pid.
+//
+// If WithTarget is used, the one which is used last will take precedence.
+func WithPID(pid int) InstrumentationOption {
+	exeLinkPath := fmt.Sprintf("/proc/%d/exe", pid)
+	exePath, err := os.Readlink(exeLinkPath)
+	if err != nil {
+		log.Logger.Error(err, "Failed to read link for process exe")
+		exePath = ""
+	}
+
+	return WithTarget(exePath)
 }
