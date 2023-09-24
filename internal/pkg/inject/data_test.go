@@ -18,6 +18,7 @@ import (
 	"encoding/json"
 	"testing"
 
+	"github.com/hashicorp/go-version"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/stretchr/testify/require"
@@ -125,7 +126,10 @@ func TestGetOffsetFromTracked(t *testing.T) {
 func testHasOffset(t *testing.T, data *TrackedOffsets, strct, field, ver string, want uint64) {
 	t.Helper()
 
-	got, ok := data.GetOffset(strct, field, ver)
+	v, err := version.NewVersion(ver)
+	require.NoError(t, err)
+
+	got, ok := data.GetOffset(strct, field, v)
 	if assert.Truef(t, ok, "missing offset: %s.%s %s", strct, field, ver) {
 		assert.Equalf(t, want, got, "invalid offset: %s.%s %s", strct, field, ver)
 	}
@@ -134,6 +138,9 @@ func testHasOffset(t *testing.T, data *TrackedOffsets, strct, field, ver string,
 func testNoOffset(t *testing.T, data *TrackedOffsets, strct, field, ver string) {
 	t.Helper()
 
-	o, ok := data.GetOffset(strct, field, ver)
+	v, err := version.NewVersion(ver)
+	require.NoError(t, err)
+
+	o, ok := data.GetOffset(strct, field, v)
 	assert.Falsef(t, ok, "has offset, but should not: %s.%s %s: %d", strct, field, ver, o)
 }

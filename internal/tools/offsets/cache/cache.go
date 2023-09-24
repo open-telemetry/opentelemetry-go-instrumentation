@@ -21,6 +21,7 @@ import (
 	"log"
 	"os"
 
+	"github.com/hashicorp/go-version"
 	"go.opentelemetry.io/auto/internal/pkg/inject"
 	"go.opentelemetry.io/auto/internal/tools/offsets/binary"
 )
@@ -59,10 +60,10 @@ func NewCache(prevOffsetFile string) *Cache {
 
 // IsAllInCache checks whether the passed datamembers exist in the cache for a
 // given version.
-func (c *Cache) IsAllInCache(version string, dataMembers []*binary.DataMember) ([]*binary.DataMemberOffset, bool) {
+func (c *Cache) IsAllInCache(v *version.Version, dataMembers []*binary.DataMember) ([]*binary.DataMemberOffset, bool) {
 	var results []*binary.DataMemberOffset
 	for _, dm := range dataMembers {
-		off, ok := c.data.GetOffset(dm.StructName, dm.Field, version)
+		off, ok := c.data.GetOffset(dm.StructName, dm.Field, v)
 		if !ok {
 			return nil, false
 		}

@@ -19,6 +19,8 @@ import (
 	"io/ioutil"
 	"net/http"
 	"strings"
+
+	"github.com/hashicorp/go-version"
 )
 
 const (
@@ -32,7 +34,7 @@ type goDevResponse struct {
 
 // FindVersionsFromGoWebsite returns all known Go versions from the Go package
 // mirror at https://go.dev/dl/.
-func FindVersionsFromGoWebsite() ([]string, error) {
+func FindVersionsFromGoWebsite() ([]*version.Version, error) {
 	res, err := http.Get(jsonURL)
 	if err != nil {
 		return nil, err
@@ -50,11 +52,15 @@ func FindVersionsFromGoWebsite() ([]string, error) {
 		return nil, err
 	}
 
-	var versions []string
+	var versions []*version.Version
 	for _, v := range resp {
 		if v.Stable {
 			stripepdV := strings.ReplaceAll(v.Version, "go", "")
-			versions = append(versions, stripepdV)
+			v, err := version.NewVersion(stripepdV)
+			if err != nil {
+				return nil, err
+			}
+			versions = append(versions, v)
 		}
 	}
 
