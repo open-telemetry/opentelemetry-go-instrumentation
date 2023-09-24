@@ -77,7 +77,7 @@ func (h *Instrumentor) FuncNames() []string {
 
 // Load loads all instrumentation offsets.
 func (h *Instrumentor) Load(ctx *context.InstrumentorContext) error {
-	spec, err := ctx.Injector.Inject(loadBpf, "go", ctx.TargetDetails.GoVersion.Original(), nil, []*inject.FlagField{
+	spec, err := ctx.Injector.Inject(loadBpf, "go", ctx.TargetDetails.GoVersion, nil, []*inject.FlagField{
 		{
 			VarName: "should_include_db_statement",
 			Value:   shouldIncludeDBStatement(),
