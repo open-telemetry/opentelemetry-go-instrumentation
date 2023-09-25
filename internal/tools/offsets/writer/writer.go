@@ -27,7 +27,6 @@ import (
 
 	"go.opentelemetry.io/auto/internal/pkg/inject"
 	"go.opentelemetry.io/auto/internal/tools/offsets/target"
-	"go.opentelemetry.io/auto/internal/tools/offsets/versions"
 )
 
 // WriteResults writes results to fileName.
@@ -74,8 +73,7 @@ func convertResult(r *target.Result, offsets *inject.TrackedOffsets) {
 		}
 		// the algorithm below assumes offsets versions are sorted from older to newer
 		sort.Slice(offs, func(i, j int) bool {
-			return versions.MustParse(offs[i].Since).
-				LessThanOrEqual(versions.MustParse(offs[j].Since))
+			return offs[i].Since.LessThanOrEqual(offs[j].Since)
 		})
 
 		hilo := hiLoSemVers{}
@@ -105,8 +103,8 @@ func convertResult(r *target.Result, offsets *inject.TrackedOffsets) {
 		strFields[parts[1]] = append(strFields[parts[1]], inject.TrackedField{
 			Offsets: offs,
 			Versions: inject.VersionInfo{
-				Oldest: hl.lo.String(),
-				Newest: hl.hi.String(),
+				Oldest: hl.lo,
+				Newest: hl.hi,
 			},
 		})
 	}
@@ -118,9 +116,7 @@ type hiLoSemVers struct {
 	lo *version.Version
 }
 
-func (hl *hiLoSemVers) updateModuleVersion(vr string) {
-	ver := versions.MustParse(vr)
-
+func (hl *hiLoSemVers) updateModuleVersion(ver *version.Version) {
 	if hl.lo == nil || ver.LessThan(hl.lo) {
 		hl.lo = ver
 	}

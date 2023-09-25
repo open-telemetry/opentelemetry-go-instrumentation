@@ -18,6 +18,7 @@ import (
 	"encoding/json"
 	"testing"
 
+	"github.com/hashicorp/go-version"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/stretchr/testify/require"
@@ -27,7 +28,7 @@ func TestGetOffset(t *testing.T) {
 	dataFile := `{
 	"data" : {
 		"struct_1" : { 
-			"field_1" : {
+			"field_1" : [{
 				"versions": {
 					"oldest": "1.7.0",
 					"newest": "1.10.0"
@@ -40,8 +41,8 @@ func TestGetOffset(t *testing.T) {
 					{ "offset": 6, "since": "1.8.2" },
 					{ "offset": 7, "since": "1.9.0" }
 				]
-			},
-			"field_2" : {
+			}],
+			"field_2" : [{
 				"versions": {
 					"oldest": "1.0.0",
 					"newest": "1.2.0"
@@ -49,10 +50,10 @@ func TestGetOffset(t *testing.T) {
 				"offsets": [
 					{ "offset": 200, "since": "1.0.0" }
 				]
-			}
+			}]
 		},
 		"struct_2" : { 
-			"field_1" : {
+			"field_1" : [{
 				"versions": {
 					"oldest": "1.0.0",
 					"newest": "1.15.0"
@@ -60,7 +61,7 @@ func TestGetOffset(t *testing.T) {
 				"offsets": [
 					{ "offset": 1000, "since": "1.0.0" }
 				]
-			}
+			}]
 		}
 	}
 }`
@@ -125,7 +126,10 @@ func TestGetOffsetFromTracked(t *testing.T) {
 func testHasOffset(t *testing.T, data *TrackedOffsets, strct, field, ver string, want uint64) {
 	t.Helper()
 
-	got, ok := data.GetOffset(strct, field, ver)
+	v, err := version.NewVersion(ver)
+	require.NoError(t, err)
+
+	got, ok := data.GetOffset(strct, field, v)
 	if assert.Truef(t, ok, "missing offset: %s.%s %s", strct, field, ver) {
 		assert.Equalf(t, want, got, "invalid offset: %s.%s %s", strct, field, ver)
 	}
@@ -134,6 +138,9 @@ func testHasOffset(t *testing.T, data *TrackedOffsets, strct, field, ver string,
 func testNoOffset(t *testing.T, data *TrackedOffsets, strct, field, ver string) {
 	t.Helper()
 
-	o, ok := data.GetOffset(strct, field, ver)
+	v, err := version.NewVersion(ver)
+	require.NoError(t, err)
+
+	o, ok := data.GetOffset(strct, field, v)
 	assert.Falsef(t, ok, "has offset, but should not: %s.%s %s: %d", strct, field, ver, o)
 }

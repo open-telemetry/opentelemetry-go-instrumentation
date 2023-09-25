@@ -21,6 +21,8 @@ import (
 	"os"
 	"path"
 
+	"github.com/hashicorp/go-version"
+
 	"go.opentelemetry.io/auto/internal/tools/offsets/utils"
 )
 
@@ -39,7 +41,7 @@ var (
 
 // DownloadBinary downloads the module with modName at version.
 // revive:disable-next-line:flag-parameter
-func DownloadBinary(modName string, version string, isGoStandartLib bool) (string, string, error) {
+func DownloadBinary(modName string, ver *version.Version, isGoStandartLib bool) (string, string, error) {
 	dir, err := os.MkdirTemp("", appName)
 	if err != nil {
 		return "", "", err
@@ -47,9 +49,9 @@ func DownloadBinary(modName string, version string, isGoStandartLib bool) (strin
 
 	var goModContent string
 	if isGoStandartLib {
-		goModContent = fmt.Sprintf(goModStdLib, version)
+		goModContent = fmt.Sprintf(goModStdLib, ver.Original())
 	} else {
-		goModContent = fmt.Sprintf(goMod, modName, version)
+		goModContent = fmt.Sprintf(goMod, modName, ver.Original())
 	}
 
 	err = os.WriteFile(path.Join(dir, "go.mod"), []byte(goModContent), fs.ModePerm)
