@@ -31,10 +31,13 @@ type StructField struct {
 	Field string
 }
 
+// structName returns the package path prefixed struct name of s.
 func (s StructField) structName() string {
 	return fmt.Sprintf("%s.%s", s.PkgPath, s.Struct)
 }
 
+// offset returns the field offset found in the DWARF data d and true. If the
+// offset is not found in d, 0 and false are returned.
 func (s StructField) offset(d *dwarf.Data) (uint64, bool) {
 	r := d.Reader()
 	if !gotoEntry(r, dwarf.TagStructType, s.structName()) {
@@ -54,11 +57,15 @@ func (s StructField) offset(d *dwarf.Data) (uint64, bool) {
 	return uint64(f.Val.(int64)), true
 }
 
+// gotoEntry reads from r until the entry with a tag equal to name is found.
+// True is returned if the entry is found, otherwise false is returned.
 func gotoEntry(r *dwarf.Reader, tag dwarf.Tag, name string) bool {
 	_, err := findEntry(r, tag, name)
 	return err == nil
 }
 
+// findEntry returns the DWARF entry with a tag equal to name read from r. An
+// error is returned if the entry cannot be found.
 func findEntry(r *dwarf.Reader, tag dwarf.Tag, name string) (*dwarf.Entry, error) {
 	for {
 		entry, err := r.Next()
@@ -77,6 +84,8 @@ func findEntry(r *dwarf.Reader, tag dwarf.Tag, name string) (*dwarf.Entry, error
 	return nil, errors.New("not found")
 }
 
+// entryField returns the DWARF field from DWARF entry e that has the passed
+// DWARF attribute a.
 func entryField(e *dwarf.Entry, a dwarf.Attr) (dwarf.Field, bool) {
 	for _, f := range e.Field {
 		if f.Attr == a {
