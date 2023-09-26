@@ -17,8 +17,9 @@ package opentelemetry
 import (
 	"context"
 
-	"go.opentelemetry.io/auto/internal/pkg/instrumentors/events"
 	"go.opentelemetry.io/otel/trace"
+
+	"go.opentelemetry.io/auto/internal/pkg/instrumentors/events"
 )
 
 type eBPFSourceIDGenerator struct{}
