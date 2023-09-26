@@ -17,7 +17,6 @@ package downloader
 import (
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"os"
 	"path"
@@ -34,7 +33,7 @@ const (
 // DownloadBinaryFromRemote returns the downloaded Go binary at version from
 // https://go.dev/dl/.
 func DownloadBinaryFromRemote(_ string, ver *version.Version) (string, string, error) {
-	dir, err := ioutil.TempDir("", ver.String())
+	dir, err := os.MkdirTemp("", ver.String())
 	if err != nil {
 		return "", "", err
 	}
