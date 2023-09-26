@@ -68,9 +68,9 @@ func newApp(ctx context.Context, l logr.Logger, m manifest) (*app, error) {
 	return a, nil
 }
 
-func (a *app) Analyze(sf StructField) structFieldOffset {
-	a.log.V(1).Info("analyzing binary...", "package", sf.Package, "binary", a.exec)
-	return sf.offset(a.Manifest.AppVer, a.data)
+func (a *app) GetOffset(sf StructField) (uint64, bool) {
+	a.log.V(1).Info("analyzing binary...", "package", sf.PkgPath, "binary", a.exec)
+	return sf.offset(a.data)
 }
 
 func (a *app) Close() error {

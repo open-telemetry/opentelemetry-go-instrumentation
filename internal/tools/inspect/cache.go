@@ -45,12 +45,15 @@ func newCache(l logr.Logger, offsetFile string) (*cache, error) {
 	return c, err
 }
 
-// Get returns the cached structFieldOffset for the StructField at the
-// specified version. If the cache does not contain a valid structFieldOffset
-// for the provided values, the returned Offset of the structFieldOffset will
-// be -1.
-func (c *cache) Get(ver *version.Version, sf StructField) structFieldOffset {
-	sfo, ok := c.get(ver, sf)
+// Get returns the cached offset and true for the StructField at the specified
+// version. If the cache does not contain a valid offset for the provided
+// values, 0 and false are returned.
+func (c *cache) Get(ver *version.Version, sf StructField) (uint64, bool) {
+	if c.data == nil {
+		return 0, false
+	}
+
+	off, ok := c.data.GetOffset(sf.structName(), sf.Field, ver)
 	msg := "cache "
 	if ok {
 		msg += "hit"
@@ -60,23 +63,9 @@ func (c *cache) Get(ver *version.Version, sf StructField) structFieldOffset {
 	c.log.V(1).Info(
 		msg,
 		"version", ver,
-		"package", sf.Package,
+		"package", sf.PkgPath,
 		"struct", sf.Struct,
 		"field", sf.Field,
 	)
-	return sfo
-}
-
-func (c *cache) get(ver *version.Version, sf StructField) (structFieldOffset, bool) {
-	sfo := structFieldOffset{StructField: sf, Version: ver, Offset: -1}
-
-	if c.data == nil {
-		return sfo, false
-	}
-
-	o, ok := c.data.GetOffset(sf.structName(), sf.Field, ver)
-	if ok {
-		sfo.Offset = int64(o)
-	}
-	return sfo, ok
+	return off, ok
 }

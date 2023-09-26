@@ -17,6 +17,7 @@ package inspect
 import (
 	"context"
 	"errors"
+	"sort"
 
 	"github.com/docker/docker/client"
 	"github.com/go-logr/logr"
@@ -117,7 +118,7 @@ func (i *Inspector) Do(ctx context.Context) (*inject.TrackedOffsets, error) {
 		return nil
 	})
 
-	c := make(chan []structFieldOffset)
+	c := make(chan []result)
 	for n := 0; n < max(1, i.NWorkers-1); n++ {
 		g.Go(func() error {
 			for m := range todo {
@@ -140,7 +141,7 @@ func (i *Inspector) Do(ctx context.Context) (*inject.TrackedOffsets, error) {
 		close(c)
 	}()
 
-	var results []structFieldOffset
+	var results []result
 	for r := range c {
 		i.logResults(r)
 		results = append(results, r...)
@@ -152,20 +153,36 @@ func (i *Inspector) Do(ctx context.Context) (*inject.TrackedOffsets, error) {
 	return trackedOffsets(results), nil
 }
 
-func (i *Inspector) do(ctx context.Context, m manifest) ([]structFieldOffset, error) {
-	var (
-		missing bool
-		out     []structFieldOffset
-	)
+func max(a, b int) int {
+	if a > b {
+		return a
+	}
+	return b
+}
+
+type result struct {
+	StructField StructField
+	Version     *version.Version
+	Offset      uint64
+	Found       bool
+}
+
+func (i *Inspector) do(ctx context.Context, m manifest) (out []result, err error) {
+	var uncachedIndices []int
 	for _, f := range m.Fields {
-		sfo := i.cache.Get(m.AppVer, f)
-		out = append(out, sfo)
-		if sfo.Offset < 0 {
-			missing = true
+		o, ok := i.cache.Get(m.AppVer, f)
+		out = append(out, result{
+			StructField: f,
+			Version:     m.AppVer,
+			Offset:      o,
+			Found:       ok,
+		})
+		if !ok {
+			uncachedIndices = append(uncachedIndices, len(out)-1)
 		}
 	}
 
-	if !missing {
+	if len(uncachedIndices) == 0 {
 		return out, nil
 	}
 
@@ -187,25 +204,23 @@ func (i *Inspector) do(ctx context.Context, m manifest) ([]structFieldOffset, er
 	}
 	defer app.Close()
 
-	for i, f := range out {
-		if f.Offset < 0 {
-			out[i] = app.Analyze(f.StructField)
-		}
+	for _, i := range uncachedIndices {
+		out[i].Offset, out[i].Found = app.GetOffset(out[i].StructField)
 	}
 
 	return out, nil
 }
 
-func (i *Inspector) logResults(results []structFieldOffset) {
+func (i *Inspector) logResults(results []result) {
 	for _, r := range results {
 		msg := "offset "
 		kv := []interface{}{
 			"version", r.Version,
-			"package", r.Package,
-			"struct", r.Struct,
-			"field", r.Field,
+			"package", r.StructField.PkgPath,
+			"struct", r.StructField.Struct,
+			"field", r.StructField.Field,
 		}
-		if r.Offset < 0 {
+		if !r.Found {
 			msg += "not found"
 		} else {
 			msg += "found"
@@ -215,9 +230,129 @@ func (i *Inspector) logResults(results []structFieldOffset) {
 	}
 }
 
-func max(a, b int) int {
-	if a > b {
-		return a
+func trackedOffsets(results []result) *inject.TrackedOffsets {
+	return newTrackedOffsets(indexFields(indexOffsets(results)))
+}
+
+func indexOffsets(results []result) map[StructField][]offset {
+	offsets := make(map[StructField][]offset)
+	for _, r := range results {
+		offsets[r.StructField] = append(offsets[r.StructField], offset{
+			VersionedOffset: inject.VersionedOffset{
+				Offset: r.Offset,
+				Since:  r.Version,
+			},
+			Valid: r.Found,
+		})
 	}
-	return b
+	return offsets
+}
+
+func indexFields(offsets map[StructField][]offset) map[StructField][]field {
+	fields := make(map[StructField][]field)
+	for id, offs := range offsets {
+		r := new(versionRange)
+		last := -1
+		var collapsed []offset
+
+		sort.Slice(offs, func(i, j int) bool {
+			return offs[i].Since.LessThan(offs[j].Since)
+		})
+		for i, off := range offs {
+			if !off.Valid {
+				if !r.empty() && len(collapsed) > 0 {
+					fields[id] = append(fields[id], field{
+						Vers: r,
+						Offs: collapsed,
+					})
+				}
+
+				r = new(versionRange)
+				collapsed = []offset{}
+				last = -1
+				continue
+			}
+			r.update(off.Since)
+
+			// Only append if field value changed.
+			if last < 0 || off.Offset != offs[last].Offset {
+				collapsed = append(collapsed, off)
+			}
+			last = i
+		}
+		if !r.empty() && len(collapsed) > 0 {
+			fields[id] = append(fields[id], field{
+				Vers: r,
+				Offs: collapsed,
+			})
+		}
+	}
+	return fields
+}
+
+func newTrackedOffsets(fields map[StructField][]field) *inject.TrackedOffsets {
+	tracked := &inject.TrackedOffsets{
+		Data: make(map[string]inject.TrackedStruct),
+	}
+	for id, fs := range fields {
+		for _, f := range fs {
+			key := id.structName()
+			strct, ok := tracked.Data[key]
+			if !ok {
+				strct = make(inject.TrackedStruct)
+				tracked.Data[key] = strct
+			}
+
+			strct[id.Field] = append(strct[id.Field], f.trackedField())
+		}
+	}
+
+	return tracked
+}
+
+// offset is a field offset result.
+type offset struct {
+	inject.VersionedOffset
+
+	// Valid indicates if this contains a valid field offset result. This
+	// distinguishes between an offset of "0" and an unset value.
+	Valid bool
+}
+
+type field struct {
+	Vers *versionRange
+	Offs []offset
+}
+
+func (f field) trackedField() inject.TrackedField {
+	vo := make([]inject.VersionedOffset, len(f.Offs))
+	for i := range vo {
+		vo[i] = f.Offs[i].VersionedOffset
+	}
+
+	return inject.TrackedField{
+		Versions: f.Vers.versionInfo(),
+		Offsets:  vo,
+	}
+}
+
+type versionRange struct {
+	inject.VersionInfo
+}
+
+func (r *versionRange) versionInfo() inject.VersionInfo {
+	return r.VersionInfo
+}
+
+func (r *versionRange) empty() bool {
+	return r == nil || (r.Oldest == nil && r.Newest == nil)
+}
+
+func (r *versionRange) update(ver *version.Version) {
+	if r.Oldest == nil || ver.LessThan(r.Oldest) {
+		r.Oldest = ver
+	}
+	if r.Newest == nil || ver.GreaterThan(r.Newest) {
+		r.Newest = ver
+	}
 }

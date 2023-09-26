@@ -87,33 +87,33 @@ func main() {
 	}
 
 	i.InspectStdlib(ren("templates/runtime/*.tmpl"), goVers, []inspect.StructField{{
-		Package: "runtime",
+		PkgPath: "runtime",
 		Struct:  "g",
 		Field:   "goid",
 	}})
 
 	i.InspectStdlib(ren("templates/net/http/*.tmpl"), goVers, []inspect.StructField{{
-		Package: "net/http",
+		PkgPath: "net/http",
 		Struct:  "Request",
 		Field:   "Method",
 	}, {
-		Package: "net/http",
+		PkgPath: "net/http",
 		Struct:  "Request",
 		Field:   "URL",
 	}, {
-		Package: "net/http",
+		PkgPath: "net/http",
 		Struct:  "Request",
 		Field:   "RemoteAddr",
 	}, {
-		Package: "net/http",
+		PkgPath: "net/http",
 		Struct:  "Request",
 		Field:   "Header",
 	}, {
-		Package: "net/http",
+		PkgPath: "net/http",
 		Struct:  "Request",
 		Field:   "ctx",
 	}, {
-		Package: "net/url",
+		PkgPath: "net/url",
 		Struct:  "URL",
 		Field:   "Path",
 	}})
@@ -124,39 +124,39 @@ func main() {
 		os.Exit(1)
 	}
 	i.Inspect3rdParty(ren("templates/google.golang.org/grpc/*.tmpl"), v, []inspect.StructField{{
-		Package: "google.golang.org/grpc/internal/transport",
+		PkgPath: "google.golang.org/grpc/internal/transport",
 		Struct:  "Stream",
 		Field:   "method",
 	}, {
-		Package: "google.golang.org/grpc/internal/transport",
+		PkgPath: "google.golang.org/grpc/internal/transport",
 		Struct:  "Stream",
 		Field:   "id",
 	}, {
-		Package: "google.golang.org/grpc/internal/transport",
+		PkgPath: "google.golang.org/grpc/internal/transport",
 		Struct:  "Stream",
 		Field:   "ctx",
 	}, {
-		Package: "google.golang.org/grpc",
+		PkgPath: "google.golang.org/grpc",
 		Struct:  "ClientConn",
 		Field:   "target",
 	}, {
-		Package: "golang.org/x/net/http2",
+		PkgPath: "golang.org/x/net/http2",
 		Struct:  "MetaHeadersFrame",
 		Field:   "Fields",
 	}, {
-		Package: "golang.org/x/net/http2",
+		PkgPath: "golang.org/x/net/http2",
 		Struct:  "FrameHeader",
 		Field:   "StreamID",
 	}, {
-		Package: "google.golang.org/grpc/internal/transport",
+		PkgPath: "google.golang.org/grpc/internal/transport",
 		Struct:  "http2Client",
 		Field:   "nextID",
 	}, {
-		Package: "google.golang.org/grpc/internal/transport",
+		PkgPath: "google.golang.org/grpc/internal/transport",
 		Struct:  "headerFrame",
 		Field:   "streamID",
 	}, {
-		Package: "google.golang.org/grpc/internal/transport",
+		PkgPath: "google.golang.org/grpc/internal/transport",
 		Struct:  "headerFrame",
 		Field:   "hf",
 	}})
