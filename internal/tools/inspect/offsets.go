@@ -22,7 +22,6 @@ import (
 	"sort"
 
 	"github.com/hashicorp/go-version"
-
 	"go.opentelemetry.io/auto/internal/pkg/inject"
 )
 
@@ -226,7 +225,7 @@ type offset struct {
 
 func (o offset) versionedOffset() inject.VersionedOffset {
 	return inject.VersionedOffset{
-		Offset: uintptr(o.Value),
+		Offset: uint64(o.Value),
 		Since:  o.Since,
 	}
 }

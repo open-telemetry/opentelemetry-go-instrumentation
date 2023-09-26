@@ -25,7 +25,6 @@ import (
 	"golang.org/x/sys/unix"
 	"google.golang.org/grpc"
 
-	"go.opentelemetry.io/auto"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentors/events"
 	"go.opentelemetry.io/auto/internal/pkg/log"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace"
@@ -40,16 +39,8 @@ const (
 	otelServiceNameEnvVar = "OTEL_SERVICE_NAME"
 )
 
-var (
-	// Controller-local reference to the auto-instrumentation release version.
-	releaseVersion = auto.Version()
-	// Start of this auto-instrumentation's exporter User-Agent header, e.g. ""OTel-Go-Auto-Instrumentation/1.2.3".
-	baseUserAgent = fmt.Sprintf("OTel-Go-Auto-Instrumentation/%s", releaseVersion)
-	// Information about the runtime environment for inclusion in User-Agent, e.g. "go/1.18.2 (linux/amd64)".
-	runtimeInfo = fmt.Sprintf("%s (%s/%s)", strings.Replace(runtime.Version(), "go", "go/", 1), runtime.GOOS, runtime.GOARCH)
-	// Combined User-Agent identifying this auto-instrumentation and its runtime environment, see RFC7231 for format considerations.
-	autoinstUserAgent = fmt.Sprintf("%s %s", baseUserAgent, runtimeInfo)
-)
+// Information about the runtime environment for inclusion in User-Agent, e.g. "go/1.18.2 (linux/amd64)".
+var runtimeInfo = fmt.Sprintf("%s (%s/%s)", strings.Replace(runtime.Version(), "go", "go/", 1), runtime.GOOS, runtime.GOARCH)
 
 // Controller handles OpenTelemetry telemetry generation for events.
 type Controller struct {
@@ -98,7 +89,7 @@ func (c *Controller) convertTime(t int64) time.Time {
 }
 
 // NewController returns a new initialized [Controller].
-func NewController() (*Controller, error) {
+func NewController(version string) (*Controller, error) {
 	serviceName, exists := os.LookupEnv(otelServiceNameEnvVar)
 	if !exists {
 		return nil, fmt.Errorf("%s env var must be set", otelServiceNameEnvVar)
@@ -109,7 +100,7 @@ func NewController() (*Controller, error) {
 		resource.WithAttributes(
 			semconv.ServiceNameKey.String(serviceName),
 			semconv.TelemetrySDKLanguageGo,
-			semconv.TelemetryAutoVersionKey.String(releaseVersion),
+			semconv.TelemetryAutoVersionKey.String(version),
 		),
 	)
 	if err != nil {
@@ -117,6 +108,10 @@ func NewController() (*Controller, error) {
 	}
 
 	log.Logger.V(0).Info("Establishing connection to OTLP receiver ...")
+	// Controller-local reference to the auto-instrumentation release version.
+	// Start of this auto-instrumentation's exporter User-Agent header, e.g. ""OTel-Go-Auto-Instrumentation/1.2.3".
+	baseUserAgent := fmt.Sprintf("OTel-Go-Auto-Instrumentation/%s", version)
+	autoinstUserAgent := fmt.Sprintf("%s %s", baseUserAgent, runtimeInfo)
 	otlpTraceClient := otlptracegrpc.NewClient(
 		otlptracegrpc.WithDialOption(grpc.WithUserAgent(autoinstUserAgent)),
 	)

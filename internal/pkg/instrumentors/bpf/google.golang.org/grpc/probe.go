@@ -22,21 +22,20 @@ import (
 	"strings"
 
 	"github.com/cilium/ebpf"
-
-	"go.opentelemetry.io/auto/internal/pkg/instrumentors/bpffs"
-
 	"github.com/cilium/ebpf/link"
 	"github.com/cilium/ebpf/perf"
 	"golang.org/x/sys/unix"
 
+	"go.opentelemetry.io/otel/attribute"
+	semconv "go.opentelemetry.io/otel/semconv/v1.18.0"
+	"go.opentelemetry.io/otel/trace"
+
 	"go.opentelemetry.io/auto/internal/pkg/inject"
+	"go.opentelemetry.io/auto/internal/pkg/instrumentors/bpffs"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentors/context"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentors/events"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentors/utils"
 	"go.opentelemetry.io/auto/internal/pkg/log"
-	"go.opentelemetry.io/otel/attribute"
-	semconv "go.opentelemetry.io/otel/semconv/v1.18.0"
-	"go.opentelemetry.io/otel/trace"
 )
 
 //go:generate go run github.com/cilium/ebpf/cmd/bpf2go -target amd64,arm64 -cc clang -cflags $CFLAGS bpf ./bpf/probe.bpf.c
@@ -68,15 +67,17 @@ func (g *Instrumentor) LibraryName() string {
 // FuncNames returns the function names from "google.golang.org/grpc" that are
 // instrumented.
 func (g *Instrumentor) FuncNames() []string {
-	return []string{"google.golang.org/grpc.(*ClientConn).Invoke",
+	return []string{
+		"google.golang.org/grpc.(*ClientConn).Invoke",
 		"google.golang.org/grpc/internal/transport.(*http2Client).NewStream",
-		"google.golang.org/grpc/internal/transport.(*loopyWriter).headerHandler"}
+		"google.golang.org/grpc/internal/transport.(*loopyWriter).headerHandler",
+	}
 }
 
 // Load loads all instrumentation offsets.
 func (g *Instrumentor) Load(ctx *context.InstrumentorContext) error {
-	libVersion := ctx.TargetDetails.Libraries[g.LibraryName()]
-	spec, err := ctx.Injector.Inject(loadBpf, g.LibraryName(), libVersion, []*inject.StructField{
+	ver := ctx.TargetDetails.Libraries[g.LibraryName()]
+	spec, err := ctx.Injector.Inject(loadBpf, g.LibraryName(), ver, []*inject.StructField{
 		{
 			VarName:    "clientconn_target_ptr_pos",
 			StructName: "google.golang.org/grpc.ClientConn",
@@ -98,7 +99,6 @@ func (g *Instrumentor) Load(ctx *context.InstrumentorContext) error {
 			Field:      "streamID",
 		},
 	}, nil, true)
-
 	if err != nil {
 		return err
 	}

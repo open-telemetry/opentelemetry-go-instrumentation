@@ -15,19 +15,20 @@
 package instrumentors
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/cilium/ebpf/link"
 	"github.com/cilium/ebpf/rlimit"
 
 	"go.opentelemetry.io/auto/internal/pkg/inject"
-	"go.opentelemetry.io/auto/internal/pkg/instrumentors/context"
+	iCtx "go.opentelemetry.io/auto/internal/pkg/instrumentors/context"
 	"go.opentelemetry.io/auto/internal/pkg/log"
 	"go.opentelemetry.io/auto/internal/pkg/process"
 )
 
 // Run runs the event processing loop for all managed Instrumentors.
-func (m *Manager) Run(target *process.TargetDetails) error {
+func (m *Manager) Run(ctx context.Context, target *process.TargetDetails) error {
 	if len(m.instrumentors) == 0 {
 		log.Logger.V(0).Info("there are no available instrumentations for target process")
 		return nil
@@ -44,9 +45,13 @@ func (m *Manager) Run(target *process.TargetDetails) error {
 
 	for {
 		select {
+		case <-ctx.Done():
+			m.Close()
+			m.cleanup(target)
+			return ctx.Err()
 		case <-m.done:
 			log.Logger.V(0).Info("shutting down all instrumentors due to signal")
-			m.cleanup()
+			m.cleanup(target)
 			return nil
 		case e := <-m.incomingEvents:
 			m.otelController.Trace(e)
@@ -69,7 +74,7 @@ func (m *Manager) load(target *process.TargetDetails) error {
 	if err != nil {
 		return err
 	}
-	ctx := &context.InstrumentorContext{
+	ctx := &iCtx.InstrumentorContext{
 		TargetDetails: target,
 		Executable:    exe,
 		Injector:      injector,
@@ -86,7 +91,7 @@ func (m *Manager) load(target *process.TargetDetails) error {
 		err := i.Load(ctx)
 		if err != nil {
 			log.Logger.Error(err, "error while loading instrumentors, cleaning up", "name", name)
-			m.cleanup()
+			m.cleanup(target)
 			return err
 		}
 	}
@@ -95,10 +100,17 @@ func (m *Manager) load(target *process.TargetDetails) error {
 	return nil
 }
 
-func (m *Manager) cleanup() {
+func (m *Manager) cleanup(target *process.TargetDetails) {
 	close(m.incomingEvents)
 	for _, i := range m.instrumentors {
 		i.Close()
+	}
+
+	log.Logger.V(0).Info("Cleaning bpffs")
+	err := m.allocator.Clean(target)
+
+	if err != nil {
+		log.Logger.Error(err, "Failed to clean bpffs")
 	}
 }
 

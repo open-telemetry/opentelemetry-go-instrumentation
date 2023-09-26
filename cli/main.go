@@ -15,16 +15,15 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/signal"
 	"syscall"
 
+	"go.opentelemetry.io/auto"
 	"go.opentelemetry.io/auto/internal/pkg/errors"
-	"go.opentelemetry.io/auto/internal/pkg/instrumentors"
 	"go.opentelemetry.io/auto/internal/pkg/log"
-	"go.opentelemetry.io/auto/internal/pkg/opentelemetry"
-	"go.opentelemetry.io/auto/internal/pkg/process"
 )
 
 func main() {
@@ -34,57 +33,31 @@ func main() {
 		os.Exit(1)
 	}
 
-	log.Logger.V(0).Info("starting Go OpenTelemetry Agent ...")
-	target := process.ParseTargetArgs()
-	if err = target.Validate(); err != nil {
-		log.Logger.Error(err, "invalid target args")
-		return
-	}
-
-	processAnalyzer := process.NewAnalyzer()
-	otelController, err := opentelemetry.NewController()
+	log.Logger.V(0).Info("building OpenTelemetry Go instrumentation ...")
+	inst, err := auto.NewInstrumentation()
 	if err != nil {
-		log.Logger.Error(err, "unable to create OpenTelemetry controller")
+		log.Logger.Error(err, "failed to create instrumentation")
 		return
 	}
 
-	instManager, err := instrumentors.NewManager(otelController)
-	if err != nil {
-		log.Logger.Error(err, "error creating instrumetors manager")
-		return
-	}
-
-	stopper := make(chan os.Signal, 1)
-	signal.Notify(stopper, os.Interrupt, syscall.SIGTERM)
+	// Trap Ctrl+C and SIGTERM and call cancel on the context.
+	ctx, cancel := context.WithCancel(context.Background())
+	ch := make(chan os.Signal, 1)
+	signal.Notify(ch, os.Interrupt, syscall.SIGTERM)
+	defer func() {
+		signal.Stop(ch)
+		cancel()
+	}()
 	go func() {
-		<-stopper
-		log.Logger.V(0).Info("Got SIGTERM, cleaning up..")
-		processAnalyzer.Close()
-		instManager.Close()
+		select {
+		case <-ch:
+			cancel()
+		case <-ctx.Done():
+		}
 	}()
 
-	pid, err := processAnalyzer.DiscoverProcessID(target)
-	if err != nil {
-		if err != errors.ErrInterrupted {
-			log.Logger.Error(err, "error while discovering process id")
-		}
-		return
-	}
-
-	targetDetails, err := processAnalyzer.Analyze(pid, instManager.GetRelevantFuncs())
-	if err != nil {
-		log.Logger.Error(err, "error while analyzing target process")
-		return
-	}
-	log.Logger.V(0).Info("target process analysis completed", "pid", targetDetails.PID,
-		"go_version", targetDetails.GoVersion, "dependencies", targetDetails.Libraries,
-		"total_functions_found", len(targetDetails.Functions))
-
-	instManager.FilterUnusedInstrumentors(targetDetails)
-
-	log.Logger.V(0).Info("invoking instrumentors")
-	err = instManager.Run(targetDetails)
-	if err != nil && err != errors.ErrInterrupted {
-		log.Logger.Error(err, "error while running instrumentors")
+	log.Logger.V(0).Info("starting instrumentors...")
+	if err = inst.Run(ctx); err != nil && err != errors.ErrInterrupted {
+		log.Logger.Error(err, "instrumentation crashed")
 	}
 }

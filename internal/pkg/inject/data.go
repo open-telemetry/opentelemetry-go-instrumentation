@@ -23,28 +23,33 @@ type TrackedOffsets struct {
 	Data map[string]TrackedStruct `json:"data"`
 }
 
-func (o *TrackedOffsets) GetOffset(strct, field string, ver *version.Version) (uintptr, bool) {
+// GetOffset returns the struct field offset for at the specified version ver
+// and true if o contains that offset. A value of 0 and false will be returned
+// if o does not contain the offset.
+func (o *TrackedOffsets) GetOffset(strct, field string, ver *version.Version) (uint64, bool) {
 	sMap, ok := o.Data[strct]
 	if !ok {
 		return 0, false
 	}
-	fMap, ok := sMap[field]
+
+	fields, ok := sMap[field]
 	if !ok {
 		return 0, false
 	}
-	for _, field := range fMap {
-		if ver.LessThan(field.Versions.Oldest) || ver.GreaterThan(field.Versions.Newest) {
+
+	for _, f := range fields {
+		if ver.LessThan(f.Versions.Oldest) || ver.GreaterThan(f.Versions.Newest) {
 			continue
 		}
-		// Search from the newest version (last in the slice)
-		for o := len(field.Offsets) - 1; o >= 0; o-- {
-			od := &field.Offsets[o]
+
+		// Search from the newest version (last in the slice).
+		for o := len(f.Offsets) - 1; o >= 0; o-- {
+			od := &f.Offsets[o]
 			if ver.GreaterThanOrEqual(od.Since) {
 				return od.Offset, true
 			}
 		}
 	}
-
 	return 0, false
 }
 
@@ -69,6 +74,6 @@ type VersionInfo struct {
 // VersionedOffset is the offset for a particular version of a data type from a
 // package.
 type VersionedOffset struct {
-	Offset uintptr          `json:"offset"`
+	Offset uint64           `json:"offset"`
 	Since  *version.Version `json:"since"`
 }
