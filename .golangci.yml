@@ -83,7 +83,7 @@ linters-settings:
       # Exclude sentences prefixing a list.
       - ':$'
   goimports:
-    local-prefixes: go.opentelemetry.io
+    local-prefixes: go.opentelemetry.io/auto
   misspell:
     locale: US
     ignore-words:
