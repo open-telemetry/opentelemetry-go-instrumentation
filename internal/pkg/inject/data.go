@@ -32,28 +32,29 @@ func (o *TrackedOffsets) GetOffset(strct, field string, ver *version.Version) (u
 		return 0, false
 	}
 
-	f, ok := sMap[field]
+	fields, ok := sMap[field]
 	if !ok {
 		return 0, false
 	}
 
-	if ver.LessThan(f.Versions.Oldest) || ver.GreaterThan(f.Versions.Newest) {
-		return 0, false
-	}
+	for _, f := range fields {
+		if ver.LessThan(f.Versions.Oldest) || ver.GreaterThan(f.Versions.Newest) {
+			continue
+		}
 
-	// Search from the newest version (last in the slice).
-	for o := len(f.Offsets) - 1; o >= 0; o-- {
-		od := &f.Offsets[o]
-		if ver.GreaterThanOrEqual(od.Since) {
-			return od.Offset, true
+		// Search from the newest version (last in the slice).
+		for o := len(f.Offsets) - 1; o >= 0; o-- {
+			od := &f.Offsets[o]
+			if ver.GreaterThanOrEqual(od.Since) {
+				return od.Offset, true
+			}
 		}
 	}
-
 	return 0, false
 }
 
 // TrackedStruct maps fields names to the tracked fields offsets.
-type TrackedStruct map[string]TrackedField
+type TrackedStruct map[string][]TrackedField
 
 // TrackedField are the field offsets for a tracked struct.
 type TrackedField struct {

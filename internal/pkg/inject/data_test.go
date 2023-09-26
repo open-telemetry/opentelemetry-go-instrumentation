@@ -28,21 +28,41 @@ func TestGetOffset(t *testing.T) {
 	dataFile := `{
 	"data" : {
 		"struct_1" : { 
-			"field_1" : {
-				"versions": {
-					"oldest": "1.7.0",
-					"newest": "1.10.0"
+			"field_1" : [
+				{
+					"versions": {
+						"oldest": "1.0.0",
+						"newest": "1.5.0"
+					},
+					"offsets": [
+						{ "offset": 1, "since": "1.0.0" }
+					]
 				},
-				"offsets": [
-					{ "offset": 2, "since": "1.7.0" },
-					{ "offset": 3, "since": "1.7.3" },
-					{ "offset": 4, "since": "1.8.0" },
-					{ "offset": 5, "since": "1.8.1" },
-					{ "offset": 6, "since": "1.8.2" },
-					{ "offset": 7, "since": "1.9.0" }
-				]
-			},
-			"field_2" : {
+				{
+					"versions": {
+						"oldest": "1.7.0",
+						"newest": "1.10.0"
+					},
+					"offsets": [
+						{ "offset": 2, "since": "1.7.0" },
+						{ "offset": 3, "since": "1.7.3" },
+						{ "offset": 4, "since": "1.8.0" },
+						{ "offset": 5, "since": "1.8.1" },
+						{ "offset": 6, "since": "1.8.2" },
+						{ "offset": 7, "since": "1.9.0" }
+					]
+				},
+				{
+					"versions": {
+						"oldest": "3.0.0",
+						"newest": "5.1.0"
+					},
+					"offsets": [
+						{ "offset": 100, "since": "3.0.0" }
+					]
+				}
+			],
+			"field_2" : [{
 				"versions": {
 					"oldest": "1.0.0",
 					"newest": "1.2.0"
@@ -50,10 +70,10 @@ func TestGetOffset(t *testing.T) {
 				"offsets": [
 					{ "offset": 200, "since": "1.0.0" }
 				]
-			}
+			}]
 		},
 		"struct_2" : { 
-			"field_1" : {
+			"field_1" : [{
 				"versions": {
 					"oldest": "1.0.0",
 					"newest": "1.15.0"
@@ -61,7 +81,7 @@ func TestGetOffset(t *testing.T) {
 				"offsets": [
 					{ "offset": 1000, "since": "1.0.0" }
 				]
-			}
+			}]
 		}
 	}
 }`
@@ -69,8 +89,13 @@ func TestGetOffset(t *testing.T) {
 	err := json.Unmarshal([]byte(dataFile), data)
 	require.NoError(t, err)
 
+	testHasOffset(t, data, "struct_1", "field_1", "1.0.0", 1)
+	testHasOffset(t, data, "struct_1", "field_1", "1.5.0", 1)
+
+	// Handles minor and patch version gaps.
 	testNoOffset(t, data, "struct_1", "field_1", "1.5.1")
 	testNoOffset(t, data, "struct_1", "field_1", "1.6.0")
+
 	testHasOffset(t, data, "struct_1", "field_1", "1.7.0", 2)
 	testHasOffset(t, data, "struct_1", "field_1", "1.7.1", 2)
 	testHasOffset(t, data, "struct_1", "field_1", "1.7.2", 2)
@@ -86,7 +111,14 @@ func TestGetOffset(t *testing.T) {
 	testHasOffset(t, data, "struct_1", "field_1", "1.10.0", 7)
 	testNoOffset(t, data, "struct_1", "field_1", "1.10.1")
 	testNoOffset(t, data, "struct_1", "field_1", "1.11.0")
+
+	// Handles major version gaps.
 	testNoOffset(t, data, "struct_1", "field_1", "2.0.0")
+	testHasOffset(t, data, "struct_1", "field_1", "3.0.0", 100)
+	testHasOffset(t, data, "struct_1", "field_1", "4.0.0", 100)
+	testHasOffset(t, data, "struct_1", "field_1", "5.0.0", 100)
+	testNoOffset(t, data, "struct_1", "field_1", "5.2.0")
+	testNoOffset(t, data, "struct_1", "field_1", "6.0.0")
 
 	// Handles multiple fields.
 	testNoOffset(t, data, "struct_1", "field_2", "0.1.0")
