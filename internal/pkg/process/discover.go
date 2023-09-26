@@ -16,7 +16,6 @@ package process
 
 import (
 	"io"
-	"io/ioutil"
 	"os"
 	"path"
 	"strconv"
@@ -97,7 +96,7 @@ func (a *Analyzer) findProcessID(target *TargetArgs) (int, error) {
 			exeName, err := os.Readlink(path.Join("/proc", dname, "exe"))
 			if err != nil {
 				// Read link may fail if target process runs not as root
-				cmdLine, err := ioutil.ReadFile(path.Join("/proc", dname, "cmdline"))
+				cmdLine, err := os.ReadFile(path.Join("/proc", dname, "cmdline"))
 				if err != nil {
 					return 0, err
 				}

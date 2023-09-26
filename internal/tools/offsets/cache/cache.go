@@ -17,7 +17,7 @@ package cache
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"log"
 	"os"
 
@@ -40,7 +40,7 @@ func NewCache(prevOffsetFile string) *Cache {
 	}
 
 	defer f.Close()
-	data, err := ioutil.ReadAll(f)
+	data, err := io.ReadAll(f)
 	if err != nil {
 		log.Printf("error reading existing offsets file: %v. Ignoring existing file.\n", err)
 		return nil
