@@ -108,7 +108,6 @@ func (m *Manager) cleanup(target *process.TargetDetails) {
 
 	log.Logger.V(0).Info("Cleaning bpffs")
 	err := m.allocator.Clean(target)
-
 	if err != nil {
 		log.Logger.Error(err, "Failed to clean bpffs")
 	}

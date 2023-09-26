@@ -26,17 +26,21 @@ import (
 	"go.uber.org/zap"
 )
 
-const sqlQuery = "SELECT * FROM contacts"
-const dbName = "test.db"
-const tableDefinition = `CREATE TABLE contacts (
+const (
+	sqlQuery = "SELECT * FROM contacts"
+	dbName   = "test.db"
+
+	tableDefinition = `CREATE TABLE contacts (
 							contact_id INTEGER PRIMARY KEY,
 							first_name TEXT NOT NULL,
 							last_name TEXT NOT NULL,
 							email TEXT NOT NULL UNIQUE,
 							phone TEXT NOT NULL UNIQUE);`
-const tableInsertion = `INSERT INTO 'contacts'
+
+	tableInsertion = `INSERT INTO 'contacts'
 						('first_name', 'last_name', 'email', 'phone') VALUES
 						('Moshe', 'Levi', 'moshe@gmail.com', '052-1234567');`
+)
 
 // Server is Http server that exposes multiple endpoints.
 type Server struct {
@@ -60,7 +64,6 @@ func NewServer() *Server {
 	CreateDb()
 
 	database, err := sql.Open("sqlite3", dbName)
-
 	if err != nil {
 		panic(err)
 	}
@@ -86,7 +89,6 @@ func (s *Server) queryDb(w http.ResponseWriter, req *http.Request) {
 	ctx := req.Context()
 
 	conn, err := s.db.Conn(ctx)
-
 	if err != nil {
 		panic(err)
 	}

@@ -106,7 +106,6 @@ func (h *Instrumentor) Load(ctx *context.InstrumentorContext) error {
 			Field:      "Header",
 		},
 	}, nil, false)
-
 	if err != nil {
 		return err
 	}

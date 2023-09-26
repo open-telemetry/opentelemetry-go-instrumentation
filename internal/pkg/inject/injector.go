@@ -27,10 +27,8 @@ import (
 	"go.opentelemetry.io/auto/internal/pkg/process"
 )
 
-var (
-	//go:embed offset_results.json
-	offsetsData string
-)
+//go:embed offset_results.json
+var offsetsData string
 
 // Injector injects OpenTelemetry instrumentation Go packages.
 type Injector struct {
