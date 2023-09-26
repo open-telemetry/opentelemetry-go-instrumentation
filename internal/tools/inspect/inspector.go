@@ -39,21 +39,21 @@ type manifest struct {
 // Inspector inspects structure of Go packages.
 type Inspector struct {
 	NWorkers int
+	Cache    *Cache
 
 	log    logr.Logger
-	cache  *cache
 	client *client.Client
 
 	manifests []manifest
 }
 
-// New returns an Inspector that will use offsetFile as a cache for offsets.
-func New(l logr.Logger, offsetFile string) (*Inspector, error) {
+// New returns an Inspector that will use c to check for a cached offsets.
+func New(l logr.Logger, c *Cache) (*Inspector, error) {
 	logger := l.WithName("inspector")
 
-	c, err := newCache(l, offsetFile)
-	if err != nil {
-		logger.Error(err, "using empty cache")
+	if cache == nil {
+		logger.Info("using empty cache")
+		cache = newCache(l)
 	}
 
 	cli, err := client.NewClientWithOpts(
@@ -67,7 +67,7 @@ func New(l logr.Logger, offsetFile string) (*Inspector, error) {
 	return &Inspector{
 		NWorkers: defaultNWorkers,
 		log:      logger,
-		cache:    c,
+		Cache:    c,
 		client:   cli,
 	}, nil
 }
@@ -170,7 +170,7 @@ type result struct {
 func (i *Inspector) do(ctx context.Context, m manifest) (out []result, err error) {
 	var uncachedIndices []int
 	for _, f := range m.Fields {
-		o, ok := i.cache.Get(m.AppVer, f)
+		o, ok := i.Cache.GetOffset(m.AppVer, f)
 		out = append(out, result{
 			StructField: f,
 			Version:     m.AppVer,

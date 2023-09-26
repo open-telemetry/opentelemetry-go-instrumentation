@@ -75,7 +75,12 @@ func main() {
 	stdr.SetVerbosity(verbosity)
 	l := stdr.New(log.New(os.Stdout, "", log.LstdFlags))
 
-	i, err := inspect.New(l, cacheFile)
+	c, err := inspect.NewCache(l, cacheFile)
+	if err != nil {
+		l.Error(err, "failed to load cache", "path", cacheFile)
+	}
+
+	i, err := inspect.New(l, c)
 	if err != nil {
 		l.Error(err, "failed to setup inspector")
 		os.Exit(1)

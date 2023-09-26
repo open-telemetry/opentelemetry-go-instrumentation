@@ -24,15 +24,15 @@ import (
 	"go.opentelemetry.io/auto/internal/pkg/inject"
 )
 
-type cache struct {
+type Cache struct {
 	log logr.Logger
 
 	dataMu sync.Mutex
 	data   *inject.TrackedOffsets
 }
 
-func newCache(l logr.Logger, offsetFile string) (*cache, error) {
-	c := &cache{log: l.WithName("cache")}
+func NewCache(l logr.Logger, offsetFile string) (*Cache, error) {
+	c := newCache(l)
 
 	f, err := os.Open(offsetFile)
 	if err != nil {
@@ -45,10 +45,14 @@ func newCache(l logr.Logger, offsetFile string) (*cache, error) {
 	return c, err
 }
 
-// Get returns the cached offset and true for the StructField at the specified
-// version. If the cache does not contain a valid offset for the provided
-// values, 0 and false are returned.
-func (c *cache) Get(ver *version.Version, sf StructField) (uint64, bool) {
+func newCache(l logr.Logger) *Cache {
+	return &Cache{log: l.WithName("cache")}
+}
+
+// GetOffset returns the cached offset and true for the StructField at the
+// specified version. If the cache does not contain a valid offset for the
+// provided values, 0 and false are returned.
+func (c *Cache) GetOffset(ver *version.Version, sf StructField) (uint64, bool) {
 	if c.data == nil {
 		return 0, false
 	}
