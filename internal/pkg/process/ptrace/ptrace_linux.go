@@ -149,7 +149,6 @@ func NewTracedProgram(pid int, logger logr.Logger) (*TracedProgram, error) {
 func (p *TracedProgram) Detach() error {
 	for _, tid := range p.tids {
 		err := syscall.PtraceDetach(tid)
-
 		if err != nil {
 			if !strings.Contains(err.Error(), "no such process") {
 				return errors.WithStack(err)

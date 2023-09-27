@@ -30,10 +30,8 @@ import (
 	"go.opentelemetry.io/auto/internal/pkg/process"
 )
 
-var (
-	// Error message returned when unable to find all instrumentation functions.
-	errNotAllFuncsFound = fmt.Errorf("not all functions found for instrumentation")
-)
+// Error message returned when unable to find all instrumentation functions.
+var errNotAllFuncsFound = fmt.Errorf("not all functions found for instrumentation")
 
 // Manager handles the management of [Instrumentor] instances.
 type Manager struct {

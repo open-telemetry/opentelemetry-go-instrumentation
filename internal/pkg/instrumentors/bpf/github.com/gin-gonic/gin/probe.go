@@ -18,7 +18,6 @@ import (
 	"bytes"
 	"encoding/binary"
 	"errors"
-
 	"os"
 
 	"go.opentelemetry.io/auto/internal/pkg/instrumentors/bpffs"
@@ -99,7 +98,6 @@ func (h *Instrumentor) Load(ctx *context.InstrumentorContext) error {
 			Field:      "Path",
 		},
 	}, nil, false)
-
 	if err != nil {
 		return err
 	}
