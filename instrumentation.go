@@ -18,11 +18,14 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"path/filepath"
+	"strings"
 
 	"go.opentelemetry.io/auto/internal/pkg/instrumentors"
 	"go.opentelemetry.io/auto/internal/pkg/log"
 	"go.opentelemetry.io/auto/internal/pkg/opentelemetry"
 	"go.opentelemetry.io/auto/internal/pkg/process"
+	semconv "go.opentelemetry.io/otel/semconv/v1.18.0"
 )
 
 const (
@@ -33,6 +36,8 @@ const (
 	envServiceNameKey = "OTEL_SERVICE_NAME"
 	// serviceNameDefault is the default service name prefix used if a user does not provide one.
 	serviceNameDefault = "unknown_service"
+	// resourceAttrKey is the environment variable name OpenTelemetry Resource information will be read from.
+	resourceAttrKey = "OTEL_RESOURCE_ATTRIBUTES"
 )
 
 // Instrumentation manages and controls all OpenTelemetry Go
@@ -126,14 +131,46 @@ func newInstConfig(opts []InstrumentationOption) instConfig {
 }
 
 func (c instConfig) applyEnv() instConfig {
+	c = c.applyResourceAtrrEnv()
 	if v, ok := os.LookupEnv(envTargetExeKey); ok {
 		c.target = &process.TargetArgs{ExePath: v}
 	}
 	if v, ok := os.LookupEnv(envServiceNameKey); ok {
 		c.serviceName = v
 	} else if c.serviceName == "" {
+		c = c.setDefualtServiceName()
+	}
+	return c
+}
+
+func (c instConfig) setDefualtServiceName() instConfig {
+	if c.target != nil {
+		c.serviceName = fmt.Sprintf("%s:%s", serviceNameDefault, filepath.Base(c.target.ExePath))
+	} else {
 		c.serviceName = serviceNameDefault
 	}
+	return c
+}
+
+func (c instConfig) applyResourceAtrrEnv() instConfig {
+	attrs := strings.TrimSpace(os.Getenv(resourceAttrKey))
+
+	if attrs == "" {
+		return c
+	}
+
+	pairs := strings.Split(attrs, ",")
+	for _, p := range pairs {
+		k, v, found := strings.Cut(p, "=")
+		if !found {
+			continue
+		}
+		key := strings.TrimSpace(k)
+		if key == string(semconv.ServiceNameKey) {
+			c.serviceName = strings.TrimSpace(v)
+		}
+	}
+
 	return c
 }
 
