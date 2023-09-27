@@ -29,13 +29,6 @@ import (
 
 const defaultNWorkers = 20
 
-type manifest struct {
-	Renderer Renderer
-	Builder  *builder
-	AppVer   *version.Version
-	Fields   []StructField
-}
-
 // Inspector inspects structure of Go packages.
 type Inspector struct {
 	NWorkers int
@@ -44,11 +37,16 @@ type Inspector struct {
 	log    logr.Logger
 	client *client.Client
 
-	manifests []manifest
+	jobs []job
 }
 
-// New returns an Inspector that will use c to check for a cached offsets.
-func New(l logr.Logger, c *Cache) (*Inspector, error) {
+// New returns an Inspector that configured to inspect offsets defined in the
+// manifests.
+//
+// If cache is non-nil, offsets will first be looked up there. Otherwise, the
+// offsets will be found by building the applicatiions in the manifests and
+// inspecting the produced binaries.
+func New(l logr.Logger, cache *Cache, manifests ...Manifest) (*Inspector, error) {
 	logger := l.WithName("inspector")
 
 	if cache == nil {
@@ -64,53 +62,57 @@ func New(l logr.Logger, c *Cache) (*Inspector, error) {
 		return nil, err
 	}
 
-	return &Inspector{
+	i := &Inspector{
 		NWorkers: defaultNWorkers,
 		log:      logger,
-		Cache:    c,
+		Cache:    cache,
 		client:   cli,
-	}, nil
+	}
+	for _, m := range manifests {
+		i.AddManifest(m)
+	}
+	return i, nil
 }
 
-// Inspect3rdParty adds fields for a 3rd-party package to be a analyzed for the
-// passed vers of that package using the Renderer r to generate a token
-// program. The token program needs to contain the fields when compiled for the
-// analysis to work.
-func (i *Inspector) Inspect3rdParty(r Renderer, vers []*version.Version, fields []StructField) {
-	for _, v := range vers {
-		i.manifests = append(i.manifests, manifest{
-			Renderer: r,
-			Builder:  newBuilder(i.log, i.client, nil),
-			AppVer:   v,
-			Fields:   fields,
-		})
+// AddManifest adds the manifest to the Inspector's set of Manifests to
+// inspect.
+func (i *Inspector) AddManifest(manifest Manifest) {
+	goVer := manifest.Application.GoVerions
+	if goVer == nil {
+		// Passsing nil to newBuilder will mean the application is built with
+		// the latest version of Go.
+		goVer = append(goVer, nil)
+	}
+
+	for _, gV := range goVer {
+		for _, v := range manifest.Application.Versions {
+			i.jobs = append(i.jobs, job{
+				Renderer: manifest.Application.Renderer,
+				Builder:  newBuilder(i.log, i.client, gV),
+				AppVer:   v,
+				Fields:   manifest.StructFields,
+			})
+		}
 	}
 }
 
-// InspectStdlib adds fields for a stdlib package to be a analyzed for the
-// passed vers using the Renderer r to generate a token program. The token
-// program needs to contain the fields when compiled for the analysis to work.
-func (i *Inspector) InspectStdlib(r Renderer, vers []*version.Version, fields []StructField) {
-	for _, v := range vers {
-		i.manifests = append(i.manifests, manifest{
-			Renderer: r,
-			Builder:  newBuilder(i.log, i.client, v),
-			AppVer:   v,
-			Fields:   fields,
-		})
-	}
+type job struct {
+	Renderer Renderer
+	Builder  *builder
+	AppVer   *version.Version
+	Fields   []StructField
 }
 
 // Do performs the inspections and returns all found offsets.
 func (i *Inspector) Do(ctx context.Context) (*inject.TrackedOffsets, error) {
 	g, ctx := errgroup.WithContext(ctx)
-	todo := make(chan manifest)
+	todo := make(chan job)
 
 	g.Go(func() error {
 		defer close(todo)
-		for _, m := range i.manifests {
+		for _, j := range i.jobs {
 			select {
-			case todo <- m:
+			case todo <- j:
 			case <-ctx.Done():
 				return ctx.Err()
 			}
@@ -167,13 +169,13 @@ type result struct {
 	Found       bool
 }
 
-func (i *Inspector) do(ctx context.Context, m manifest) (out []result, err error) {
+func (i *Inspector) do(ctx context.Context, j job) (out []result, err error) {
 	var uncachedIndices []int
-	for _, f := range m.Fields {
-		o, ok := i.Cache.GetOffset(m.AppVer, f)
+	for _, f := range j.Fields {
+		o, ok := i.Cache.GetOffset(j.AppVer, f)
 		out = append(out, result{
 			StructField: f,
-			Version:     m.AppVer,
+			Version:     j.AppVer,
 			Offset:      o,
 			Found:       ok,
 		})
@@ -186,14 +188,14 @@ func (i *Inspector) do(ctx context.Context, m manifest) (out []result, err error
 		return out, nil
 	}
 
-	app, err := newApp(ctx, i.log, m)
+	app, err := newApp(ctx, i.log, j)
 	buildErr := &errBuild{}
 	if errors.As(err, &buildErr) {
 		i.log.V(1).Info(
 			"failed to build app, skipping",
-			"version", m.AppVer,
-			"src", m.Renderer.src,
-			"Go", m.Builder.GoImage,
+			"version", j.AppVer,
+			"src", j.Renderer.src,
+			"Go", j.Builder.GoImage,
 			"rc", buildErr.ReturnCode,
 			"stdout", buildErr.Stdout,
 			"stderr", buildErr.Stderr,

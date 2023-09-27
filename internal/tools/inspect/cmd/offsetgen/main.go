@@ -24,6 +24,7 @@ import (
 	"os/signal"
 	"runtime"
 
+	"github.com/go-logr/logr"
 	"github.com/go-logr/stdr"
 	"github.com/hashicorp/go-version"
 
@@ -49,6 +50,8 @@ var (
 
 	// goVers are the versions of Go supported.
 	goVers []*version.Version
+
+	logger logr.Logger
 )
 
 func init() {
@@ -69,102 +72,122 @@ func init() {
 		fmt.Printf("failed to get Go versions: %v", err)
 		os.Exit(1)
 	}
+
+	stdr.SetVerbosity(verbosity)
+	logger = stdr.New(log.New(os.Stdout, "", log.LstdFlags))
+}
+
+func ren(src string) inspect.Renderer {
+	return inspect.NewRenderer(logger, src, inspect.DefaultFS)
+}
+
+var manifests = []inspect.Manifest{
+	{
+		Application: inspect.Application{
+			Renderer:  ren("templates/runtime/*.tmpl"),
+			GoVerions: goVers,
+		},
+		StructFields: []inspect.StructField{{
+			PkgPath: "runtime",
+			Struct:  "g",
+			Field:   "goid",
+		}},
+	},
+	{
+		Application: inspect.Application{
+			Renderer:  ren("templates/net/http/*.tmpl"),
+			GoVerions: goVers,
+		},
+		StructFields: []inspect.StructField{{
+			PkgPath: "net/http",
+			Struct:  "Request",
+			Field:   "Method",
+		}, {
+			PkgPath: "net/http",
+			Struct:  "Request",
+			Field:   "URL",
+		}, {
+			PkgPath: "net/http",
+			Struct:  "Request",
+			Field:   "RemoteAddr",
+		}, {
+			PkgPath: "net/http",
+			Struct:  "Request",
+			Field:   "Header",
+		}, {
+			PkgPath: "net/http",
+			Struct:  "Request",
+			Field:   "ctx",
+		}, {
+			PkgPath: "net/url",
+			Struct:  "URL",
+			Field:   "Path",
+		}},
+	},
+	{
+		Application: inspect.Application{
+			Renderer: ren("templates/google.golang.org/grpc/*.tmpl"),
+			Versions: func() []*version.Version {
+				v, err := PkgVersions("google.golang.org/grpc")
+				if err != nil {
+					logger.Error(err, "failed to \"google.golang.org/grpc\" versions")
+					os.Exit(1)
+				}
+				return v
+			}(),
+		},
+		StructFields: []inspect.StructField{{
+			PkgPath: "google.golang.org/grpc/internal/transport",
+			Struct:  "Stream",
+			Field:   "method",
+		}, {
+			PkgPath: "google.golang.org/grpc/internal/transport",
+			Struct:  "Stream",
+			Field:   "id",
+		}, {
+			PkgPath: "google.golang.org/grpc/internal/transport",
+			Struct:  "Stream",
+			Field:   "ctx",
+		}, {
+			PkgPath: "google.golang.org/grpc",
+			Struct:  "ClientConn",
+			Field:   "target",
+		}, {
+			PkgPath: "golang.org/x/net/http2",
+			Struct:  "MetaHeadersFrame",
+			Field:   "Fields",
+		}, {
+			PkgPath: "golang.org/x/net/http2",
+			Struct:  "FrameHeader",
+			Field:   "StreamID",
+		}, {
+			PkgPath: "google.golang.org/grpc/internal/transport",
+			Struct:  "http2Client",
+			Field:   "nextID",
+		}, {
+			PkgPath: "google.golang.org/grpc/internal/transport",
+			Struct:  "headerFrame",
+			Field:   "streamID",
+		}, {
+			PkgPath: "google.golang.org/grpc/internal/transport",
+			Struct:  "headerFrame",
+			Field:   "hf",
+		}},
+	},
 }
 
 func main() {
-	stdr.SetVerbosity(verbosity)
-	l := stdr.New(log.New(os.Stdout, "", log.LstdFlags))
-
-	c, err := inspect.NewCache(l, cacheFile)
+	c, err := inspect.NewCache(logger, cacheFile)
 	if err != nil {
-		l.Error(err, "failed to load cache", "path", cacheFile)
+		logger.Error(err, "failed to load cache", "path", cacheFile)
 	}
 
-	i, err := inspect.New(l, c)
+	i, err := inspect.New(logger, c, manifests...)
 	if err != nil {
-		l.Error(err, "failed to setup inspector")
+		logger.Error(err, "failed to setup inspector")
 		os.Exit(1)
 	}
 	i.NWorkers = numCPU
-
-	ren := func(src string) inspect.Renderer {
-		return inspect.NewRenderer(l, src, inspect.DefaultFS)
-	}
-
-	i.InspectStdlib(ren("templates/runtime/*.tmpl"), goVers, []inspect.StructField{{
-		PkgPath: "runtime",
-		Struct:  "g",
-		Field:   "goid",
-	}})
-
-	i.InspectStdlib(ren("templates/net/http/*.tmpl"), goVers, []inspect.StructField{{
-		PkgPath: "net/http",
-		Struct:  "Request",
-		Field:   "Method",
-	}, {
-		PkgPath: "net/http",
-		Struct:  "Request",
-		Field:   "URL",
-	}, {
-		PkgPath: "net/http",
-		Struct:  "Request",
-		Field:   "RemoteAddr",
-	}, {
-		PkgPath: "net/http",
-		Struct:  "Request",
-		Field:   "Header",
-	}, {
-		PkgPath: "net/http",
-		Struct:  "Request",
-		Field:   "ctx",
-	}, {
-		PkgPath: "net/url",
-		Struct:  "URL",
-		Field:   "Path",
-	}})
-
-	v, err := PkgVersions("google.golang.org/grpc")
-	if err != nil {
-		l.Error(err, "failed to \"google.golang.org/grpc\" versions")
-		os.Exit(1)
-	}
-	i.Inspect3rdParty(ren("templates/google.golang.org/grpc/*.tmpl"), v, []inspect.StructField{{
-		PkgPath: "google.golang.org/grpc/internal/transport",
-		Struct:  "Stream",
-		Field:   "method",
-	}, {
-		PkgPath: "google.golang.org/grpc/internal/transport",
-		Struct:  "Stream",
-		Field:   "id",
-	}, {
-		PkgPath: "google.golang.org/grpc/internal/transport",
-		Struct:  "Stream",
-		Field:   "ctx",
-	}, {
-		PkgPath: "google.golang.org/grpc",
-		Struct:  "ClientConn",
-		Field:   "target",
-	}, {
-		PkgPath: "golang.org/x/net/http2",
-		Struct:  "MetaHeadersFrame",
-		Field:   "Fields",
-	}, {
-		PkgPath: "golang.org/x/net/http2",
-		Struct:  "FrameHeader",
-		Field:   "StreamID",
-	}, {
-		PkgPath: "google.golang.org/grpc/internal/transport",
-		Struct:  "http2Client",
-		Field:   "nextID",
-	}, {
-		PkgPath: "google.golang.org/grpc/internal/transport",
-		Struct:  "headerFrame",
-		Field:   "streamID",
-	}, {
-		PkgPath: "google.golang.org/grpc/internal/transport",
-		Struct:  "headerFrame",
-		Field:   "hf",
-	}})
 
 	// Trap Ctrl+C and call cancel on the context.
 	ctx, cancel := context.WithCancel(context.Background())
@@ -184,15 +207,15 @@ func main() {
 
 	to, err := i.Do(ctx)
 	if err != nil {
-		l.Error(err, "failed get offsets")
+		logger.Error(err, "failed get offsets")
 		os.Exit(1)
 	}
 
 	if to != nil {
-		l.Info("writing offsets", "dest", outputFile)
+		logger.Info("writing offsets", "dest", outputFile)
 		f, err := os.Create(outputFile)
 		if err != nil {
-			l.Error(err, "failed to open output file", "dest", outputFile)
+			logger.Error(err, "failed to open output file", "dest", outputFile)
 			os.Exit(1)
 		}
 		defer f.Close()
@@ -200,10 +223,10 @@ func main() {
 		enc := json.NewEncoder(f)
 		enc.SetIndent("", "  ")
 		if err := enc.Encode(to); err != nil {
-			l.Error(err, "failed to write offsets", "dest", outputFile)
+			logger.Error(err, "failed to write offsets", "dest", outputFile)
 			os.Exit(1)
 		}
 	} else {
-		l.Info("no offsets found")
+		logger.Info("no offsets found")
 	}
 }

@@ -21,10 +21,14 @@ import (
 	"os"
 
 	"github.com/go-logr/logr"
+	"github.com/hashicorp/go-version"
 )
 
 type app struct {
-	Manifest manifest
+	Renderer Renderer
+	Builder  *builder
+	AppVer   *version.Version
+	Fields   []StructField
 
 	log    logr.Logger
 	tmpDir string
@@ -32,8 +36,14 @@ type app struct {
 	data   *dwarf.Data
 }
 
-func newApp(ctx context.Context, l logr.Logger, m manifest) (*app, error) {
-	a := &app{log: l.WithName("app"), Manifest: m}
+func newApp(ctx context.Context, l logr.Logger, j job) (*app, error) {
+	a := &app{
+		Renderer: j.Renderer,
+		Builder:  j.Builder,
+		AppVer:   j.AppVer,
+		Fields:   j.Fields,
+		log:      l.WithName("app"),
+	}
 
 	var err error
 	a.tmpDir, err = os.MkdirTemp("", "inspect-*")
@@ -42,13 +52,13 @@ func newApp(ctx context.Context, l logr.Logger, m manifest) (*app, error) {
 	}
 
 	data := struct{ Version string }{
-		Version: "v" + a.Manifest.AppVer.String(),
+		Version: "v" + a.AppVer.String(),
 	}
-	if err = m.Renderer.Render(a.tmpDir, data); err != nil {
+	if err = j.Renderer.Render(a.tmpDir, data); err != nil {
 		return nil, err
 	}
 
-	a.exec, err = m.Builder.Build(ctx, a.tmpDir, a.Manifest.AppVer)
+	a.exec, err = j.Builder.Build(ctx, a.tmpDir, a.AppVer)
 	if err != nil {
 		return nil, err
 	}
