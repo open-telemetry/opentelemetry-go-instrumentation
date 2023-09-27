@@ -31,8 +31,10 @@ import (
 // a 16-byte header, consisting of buildInfoMagic (14 bytes),
 // the binary's pointer size (1 byte),
 // and whether the binary is big endian (1 byte).
-var buildInfoMagic = []byte("\xff Go buildinf:")
-var errNotGoExe = errors.New("not a Go executable")
+var (
+	buildInfoMagic = []byte("\xff Go buildinf:")
+	errNotGoExe    = errors.New("not a Go executable")
+)
 
 func (a *Analyzer) getModuleDetails(f *elf.File) (*version.Version, map[string]*version.Version, error) {
 	goVersion, modules, err := getGoDetails(f)

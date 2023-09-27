@@ -12,7 +12,7 @@ linters:
     - depguard
     - errcheck
     - godot
-    - gofmt
+    - gofumpt
     - goimports
     - gosimple
     - govet
@@ -62,6 +62,9 @@ issues:
 linters-settings:
   depguard:
     rules:
+      ioutil:
+        deny:
+          - pkg: "io/ioutil"
       crypto:
         deny:
           - pkg: "crypto/md5"
@@ -83,7 +86,7 @@ linters-settings:
       # Exclude sentences prefixing a list.
       - ':$'
   goimports:
-    local-prefixes: go.opentelemetry.io
+    local-prefixes: go.opentelemetry.io/auto
   misspell:
     locale: US
     ignore-words:

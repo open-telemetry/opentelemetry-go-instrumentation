@@ -29,13 +29,14 @@ import (
 	"github.com/cilium/ebpf/perf"
 	"golang.org/x/sys/unix"
 
+	"go.opentelemetry.io/otel/attribute"
+	semconv "go.opentelemetry.io/otel/semconv/v1.18.0"
+	"go.opentelemetry.io/otel/trace"
+
 	"go.opentelemetry.io/auto/internal/pkg/instrumentors/context"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentors/events"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentors/utils"
 	"go.opentelemetry.io/auto/internal/pkg/log"
-	"go.opentelemetry.io/otel/attribute"
-	semconv "go.opentelemetry.io/otel/semconv/v1.18.0"
-	"go.opentelemetry.io/otel/trace"
 )
 
 //go:generate go run github.com/cilium/ebpf/cmd/bpf2go -target amd64,arm64 -cc clang -cflags $CFLAGS bpf ./bpf/probe.bpf.c
@@ -81,8 +82,8 @@ func (h *Instrumentor) Load(ctx *context.InstrumentorContext) error {
 		{
 			VarName: "should_include_db_statement",
 			Value:   shouldIncludeDBStatement(),
-		}}, true)
-
+		},
+	}, true)
 	if err != nil {
 		return err
 	}
@@ -100,7 +101,6 @@ func (h *Instrumentor) Load(ctx *context.InstrumentorContext) error {
 	}
 
 	offset, err := ctx.TargetDetails.GetFunctionOffset(h.FuncNames()[0])
-
 	if err != nil {
 		return err
 	}
@@ -108,7 +108,6 @@ func (h *Instrumentor) Load(ctx *context.InstrumentorContext) error {
 	up, err := ctx.Executable.Uprobe("", h.bpfObjects.UprobeQueryDC, &link.UprobeOptions{
 		Address: offset,
 	})
-
 	if err != nil {
 		return err
 	}
@@ -116,7 +115,6 @@ func (h *Instrumentor) Load(ctx *context.InstrumentorContext) error {
 	h.uprobes = append(h.uprobes, up)
 
 	retOffsets, err := ctx.TargetDetails.GetFunctionReturns(h.FuncNames()[0])
-
 	if err != nil {
 		return err
 	}
