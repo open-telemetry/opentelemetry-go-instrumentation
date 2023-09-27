@@ -31,7 +31,7 @@ const (
 	envTargetExeKey = "OTEL_GO_AUTO_TARGET_EXE"
 	// envServiceName is the key for the envoriment variable value containing the service name.
 	envServiceNameKey = "OTEL_SERVICE_NAME"
-	// prefix for default service name if not provided.
+	// serviceNameDefault is the default service name prefix used if a user does not provide one.
 	serviceNameDefault = "unknown_service"
 )
 
