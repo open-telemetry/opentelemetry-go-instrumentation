@@ -34,6 +34,7 @@ import (
 // minCompatVer is the min "go mod" version that includes the "compat" option.
 var minCompatVer = version.Must(version.NewVersion("1.17.0"))
 
+// builder builds a Go application into a binary using Docker.
 type builder struct {
 	log logr.Logger
 	cli *client.Client
@@ -42,6 +43,12 @@ type builder struct {
 	GoImage string
 }
 
+// newBuilder returns a builder that will use goVer version of a Go docker
+// image to build Go applications. The cli is used to connect to the docker
+// interface.
+//
+// If goVer is nil, the latest version of the Go docker container will be used
+// to build applications.
 func newBuilder(l logr.Logger, cli *client.Client, goVer *version.Version) *builder {
 	img := "golang:latest"
 	if goVer != nil {
@@ -58,6 +65,7 @@ func newBuilder(l logr.Logger, cli *client.Client, goVer *version.Version) *buil
 	}
 }
 
+// Build builds the appV version of a Go application located in dir.
 func (b *builder) Build(ctx context.Context, dir string, appV *version.Version) (string, error) {
 	b.log.V(2).Info("building application...", "version", appV, "dir", dir, "image", b.GoImage)
 
