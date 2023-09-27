@@ -211,22 +211,23 @@ func main() {
 		os.Exit(1)
 	}
 
-	if to != nil {
-		logger.Info("writing offsets", "dest", outputFile)
-		f, err := os.Create(outputFile)
-		if err != nil {
-			logger.Error(err, "failed to open output file", "dest", outputFile)
-			os.Exit(1)
-		}
-		defer f.Close()
-
-		enc := json.NewEncoder(f)
-		enc.SetIndent("", "  ")
-		if err := enc.Encode(to); err != nil {
-			logger.Error(err, "failed to write offsets", "dest", outputFile)
-			os.Exit(1)
-		}
-	} else {
+	if to == nil {
 		logger.Info("no offsets found")
+		return
+	}
+
+	logger.Info("writing offsets", "dest", outputFile)
+	f, err := os.Create(outputFile)
+	if err != nil {
+		logger.Error(err, "failed to open output file", "dest", outputFile)
+		os.Exit(1)
+	}
+	defer f.Close()
+
+	enc := json.NewEncoder(f)
+	enc.SetIndent("", "  ")
+	if err := enc.Encode(to); err != nil {
+		logger.Error(err, "failed to write offsets", "dest", outputFile)
+		os.Exit(1)
 	}
 }
