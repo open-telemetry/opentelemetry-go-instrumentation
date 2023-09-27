@@ -69,14 +69,21 @@ func New(l logr.Logger, cache *Cache, manifests ...Manifest) (*Inspector, error)
 		client:   cli,
 	}
 	for _, m := range manifests {
-		i.AddManifest(m)
+		err := i.AddManifest(m)
+		if err != nil {
+			return nil, err
+		}
 	}
 	return i, nil
 }
 
 // AddManifest adds the manifest to the Inspector's set of Manifests to
 // inspect.
-func (i *Inspector) AddManifest(manifest Manifest) {
+func (i *Inspector) AddManifest(manifest Manifest) error {
+	if err := manifest.validate(); err != nil {
+		return err
+	}
+
 	goVer := manifest.Application.GoVerions
 	if goVer == nil {
 		// Passsing nil to newBuilder will mean the application is built with
@@ -84,8 +91,13 @@ func (i *Inspector) AddManifest(manifest Manifest) {
 		goVer = append(goVer, nil)
 	}
 
+	appVer := manifest.Application.Versions
+	if appVer == nil {
+		appVer = goVer
+	}
+
 	for _, gV := range goVer {
-		for _, v := range manifest.Application.Versions {
+		for _, v := range appVer {
 			i.jobs = append(i.jobs, job{
 				Renderer: manifest.Application.Renderer,
 				Builder:  newBuilder(i.log, i.client, gV),
@@ -94,6 +106,7 @@ func (i *Inspector) AddManifest(manifest Manifest) {
 			})
 		}
 	}
+	return nil
 }
 
 type job struct {

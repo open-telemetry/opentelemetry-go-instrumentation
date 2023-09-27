@@ -81,11 +81,24 @@ func ren(src string) inspect.Renderer {
 	return inspect.NewRenderer(logger, src, inspect.DefaultFS)
 }
 
+func getGoVers() []*version.Version {
+	if goVers == nil {
+		var err error
+		goVers, err = GoVersions(">= " + minGoVersion)
+		if err != nil {
+			fmt.Printf("failed to get Go versions: %v", err)
+			logger.Error(err, "failed to get Go versions: %v")
+			os.Exit(1)
+		}
+	}
+	return goVers
+}
+
 var manifests = []inspect.Manifest{
 	{
 		Application: inspect.Application{
 			Renderer:  ren("templates/runtime/*.tmpl"),
-			GoVerions: goVers,
+			GoVerions: getGoVers(),
 		},
 		StructFields: []inspect.StructField{{
 			PkgPath: "runtime",
@@ -96,7 +109,7 @@ var manifests = []inspect.Manifest{
 	{
 		Application: inspect.Application{
 			Renderer:  ren("templates/net/http/*.tmpl"),
-			GoVerions: goVers,
+			GoVerions: getGoVers(),
 		},
 		StructFields: []inspect.StructField{{
 			PkgPath: "net/http",
