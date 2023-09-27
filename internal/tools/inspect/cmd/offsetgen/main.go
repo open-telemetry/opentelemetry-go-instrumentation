@@ -202,20 +202,8 @@ func main() {
 	i.NWorkers = numCPU
 
 	// Trap Ctrl+C and call cancel on the context.
-	ctx, cancel := context.WithCancel(context.Background())
-	ch := make(chan os.Signal, 1)
-	signal.Notify(ch, os.Interrupt)
-	defer func() {
-		signal.Stop(ch)
-		cancel()
-	}()
-	go func() {
-		select {
-		case <-ch:
-			cancel()
-		case <-ctx.Done():
-		}
-	}()
+	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
+	defer cancel()
 
 	to, err := i.Do(ctx)
 	if err != nil {
