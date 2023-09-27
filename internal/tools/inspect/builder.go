@@ -63,7 +63,7 @@ func (b *builder) Build(ctx context.Context, dir string, appV *version.Version) 
 
 	app := fmt.Sprintf("app%s", appV.Original())
 	var cmd string
-	if b.goVer.LessThan(minCompatVer) {
+	if b.goVer != nil && b.goVer.LessThan(minCompatVer) {
 		cmd = "go mod tidy && go build -o " + app
 	} else {
 		cmd = "go mod tidy -compat=1.17 && go build -o " + app

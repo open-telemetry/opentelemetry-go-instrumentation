@@ -90,7 +90,17 @@ func (i *Inspector) AddManifest(manifest Manifest) error {
 	if goVer == nil {
 		// Passsing nil to newBuilder will mean the application is built with
 		// the latest version of Go.
-		goVer = append(goVer, nil)
+		b := newBuilder(i.log, i.client, nil)
+		for _, ver := range manifest.Application.Versions {
+			v := ver
+			i.jobs = append(i.jobs, job{
+				Renderer: manifest.Application.Renderer,
+				Builder:  b,
+				AppVer:   v,
+				Fields:   manifest.StructFields,
+			})
+		}
+		return nil
 	}
 
 	if manifest.Application.Versions == nil {
