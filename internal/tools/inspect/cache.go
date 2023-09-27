@@ -24,6 +24,7 @@ import (
 	"go.opentelemetry.io/auto/internal/pkg/inject"
 )
 
+// Cache is a cache of struct field offsets.
 type Cache struct {
 	log logr.Logger
 
@@ -31,6 +32,8 @@ type Cache struct {
 	data   *inject.TrackedOffsets
 }
 
+// NewCache loads struct field offsets from offsetFile and returns them as a
+// new Cache.
 func NewCache(l logr.Logger, offsetFile string) (*Cache, error) {
 	c := newCache(l)
 
