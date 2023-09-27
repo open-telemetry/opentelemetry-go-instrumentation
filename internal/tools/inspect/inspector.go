@@ -84,6 +84,8 @@ func (i *Inspector) AddManifest(manifest Manifest) error {
 		return err
 	}
 
+	i.log.V(2).Info("adding manifest", "manifest", manifest)
+
 	goVer := manifest.Application.GoVerions
 	if goVer == nil {
 		// Passsing nil to newBuilder will mean the application is built with
@@ -91,16 +93,26 @@ func (i *Inspector) AddManifest(manifest Manifest) error {
 		goVer = append(goVer, nil)
 	}
 
-	appVer := manifest.Application.Versions
-	if appVer == nil {
-		appVer = goVer
+	if manifest.Application.Versions == nil {
+		for _, gVer := range goVer {
+			v := gVer
+			i.jobs = append(i.jobs, job{
+				Renderer: manifest.Application.Renderer,
+				Builder:  newBuilder(i.log, i.client, v),
+				AppVer:   v,
+				Fields:   manifest.StructFields,
+			})
+		}
+		return nil
 	}
 
 	for _, gV := range goVer {
-		for _, v := range appVer {
+		b := newBuilder(i.log, i.client, gV)
+		for _, ver := range manifest.Application.Versions {
+			v := ver
 			i.jobs = append(i.jobs, job{
 				Renderer: manifest.Application.Renderer,
-				Builder:  newBuilder(i.log, i.client, gV),
+				Builder:  b,
 				AppVer:   v,
 				Fields:   manifest.StructFields,
 			})

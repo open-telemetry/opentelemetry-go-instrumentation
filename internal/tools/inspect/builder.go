@@ -45,7 +45,10 @@ type builder struct {
 func newBuilder(l logr.Logger, cli *client.Client, goVer *version.Version) *builder {
 	img := "golang:latest"
 	if goVer != nil {
-		img = fmt.Sprintf("golang:%s", goVer.Original())
+		// Use goVer.String here so 1.12 means 1.12.0. If Original is used, it
+		// would mean that the 1.12.17 docker image (which is tagged as the
+		// latest "1.12" release) would be used.
+		img = fmt.Sprintf("golang:%s", goVer.String())
 	}
 	return &builder{
 		log:     l.WithName("builder"),
