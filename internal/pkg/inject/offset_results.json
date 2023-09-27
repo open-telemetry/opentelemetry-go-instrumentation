@@ -298,13 +298,13 @@
       "Header": [
         {
           "versions": {
-            "oldest": "1.20.0",
+            "oldest": "1.12.0",
             "newest": "1.21.1"
           },
           "offsets": [
             {
               "offset": 56,
-              "since": "1.20.0"
+              "since": "1.12.0"
             }
           ]
         }
@@ -312,13 +312,13 @@
       "Method": [
         {
           "versions": {
-            "oldest": "1.20.0",
+            "oldest": "1.12.0",
             "newest": "1.21.1"
           },
           "offsets": [
             {
               "offset": 0,
-              "since": "1.20.0"
+              "since": "1.12.0"
             }
           ]
         }
@@ -326,13 +326,13 @@
       "RemoteAddr": [
         {
           "versions": {
-            "oldest": "1.20.0",
+            "oldest": "1.12.0",
             "newest": "1.21.1"
           },
           "offsets": [
             {
               "offset": 176,
-              "since": "1.20.0"
+              "since": "1.12.0"
             }
           ]
         }
@@ -340,13 +340,13 @@
       "URL": [
         {
           "versions": {
-            "oldest": "1.20.0",
+            "oldest": "1.12.0",
             "newest": "1.21.1"
           },
           "offsets": [
             {
               "offset": 16,
-              "since": "1.20.0"
+              "since": "1.12.0"
             }
           ]
         }
@@ -354,13 +354,13 @@
       "ctx": [
         {
           "versions": {
-            "oldest": "1.20.0",
+            "oldest": "1.12.0",
             "newest": "1.21.1"
           },
           "offsets": [
             {
               "offset": 232,
-              "since": "1.20.0"
+              "since": "1.12.0"
             }
           ]
         }
@@ -370,13 +370,13 @@
       "Path": [
         {
           "versions": {
-            "oldest": "1.20.0",
+            "oldest": "1.12.0",
             "newest": "1.21.1"
           },
           "offsets": [
             {
               "offset": 56,
-              "since": "1.20.0"
+              "since": "1.12.0"
             }
           ]
         }
@@ -386,13 +386,13 @@
       "goid": [
         {
           "versions": {
-            "oldest": "1.20.0",
+            "oldest": "1.12.0",
             "newest": "1.21.1"
           },
           "offsets": [
             {
               "offset": 152,
-              "since": "1.20.0"
+              "since": "1.12.0"
             }
           ]
         }
