@@ -36,7 +36,7 @@ var (
 	errNotGoExe    = errors.New("not a Go executable")
 )
 
-func (a *Analyzer) getModuleDetails(f *elf.File) (*version.Version, map[string]*version.Version, error) {
+func (a *Analyzer) getModuleDetails(f *elf.File) (*version.Version, map[string]string, error) {
 	goVersion, modules, err := getGoDetails(f)
 	if err != nil {
 		return nil, nil, err
@@ -48,8 +48,8 @@ func (a *Analyzer) getModuleDetails(f *elf.File) (*version.Version, map[string]*
 	}
 
 	log.Logger.V(1).Info("go version detected", "version", goVersion)
-	modsMap, err := parseModules(modules)
-	return v, modsMap, err
+	modsMap := parseModules(modules)
+	return v, modsMap, nil
 }
 
 func parseGoVersion(vers string) (*version.Version, error) {
@@ -173,9 +173,9 @@ func readString(f *elf.File, ptrSize int, readPtr func([]byte) uint64, addr uint
 	return string(data)
 }
 
-func parseModules(mod string) (map[string]*version.Version, error) {
+func parseModules(mod string) map[string]string {
 	lines := strings.Split(mod, "\n")
-	result := make(map[string]*version.Version)
+	result := make(map[string]string)
 	for _, line := range lines {
 		parts := strings.Fields(line)
 		if len(parts) > 1 {
@@ -187,17 +187,12 @@ func parseModules(mod string) (map[string]*version.Version, error) {
 					v = parts[2]
 				}
 
-				ver, err := version.NewVersion(v)
-				if err != nil {
-					return nil, err
-				}
-
-				result[modPackage] = ver
+				result[modPackage] = v
 			}
 		}
 	}
 
-	return result, nil
+	return result
 }
 
 func decodeString(data []byte) (s string, rest []byte) {

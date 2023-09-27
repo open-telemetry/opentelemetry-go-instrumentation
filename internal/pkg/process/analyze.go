@@ -37,7 +37,7 @@ type TargetDetails struct {
 	PID               int
 	Functions         []*Func
 	GoVersion         *version.Version
-	Libraries         map[string]*version.Version
+	Libraries         map[string]string
 	AllocationDetails *AllocationDetails
 }
 

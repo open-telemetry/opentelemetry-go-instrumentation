@@ -18,10 +18,15 @@ import (
 	"bytes"
 	"encoding/binary"
 	"errors"
+	"fmt"
 	"os"
 	"strings"
 
 	"github.com/cilium/ebpf"
+	"github.com/hashicorp/go-version"
+
+	"go.opentelemetry.io/auto/internal/pkg/instrumentors/bpffs"
+
 	"github.com/cilium/ebpf/link"
 	"github.com/cilium/ebpf/perf"
 	"golang.org/x/sys/unix"
@@ -31,7 +36,6 @@ import (
 	"go.opentelemetry.io/otel/trace"
 
 	"go.opentelemetry.io/auto/internal/pkg/inject"
-	"go.opentelemetry.io/auto/internal/pkg/instrumentors/bpffs"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentors/context"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentors/events"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentors/utils"
@@ -76,7 +80,12 @@ func (g *Instrumentor) FuncNames() []string {
 
 // Load loads all instrumentation offsets.
 func (g *Instrumentor) Load(ctx *context.InstrumentorContext) error {
-	ver := ctx.TargetDetails.Libraries[g.LibraryName()]
+	v := ctx.TargetDetails.Libraries[g.LibraryName()]
+	ver, err := version.NewVersion(v)
+	if err != nil {
+		return fmt.Errorf("invalid package version: %w", err)
+	}
+
 	spec, err := ctx.Injector.Inject(loadBpf, g.LibraryName(), ver, []*inject.StructField{
 		{
 			VarName:    "clientconn_target_ptr_pos",
