@@ -23,6 +23,8 @@ import (
 	"github.com/hashicorp/go-version"
 )
 
+// Manifest contains all information that needs to be inspected for an
+// application.
 type Manifest struct {
 	// Application is the application to extract binary data from.
 	Application Application
