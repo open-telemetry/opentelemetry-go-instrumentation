@@ -24,6 +24,7 @@ import (
 	"github.com/hashicorp/go-version"
 )
 
+// app holds a built Go application.
 type app struct {
 	Renderer Renderer
 	Builder  *builder
@@ -36,6 +37,11 @@ type app struct {
 	data   *dwarf.Data
 }
 
+// newApp builds and returns a new app.
+//
+// The new app is built in a temp directory. It is up to the caller to ensure
+// the returned app's Close method is called when it is no longer needed so
+// all temp directory resources are cleaned up.
 func newApp(ctx context.Context, l logr.Logger, j job) (*app, error) {
 	a := &app{
 		Renderer: j.Renderer,
@@ -78,11 +84,14 @@ func newApp(ctx context.Context, l logr.Logger, j job) (*app, error) {
 	return a, nil
 }
 
+// GetOffset returnst the struct field offset for sf. It uses the DWARF data
+// of the app's built binary to find this value.
 func (a *app) GetOffset(sf StructField) (uint64, bool) {
 	a.log.V(1).Info("analyzing binary...", "package", sf.PkgPath, "binary", a.exec)
 	return sf.offset(a.data)
 }
 
+// Close closes the app, releasing all held resources.
 func (a *app) Close() error {
 	return os.RemoveAll(a.tmpDir)
 }
