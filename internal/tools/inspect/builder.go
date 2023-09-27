@@ -31,9 +31,14 @@ import (
 	"github.com/hashicorp/go-version"
 )
 
+// minCompatVer is the min "go mod" version that includes the "compat" option.
+var minCompatVer = version.Must(version.NewVersion("1.17.0"))
+
 type builder struct {
-	log     logr.Logger
-	cli     *client.Client
+	log logr.Logger
+	cli *client.Client
+
+	goVer   *version.Version
 	GoImage string
 }
 
@@ -42,14 +47,24 @@ func newBuilder(l logr.Logger, cli *client.Client, goVer *version.Version) *buil
 	if goVer != nil {
 		img = fmt.Sprintf("golang:%s", goVer.Original())
 	}
-	return &builder{log: l.WithName("builder"), cli: cli, GoImage: img}
+	return &builder{
+		log:     l.WithName("builder"),
+		cli:     cli,
+		goVer:   goVer,
+		GoImage: img,
+	}
 }
 
 func (b *builder) Build(ctx context.Context, dir string, appV *version.Version) (string, error) {
 	b.log.V(2).Info("building application...", "version", appV, "dir", dir, "image", b.GoImage)
 
 	app := fmt.Sprintf("app%s", appV.Original())
-	cmd := "go mod tidy -compat=1.17 && go build -o " + app
+	var cmd string
+	if b.goVer.LessThan(minCompatVer) {
+		cmd = "go mod tidy && go build -o " + app
+	} else {
+		cmd = "go mod tidy -compat=1.17 && go build -o " + app
+	}
 	if err := b.runCmd(ctx, []string{"sh", "-c", cmd}, dir); err != nil {
 		return "", err
 	}
