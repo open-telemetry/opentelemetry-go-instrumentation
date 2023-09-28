@@ -25,7 +25,7 @@ import (
 	"go.opentelemetry.io/auto/internal/pkg/log"
 	"go.opentelemetry.io/auto/internal/pkg/opentelemetry"
 	"go.opentelemetry.io/auto/internal/pkg/process"
-	semconv "go.opentelemetry.io/otel/semconv/v1.18.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
 )
 
 const (
@@ -34,10 +34,11 @@ const (
 	envTargetExeKey = "OTEL_GO_AUTO_TARGET_EXE"
 	// envServiceName is the key for the envoriment variable value containing the service name.
 	envServiceNameKey = "OTEL_SERVICE_NAME"
+	// envResourceAttrKey is the key for the environment variable value containing
+	// OpenTelemetry Resource attributes.
+	envResourceAttrKey = "OTEL_RESOURCE_ATTRIBUTES"
 	// serviceNameDefault is the default service name prefix used if a user does not provide one.
 	serviceNameDefault = "unknown_service"
-	// resourceAttrKey is the environment variable name OpenTelemetry Resource information will be read from.
-	resourceAttrKey = "OTEL_RESOURCE_ATTRIBUTES"
 )
 
 // Instrumentation manages and controls all OpenTelemetry Go
