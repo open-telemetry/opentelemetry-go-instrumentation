@@ -21,11 +21,12 @@ import (
 	"path/filepath"
 	"strings"
 
+	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
+
 	"go.opentelemetry.io/auto/internal/pkg/instrumentors"
 	"go.opentelemetry.io/auto/internal/pkg/log"
 	"go.opentelemetry.io/auto/internal/pkg/opentelemetry"
 	"go.opentelemetry.io/auto/internal/pkg/process"
-	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
 )
 
 const (
