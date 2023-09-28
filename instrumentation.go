@@ -154,7 +154,7 @@ func (c instConfig) setDefualtServiceName() instConfig {
 }
 
 func (c instConfig) applyResourceAtrrEnv() instConfig {
-	attrs := strings.TrimSpace(os.Getenv(resourceAttrKey))
+	attrs := strings.TrimSpace(os.Getenv(envResourceAttrKey))
 
 	if attrs == "" {
 		return c

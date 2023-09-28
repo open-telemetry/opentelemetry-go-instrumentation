@@ -37,7 +37,7 @@ func TestWithServiceName(t *testing.T) {
 
 	// OTEL_RESOURCE_ATTRIBUTES
 	resServiceName := "resValue"
-	err := os.Setenv(resourceAttrKey, fmt.Sprintf("key1=val1,%s=%s", string(semconv.ServiceNameKey), resServiceName))
+	err := os.Setenv(envResourceAttrKey, fmt.Sprintf("key1=val1,%s=%s", string(semconv.ServiceNameKey), resServiceName))
 	if err != nil {
 		t.Error(err)
 	}
