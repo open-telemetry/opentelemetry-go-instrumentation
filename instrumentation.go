@@ -50,11 +50,9 @@ type Instrumentation struct {
 	manager  *instrumentors.Manager
 }
 
-var (
-	// Error message returned when instrumentation is launched without a target
-	// binary.
-	errUndefinedTarget = fmt.Errorf("undefined target Go binary, consider setting the %s environment variable pointing to the target binary to instrument", envTargetExeKey)
-)
+// Error message returned when instrumentation is launched without a target
+// binary.
+var errUndefinedTarget = fmt.Errorf("undefined target Go binary, consider setting the %s environment variable pointing to the target binary to instrument", envTargetExeKey)
 
 // NewInstrumentation returns a new [Instrumentation] configured with the
 // provided opts.

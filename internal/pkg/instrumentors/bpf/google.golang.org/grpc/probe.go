@@ -71,9 +71,11 @@ func (g *Instrumentor) LibraryName() string {
 // FuncNames returns the function names from "google.golang.org/grpc" that are
 // instrumented.
 func (g *Instrumentor) FuncNames() []string {
-	return []string{"google.golang.org/grpc.(*ClientConn).Invoke",
+	return []string{
+		"google.golang.org/grpc.(*ClientConn).Invoke",
 		"google.golang.org/grpc/internal/transport.(*http2Client).NewStream",
-		"google.golang.org/grpc/internal/transport.(*loopyWriter).headerHandler"}
+		"google.golang.org/grpc/internal/transport.(*loopyWriter).headerHandler",
+	}
 }
 
 // Load loads all instrumentation offsets.
@@ -106,7 +108,6 @@ func (g *Instrumentor) Load(ctx *context.InstrumentorContext) error {
 			Field:      "streamID",
 		},
 	}, nil, true)
-
 	if err != nil {
 		return err
 	}

@@ -99,7 +99,6 @@ func (h *Instrumentor) Load(ctx *context.InstrumentorContext) error {
 			Field:      "ctx",
 		},
 	}, nil, true)
-
 	if err != nil {
 		return err
 	}
@@ -116,7 +115,6 @@ func (h *Instrumentor) Load(ctx *context.InstrumentorContext) error {
 	}
 
 	offset, err := ctx.TargetDetails.GetFunctionOffset(h.FuncNames()[0])
-
 	if err != nil {
 		return err
 	}
@@ -124,7 +122,6 @@ func (h *Instrumentor) Load(ctx *context.InstrumentorContext) error {
 	up, err := ctx.Executable.Uprobe("", h.bpfObjects.UprobeHttpClientDo, &link.UprobeOptions{
 		Address: offset,
 	})
-
 	if err != nil {
 		return err
 	}
@@ -132,7 +129,6 @@ func (h *Instrumentor) Load(ctx *context.InstrumentorContext) error {
 	h.uprobes = append(h.uprobes, up)
 
 	retOffsets, err := ctx.TargetDetails.GetFunctionReturns(h.FuncNames()[0])
-
 	if err != nil {
 		return err
 	}
