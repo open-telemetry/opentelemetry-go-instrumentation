@@ -133,14 +133,16 @@ func newInstConfig(opts []InstrumentationOption) instConfig {
 }
 
 func (c instConfig) applyEnv() instConfig {
-	c = c.applyResourceAtrrEnv()
 	if v, ok := os.LookupEnv(envTargetExeKey); ok {
 		c.target = &process.TargetArgs{ExePath: v}
 	}
 	if v, ok := os.LookupEnv(envServiceNameKey); ok {
 		c.serviceName = v
-	} else if c.serviceName == "" {
-		c = c.setDefualtServiceName()
+	} else {
+		c = c.applyResourceAtrrEnv()
+		if c.serviceName == "" {
+			c = c.setDefualtServiceName()
+		}
 	}
 	return c
 }
