@@ -17,7 +17,6 @@ package opentelemetry
 import (
 	"context"
 	"fmt"
-	"os"
 	"runtime"
 	"strings"
 	"time"
@@ -34,10 +33,6 @@ import (
 
 	"go.opentelemetry.io/auto/internal/pkg/instrumentors/events"
 	"go.opentelemetry.io/auto/internal/pkg/log"
-)
-
-const (
-	otelServiceNameEnvVar = "OTEL_SERVICE_NAME"
 )
 
 // Information about the runtime environment for inclusion in User-Agent, e.g. "go/1.18.2 (linux/amd64)".
@@ -90,12 +85,7 @@ func (c *Controller) convertTime(t int64) time.Time {
 }
 
 // NewController returns a new initialized [Controller].
-func NewController(version string) (*Controller, error) {
-	serviceName, exists := os.LookupEnv(otelServiceNameEnvVar)
-	if !exists {
-		return nil, fmt.Errorf("%s env var must be set", otelServiceNameEnvVar)
-	}
-
+func NewController(version string, serviceName string) (*Controller, error) {
 	ctx := context.Background()
 	res, err := resource.New(ctx,
 		resource.WithAttributes(
