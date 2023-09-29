@@ -124,7 +124,9 @@ type instConfig struct {
 func newInstConfig(opts []InstrumentationOption) instConfig {
 	var c instConfig
 	for _, opt := range opts {
-		c = opt.apply(c)
+		if opt != nil {
+			c = opt.apply(c)
+		}
 	}
 	c = c.applyEnv()
 	return c
@@ -190,6 +192,9 @@ func (o fnOpt) apply(c instConfig) instConfig { return o(c) }
 // WithTarget returns an [InstrumentationOption] defining the target binary for
 // [Instrumentation] that is being executed at the provided path.
 //
+// This option conflicts with [WithPID]. If both are used, the last one
+// passed to [Instrumentation] will take precedence and be used.
+//
 // If multiple of these options are provided to an [Instrumentation], the last
 // one will be used.
 //
@@ -214,4 +219,26 @@ func WithServiceName(serviceName string) InstrumentationOption {
 		c.serviceName = serviceName
 		return c
 	})
+}
+
+// WithPID returns an [InstrumentationOption] corresponding to the executable
+// used by the provided pid.
+//
+// This option conflicts with [WithTarget]. If both are used, the last one
+// passed to [Instrumentation] will take precedence and be used.
+//
+// If multiple of these options are provided to an [Instrumentation], the last
+// one will be used.
+//
+// If OTEL_GO_AUTO_TARGET_EXE is defined it will take precedence over any value
+// passed here.
+func WithPID(pid int) InstrumentationOption {
+	exeLinkPath := fmt.Sprintf("/proc/%d/exe", pid)
+	exePath, err := os.Readlink(exeLinkPath)
+	if err != nil {
+		log.Logger.Error(err, "Failed to read exe link for process", "pid", pid)
+		return nil
+	}
+
+	return WithTarget(exePath)
 }

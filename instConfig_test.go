@@ -17,6 +17,8 @@ package auto
 import (
 	"fmt"
 	"os"
+	"strconv"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -52,4 +54,39 @@ func TestWithServiceName(t *testing.T) {
 	}
 	c = newInstConfig([]InstrumentationOption{WithServiceName((testServiceName))})
 	assert.Equal(t, envServiceName, c.serviceName)
+}
+
+func TestWithPID(t *testing.T) {
+	// Get a non existing PID
+	maxPIDBytes, err := os.ReadFile("/proc/sys/kernel/pid_max")
+	if err != nil {
+		t.Error(err)
+	}
+
+	maxPID, err := strconv.Atoi(strings.TrimSuffix(string(maxPIDBytes), "\n"))
+	if err != nil {
+		t.Error(err)
+	}
+
+	// Non existing PID
+	nonExistingPID := maxPID + 1
+	c := newInstConfig([]InstrumentationOption{WithPID(nonExistingPID)})
+	assert.Nil(t, c.target)
+
+	// Current PID
+	currPID := os.Getpid()
+	c = newInstConfig([]InstrumentationOption{WithPID(currPID)})
+	exe, err := os.Executable()
+	if err != nil {
+		t.Error(err)
+	}
+	assert.Equal(t, exe, c.target.ExePath)
+
+	// Non existing PID but valid target should override it
+	c = newInstConfig([]InstrumentationOption{WithPID(nonExistingPID), WithTarget(exe)})
+	assert.Equal(t, exe, c.target.ExePath)
+
+	// Non valid target exe but valid PID - PID should override
+	c = newInstConfig([]InstrumentationOption{WithTarget("Non_Existing_Process"), WithPID(currPID)})
+	assert.Equal(t, exe, c.target.ExePath)
 }
