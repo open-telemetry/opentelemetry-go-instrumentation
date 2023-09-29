@@ -8,6 +8,10 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 
 ## [Unreleased]
 
+### Added
+
+- Add `WithServiceName` config option for instrumentation. ([#353](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/353))
+
 ### Changed
 
 - Fix runtime panic if OTEL_GO_AUTO_TARGET_EXE is not set. ([#339](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/339))
