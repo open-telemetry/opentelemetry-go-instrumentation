@@ -16,7 +16,9 @@ package process
 
 import (
 	"errors"
+	"fmt"
 	"os"
+	"syscall"
 )
 
 // ExePathEnvVar is the environment variable key whose value points to the
@@ -26,26 +28,40 @@ const ExePathEnvVar = "OTEL_GO_AUTO_TARGET_EXE"
 // TargetArgs are the binary target information.
 type TargetArgs struct {
 	ExePath string
+	Pid     int
 }
 
 // Validate validates t and returns an error if not valid.
 func (t *TargetArgs) Validate() error {
+	if t.Pid != 0 {
+		return validatePID(t.Pid)
+	}
 	if t.ExePath == "" {
 		return errors.New("target binary path not specified, please specify " + ExePathEnvVar + " env variable")
 	}
 
+	return validateExePath(t.ExePath)
+}
+
+func validateExePath(exePath string) error {
+	info, err := os.Stat(exePath)
+	if err != nil {
+		return errors.New(exePath + "does not exist")
+	}
+	if info.Mode().Perm()&0o111 == 0 {
+		return errors.New(exePath + "is not executable")
+	}
 	return nil
 }
 
-// ParseTargetArgs returns TargetArgs for the target pointed to by the
-// environment variable OTEL_GO_AUTO_TARGET_EXE.
-func ParseTargetArgs() *TargetArgs {
-	result := &TargetArgs{}
-
-	val, exists := os.LookupEnv(ExePathEnvVar)
-	if exists {
-		result.ExePath = val
+func validatePID(pid int) error {
+	p, err := os.FindProcess(pid)
+	if err != nil {
+		return fmt.Errorf("can't find process with pid %d", pid)
 	}
-
-	return result
+	err = p.Signal(syscall.Signal(0))
+	if err != nil {
+		return fmt.Errorf("process with pid %d does not exist", pid)
+	}
+	return nil
 }

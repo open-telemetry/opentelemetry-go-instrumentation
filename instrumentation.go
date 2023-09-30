@@ -50,8 +50,8 @@ type Instrumentation struct {
 	manager  *instrumentors.Manager
 }
 
-// Error message returned when instrumentation is launched without a target
-// binary.
+// Error message returned when instrumentation is launched without a valid target
+// binary or pid.
 var errUndefinedTarget = fmt.Errorf("undefined target Go binary, consider setting the %s environment variable pointing to the target binary to instrument", envTargetExeKey)
 
 // NewInstrumentation returns a new [Instrumentation] configured with the
@@ -192,8 +192,8 @@ func (o fnOpt) apply(c instConfig) instConfig { return o(c) }
 // WithTarget returns an [InstrumentationOption] defining the target binary for
 // [Instrumentation] that is being executed at the provided path.
 //
-// This option conflicts with [WithPID]. If both are used, the last one
-// passed to [Instrumentation] will take precedence and be used.
+// This option conflicts with [WithPID]. If both are used, [WithPID] will take
+// precedence and be used.
 //
 // If multiple of these options are provided to an [Instrumentation], the last
 // one will be used.
@@ -202,7 +202,11 @@ func (o fnOpt) apply(c instConfig) instConfig { return o(c) }
 // passed here.
 func WithTarget(path string) InstrumentationOption {
 	return fnOpt(func(c instConfig) instConfig {
-		c.target = &process.TargetArgs{ExePath: path}
+		if c.target == nil {
+			c.target = &process.TargetArgs{ExePath: path}
+		} else {
+			c.target.ExePath = path
+		}
 		return c
 	})
 }
@@ -224,21 +228,19 @@ func WithServiceName(serviceName string) InstrumentationOption {
 // WithPID returns an [InstrumentationOption] corresponding to the executable
 // used by the provided pid.
 //
-// This option conflicts with [WithTarget]. If both are used, the last one
-// passed to [Instrumentation] will take precedence and be used.
+// This option conflicts with [WithTarget]. If both are used, [WithPID]
+// will take precedence and be used. If OTEL_GO_AUTO_TARGET_EXE is defined,
+// the pid passed here will take precedence.
 //
 // If multiple of these options are provided to an [Instrumentation], the last
 // one will be used.
-//
-// If OTEL_GO_AUTO_TARGET_EXE is defined it will take precedence over any value
-// passed here.
 func WithPID(pid int) InstrumentationOption {
-	exeLinkPath := fmt.Sprintf("/proc/%d/exe", pid)
-	exePath, err := os.Readlink(exeLinkPath)
-	if err != nil {
-		log.Logger.Error(err, "Failed to read exe link for process", "pid", pid)
-		return nil
-	}
-
-	return WithTarget(exePath)
+	return fnOpt(func(c instConfig) instConfig {
+		if c.target == nil {
+			c.target = &process.TargetArgs{Pid: pid}
+		} else {
+			c.target.Pid = pid
+		}
+		return c
+	})
 }
