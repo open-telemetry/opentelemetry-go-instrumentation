@@ -134,7 +134,9 @@ func newInstConfig(opts []InstrumentationOption) instConfig {
 
 func (c instConfig) applyEnv() instConfig {
 	if v, ok := os.LookupEnv(envTargetExeKey); ok {
-		c.target = &process.TargetArgs{ExePath: v}
+		if c.target == nil || (c.target != nil && c.target.Pid == 0) {
+			c.target = &process.TargetArgs{ExePath: v}
+		}
 	}
 	if v, ok := os.LookupEnv(envServiceNameKey); ok {
 		c.serviceName = v
