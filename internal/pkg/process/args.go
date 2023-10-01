@@ -43,7 +43,6 @@ func (t *TargetArgs) Validate() error {
 	return nil
 }
 
-
 func validatePID(pid int) error {
 	p, err := os.FindProcess(pid)
 	if err != nil {
