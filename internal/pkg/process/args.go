@@ -40,19 +40,9 @@ func (t *TargetArgs) Validate() error {
 		return errors.New("target binary path not specified, please specify " + ExePathEnvVar + " env variable")
 	}
 
-	return validateExePath(t.ExePath)
-}
-
-func validateExePath(exePath string) error {
-	info, err := os.Stat(exePath)
-	if err != nil {
-		return errors.New(exePath + "does not exist")
-	}
-	if info.Mode().Perm()&0o111 == 0 {
-		return errors.New(exePath + "is not executable")
-	}
 	return nil
 }
+
 
 func validatePID(pid int) error {
 	p, err := os.FindProcess(pid)

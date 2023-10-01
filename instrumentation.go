@@ -122,7 +122,7 @@ type instConfig struct {
 }
 
 func newInstConfig(opts []InstrumentationOption) instConfig {
-	var c instConfig = instConfig{target: &process.TargetArgs{}}
+	var c = instConfig{target: &process.TargetArgs{}}
 	for _, opt := range opts {
 		if opt != nil {
 			c = opt.apply(c)
