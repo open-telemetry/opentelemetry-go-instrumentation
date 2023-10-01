@@ -122,7 +122,7 @@ type instConfig struct {
 }
 
 func newInstConfig(opts []InstrumentationOption) instConfig {
-	var c instConfig
+	var c instConfig = instConfig{target: &process.TargetArgs{}}
 	for _, opt := range opts {
 		if opt != nil {
 			c = opt.apply(c)
@@ -134,9 +134,7 @@ func newInstConfig(opts []InstrumentationOption) instConfig {
 
 func (c instConfig) applyEnv() instConfig {
 	if v, ok := os.LookupEnv(envTargetExeKey); ok {
-		if c.target == nil || (c.target != nil && c.target.Pid == 0) {
-			c.target = &process.TargetArgs{ExePath: v}
-		}
+		c.target.ExePath = v
 	}
 	if v, ok := os.LookupEnv(envServiceNameKey); ok {
 		c.serviceName = v
@@ -150,7 +148,7 @@ func (c instConfig) applyEnv() instConfig {
 }
 
 func (c instConfig) setDefualtServiceName() instConfig {
-	if c.target != nil {
+	if c.target.ExePath != "" {
 		c.serviceName = fmt.Sprintf("%s:%s", serviceNameDefault, filepath.Base(c.target.ExePath))
 	} else {
 		c.serviceName = serviceNameDefault
@@ -204,11 +202,7 @@ func (o fnOpt) apply(c instConfig) instConfig { return o(c) }
 // passed here.
 func WithTarget(path string) InstrumentationOption {
 	return fnOpt(func(c instConfig) instConfig {
-		if c.target == nil {
-			c.target = &process.TargetArgs{ExePath: path}
-		} else {
-			c.target.ExePath = path
-		}
+		c.target.ExePath = path
 		return c
 	})
 }
@@ -238,11 +232,7 @@ func WithServiceName(serviceName string) InstrumentationOption {
 // one will be used.
 func WithPID(pid int) InstrumentationOption {
 	return fnOpt(func(c instConfig) instConfig {
-		if c.target == nil {
-			c.target = &process.TargetArgs{Pid: pid}
-		} else {
-			c.target.Pid = pid
-		}
+		c.target.Pid = pid
 		return c
 	})
 }
