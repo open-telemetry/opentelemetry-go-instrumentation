@@ -53,6 +53,10 @@ func main() {
 				StructName: "runtime.g",
 				Field:      "goid",
 			},
+			{
+				StructName: "runtime.hmap",
+				Field:      "buckets",
+			},
 		})
 
 	if err != nil {
