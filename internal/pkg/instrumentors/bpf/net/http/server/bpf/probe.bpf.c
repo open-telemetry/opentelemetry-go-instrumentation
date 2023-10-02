@@ -69,6 +69,7 @@ volatile const u64 url_ptr_pos;
 volatile const u64 path_ptr_pos;
 volatile const u64 ctx_ptr_pos;
 volatile const u64 headers_ptr_pos;
+volatile const u64 buckets_ptr_pos;
 
 static __always_inline struct span_context *extract_context_from_req_headers(void *headers_ptr_ptr)
 {
@@ -97,7 +98,7 @@ static __always_inline struct span_context *extract_context_from_req_headers(voi
     }
     u64 bucket_count = 1 << log_2_bucket_count;
     void *header_buckets;
-    res = bpf_probe_read(&header_buckets, sizeof(header_buckets), headers_ptr + 16);
+    res = bpf_probe_read(&header_buckets, sizeof(header_buckets), (void*)(headers_ptr + buckets_ptr_pos));
     if (res < 0)
     {
         return NULL;
@@ -216,7 +217,6 @@ int uprobe_ServerMux_ServeHTTP(struct pt_regs *ctx)
     void *key = get_consistent_key(ctx, (void *)(req_ptr + ctx_ptr_pos));
 
     // Write event
-    httpReq.sc = generate_span_context();
     bpf_map_update_elem(&http_events, &key, &httpReq, 0);
     start_tracking_span(req_ctx_ptr, &httpReq.sc);
     return 0;

@@ -289,6 +289,22 @@
           ]
         }
       ]
+    },
+    "runtime.hmap": {
+      "buckets": [
+        {
+          "versions": {
+            "oldest": "1.12.0",
+            "newest": "1.21.1"
+          },
+          "offsets": [
+            {
+              "offset": 16,
+              "since": "1.12.0"
+            }
+          ]
+        }
+      ]
     }
   }
 }
