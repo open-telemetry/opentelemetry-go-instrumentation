@@ -87,8 +87,7 @@ func NewInstrumentation(opts ...InstrumentationOption) (*Instrumentation, error)
 	if log.Logger.IsZero() {
 		err := log.Init()
 		if err != nil {
-			fmt.Printf("could not init logger: %s\n", err)
-			os.Exit(1)
+			return nil, err
 		}
 	}
 
