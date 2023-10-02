@@ -27,13 +27,14 @@ import (
 	"github.com/cilium/ebpf/perf"
 	"golang.org/x/sys/unix"
 
+	"go.opentelemetry.io/otel/attribute"
+	semconv "go.opentelemetry.io/otel/semconv/v1.7.0"
+	"go.opentelemetry.io/otel/trace"
+
 	"go.opentelemetry.io/auto/internal/pkg/inject"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentors/context"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentors/events"
 	"go.opentelemetry.io/auto/internal/pkg/log"
-	"go.opentelemetry.io/otel/attribute"
-	semconv "go.opentelemetry.io/otel/semconv/v1.7.0"
-	"go.opentelemetry.io/otel/trace"
 )
 
 //go:generate go run github.com/cilium/ebpf/cmd/bpf2go -target amd64,arm64 -cc clang -cflags $CFLAGS bpf ./bpf/probe.bpf.c
@@ -71,7 +72,7 @@ func (h *Instrumentor) FuncNames() []string {
 
 // Load loads all instrumentation offsets.
 func (h *Instrumentor) Load(ctx *context.InstrumentorContext) error {
-	spec, err := ctx.Injector.Inject(loadBpf, "go", ctx.TargetDetails.GoVersion.Original(), []*inject.StructField{
+	spec, err := ctx.Injector.Inject(loadBpf, "go", ctx.TargetDetails.GoVersion, []*inject.StructField{
 		{
 			VarName:    "method_ptr_pos",
 			StructName: "net/http.Request",
@@ -103,7 +104,6 @@ func (h *Instrumentor) Load(ctx *context.InstrumentorContext) error {
 			Field:      "buckets",
 		},
 	}, nil, true)
-
 	if err != nil {
 		return err
 	}
@@ -120,7 +120,6 @@ func (h *Instrumentor) Load(ctx *context.InstrumentorContext) error {
 	}
 
 	offset, err := ctx.TargetDetails.GetFunctionOffset(h.FuncNames()[0])
-
 	if err != nil {
 		return err
 	}
@@ -128,7 +127,6 @@ func (h *Instrumentor) Load(ctx *context.InstrumentorContext) error {
 	up, err := ctx.Executable.Uprobe("", h.bpfObjects.UprobeHttpClientDo, &link.UprobeOptions{
 		Address: offset,
 	})
-
 	if err != nil {
 		return err
 	}
@@ -136,7 +134,6 @@ func (h *Instrumentor) Load(ctx *context.InstrumentorContext) error {
 	h.uprobes = append(h.uprobes, up)
 
 	retOffsets, err := ctx.TargetDetails.GetFunctionReturns(h.FuncNames()[0])
-
 	if err != nil {
 		return err
 	}

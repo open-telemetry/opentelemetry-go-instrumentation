@@ -18,7 +18,6 @@ import (
 	"bytes"
 	"encoding/binary"
 	"errors"
-
 	"os"
 
 	"go.opentelemetry.io/auto/internal/pkg/instrumentors/bpffs"
@@ -28,14 +27,15 @@ import (
 	"github.com/cilium/ebpf/perf"
 	"golang.org/x/sys/unix"
 
+	"go.opentelemetry.io/otel/attribute"
+	semconv "go.opentelemetry.io/otel/semconv/v1.18.0"
+	"go.opentelemetry.io/otel/trace"
+
 	"go.opentelemetry.io/auto/internal/pkg/inject"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentors/context"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentors/events"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentors/utils"
 	"go.opentelemetry.io/auto/internal/pkg/log"
-	"go.opentelemetry.io/otel/attribute"
-	semconv "go.opentelemetry.io/otel/semconv/v1.18.0"
-	"go.opentelemetry.io/otel/trace"
 )
 
 //go:generate go run github.com/cilium/ebpf/cmd/bpf2go -target amd64,arm64 -cc clang -cflags $CFLAGS bpf ./bpf/probe.bpf.c
@@ -76,7 +76,7 @@ func (h *Instrumentor) FuncNames() []string {
 
 // Load loads all instrumentation offsets.
 func (h *Instrumentor) Load(ctx *context.InstrumentorContext) error {
-	spec, err := ctx.Injector.Inject(loadBpf, "go", ctx.TargetDetails.GoVersion.Original(), []*inject.StructField{
+	spec, err := ctx.Injector.Inject(loadBpf, "go", ctx.TargetDetails.GoVersion, []*inject.StructField{
 		{
 			VarName:    "method_ptr_pos",
 			StructName: "net/http.Request",
@@ -98,7 +98,6 @@ func (h *Instrumentor) Load(ctx *context.InstrumentorContext) error {
 			Field:      "Path",
 		},
 	}, nil, false)
-
 	if err != nil {
 		return err
 	}

@@ -26,57 +26,35 @@ type TrackedOffsets struct {
 // GetOffset returns the struct field offset for at the specified version ver
 // and true if o contains that offset. A value of 0 and false will be returned
 // if o does not contain the offset.
-func (o *TrackedOffsets) GetOffset(strct, field, ver string) (uint64, bool) {
+func (o *TrackedOffsets) GetOffset(strct, field string, ver *version.Version) (uint64, bool) {
 	sMap, ok := o.Data[strct]
 	if !ok {
 		return 0, false
 	}
 
-	f, ok := sMap[field]
+	fields, ok := sMap[field]
 	if !ok {
 		return 0, false
 	}
 
-	v, err := version.NewVersion(ver)
-	if err != nil {
-		// Shouldn't happen unless a bug in our code.
-		panic(err.Error())
-	}
-
-	oldest, err := version.NewVersion(f.Versions.Oldest)
-	if err != nil {
-		// Shouldn't happen unless a bug in our code.
-		panic(err.Error())
-	}
-
-	newest, err := version.NewVersion(f.Versions.Newest)
-	if err != nil {
-		// Shouldn't happen unless a bug in our code.
-		panic(err.Error())
-	}
-
-	if v.LessThan(oldest) || v.GreaterThan(newest) {
-		return 0, false
-	}
-
-	// Search from the newest version (last in the slice).
-	for o := len(f.Offsets) - 1; o >= 0; o-- {
-		od := &f.Offsets[o]
-		since, err := version.NewVersion(od.Since)
-		if err != nil {
-			// Shouldn't happen unless a bug in our code.
-			panic(err.Error())
+	for _, f := range fields {
+		if ver.LessThan(f.Versions.Oldest) || ver.GreaterThan(f.Versions.Newest) {
+			continue
 		}
-		if v.GreaterThanOrEqual(since) {
-			return od.Offset, true
+
+		// Search from the newest version (last in the slice).
+		for o := len(f.Offsets) - 1; o >= 0; o-- {
+			od := &f.Offsets[o]
+			if ver.GreaterThanOrEqual(od.Since) {
+				return od.Offset, true
+			}
 		}
 	}
-
 	return 0, false
 }
 
 // TrackedStruct maps fields names to the tracked fields offsets.
-type TrackedStruct map[string]TrackedField
+type TrackedStruct map[string][]TrackedField
 
 // TrackedField are the field offsets for a tracked struct.
 type TrackedField struct {
@@ -89,13 +67,13 @@ type TrackedField struct {
 
 // VersionInfo is the span of supported versions.
 type VersionInfo struct {
-	Oldest string `json:"oldest"`
-	Newest string `json:"newest"`
+	Oldest *version.Version `json:"oldest"`
+	Newest *version.Version `json:"newest"`
 }
 
 // VersionedOffset is the offset for a particular version of a data type from a
 // package.
 type VersionedOffset struct {
-	Offset uint64 `json:"offset"`
-	Since  string `json:"since"`
+	Offset uint64           `json:"offset"`
+	Since  *version.Version `json:"since"`
 }

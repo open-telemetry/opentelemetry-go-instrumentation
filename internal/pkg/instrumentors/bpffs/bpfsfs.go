@@ -37,7 +37,7 @@ func PathForTargetApplication(target *process.TargetDetails) string {
 func Mount(target *process.TargetDetails) error {
 	if !isBPFFSMounted() {
 		// Directory does not exist, create it and mount
-		if err := os.MkdirAll(bpfFsPath, 0755); err != nil {
+		if err := os.MkdirAll(bpfFsPath, 0o755); err != nil {
 			return err
 		}
 
@@ -48,7 +48,7 @@ func Mount(target *process.TargetDetails) error {
 	}
 
 	// create directory with read, write and execute permissions
-	return os.Mkdir(PathForTargetApplication(target), 0755)
+	return os.Mkdir(PathForTargetApplication(target), 0o755)
 }
 
 func isBPFFSMounted() bool {

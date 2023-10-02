@@ -17,10 +17,11 @@ package downloader
 import (
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"os"
 	"path"
+
+	"github.com/hashicorp/go-version"
 
 	"go.opentelemetry.io/auto/internal/tools/offsets/utils"
 )
@@ -31,8 +32,8 @@ const (
 
 // DownloadBinaryFromRemote returns the downloaded Go binary at version from
 // https://go.dev/dl/.
-func DownloadBinaryFromRemote(_ string, version string) (string, string, error) {
-	dir, err := ioutil.TempDir("", version)
+func DownloadBinaryFromRemote(_ string, ver *version.Version) (string, string, error) {
+	dir, err := os.MkdirTemp("", ver.String())
 	if err != nil {
 		return "", "", err
 	}
@@ -42,7 +43,7 @@ func DownloadBinaryFromRemote(_ string, version string) (string, string, error) 
 	}
 	defer dest.Close()
 
-	resp, err := http.Get(fmt.Sprintf(urlPattern, version))
+	resp, err := http.Get(fmt.Sprintf(urlPattern, ver.Original()))
 	if err != nil {
 		return "", "", err
 	}

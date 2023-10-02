@@ -47,11 +47,11 @@ func (m *Manager) Run(ctx context.Context, target *process.TargetDetails) error 
 		select {
 		case <-ctx.Done():
 			m.Close()
-			m.cleanup()
+			m.cleanup(target)
 			return ctx.Err()
 		case <-m.done:
 			log.Logger.V(0).Info("shutting down all instrumentors due to signal")
-			m.cleanup()
+			m.cleanup(target)
 			return nil
 		case e := <-m.incomingEvents:
 			m.otelController.Trace(e)
@@ -91,7 +91,7 @@ func (m *Manager) load(target *process.TargetDetails) error {
 		err := i.Load(ctx)
 		if err != nil {
 			log.Logger.Error(err, "error while loading instrumentors, cleaning up", "name", name)
-			m.cleanup()
+			m.cleanup(target)
 			return err
 		}
 	}
@@ -100,10 +100,16 @@ func (m *Manager) load(target *process.TargetDetails) error {
 	return nil
 }
 
-func (m *Manager) cleanup() {
+func (m *Manager) cleanup(target *process.TargetDetails) {
 	close(m.incomingEvents)
 	for _, i := range m.instrumentors {
 		i.Close()
+	}
+
+	log.Logger.V(0).Info("Cleaning bpffs")
+	err := m.allocator.Clean(target)
+	if err != nil {
+		log.Logger.Error(err, "Failed to clean bpffs")
 	}
 }
 

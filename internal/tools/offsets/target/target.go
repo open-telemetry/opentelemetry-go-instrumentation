@@ -50,7 +50,7 @@ type Result struct {
 
 // VersionedResult is the offset for a version of a module.
 type VersionedResult struct {
-	Version    string
+	Version    *version.Version
 	OffsetData *binary.Result
 }
 
@@ -159,8 +159,8 @@ func (t *Data) analyzeFile(exePath string, dm []*binary.DataMember) (*binary.Res
 	return res, nil
 }
 
-func (t *Data) findVersions() ([]string, error) {
-	var vers []string
+func (t *Data) findVersions() ([]*version.Version, error) {
+	var vers []*version.Version
 	var err error
 	switch t.versionsStrategy {
 	case GoListVersionsStrategy:
@@ -181,14 +181,9 @@ func (t *Data) findVersions() ([]string, error) {
 		return vers, nil
 	}
 
-	var filteredVers []string
+	var filteredVers []*version.Version
 	for _, v := range vers {
-		semver, err := version.NewVersion(v)
-		if err != nil {
-			return nil, err
-		}
-
-		if t.versionConstraint.Check(semver) {
+		if t.versionConstraint.Check(v) {
 			filteredVers = append(filteredVers, v)
 		}
 	}
@@ -196,12 +191,12 @@ func (t *Data) findVersions() ([]string, error) {
 	return filteredVers, nil
 }
 
-func (t *Data) downloadBinary(modName string, version string) (string, string, error) {
+func (t *Data) downloadBinary(modName string, v *version.Version) (string, string, error) {
 	switch t.binaryFetchStrategy {
 	case WrapAsGoAppBinaryFetchStrategy:
-		return downloader.DownloadBinary(modName, version, t.isGoStdlib)
+		return downloader.DownloadBinary(modName, v, t.isGoStdlib)
 	case DownloadPreCompiledBinaryFetchStrategy:
-		return downloader.DownloadBinaryFromRemote(modName, version)
+		return downloader.DownloadBinaryFromRemote(modName, v)
 	}
 
 	return "", "", fmt.Errorf("unsupported binary fetch strategy")

@@ -18,17 +18,18 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/hashicorp/go-version"
 	"go.opentelemetry.io/auto/internal/tools/offsets/utils"
 )
 
 type goListResponse struct {
-	Path     string   `json:"Path"`
-	Versions []string `json:"versions"`
+	Path     string             `json:"Path"`
+	Versions []*version.Version `json:"versions"`
 }
 
 // FindVersionsUsingGoList returns all locally known version of module with
 // moduleName.
-func FindVersionsUsingGoList(moduleName string) ([]string, error) {
+func FindVersionsUsingGoList(moduleName string) ([]*version.Version, error) {
 	stdout, _, err := utils.RunCommand(fmt.Sprintf("go list -m -json -versions %s", moduleName), "")
 	if err != nil {
 		return nil, err

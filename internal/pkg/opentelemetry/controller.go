@@ -17,7 +17,6 @@ package opentelemetry
 import (
 	"context"
 	"fmt"
-	"os"
 	"runtime"
 	"strings"
 	"time"
@@ -25,18 +24,15 @@ import (
 	"golang.org/x/sys/unix"
 	"google.golang.org/grpc"
 
-	"go.opentelemetry.io/auto/internal/pkg/instrumentors/events"
-	"go.opentelemetry.io/auto/internal/pkg/log"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.18.0"
 	"go.opentelemetry.io/otel/trace"
-)
 
-const (
-	otelServiceNameEnvVar = "OTEL_SERVICE_NAME"
+	"go.opentelemetry.io/auto/internal/pkg/instrumentors/events"
+	"go.opentelemetry.io/auto/internal/pkg/log"
 )
 
 // Information about the runtime environment for inclusion in User-Agent, e.g. "go/1.18.2 (linux/amd64)".
@@ -89,12 +85,7 @@ func (c *Controller) convertTime(t int64) time.Time {
 }
 
 // NewController returns a new initialized [Controller].
-func NewController(version string) (*Controller, error) {
-	serviceName, exists := os.LookupEnv(otelServiceNameEnvVar)
-	if !exists {
-		return nil, fmt.Errorf("%s env var must be set", otelServiceNameEnvVar)
-	}
-
+func NewController(version string, serviceName string) (*Controller, error) {
 	ctx := context.Background()
 	res, err := resource.New(ctx,
 		resource.WithAttributes(
