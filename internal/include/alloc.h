@@ -114,6 +114,7 @@ static __always_inline void *write_target_data(void *data, s32 size)
         }
 
         bpf_map_update_elem(&alloc_map, &start_index, &updated_start, BPF_ANY);
+        bpf_printk("wrote %d bytes to userspace at addr: %lx", size, target);
         return target;
     }
     else
