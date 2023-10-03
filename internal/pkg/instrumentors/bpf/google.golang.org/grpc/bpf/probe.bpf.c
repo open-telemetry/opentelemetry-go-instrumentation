@@ -113,7 +113,7 @@ int uprobe_ClientConn_Invoke(struct pt_regs *ctx)
     void *context_ptr = get_argument(ctx, context_pos);
     // void *context_ptr_val = 0;
     // bpf_probe_read(&context_ptr_val, sizeof(context_ptr_val), context_ptr);
-    struct span_context *parent_span_ctx = get_parent_span_context(context_ptr_val);
+    struct span_context *parent_span_ctx = get_parent_span_context(context_ptr);
     if (parent_span_ctx != NULL)
     {
         bpf_probe_read(&grpcReq.psc, sizeof(grpcReq.psc), parent_span_ctx);
