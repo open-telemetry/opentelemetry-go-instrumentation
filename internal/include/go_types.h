@@ -81,11 +81,13 @@ static __always_inline void append_item_to_slice(struct go_slice *slice, void *n
 {
     if (slice->len < slice->cap)
     {
+        bpf_printk("room aviailable on current array");
         // Room available on current array
         bpf_probe_write_user(slice->array + (item_size * slice->len), new_item, item_size);
     }
     else
     {
+        bpf_printk("no room on current array");
         // No room on current array - copy to new one of size item_size * (len + 1)
         if (slice->len > MAX_DATA_SIZE || slice->len < 1)
         {
@@ -124,6 +126,11 @@ static __always_inline void append_item_to_slice(struct go_slice *slice, void *n
         // Update array
         slice->array = new_array;
         long success = bpf_probe_write_user(slice_user_ptr->array, &slice->array, sizeof(slice->array));
+        if (success != 0)
+        {
+            bpf_printk("append_item_to_slice: failed to update slice array");
+            return;
+        }
 
         // Update cap
         slice->cap++;
