@@ -56,13 +56,17 @@ struct map_bucket {
 
 static __always_inline struct go_string write_user_go_string(char *str, u32 len)
 {
+    struct go_string new_string = {.str = NULL, .len = 0};
+
     // Copy chars to userspace
     char *addr = write_target_data((void *)str, len);
-
-    // Build string struct in kernel space
-    struct go_string new_string = {};
-    new_string.str = addr;
-    new_string.len = len;
+    if (addr == NULL) {
+        return new_string;
+    } else {
+        // Build string struct in kernel space
+        new_string.str = addr;
+        new_string.len = len;
+    }
 
     // Copy new string struct to userspace
     void *res = write_target_data((void *)&new_string, sizeof(new_string));
@@ -111,6 +115,11 @@ static __always_inline void append_item_to_slice(struct go_slice *slice, void *n
         }
 
         void *new_array = write_target_data(map_buff, new_array_size);
+        if (new_array == NULL)
+        {
+            bpf_printk("append_item_to_slice: failed to copy new array to userspace");
+            return;
+        }
 
         // Update array
         slice->array = new_array;
