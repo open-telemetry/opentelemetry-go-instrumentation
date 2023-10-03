@@ -27,12 +27,6 @@ import (
 	"go.opentelemetry.io/auto/internal/pkg/process/ptrace"
 )
 
-const (
-	// The concurrent trace & span ID pairs lookup size in bytes. Currently set to 24mb.
-	// TODO: Review map size.
-	mapSize = 25165824
-)
-
 // TargetDetails are the details about a target function.
 type TargetDetails struct {
 	PID               int
@@ -107,6 +101,12 @@ func (a *Analyzer) remoteMmap(pid int, mapSize uint64) (uint64, error) {
 		return 0, err
 	}
 
+	err = program.Madvise(addr, mapSize)
+	if err != nil {
+		log.Logger.Error(err, "Failed to madvise", "pid", pid)
+		return 0, err
+	}
+
 	return addr, nil
 }
 
@@ -134,6 +134,7 @@ func (a *Analyzer) Analyze(pid int, relevantFuncs map[string]interface{}) (*Targ
 	result.GoVersion = goVersion
 	result.Libraries = modules
 
+	mapSize := uint64(os.Getpagesize() * runtime.NumCPU() * 50)
 	addr, err := a.remoteMmap(pid, mapSize)
 	if err != nil {
 		log.Logger.Error(err, "Failed to mmap")
