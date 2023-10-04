@@ -35,6 +35,15 @@ struct
     __uint(pinning, LIBBPF_PIN_BY_NAME);
 } alloc_map SEC(".maps");
 
+// Buffer for aligned data
+struct
+{
+    __uint(type, BPF_MAP_TYPE_PERCPU_ARRAY);
+    __uint(key_size, sizeof(u32));
+    __uint(value_size, MAX_BUFFER_SIZE);
+    __uint(max_entries, 1);
+} alignment_buffer SEC(".maps");
+
 static __always_inline u64 get_area_start()
 {
     s64 partition_size = (end_addr - start_addr) / total_cpus;
@@ -44,6 +53,9 @@ static __always_inline u64 get_area_start()
     if (start == NULL || *start == 0)
     {
         u64 current_start_addr = start_addr + (partition_size * current_cpu);
+        if (current_start_addr % 8 != 0) {
+            current_start_addr += 8 - (current_start_addr % 8);
+        }
         bpf_map_update_elem(&alloc_map, &start_index, &current_start_addr, BPF_ANY);
         return current_start_addr;
     }
@@ -90,6 +102,29 @@ static __always_inline void *write_target_data(void *data, s32 size)
         return NULL;
     }
 
+    // Add padding to align to 8 bytes
+    if (size % 8 != 0) {
+        size += 8 - (size % 8);
+
+        // Write to the buffer
+        u32 key = 0;
+        void *buffer = bpf_map_lookup_elem(&alignment_buffer, &key);
+        if (buffer == NULL) {
+            bpf_printk("failed to get alignment buffer");
+            return NULL;
+        }
+
+        // Copy size bytes from data to buffer
+        size = bound_number(size, MIN_BUFFER_SIZE, MAX_BUFFER_SIZE);
+        long success = bpf_probe_read(buffer, size, data);
+        if (success != 0) {
+            bpf_printk("failed to copy data to alignment buffer");
+            return NULL;
+        }
+
+        data = buffer;
+    }
+
     u64 start = get_area_start();
     u64 end = get_area_end(start);
     if (end - start < size)
@@ -109,9 +144,9 @@ static __always_inline void *write_target_data(void *data, s32 size)
         u64 updated_start = start + size;
 
         // align updated_start to 8 bytes
-        if (updated_start % 8 != 0) {
-            updated_start += 8 - (updated_start % 8);
-        }
+        // if (updated_start % 8 != 0) {
+        //     updated_start += 8 - (updated_start % 8);
+        // }
 
         bpf_map_update_elem(&alloc_map, &start_index, &updated_start, BPF_ANY);
         bpf_printk("wrote %d bytes to userspace at addr: %lx", size, target);
