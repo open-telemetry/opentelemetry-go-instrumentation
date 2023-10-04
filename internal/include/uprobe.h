@@ -43,7 +43,8 @@ int uprobe_##name##_Returns(struct pt_regs *ctx) {                              
     tmpReq.end_time = bpf_ktime_get_ns();                                                                  \
     bpf_perf_event_output(ctx, &events_map, BPF_F_CURRENT_CPU, &tmpReq, sizeof(tmpReq));                   \
     bpf_map_delete_elem(&uprobe_context_map, &key);                                                        \
-    stop_tracking_span(&tmpReq.sc);                                                                        \
+    bool isRoot = (tmpReq.psc.TraceID[0] == 0);                                                            \
+    stop_tracking_span(&tmpReq.sc, isRoot);                                                                \
     return 0;                                                                                              \
 }
 

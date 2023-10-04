@@ -212,17 +212,7 @@ int uprobe_ServerMux_ServeHTTP(struct pt_regs *ctx)
     }
     else
     {
-        parent_ctx = get_parent_span_context(req_ctx_ptr);
-        if (parent_ctx != NULL)
-        {
-            httpReq.psc = *parent_ctx;
-            copy_byte_arrays(httpReq.psc.TraceID, httpReq.sc.TraceID, TRACE_ID_SIZE);
-            generate_random_bytes(httpReq.sc.SpanID, SPAN_ID_SIZE);
-        }
-        else
-        {
-            httpReq.sc = generate_span_context();
-        }
+        httpReq.sc = generate_span_context();
     }
 
     // Get key

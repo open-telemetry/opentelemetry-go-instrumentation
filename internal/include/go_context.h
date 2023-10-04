@@ -77,14 +77,17 @@ static __always_inline void start_tracking_span(void *ctx, struct span_context *
     bpf_map_update_elem(&tracked_spans_by_sc, sc, &ctx, BPF_ANY);
 }
 
-static __always_inline void stop_tracking_span(struct span_context *sc) {
-    void *ctx = bpf_map_lookup_elem(&tracked_spans_by_sc, sc);
-    if (ctx == NULL)
+static __always_inline void stop_tracking_span(struct span_context *sc, bool isRoot) {
+    if (isRoot)
     {
-        return;
-    }
+        void *ctx = bpf_map_lookup_elem(&tracked_spans_by_sc, sc);
+        if (ctx == NULL)
+        {
+            return;
+        }
 
-    bpf_map_delete_elem(&tracked_spans, &ctx);
+        bpf_map_delete_elem(&tracked_spans, ctx);
+    }
     bpf_map_delete_elem(&tracked_spans_by_sc, sc);
 }
 
