@@ -9,8 +9,13 @@ ALL_GO_MOD_DIRS := $(shell find . -type f -name 'go.mod' ! -path './LICENSES/*' 
 OTEL_GO_MOD_DIRS := $(filter-out $(TOOLS_MOD_DIR), $(ALL_GO_MOD_DIRS))
 
 # Build the list of include directories to compile the bpf program
-BPF_INCLUDE += -I${REPODIR}/include/libbpf
-BPF_INCLUDE += -I${REPODIR}/include
+BPF_INCLUDE += -I${REPODIR}/internal/include/libbpf
+BPF_INCLUDE += -I${REPODIR}/internal/include
+
+# Go default variables
+GOCMD?= go
+GOOS=linux
+CGO_ENABLED=1
 
 .DEFAULT_GOAL := precommit
 
@@ -18,14 +23,14 @@ BPF_INCLUDE += -I${REPODIR}/include
 FIXTURE_MODE ?= "sidecar"
 
 .PHONY: precommit
-precommit: license-header-check go-mod-tidy golangci-lint-fix
+precommit: license-header-check dependabot-generate go-mod-tidy golangci-lint-fix
 
 # Tools
 $(TOOLS):
 	@mkdir -p $@
 $(TOOLS)/%: | $(TOOLS)
 	cd $(TOOLS_MOD_DIR) && \
-	go build -o $@ $(PACKAGE)
+	$(GOCMD) build -o $@ $(PACKAGE)
 
 MULTIMOD = $(TOOLS)/multimod
 $(TOOLS)/multimod: PACKAGE=go.opentelemetry.io/build-tools/multimod
@@ -33,28 +38,34 @@ $(TOOLS)/multimod: PACKAGE=go.opentelemetry.io/build-tools/multimod
 GOLICENSES = $(TOOLS)/go-licenses
 $(TOOLS)/go-licenses: PACKAGE=github.com/google/go-licenses
 
+DBOTCONF = $(TOOLS)/dbotconf
+$(TOOLS)/dbotconf: PACKAGE=go.opentelemetry.io/build-tools/dbotconf
+
 IMG_NAME ?= otel-go-instrumentation
 
 GOLANGCI_LINT = $(TOOLS)/golangci-lint
 $(TOOLS)/golangci-lint: PACKAGE=github.com/golangci/golangci-lint/cmd/golangci-lint
 
+OFFSETS = $(TOOLS)/offsets
+$(TOOLS)/offsets: PACKAGE=go.opentelemetry.io/auto/$(TOOLS_MOD_DIR)/offsets
+
 .PHONY: tools
-tools: $(GOLICENSES) $(MULTIMOD) $(GOLANGCI_LINT)
+tools: $(GOLICENSES) $(MULTIMOD) $(GOLANGCI_LINT) $(DBOTCONF) $(OFFSETS)
 
 ALL_GO_MODS := $(shell find . -type f -name 'go.mod' ! -path '$(TOOLS_MOD_DIR)/*' ! -path './LICENSES/*' | sort)
 GO_MODS_TO_TEST := $(ALL_GO_MODS:%=test/%)
 
 .PHONY: test
-test: $(GO_MODS_TO_TEST)
+test: generate $(GO_MODS_TO_TEST)
 test/%: GO_MOD=$*
 test/%:
-	cd $(shell dirname $(GO_MOD)) && go test -v ./...
+	cd $(shell dirname $(GO_MOD)) && $(GOCMD) test -v ./...
 
 .PHONY: generate
 generate: export CFLAGS := $(BPF_INCLUDE)
 generate: go-mod-tidy
 generate:
-	go generate ./...
+	$(GOCMD) generate ./...
 
 .PHONY: docker-generate
 docker-generate:
@@ -64,7 +75,7 @@ docker-generate:
 go-mod-tidy: $(ALL_GO_MOD_DIRS:%=go-mod-tidy/%)
 go-mod-tidy/%: DIR=$*
 go-mod-tidy/%:
-	@cd $(DIR) && go mod tidy -compat=1.20
+	@cd $(DIR) && $(GOCMD) mod tidy -compat=1.20
 
 .PHONY: golangci-lint golangci-lint-fix
 golangci-lint-fix: ARGS=--fix
@@ -74,19 +85,19 @@ golangci-lint/%: DIR=$*
 golangci-lint/%: | $(GOLANGCI_LINT)
 	@echo 'golangci-lint $(if $(ARGS),$(ARGS) ,)$(DIR)' \
 		&& cd $(DIR) \
-		&& $(GOLANGCI_LINT) run --allow-serial-runners $(ARGS)
+		&& $(GOLANGCI_LINT) run --allow-serial-runners --timeout=2m0s $(ARGS)
 
 .PHONY: build
 build: generate
-	GOOS=linux go build -o otel-go-instrumentation cli/main.go
+	$(GOCMD) build -o otel-go-instrumentation cli/main.go
 
 .PHONY: docker-build
 docker-build:
 	docker buildx build -t $(IMG_NAME) .
 
 .PHONY: offsets
-offsets:
-	cd offsets-tracker; OFFSETS_OUTPUT_FILE="../pkg/inject/offset_results.json" go run main.go
+offsets: | $(OFFSETS)
+	OFFSETS_OUTPUT_FILE="$(REPODIR)/internal/pkg/inject/offset_results.json" $(OFFSETS)
 
 .PHONY: docker-offsets
 docker-offsets:
@@ -96,12 +107,12 @@ docker-offsets:
 update-licenses: generate $(GOLICENSES)
 	rm -rf LICENSES
 	$(GOLICENSES) save ./cli/ --save_path LICENSES
-	cp -R ./include/libbpf ./LICENSES
+	cp -R ./internal/include/libbpf ./LICENSES
 
 .PHONY: verify-licenses
 verify-licenses: generate $(GOLICENSES)
 	$(GOLICENSES) save ./cli --save_path temp
-	cp -R ./include/libbpf ./temp; \
+	cp -R ./internal/include/libbpf ./temp; \
     if diff temp LICENSES > /dev/null; then \
       echo "Passed"; \
       rm -rf temp; \
@@ -110,6 +121,15 @@ verify-licenses: generate $(GOLICENSES)
       rm -rf temp; \
       exit 1; \
     fi; \
+
+DEPENDABOT_CONFIG = .github/dependabot.yml
+.PHONY: dependabot-check
+dependabot-check: | $(DBOTCONF)
+	@$(DBOTCONF) --ignore "/LICENSES" verify $(DEPENDABOT_CONFIG) || ( echo "(run: make dependabot-generate)"; exit 1 )
+
+.PHONY: dependabot-generate
+dependabot-generate: | $(DBOTCONF)
+	@$(DBOTCONF) --ignore "/LICENSES" generate > $(DEPENDABOT_CONFIG)
 
 .PHONY: license-header-check
 license-header-check:
@@ -121,15 +141,14 @@ license-header-check:
 	           exit 1; \
 	   fi
 
-.PHONY: fixture-nethttp fixture-gorillamux fixture-gin fixture-databasesql
+.PHONY: fixture-nethttp fixture-gin fixture-databasesql
 fixture-nethttp: fixtures/nethttp
-fixture-gorillamux: fixtures/gorillamux
 fixture-gin: fixtures/gin
 fixture-databasesql: fixtures/databasesql
 fixtures/%: LIBRARY=$*
 fixtures/%:
 	$(MAKE) docker-build
-	cd test/e2e/$(LIBRARY) && docker build -t sample-app .
+	cd internal/test/e2e/$(LIBRARY) && docker build -t sample-app .
 	kind create cluster
 	kind load docker-image otel-go-instrumentation sample-app
 	helm repo add open-telemetry https://open-telemetry.github.io/opentelemetry-helm-charts
@@ -141,9 +160,9 @@ fixtures/%:
 	kubectl wait --for=condition=Ready --timeout=60s pod/test-opentelemetry-collector-0
 	kubectl -n default create -f .github/workflows/e2e/k8s/$(FIXTURE_MODE)/sample-job.yml
 	kubectl wait --for=condition=Complete --timeout=60s job/sample-job
-	kubectl cp -c filecp default/test-opentelemetry-collector-0:tmp/trace.json ./test/e2e/$(LIBRARY)/traces-orig.json
-	rm -f ./test/e2e/$(LIBRARY)/traces.json
-	bats ./test/e2e/$(LIBRARY)/verify.bats
+	kubectl cp -c filecp default/test-opentelemetry-collector-0:tmp/trace.json ./internal/test/e2e/$(LIBRARY)/traces-orig.json
+	rm -f ./internal/test/e2e/$(LIBRARY)/traces.json
+	bats ./internal/test/e2e/$(LIBRARY)/verify.bats
 	kind delete cluster
 
 .PHONY: prerelease

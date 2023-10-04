@@ -11,16 +11,21 @@ jobs:
     strategy:
       matrix:
         k8s-version: ["v1.26.0"]
+<<<<<<< HEAD
         library: ["gorillamux", "nethttp", "gin", "databasesql"]
         mode: ["sidecar", "deployment"]
+=======
+        library: ["nethttp", "gin", "databasesql"]
+>>>>>>> main
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repo
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: Setup Go
         uses: actions/setup-go@v4
         with:
-          go-version: "1.20"
+          go-version: "~1.21.1"
+          check-latest: true
       - name: Setup BATS
         uses: mig4/setup-bats@v1
       - name: Build auto-instrumentation
@@ -28,7 +33,7 @@ jobs:
           IMG=otel-go-instrumentation:latest make docker-build
       - name: Build sample app
         run: |
-          cd test/e2e/${{ matrix.library }}
+          cd internal/test/e2e/${{ matrix.library }}
           docker build -t sample-app:latest .
       - name: Set up Helm
         uses: azure/setup-helm@v3.5
@@ -51,8 +56,13 @@ jobs:
       - name: Add Dependencies
         shell: bash
         run: |
+<<<<<<< HEAD
           helm repo add open-telemetry https://open-telemetry.github.io/opentelemetry-helm-charts
       - uses: actions/checkout@v3
+=======
+            helm repo add open-telemetry https://open-telemetry.github.io/opentelemetry-helm-charts
+      - uses: actions/checkout@v4
+>>>>>>> main
         with:
           repository: 'open-telemetry/opentelemetry-helm-charts'
           path: opentelemetry-helm-charts
@@ -69,8 +79,8 @@ jobs:
           kubectl wait --for=condition=Complete --timeout=60s job/sample-job
       - name: copy telemetry trace output
         run: |
-          kubectl cp -c filecp default/test-opentelemetry-collector-0:tmp/trace.json ./test/e2e/${{ matrix.library }}/traces-orig.json
-          rm -f ./test/e2e/${{ matrix.library }}/traces.json
+          kubectl cp -c filecp default/test-opentelemetry-collector-0:tmp/trace.json ./internal/test/e2e/${{ matrix.library }}/traces-orig.json
+          rm -f ./internal/test/e2e/${{ matrix.library }}/traces.json
       - name: verify output and redact to traces.json
         run: |
-          bats ./test/e2e/${{ matrix.library }}/verify.bats
+          bats ./internal/test/e2e/${{ matrix.library }}/verify.bats

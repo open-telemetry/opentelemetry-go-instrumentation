@@ -23,15 +23,14 @@ import (
 	"strings"
 	"syscall"
 
-	"google.golang.org/grpc"
-
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
+	"google.golang.org/grpc"
 
 	"go.opentelemetry.io/auto"
-	"go.opentelemetry.io/auto/pkg/log"
-	"go.opentelemetry.io/auto/pkg/orchestrator"
-	"go.opentelemetry.io/auto/pkg/process"
+	"go.opentelemetry.io/auto/internal/pkg/log"
+	"go.opentelemetry.io/auto/internal/pkg/orchestrator"
+	"go.opentelemetry.io/auto/internal/pkg/process"
 )
 
 var (
@@ -56,49 +55,8 @@ func main() {
 	}
 
 	log.Logger.V(0).Info("starting Go OpenTelemetry Agent ...")
-	ctx := contextWithSigterm(context.Background())
-	log.Logger.V(0).Info("Establishing connection to OTLP receiver ...")
-	otlpTraceClient := otlptracegrpc.NewClient(
-		otlptracegrpc.WithDialOption(grpc.WithUserAgent(autoinstUserAgent)),
-	)
-	traceExporter, err := otlptrace.New(ctx, otlpTraceClient)
-	if err != nil {
-		log.Logger.Error(err, "unable to connect to OTLP endpoint")
-		return
-	}
-	targetArgs := process.ParseTargetArgs()
-	if targetArgs != nil {
-		if err := targetArgs.Validate(); err != nil {
-			log.Logger.Error(err, "invalid target args")
-			return
-		}
-	}
-	r, err := orchestrator.New(ctx, targetArgs, traceExporter)
-	if err != nil {
-		log.Logger.V(0).Error(err, "creating orchestrator")
-	}
 	if err = r.Run(); err != nil {
 		log.Logger.Error(err, "running orchestrator")
 	}
 }
 
-func contextWithSigterm(parent context.Context) context.Context {
-	ctx, cancel := context.WithCancel(parent)
-
-	ch := make(chan os.Signal, 1)
-	signal.Notify(ch, os.Interrupt, syscall.SIGTERM)
-
-	go func() {
-		defer close(ch)
-		defer signal.Stop(ch)
-
-		select {
-		case <-parent.Done(): // if parent is cancelled, return
-			return
-		case <-ch: // if SIGTERM is received, cancel this context
-			cancel()
-		}
-	}()
-
-	return ctx
-}

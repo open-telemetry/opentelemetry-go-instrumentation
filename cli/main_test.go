@@ -15,12 +15,10 @@
 package main
 
 import (
-	"fmt"
-	"testing"
+	"github.com/cilium/ebpf/link"
 
-	"github.com/stretchr/testify/assert"
-
-	"go.opentelemetry.io/auto"
+	"go.opentelemetry.io/auto/internal/pkg/inject"
+	"go.opentelemetry.io/auto/internal/pkg/process"
 )
 
 func TestUserAgent(t *testing.T) {
@@ -29,4 +27,9 @@ func TestUserAgent(t *testing.T) {
 		autoinstUserAgent,
 		fmt.Sprintf("OTel-Go-Auto-Instrumentation/%s", auto.Version()),
 	)
+// InstrumentorContext holds the state of the auto-instrumentation system.
+type InstrumentorContext struct {
+	TargetDetails *process.TargetDetails
+	Executable    *link.Executable
+	Injector      *inject.Injector
 }

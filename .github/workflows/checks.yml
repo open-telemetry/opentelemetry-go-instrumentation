@@ -7,13 +7,13 @@ on:
   workflow_dispatch:
 
 env:
-  GO_VERSION: "1.20"
+  GO_VERSION: "~1.21.1"
 
 jobs:
   check-links:
     runs-on: ubuntu-22.04
     steps:
-    - uses: actions/checkout@v3.5.0
+    - uses: actions/checkout@v4
       with:
         fetch-depth: 0
     - uses: lycheeverse/lychee-action@v1.8.0
@@ -28,18 +28,19 @@ jobs:
       - name: Install Go
         uses: actions/setup-go@v4.0.0
         with:
-          go-version: ${{ env.DEFAULT_GO_VERSION }}
+          go-version: ${{ env.GO_VERSION }}
+          check-latest: true
       - name: Checkout Repo
-        uses: actions/checkout@v3.5.0
+        uses: actions/checkout@v4
       - name: Module cache
-        uses: actions/cache@v3.3.1
+        uses: actions/cache@v3.3.2
         env:
           cache-name: go-mod-cache
         with:
           path: ~/go/pkg/mod
           key: ${{ runner.os }}-${{ env.cache-name }}-${{ hashFiles('**/go.sum') }}
       - name: Tools cache
-        uses: actions/cache@v3.3.1
+        uses: actions/cache@v3.3.2
         env:
           cache-name: go-tools-cache
         with:
@@ -49,18 +50,45 @@ jobs:
         run: |
           sudo apt-get update && sudo apt-get install -y clang llvm libbpf-dev
       - name: Run linters
-        run: make license-header-check go-mod-tidy golangci-lint
+        run: make license-header-check dependabot-check go-mod-tidy golangci-lint
       - name: Check clean repository
         run: make check-clean-work-tree
+  compatibility-test:
+    strategy:
+      matrix:
+        go-version: ["~1.21.1", "~1.20.8"]
+        os: [ubuntu-latest]
+        # GitHub Actions does not support arm* architectures on default
+        # runners. It is possible to accomplish this with a self-hosted runner
+        # if we want to add this in the future:
+        # https://docs.github.com/en/actions/hosting-your-own-runners/using-self-hosted-runners-in-a-workflow
+        arch: [amd64]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v4
+      - name: Setup Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: ${{ matrix.go-version }}
+          check-latest: true
+          cache-dependency-path: "**/go.sum"
+      - name: Install build dependencies
+        run: sudo apt-get update && sudo apt-get install -y clang llvm
+      - name: Run tests
+        env:
+          GOARCH: ${{ matrix.arch }}
+        run: make test
   verify-licenses:
     runs-on: ubuntu-22.04
     steps:
       - name: Checkout Repo
-        uses: actions/checkout@v3.5.0
+        uses: actions/checkout@v4
       - name: Setup Go
         uses: actions/setup-go@v4.0.0
         with:
-          go-version: ${{ env.DEFAULT_GO_VERSION }}
+          go-version: ${{ env.GO_VERSION }}
+          check-latest: true
       - name: Install build dependencies
         run: sudo apt-get update && sudo apt-get install -y clang llvm libbpf-dev
       - run: make verify-licenses

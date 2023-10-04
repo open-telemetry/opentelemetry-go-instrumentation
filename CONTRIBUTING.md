@@ -89,18 +89,10 @@ request ID to the entry you added to `CHANGELOG.md`.
 
 A PR is considered **ready to merge** when:
 
-* It has received two qualified approvals[^1].
+* It has received at least one qualified approval[^1].
 
-  This is not enforced through automation, but needs to be validated by the
-  maintainer merging.
-  * The qualified approvals need to be from [Approver]s/[Maintainer]s
-    affiliated with different companies. Two qualified approvals from
-    [Approver]s or [Maintainer]s affiliated with the same company counts as a
-    single qualified approval.
-  * PRs introducing changes that have already been discussed and consensus
-    reached only need one qualified approval. The discussion and resolution
-    needs to be linked to the PR.
-  * Trivial changes[^2] only need one qualified approval.
+  For complex or sensitive PRs maintainers may require more than one qualified
+  approval.
 
 * All feedback has been addressed.
   * All PR comments and suggestions are resolved.
@@ -132,8 +124,6 @@ Any [Maintainer] can merge the PR once the above criteria have been met.
 
 [^1]: A qualified approval is a GitHub Pull Request review with "Approve"
   status from an OpenTelemetry Go [Approver] or [Maintainer].
-[^2]: Trivial changes include: typo corrections, cosmetic non-substantive
-  changes, documentation corrections or updates, dependency updates, etc.
 
 ## Appovers and Maintainers
 

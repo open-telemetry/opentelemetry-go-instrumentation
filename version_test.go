@@ -15,7 +15,7 @@
 package auto
 
 import (
-	"io/ioutil"
+	"os"
 	"regexp"
 	"testing"
 
@@ -34,7 +34,7 @@ func TestVersionSemver(t *testing.T) {
 }
 
 func TestVersionMatchesYaml(t *testing.T) {
-	versionYaml, err := ioutil.ReadFile("versions.yaml")
+	versionYaml, err := os.ReadFile("versions.yaml")
 	if err != nil {
 		t.Fatalf("Couldn't read versions.yaml file: %e", err)
 		return
