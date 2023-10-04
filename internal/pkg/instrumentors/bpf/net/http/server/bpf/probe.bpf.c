@@ -172,6 +172,7 @@ SEC("uprobe/ServerMux_ServeHTTP")
 int uprobe_ServerMux_ServeHTTP(struct pt_regs *ctx)
 {
     u64 request_pos = 4;
+    // Get request struct
     void *req_ptr = get_argument(ctx, request_pos);
     void *req_ctx_ptr = 0;
     void *ctx_address = get_go_interface_instance(req_ptr + ctx_ptr_pos);
@@ -179,9 +180,6 @@ int uprobe_ServerMux_ServeHTTP(struct pt_regs *ctx)
 
     struct http_request_t httpReq = {};
     httpReq.start_time = bpf_ktime_get_ns();
-
-    // Get request struct
-    void *req_ptr = get_argument(ctx, request_pos);
 
     // Get method from request
     void *method_ptr = 0;
@@ -207,6 +205,7 @@ int uprobe_ServerMux_ServeHTTP(struct pt_regs *ctx)
     struct span_context *parent_ctx = extract_context_from_req_headers(req_ptr + headers_ptr_pos);
     if (parent_ctx != NULL)
     {
+        // found parent context in http headers
         httpReq.psc = *parent_ctx;
         copy_byte_arrays(httpReq.psc.TraceID, httpReq.sc.TraceID, TRACE_ID_SIZE);
         generate_random_bytes(httpReq.sc.SpanID, SPAN_ID_SIZE);
@@ -227,9 +226,7 @@ int uprobe_ServerMux_ServeHTTP(struct pt_regs *ctx)
     }
 
     // Get key
-    void *req_ctx_ptr = 0;
-    bpf_probe_read(&req_ctx_ptr, sizeof(req_ctx_ptr), (void *)(req_ptr + ctx_ptr_pos));
-    void *key = get_consistent_key(ctx, (void *)(req_ptr + ctx_ptr_pos));
+    void *key = get_consistent_key(ctx, ctx_address);
 
     // Write event
     bpf_map_update_elem(&http_events, &key, &httpReq, 0);
