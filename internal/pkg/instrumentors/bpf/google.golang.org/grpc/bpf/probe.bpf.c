@@ -185,13 +185,9 @@ SEC("uprobe/http2Client_NewStream")
 int uprobe_http2Client_NewStream(struct pt_regs *ctx)
 {
     void *context_ptr = get_argument(ctx, 3);
-    // void *context_ptr_val = 0;
-    // bpf_probe_read(&context_ptr_val, sizeof(context_ptr_val), context_ptr);
-
     void *httpclient_ptr = get_argument(ctx, 1);
     u32 nextid = 0;
     bpf_probe_read(&nextid, sizeof(nextid), (void *)(httpclient_ptr + (httpclient_nextid_pos)));
-
     struct span_context *current_span_context = get_parent_span_context(context_ptr);
     if (current_span_context != NULL) {
         bpf_map_update_elem(&streamid_to_span_contexts, &nextid, current_span_context, 0);

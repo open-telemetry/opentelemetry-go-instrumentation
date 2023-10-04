@@ -172,6 +172,11 @@ SEC("uprobe/ServerMux_ServeHTTP")
 int uprobe_ServerMux_ServeHTTP(struct pt_regs *ctx)
 {
     u64 request_pos = 4;
+    void *req_ptr = get_argument(ctx, request_pos);
+    void *req_ctx_ptr = 0;
+    void *ctx_address = get_go_interface_instance(req_ptr + ctx_ptr_pos);
+    bpf_probe_read(&req_ctx_ptr, sizeof(req_ctx_ptr), ctx_address);
+
     struct http_request_t httpReq = {};
     httpReq.start_time = bpf_ktime_get_ns();
 
@@ -208,7 +213,17 @@ int uprobe_ServerMux_ServeHTTP(struct pt_regs *ctx)
     }
     else
     {
-        httpReq.sc = generate_span_context();
+        parent_ctx = get_parent_span_context(req_ctx_ptr);
+        if (parent_ctx != NULL)
+        {
+            httpReq.psc = *parent_ctx;
+            copy_byte_arrays(httpReq.psc.TraceID, httpReq.sc.TraceID, TRACE_ID_SIZE);
+            generate_random_bytes(httpReq.sc.SpanID, SPAN_ID_SIZE);
+        }
+        else
+        {
+            httpReq.sc = generate_span_context();
+        }
     }
 
     // Get key

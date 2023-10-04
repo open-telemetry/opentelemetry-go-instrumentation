@@ -54,19 +54,27 @@ struct map_bucket {
     void *overflow;
 };
 
+// In Go, interfaces are represented as a pair of pointers: a pointer to the
+// interface data, and a pointer to the interface table.
+// See: runtime.iface in https://golang.org/src/runtime/runtime2.go
+static __always_inline void* get_go_interface_instance(void *iface)
+{
+    return (void*)(iface + 8);
+}
+
 static __always_inline struct go_string write_user_go_string(char *str, u32 len)
 {
-    struct go_string new_string = {.str = NULL, .len = 0};
-
     // Copy chars to userspace
+    struct go_string new_string = {.str = NULL, .len = 0};
     char *addr = write_target_data((void *)str, len);
     if (addr == NULL) {
+        bpf_printk("write_user_go_string: failed to copy string to userspace");
         return new_string;
-    } else {
-        // Build string struct in kernel space
-        new_string.str = addr;
-        new_string.len = len;
     }
+
+    // Build string struct in kernel space
+    new_string.str = addr;
+    new_string.len = len;
 
     // Copy new string struct to userspace
     void *res = write_target_data((void *)&new_string, sizeof(new_string));
@@ -81,13 +89,11 @@ static __always_inline void append_item_to_slice(struct go_slice *slice, void *n
 {
     if (slice->len < slice->cap)
     {
-        bpf_printk("room aviailable on current array");
         // Room available on current array
         bpf_probe_write_user(slice->array + (item_size * slice->len), new_item, item_size);
     }
     else
     {
-        bpf_printk("no room on current array");
         // No room on current array - copy to new one of size item_size * (len + 1)
         if (slice->len > MAX_DATA_SIZE || slice->len < 1)
         {
@@ -126,11 +132,6 @@ static __always_inline void append_item_to_slice(struct go_slice *slice, void *n
         // Update array
         slice->array = new_array;
         long success = bpf_probe_write_user(slice_user_ptr->array, &slice->array, sizeof(slice->array));
-        if (success != 0)
-        {
-            bpf_printk("append_item_to_slice: failed to update slice array");
-            return;
-        }
 
         // Update cap
         slice->cap++;
@@ -141,5 +142,4 @@ static __always_inline void append_item_to_slice(struct go_slice *slice, void *n
     slice->len++;
     long success = bpf_probe_write_user(slice_user_ptr->len, &slice->len, sizeof(slice->len));
 }
-
 #endif
