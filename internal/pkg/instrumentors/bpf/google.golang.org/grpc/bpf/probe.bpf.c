@@ -176,6 +176,7 @@ int uprobe_LoopyWriter_HeaderHandler(struct pt_regs *ctx)
     struct hpack_header_field hf = {};
     hf.name = key_str;
     hf.value = val_str;
+    bpf_printk("item size %d", sizeof(hf));
     // append_item_to_slice(&slice, &hf, sizeof(hf), &slice_user_ptr, &headers_buff_map);
     return 0;
 }
