@@ -73,6 +73,10 @@ static __always_inline long inject_header(void* headers_ptr, struct span_context
     if (curr_keyvalue_count == 0) {
         // No key-value pairs in the Go map, need to "allocate" memory for the user
         bucket_ptr = write_target_data(bucket_map_value, sizeof(struct map_bucket));
+        if (bucket_ptr == NULL) {
+            bpf_printk("inject_header: Failed to write bucket to user");
+            return -1;
+        }
         // Update the buckets pointer in the hmap struct to point to newly allocated bucket
         res = bpf_probe_write_user(buckets_ptr_ptr, &bucket_ptr, sizeof(bucket_ptr));
         if (res < 0) {
@@ -95,6 +99,10 @@ static __always_inline long inject_header(void* headers_ptr, struct span_context
     // Prepare the key string for the user
     char key[W3C_KEY_LENGTH] = "traceparent";
     void *ptr = write_target_data(key, W3C_KEY_LENGTH);
+    if (ptr == NULL) {
+        bpf_printk("inject_header: Failed to write key to user");
+        return -1;
+    }
     bucket_map_value->keys[bucket_index] = (struct go_string) {.len = W3C_KEY_LENGTH, .str = ptr};
 
     // Prepare the value string slice
@@ -103,6 +111,7 @@ static __always_inline long inject_header(void* headers_ptr, struct span_context
     span_context_to_w3c_string(propagated_ctx, val);
     ptr = write_target_data(val, sizeof(val));
     if(ptr == NULL) {
+        bpf_printk("inject_header: Failed to write value to user");
         return -1;
     }
 
@@ -110,6 +119,7 @@ static __always_inline long inject_header(void* headers_ptr, struct span_context
     struct go_string header_value = {.len = W3C_VAL_LENGTH, .str = ptr};
     ptr = write_target_data((void*)&header_value, sizeof(header_value));
     if(ptr == NULL) {
+        bpf_printk("inject_header: Failed to write go_string to user");
         return -1;
     }
 
