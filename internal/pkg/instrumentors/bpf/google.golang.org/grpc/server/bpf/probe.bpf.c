@@ -91,7 +91,6 @@ int uprobe_server_handleStream(struct pt_regs *ctx)
     else
     {
         grpcReq.sc = generate_span_context();
-        bpf_memset(grpcReq.psc.SpanID, SPAN_ID_SIZE, 0);
     }
 
     // Set attributes

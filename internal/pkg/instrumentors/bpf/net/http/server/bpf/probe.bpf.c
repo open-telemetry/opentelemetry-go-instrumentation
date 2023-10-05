@@ -220,7 +220,6 @@ int uprobe_ServerMux_ServeHTTP(struct pt_regs *ctx)
     else
     {
         httpReq.sc = generate_span_context();
-        bpf_memset(httpReq.psc.SpanID, SPAN_ID_SIZE, 0);
     }
 
     // Write event

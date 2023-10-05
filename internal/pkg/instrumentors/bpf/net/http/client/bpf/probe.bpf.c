@@ -166,7 +166,6 @@ int uprobe_HttpClient_Do(struct pt_regs *ctx) {
         generate_random_bytes(httpReq.sc.SpanID, SPAN_ID_SIZE);
     } else {
         httpReq.sc = generate_span_context();
-        bpf_memset(httpReq.psc.SpanID, SPAN_ID_SIZE, 0);
     }
 
     void *method_ptr = 0;
