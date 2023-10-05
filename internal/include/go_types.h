@@ -89,63 +89,65 @@ static __always_inline void append_item_to_slice(struct go_slice *slice, void *n
 {
     if (slice->len < slice->cap)
     {
+        bpf_printk("room in slice ! len %d cap %d", slice->len, slice->cap);
         // Room available on current array
         bpf_probe_write_user(slice->array + (item_size * slice->len), new_item, item_size);
     }
     else
     {
+        bpf_printk("no room in slice ! len %d cap %d", slice->len, slice->cap);
         // No room on current array - copy to new one of size item_size * (len + 1)
-        if (slice->len > MAX_DATA_SIZE || slice->len < 1)
-        {
-            return;
-        }
+        // if (slice->len > MAX_DATA_SIZE || slice->len < 1)
+        // {
+        //     return;
+        // }
 
-        s32 alloc_size = item_size * slice->len;
-        s32 bounded_alloc_size = alloc_size > MAX_REALLOCATION ? MAX_REALLOCATION : (alloc_size < 1 ? 1 : alloc_size);
+        // s32 alloc_size = item_size * slice->len;
+        // s32 bounded_alloc_size = alloc_size > MAX_REALLOCATION ? MAX_REALLOCATION : (alloc_size < 1 ? 1 : alloc_size);
 
-        // Get buffer
-        s32 index = 0;
-        void *map_buff = bpf_map_lookup_elem(buff, &index);
-        if (!map_buff)
-        {
-            return;
-        }
+        // // Get buffer
+        // s32 index = 0;
+        // void *map_buff = bpf_map_lookup_elem(buff, &index);
+        // if (!map_buff)
+        // {
+        //     return;
+        // }
 
-        // Append to buffer
-        bpf_probe_read_user(map_buff, bounded_alloc_size, slice->array);
-        bpf_probe_read(map_buff + bounded_alloc_size, item_size, new_item);
+        // // Append to buffer
+        // bpf_probe_read_user(map_buff, bounded_alloc_size, slice->array);
+        // bpf_probe_read(map_buff + bounded_alloc_size, item_size, new_item);
 
-        // Copy buffer to userspace
-        u32 new_array_size = bounded_alloc_size + item_size;
-        if (new_array_size > MAX_DATA_SIZE || new_array_size < 1)
-        {
-            return;
-        }
+        // // Copy buffer to userspace
+        // u32 new_array_size = bounded_alloc_size + item_size;
+        // if (new_array_size > MAX_DATA_SIZE || new_array_size < 1)
+        // {
+        //     return;
+        // }
 
-        void *new_array = write_target_data(map_buff, new_array_size);
-        if (new_array == NULL)
-        {
-            bpf_printk("append_item_to_slice: failed to copy new array to userspace");
-            return;
-        }
+        // void *new_array = write_target_data(map_buff, new_array_size);
+        // if (new_array == NULL)
+        // {
+        //     bpf_printk("append_item_to_slice: failed to copy new array to userspace");
+        //     return;
+        // }
 
-        // Update array
-        slice->array = new_array;
-        long success = bpf_probe_write_user(slice_user_ptr->array, &slice->array, sizeof(slice->array));
-        if (success != 0)
-        {
-            bpf_printk("append_item_to_slice: failed to update array pointer in userspace");
-            return;
-        }
+        // // Update array
+        // slice->array = new_array;
+        // long success = bpf_probe_write_user(slice_user_ptr->array, &slice->array, sizeof(slice->array));
+        // if (success != 0)
+        // {
+        //     bpf_printk("append_item_to_slice: failed to update array pointer in userspace");
+        //     return;
+        // }
 
-        // Update cap
-        slice->cap++;
-        success = bpf_probe_write_user(slice_user_ptr->cap, &slice->cap, sizeof(slice->cap));
-        if (success != 0)
-        {
-            bpf_printk("append_item_to_slice: failed to update cap in userspace");
-            return;
-        }
+        // // Update cap
+        // slice->cap++;
+        // success = bpf_probe_write_user(slice_user_ptr->cap, &slice->cap, sizeof(slice->cap));
+        // if (success != 0)
+        // {
+        //     bpf_printk("append_item_to_slice: failed to update cap in userspace");
+        //     return;
+        // }
     }
 
     // Update len
