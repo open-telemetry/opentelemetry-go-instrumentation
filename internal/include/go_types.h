@@ -132,14 +132,29 @@ static __always_inline void append_item_to_slice(struct go_slice *slice, void *n
         // Update array
         slice->array = new_array;
         long success = bpf_probe_write_user(slice_user_ptr->array, &slice->array, sizeof(slice->array));
+        if (success != 0)
+        {
+            bpf_printk("append_item_to_slice: failed to update array pointer in userspace");
+            return;
+        }
 
         // Update cap
         slice->cap++;
         success = bpf_probe_write_user(slice_user_ptr->cap, &slice->cap, sizeof(slice->cap));
+        if (success != 0)
+        {
+            bpf_printk("append_item_to_slice: failed to update cap in userspace");
+            return;
+        }
     }
 
     // Update len
     slice->len++;
     long success = bpf_probe_write_user(slice_user_ptr->len, &slice->len, sizeof(slice->len));
+    if (success != 0)
+    {
+        bpf_printk("append_item_to_slice: failed to update len in userspace");
+        return;
+    }
 }
 #endif

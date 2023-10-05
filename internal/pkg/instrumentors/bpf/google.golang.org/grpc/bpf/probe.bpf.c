@@ -165,7 +165,7 @@ int uprobe_LoopyWriter_HeaderHandler(struct pt_regs *ctx)
     char tp_key[11] = "traceparent";
     struct go_string key_str = write_user_go_string(tp_key, sizeof(tp_key));
     if (key_str.len == 0) {
-        bpf_printk("write failed, aborting ebpf probe");
+        bpf_printk("key write failed, aborting ebpf probe");
         return 0;
     }
 
@@ -173,11 +173,15 @@ int uprobe_LoopyWriter_HeaderHandler(struct pt_regs *ctx)
     char val[SPAN_CONTEXT_STRING_SIZE];
     span_context_to_w3c_string(&current_span_context, val);
     struct go_string val_str = write_user_go_string(val, sizeof(val));
+    if (val_str.len == 0) {
+        bpf_printk("val write failed, aborting ebpf probe");
+        return 0;
+    }
     struct hpack_header_field hf = {};
     hf.name = key_str;
     hf.value = val_str;
     bpf_printk("item size %d", sizeof(hf));
-    // append_item_to_slice(&slice, &hf, sizeof(hf), &slice_user_ptr, &headers_buff_map);
+    append_item_to_slice(&slice, &hf, sizeof(hf), &slice_user_ptr, &headers_buff_map);
     return 0;
 }
 
