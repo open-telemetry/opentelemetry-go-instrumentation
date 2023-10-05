@@ -41,6 +41,11 @@ static __always_inline void *get_parent_go_context(void *ctx, void *map) {
     void *data = ctx;
     for (int i = 0; i < MAX_DISTANCE; i++)
     {
+        if (data == NULL)
+        {
+            break;
+        }
+    
         void *found_in_map = bpf_map_lookup_elem(map, &data);
         if (found_in_map != NULL)
         {
@@ -72,9 +77,21 @@ static __always_inline struct span_context *get_parent_span_context(void *ctx) {
     return parent_sc;
 }
 
-static __always_inline void start_tracking_span(void *ctx, struct span_context *sc) {
-    bpf_map_update_elem(&tracked_spans, &ctx, sc, BPF_ANY);
-    bpf_map_update_elem(&tracked_spans_by_sc, sc, &ctx, BPF_ANY);
+static __always_inline void start_tracking_span(void *contextContext, struct span_context *sc) {
+    long err = 0;
+    err = bpf_map_update_elem(&tracked_spans, &contextContext, sc, BPF_ANY);
+    if (err != 0)
+    {
+        bpf_printk("Failed to update tracked_spans map: %ld", err);
+        return;
+    }
+
+    err = bpf_map_update_elem(&tracked_spans_by_sc, sc, &contextContext, BPF_ANY);
+    if (err != 0)
+    {
+        bpf_printk("Failed to update tracked_spans_by_sc map: %ld", err);
+        return;
+    }
 }
 
 static __always_inline void stop_tracking_span(struct span_context *sc, bool isRoot) {
