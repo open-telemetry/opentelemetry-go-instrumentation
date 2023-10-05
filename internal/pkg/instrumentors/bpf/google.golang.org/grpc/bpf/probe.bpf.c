@@ -123,6 +123,8 @@ int uprobe_ClientConn_Invoke(struct pt_regs *ctx)
     else
     {
         grpcReq.sc = generate_span_context();
+        bpf_memset(grpcReq.psc.TraceID, 0, TRACE_ID_SIZE);
+        bpf_memset(grpcReq.psc.SpanID, 0, SPAN_ID_SIZE);
     }
 
     // Get key
@@ -134,7 +136,7 @@ int uprobe_ClientConn_Invoke(struct pt_regs *ctx)
     return 0;
 }
 
-UPROBE_RETURN(ClientConn_Invoke, struct grpc_request_t, 3, 0, grpc_events, events)
+UPROBE_RETURN(ClientConn_Invoke, struct grpc_request_t, 3, 0, grpc_events, events, false)
 
 // func (l *loopyWriter) headerHandler(h *headerFrame) error
 SEC("uprobe/loopyWriter_headerHandler")

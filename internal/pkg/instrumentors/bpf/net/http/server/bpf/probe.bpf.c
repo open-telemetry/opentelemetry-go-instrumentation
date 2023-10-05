@@ -220,6 +220,8 @@ int uprobe_ServerMux_ServeHTTP(struct pt_regs *ctx)
     else
     {
         httpReq.sc = generate_span_context();
+        bpf_memset(httpReq.psc.TraceID, 0, TRACE_ID_SIZE);
+        bpf_memset(httpReq.psc.SpanID, 0, SPAN_ID_SIZE);
     }
 
     // Write event
@@ -228,4 +230,4 @@ int uprobe_ServerMux_ServeHTTP(struct pt_regs *ctx)
     return 0;
 }
 
-UPROBE_RETURN(ServerMux_ServeHTTP, struct http_request_t, 4, ctx_ptr_pos, http_events, events)
+UPROBE_RETURN(ServerMux_ServeHTTP, struct http_request_t, 4, ctx_ptr_pos, http_events, events, true)

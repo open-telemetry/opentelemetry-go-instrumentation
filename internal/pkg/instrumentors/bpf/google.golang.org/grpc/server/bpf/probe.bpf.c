@@ -91,6 +91,8 @@ int uprobe_server_handleStream(struct pt_regs *ctx)
     else
     {
         grpcReq.sc = generate_span_context();
+        bpf_memset(grpcReq.psc.TraceID, 0, TRACE_ID_SIZE);
+        bpf_memset(grpcReq.psc.SpanID, 0, SPAN_ID_SIZE);
     }
 
     // Set attributes
@@ -114,7 +116,7 @@ int uprobe_server_handleStream(struct pt_regs *ctx)
     return 0;
 }
 
-UPROBE_RETURN(server_handleStream, struct grpc_request_t, 4, stream_ctx_pos, grpc_events, events)
+UPROBE_RETURN(server_handleStream, struct grpc_request_t, 4, stream_ctx_pos, grpc_events, events, true)
 
 // func (d *decodeState) decodeHeader(frame *http2.MetaHeadersFrame) error
 SEC("uprobe/decodeState_decodeHeader")
