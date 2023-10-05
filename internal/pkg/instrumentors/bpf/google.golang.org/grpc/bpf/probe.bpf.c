@@ -123,7 +123,7 @@ int uprobe_ClientConn_Invoke(struct pt_regs *ctx)
     else
     {
         grpcReq.sc = generate_span_context();
-        bpf_memset(grpcReq.psc.SpanID, 0, SPAN_ID_SIZE);
+        bpf_memset(grpcReq.psc.SpanID, SPAN_ID_SIZE, 0);
     }
 
     // Get key
