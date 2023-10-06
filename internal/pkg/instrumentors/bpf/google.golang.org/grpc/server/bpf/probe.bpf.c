@@ -140,6 +140,7 @@ int uprobe_decodeState_decodeHeader(struct pt_regs *ctx)
             bpf_probe_read(current_key, sizeof(current_key), hf.name.str);
             if (bpf_memcmp(key, current_key, sizeof(key)))
             {
+                bpf_printk("Found traceparent header grpc");
                 char val[W3C_VAL_LENGTH];
                 bpf_probe_read(val, W3C_VAL_LENGTH, hf.value.str);
 

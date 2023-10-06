@@ -137,6 +137,7 @@ static __always_inline struct span_context *extract_context_from_req_headers(voi
             {
                 continue;
             }
+            bpf_printk("found traceparent header in http server");
             void *traceparent_header_value_ptr = map_value->values[i].array;
             struct go_string traceparent_header_value_go_str;
             res = bpf_probe_read(&traceparent_header_value_go_str, sizeof(traceparent_header_value_go_str), traceparent_header_value_ptr);
