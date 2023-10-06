@@ -18,6 +18,7 @@
 #include "common.h"
 #include "span_context.h"
 #include "go_context.h"
+#include "go_types.h"
 
 #define BASE_SPAN_PROPERTIES \
     u64 start_time;          \
