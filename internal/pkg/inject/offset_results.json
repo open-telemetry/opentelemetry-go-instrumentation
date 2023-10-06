@@ -5,7 +5,7 @@
         {
           "versions": {
             "oldest": "1.3.0",
-            "newest": "1.59.0-dev"
+            "newest": "1.60.0-dev"
           },
           "offsets": [
             {
@@ -21,7 +21,7 @@
         {
           "versions": {
             "oldest": "1.3.0",
-            "newest": "1.59.0-dev"
+            "newest": "1.60.0-dev"
           },
           "offsets": [
             {
@@ -37,7 +37,7 @@
         {
           "versions": {
             "oldest": "1.3.0",
-            "newest": "1.59.0-dev"
+            "newest": "1.60.0-dev"
           },
           "offsets": [
             {
@@ -53,7 +53,7 @@
         {
           "versions": {
             "oldest": "1.3.0",
-            "newest": "1.59.0-dev"
+            "newest": "1.60.0-dev"
           },
           "offsets": [
             {
@@ -75,7 +75,7 @@
         {
           "versions": {
             "oldest": "1.3.0",
-            "newest": "1.59.0-dev"
+            "newest": "1.60.0-dev"
           },
           "offsets": [
             {
@@ -89,7 +89,7 @@
         {
           "versions": {
             "oldest": "1.3.0",
-            "newest": "1.59.0-dev"
+            "newest": "1.60.0-dev"
           },
           "offsets": [
             {
@@ -117,7 +117,7 @@
         {
           "versions": {
             "oldest": "1.3.0",
-            "newest": "1.59.0-dev"
+            "newest": "1.60.0-dev"
           },
           "offsets": [
             {
@@ -131,7 +131,7 @@
         {
           "versions": {
             "oldest": "1.3.0",
-            "newest": "1.59.0-dev"
+            "newest": "1.60.0-dev"
           },
           "offsets": [
             {
@@ -147,7 +147,7 @@
         {
           "versions": {
             "oldest": "1.3.0",
-            "newest": "1.59.0-dev"
+            "newest": "1.60.0-dev"
           },
           "offsets": [
             {
@@ -191,7 +191,7 @@
         {
           "versions": {
             "oldest": "1.12.0",
-            "newest": "1.21.1"
+            "newest": "1.21.2"
           },
           "offsets": [
             {
@@ -205,7 +205,7 @@
         {
           "versions": {
             "oldest": "1.12.0",
-            "newest": "1.21.1"
+            "newest": "1.21.2"
           },
           "offsets": [
             {
@@ -219,7 +219,7 @@
         {
           "versions": {
             "oldest": "1.12.0",
-            "newest": "1.21.1"
+            "newest": "1.21.2"
           },
           "offsets": [
             {
@@ -233,7 +233,7 @@
         {
           "versions": {
             "oldest": "1.12.0",
-            "newest": "1.21.1"
+            "newest": "1.21.2"
           },
           "offsets": [
             {
@@ -247,7 +247,7 @@
         {
           "versions": {
             "oldest": "1.12.0",
-            "newest": "1.21.1"
+            "newest": "1.21.2"
           },
           "offsets": [
             {
@@ -279,7 +279,7 @@
         {
           "versions": {
             "oldest": "1.12.0",
-            "newest": "1.21.1"
+            "newest": "1.21.2"
           },
           "offsets": [
             {
@@ -295,7 +295,7 @@
         {
           "versions": {
             "oldest": "1.12.0",
-            "newest": "1.21.1"
+            "newest": "1.21.2"
           },
           "offsets": [
             {
