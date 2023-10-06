@@ -16,6 +16,7 @@
 #define _GO_CONTEXT_H_
 
 #include "bpf_helpers.h"
+#include "go_types.h"
 
 #define MAX_DISTANCE 10
 
