@@ -156,7 +156,8 @@ int uprobe_HttpClient_Do(struct pt_regs *ctx) {
     void *req_ptr = get_argument(ctx, request_pos);
 
     // Get parent if exists
-    void *context_ptr = (void *)(req_ptr+ctx_ptr_pos);
+    void *context_ptr = get_go_interface_instance(req_ptr+ctx_ptr_pos);
+    //void *context_ptr = (void *)(req_ptr+ctx_ptr_pos);
     void *context_ptr_val = 0;
     bpf_probe_read(&context_ptr_val, sizeof(context_ptr_val), context_ptr);
     struct span_context *parent_span_ctx = get_parent_span_context(context_ptr_val);
@@ -209,4 +210,4 @@ int uprobe_HttpClient_Do(struct pt_regs *ctx) {
 
 // This instrumentation attaches uretprobe to the following function:
 // func net/http/client.Do(req *Request)
-UPROBE_RETURN(HttpClient_Do, struct http_request_t, 2, ctx_ptr_pos, http_events, events, true)
+UPROBE_RETURN(HttpClient_Do, struct http_request_t, 2, ctx_ptr_pos, http_events, events, true, false)

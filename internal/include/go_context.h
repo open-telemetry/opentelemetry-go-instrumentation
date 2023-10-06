@@ -108,4 +108,12 @@ static __always_inline void stop_tracking_span(struct span_context *sc, bool isR
     bpf_map_delete_elem(&tracked_spans_by_sc, sc);
 }
 
+static __always_inline void *get_Go_context(void *ctx, int context_pos, u64 context_offset, bool passed_as_arg) {
+    void *arg = get_argument(ctx, context_pos);
+    if (passed_as_arg) {
+        return arg;
+    }
+    return get_go_interface_instance(arg + context_offset);
+}
+
 #endif

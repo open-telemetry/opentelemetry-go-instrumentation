@@ -134,7 +134,7 @@ int uprobe_ClientConn_Invoke(struct pt_regs *ctx)
     return 0;
 }
 
-UPROBE_RETURN(ClientConn_Invoke, struct grpc_request_t, 3, 0, grpc_events, events, false)
+UPROBE_RETURN(ClientConn_Invoke, struct grpc_request_t, 3, 0, grpc_events, events, false, true)
 
 // func (l *loopyWriter) headerHandler(h *headerFrame) error
 SEC("uprobe/loopyWriter_headerHandler")

@@ -229,4 +229,4 @@ int uprobe_ServerMux_ServeHTTP(struct pt_regs *ctx)
     return 0;
 }
 
-UPROBE_RETURN(ServerMux_ServeHTTP, struct http_request_t, 4, ctx_ptr_pos, http_events, events, true)
+UPROBE_RETURN(ServerMux_ServeHTTP, struct http_request_t, 4, ctx_ptr_pos, http_events, events, true, false)
