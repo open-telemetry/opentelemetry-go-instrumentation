@@ -238,6 +238,7 @@ func (p *TracedProgram) Madvise(addr uint64, length uint64) error {
 
 // Mlock runs mlock syscall.
 func (p *TracedProgram) Mlock(addr uint64, length uint64) error {
-	_, err := p.Syscall(syscall.SYS_MLOCK, addr, length, 0, 0, 0, 0)
+	ret, err := p.Syscall(syscall.SYS_MLOCK, addr, length, 0, 0, 0, 0)
+	log.Logger.V(0).Info("mlock ret", "ret", ret)
 	return err
 }

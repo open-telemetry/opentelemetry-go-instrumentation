@@ -137,6 +137,12 @@ static __always_inline void *write_target_data(void *data, s32 size)
 
     void *target = (void *)start;
     size = bound_number(size, MIN_BUFFER_SIZE, MAX_BUFFER_SIZE);
+    u64 page_offset = (u64)target & 0xFFF;
+    u64 dist_to_next_page = 4096 - page_offset;
+    if (dist_to_next_page < size)
+    {
+        target += dist_to_next_page;
+    }
     long success = bpf_probe_write_user(target, data, size);
     if (success == 0)
     {
