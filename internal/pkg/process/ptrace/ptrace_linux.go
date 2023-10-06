@@ -235,3 +235,9 @@ func (p *TracedProgram) Madvise(addr uint64, length uint64) error {
 	_, err = p.Syscall(syscall.SYS_MADVISE, addr, length, advice, 0, 0, 0)
 	return err
 }
+
+// Mlock runs mlock syscall.
+func (p *TracedProgram) Mlock(addr uint64, length uint64) error {
+	_, err := p.Syscall(syscall.SYS_MLOCK, addr, length, 0, 0, 0, 0)
+	return err
+}
