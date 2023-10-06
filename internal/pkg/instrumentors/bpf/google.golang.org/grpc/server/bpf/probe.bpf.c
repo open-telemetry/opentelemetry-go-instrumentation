@@ -107,7 +107,7 @@ int uprobe_server_handleStream(struct pt_regs *ctx)
     void *ctx_address = get_go_interface_instance(stream_ptr + stream_ctx_pos);
     void *ctx_iface = 0;
     bpf_probe_read(&ctx_iface, sizeof(ctx_iface), ctx_address);
-    void *key = get_consistent_key(ctx, ctx_address);
+    void *key = get_consistent_key(ctx, ctx_iface);
 
     // Write event
     bpf_map_update_elem(&grpc_events, &key, &grpcReq, 0);

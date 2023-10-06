@@ -178,7 +178,7 @@ int uprobe_ServerMux_ServeHTTP(struct pt_regs *ctx)
     void *req_ctx_ptr = 0;
     void *ctx_address = get_go_interface_instance(req_ptr + ctx_ptr_pos);
     bpf_probe_read(&req_ctx_ptr, sizeof(req_ctx_ptr), ctx_address);
-    void *key = get_consistent_key(ctx, ctx_address);
+    void *key = get_consistent_key(ctx, req_ctx_ptr);
     void *httpReq_ptr = bpf_map_lookup_elem(&http_events, &key);
     if (httpReq_ptr != NULL)
     {

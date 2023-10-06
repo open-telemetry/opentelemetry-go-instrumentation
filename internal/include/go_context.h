@@ -114,7 +114,9 @@ static __always_inline void *get_Go_context(void *ctx, int context_pos, u64 cont
     if (passed_as_arg) {
         return arg;
     }
-    return get_go_interface_instance(arg + context_offset);
+    void *ctx_addr = get_go_interface_instance(arg + context_offset);
+    void *ctx_val = 0;
+    bpf_probe_read_user(&ctx_val, sizeof(ctx_val), ctx_addr);
 }
 
 #endif
