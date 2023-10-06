@@ -157,6 +157,13 @@ int uprobe_HttpClient_Do(struct pt_regs *ctx) {
 
     // Get parent if exists
     void *context_ptr = get_go_interface_instance(req_ptr+ctx_ptr_pos);
+    void *key = get_consistent_key(ctx, context_ptr);
+    void *httpReq_ptr = bpf_map_lookup_elem(&http_events, &key);
+    if (httpReq_ptr != NULL)
+    {
+        bpf_printk("client: httpReq_ptr is not null");
+        return 0;
+    }
     //void *context_ptr = (void *)(req_ptr+ctx_ptr_pos);
     void *context_ptr_val = 0;
     bpf_probe_read(&context_ptr_val, sizeof(context_ptr_val), context_ptr);
@@ -200,7 +207,7 @@ int uprobe_HttpClient_Do(struct pt_regs *ctx) {
     }
 
     // Get key
-    void *key = get_consistent_key(ctx, context_ptr);
+    // void *key = get_consistent_key(ctx, context_ptr);
 
     // Write event
     bpf_map_update_elem(&http_events, &key, &httpReq, 0);
