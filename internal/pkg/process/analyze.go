@@ -140,7 +140,7 @@ func (a *Analyzer) Analyze(pid int, relevantFuncs map[string]interface{}) (*Targ
 	result.GoVersion = goVersion
 	result.Libraries = modules
 
-	mapSize := uint64(os.Getpagesize() * runtime.NumCPU() * 50)
+	mapSize := uint64(os.Getpagesize() * runtime.NumCPU() * 2)
 	addr, err := a.remoteMmap(pid, mapSize)
 	if err != nil {
 		log.Logger.Error(err, "Failed to mmap")
