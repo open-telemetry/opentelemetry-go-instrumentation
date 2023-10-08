@@ -131,10 +131,6 @@ static __always_inline struct span_context *extract_context_from_req_headers(voi
             {
                 continue;
             }
-            if (map_value->keys[i].str == NULL)
-            {
-                continue;
-            }
             char current_header_key[W3C_KEY_LENGTH];
             bpf_probe_read(current_header_key, sizeof(current_header_key), map_value->keys[i].str);
             if (!bpf_memcmp(current_header_key, "traceparent", W3C_KEY_LENGTH) && !bpf_memcmp(current_header_key, "Traceparent", W3C_KEY_LENGTH))

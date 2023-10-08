@@ -81,7 +81,6 @@ int uprobe_server_handleStream(struct pt_regs *ctx)
     bpf_probe_read(&stream_id, sizeof(stream_id), (void *)(stream_ptr + stream_id_pos));
     void *grpcReq_ptr = bpf_map_lookup_elem(&streamid_to_grpc_events, &stream_id);
     struct grpc_request_t grpcReq = {};
-    grpcReq.start_time = bpf_ktime_get_ns();
     if (grpcReq_ptr != NULL)
     {
         bpf_probe_read(&grpcReq, sizeof(grpcReq), grpcReq_ptr);
@@ -94,6 +93,7 @@ int uprobe_server_handleStream(struct pt_regs *ctx)
         grpcReq.sc = generate_span_context();
     }
 
+    grpcReq.start_time = bpf_ktime_get_ns();
     // Set attributes
     if (!get_go_string_from_user_ptr((void *)(stream_ptr + stream_method_ptr_pos), grpcReq.method, sizeof(grpcReq.method)))
     {
