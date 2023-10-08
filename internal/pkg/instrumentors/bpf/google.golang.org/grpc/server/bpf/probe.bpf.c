@@ -68,12 +68,6 @@ volatile const u64 frame_stream_id_pod;
 volatile const u64 stream_id_pos;
 volatile const u64 stream_ctx_pos;
 
-volatile const struct go_context_loc stream_ctx_loc = {
-    .context_pos = 4,
-    .passed_as_arg = false,
-    .context_offset_ptr = &stream_ctx_pos,
-};
-
 // This instrumentation attaches uprobe to the following function:
 // func (s *Server) handleStream(t transport.ServerTransport, stream *transport.Stream, trInfo *traceInfo) {
 SEC("uprobe/server_handleStream")
@@ -87,6 +81,7 @@ int uprobe_server_handleStream(struct pt_regs *ctx)
     bpf_probe_read(&stream_id, sizeof(stream_id), (void *)(stream_ptr + stream_id_pos));
     void *grpcReq_ptr = bpf_map_lookup_elem(&streamid_to_grpc_events, &stream_id);
     struct grpc_request_t grpcReq = {};
+    grpcReq.start_time = bpf_ktime_get_ns();
     if (grpcReq_ptr != NULL)
     {
         bpf_probe_read(&grpcReq, sizeof(grpcReq), grpcReq_ptr);
@@ -100,17 +95,14 @@ int uprobe_server_handleStream(struct pt_regs *ctx)
     }
 
     // Set attributes
-    grpcReq.start_time = bpf_ktime_get_ns();
-    void *method_ptr = 0;
-    bpf_probe_read(&method_ptr, sizeof(method_ptr), (void *)(stream_ptr + stream_method_ptr_pos));
-    u64 method_len = 0;
-    bpf_probe_read(&method_len, sizeof(method_len), (void *)(stream_ptr + (stream_method_ptr_pos + 8)));
-    u64 method_size = sizeof(grpcReq.method);
-    method_size = method_size < method_len ? method_size : method_len;
-    bpf_probe_read(&grpcReq.method, method_size, method_ptr);
+    if (!get_go_string_from_user_ptr((void *)(stream_ptr + stream_method_ptr_pos), grpcReq.method, sizeof(grpcReq.method)))
+    {
+        bpf_printk("method write failed, aborting ebpf probe");
+        return 0;
+    }
 
     // Get key
-    void *ctx_iface = get_Go_context(ctx, &stream_ctx_loc);
+    void *ctx_iface = get_Go_context(ctx, 4, stream_ctx_pos, false);
     void *key = get_consistent_key(ctx, ctx_iface);
 
     // Write event
@@ -119,7 +111,7 @@ int uprobe_server_handleStream(struct pt_regs *ctx)
     return 0;
 }
 
-UPROBE_RETURN(server_handleStream, struct grpc_request_t, &stream_ctx_loc, grpc_events, events, true)
+UPROBE_RETURN(server_handleStream, struct grpc_request_t, grpc_events, events, true, 4, stream_ctx_pos, false)
 
 // func (d *decodeState) decodeHeader(frame *http2.MetaHeadersFrame) error
 SEC("uprobe/decodeState_decodeHeader")

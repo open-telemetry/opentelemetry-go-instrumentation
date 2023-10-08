@@ -78,12 +78,6 @@ volatile const u64 httpclient_nextid_pos;
 volatile const u64 headerFrame_streamid_pos;
 volatile const u64 headerFrame_hf_pos;
 
-volatile const struct go_context_loc ClientConn_Invoke_ctx_loc = {
-    .context_pos = 3,
-    .passed_as_arg = true,
-    .context_offset_ptr = NULL,
-};
-
 // This instrumentation attaches uprobe to the following function:
 // func (cc *ClientConn) Invoke(ctx context.Context, method string, args, reply interface{}, opts ...CallOption) error
 SEC("uprobe/ClientConn_Invoke")
@@ -106,16 +100,14 @@ int uprobe_ClientConn_Invoke(struct pt_regs *ctx)
 
     // Read ClientConn.Target
     void *clientconn_ptr = get_argument(ctx, clientconn_pos);
-    void *target_ptr = 0;
-    bpf_probe_read(&target_ptr, sizeof(target_ptr), (void *)(clientconn_ptr + (clientconn_target_ptr_pos)));
-    u64 target_len = 0;
-    bpf_probe_read(&target_len, sizeof(target_len), (void *)(clientconn_ptr + (clientconn_target_ptr_pos + 8)));
-    u64 target_size = sizeof(grpcReq.target);
-    target_size = target_size < target_len ? target_size : target_len;
-    bpf_probe_read(&grpcReq.target, target_size, target_ptr);
+    if (!get_go_string_from_user_ptr((void*)(clientconn_ptr + clientconn_target_ptr_pos), grpcReq.target, sizeof(grpcReq.target)))
+    {
+        bpf_printk("target write failed, aborting ebpf probe");
+        return 0;
+    }
 
     // Get parent if exists 
-    void *context_ptr = get_Go_context(ctx, &ClientConn_Invoke_ctx_loc);
+    void *context_ptr = get_Go_context(ctx, 3, 0, true);
     struct span_context *parent_span_ctx = get_parent_span_context(context_ptr);
     if (parent_span_ctx != NULL)
     {
@@ -137,7 +129,7 @@ int uprobe_ClientConn_Invoke(struct pt_regs *ctx)
     return 0;
 }
 
-UPROBE_RETURN(ClientConn_Invoke, struct grpc_request_t, &ClientConn_Invoke_ctx_loc, grpc_events, events, false)
+UPROBE_RETURN(ClientConn_Invoke, struct grpc_request_t, grpc_events, events, false, 3, 0, true)
 
 // func (l *loopyWriter) headerHandler(h *headerFrame) error
 SEC("uprobe/loopyWriter_headerHandler")
@@ -183,7 +175,6 @@ int uprobe_LoopyWriter_HeaderHandler(struct pt_regs *ctx)
     struct hpack_header_field hf = {};
     hf.name = key_str;
     hf.value = val_str;
-    bpf_printk("item size %d", sizeof(hf));
     append_item_to_slice(&slice, &hf, sizeof(hf), &slice_user_ptr, &headers_buff_map);
     return 0;
 }

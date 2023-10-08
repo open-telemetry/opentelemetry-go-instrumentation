@@ -145,12 +145,6 @@ static __always_inline long inject_header(void* headers_ptr, struct span_context
     return 0;
 }
 
-volatile const struct go_context_loc HttpClient_ctx_loc = {
-    .context_pos = 2,
-    .passed_as_arg = false,
-    .context_offset_ptr = &ctx_ptr_pos,
-};
-
 // This instrumentation attaches uprobe to the following function:
 // func net/http/client.Do(req *Request)
 SEC("uprobe/HttpClient_Do")
@@ -162,7 +156,7 @@ int uprobe_HttpClient_Do(struct pt_regs *ctx) {
     void *req_ptr = get_argument(ctx, request_pos);
 
     // Get parent if exists
-    void *context_ptr_val = get_Go_context(ctx, &HttpClient_ctx_loc);
+    void *context_ptr_val = get_Go_context(ctx, 2, ctx_ptr_pos, false);
     void *key = get_consistent_key(ctx, context_ptr_val);
     void *httpReq_ptr = bpf_map_lookup_elem(&http_events, &key);
     if (httpReq_ptr != NULL)
@@ -170,7 +164,6 @@ int uprobe_HttpClient_Do(struct pt_regs *ctx) {
         bpf_printk("client: httpReq_ptr is not null");
         return 0;
     }
-    //void *context_ptr = (void *)(req_ptr+ctx_ptr_pos);
 
     struct span_context *parent_span_ctx = get_parent_span_context(context_ptr_val);
     if (parent_span_ctx != NULL) {
@@ -181,31 +174,22 @@ int uprobe_HttpClient_Do(struct pt_regs *ctx) {
         httpReq.sc = generate_span_context();
     }
 
-    void *method_ptr = 0;
-    bpf_probe_read(&method_ptr, sizeof(method_ptr), (void *)(req_ptr+method_ptr_pos));
-    u64 method_len = 0;
-    bpf_probe_read(&method_len, sizeof(method_len), (void *)(req_ptr+(method_ptr_pos+8)));
-    u64 method_size = sizeof(httpReq.method);
-    method_size = method_size < method_len ? method_size : method_len;
-    bpf_probe_read(&httpReq.method, method_size, method_ptr);
+    if (!get_go_string_from_user_ptr((void *)(req_ptr+method_ptr_pos), httpReq.method, sizeof(httpReq.method))) {
+        bpf_printk("uprobe_HttpClient_Do: Failed to get method from request");
+        return 0;
+    }
 
     // get path from Request.URL
     void *url_ptr = 0;
     bpf_probe_read(&url_ptr, sizeof(url_ptr), (void *)(req_ptr+url_ptr_pos));
-    void *path_ptr = 0;
-    bpf_probe_read(&path_ptr, sizeof(path_ptr), (void *)(url_ptr+path_ptr_pos));
-
-    u64 path_len = 0;
-    bpf_probe_read(&path_len, sizeof(path_len), (void *)(url_ptr+(path_ptr_pos+8)));
-    u64 path_size = sizeof(httpReq.path);
-    path_size = path_size < path_len ? path_size : path_len;
-    bpf_probe_read(&httpReq.path, path_size, path_ptr);
+    if (!get_go_string_from_user_ptr((void *)(url_ptr+path_ptr_pos), httpReq.path, sizeof(httpReq.path))) {
+        bpf_printk("uprobe_HttpClient_Do: Failed to get path from Request.URL");
+        return 0;
+    }
 
     // get headers from Request
     void *headers_ptr = 0;
     bpf_probe_read(&headers_ptr, sizeof(headers_ptr), (void *)(req_ptr+headers_ptr_pos));
-    u64 map_keyvalue_count = 0;
-    bpf_probe_read(&map_keyvalue_count, sizeof(map_keyvalue_count), headers_ptr);
     long res = inject_header(headers_ptr, &httpReq.sc);
     if (res < 0) {
         bpf_printk("uprobe_HttpClient_Do: Failed to inject header");
@@ -219,4 +203,4 @@ int uprobe_HttpClient_Do(struct pt_regs *ctx) {
 
 // This instrumentation attaches uretprobe to the following function:
 // func net/http/client.Do(req *Request)
-UPROBE_RETURN(HttpClient_Do, struct http_request_t, &HttpClient_ctx_loc, http_events, events, true)
+UPROBE_RETURN(HttpClient_Do, struct http_request_t, http_events, events, true, 2, ctx_ptr_pos, false)

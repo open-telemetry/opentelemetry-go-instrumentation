@@ -171,12 +171,6 @@ static __always_inline struct span_context *extract_context_from_req_headers(voi
     return NULL;
 }
 
-volatile const struct go_context_loc ServeHTTP_ctx_loc = {
-    .context_pos = 4,
-    .passed_as_arg = false,
-    .context_offset_ptr = &ctx_ptr_pos,
-};
-
 // This instrumentation attaches uprobe to the following function:
 // func (f HandlerFunc) ServeHTTP(w ResponseWriter, r *Request)
 SEC("uprobe/HandlerFunc_ServeHTTP")
@@ -185,7 +179,7 @@ int uprobe_HandlerFunc_ServeHTTP(struct pt_regs *ctx)
     // Get key
     u64 request_pos = 4;
     void *req_ptr = get_argument(ctx, request_pos);
-    void *req_ctx_ptr = get_Go_context(ctx, &ServeHTTP_ctx_loc);
+    void *req_ctx_ptr = get_Go_context(ctx, 4, ctx_ptr_pos, false);
     if (req_ctx_ptr == NULL)
     {
         return 0;
@@ -201,28 +195,21 @@ int uprobe_HandlerFunc_ServeHTTP(struct pt_regs *ctx)
     struct http_request_t httpReq = {};
     httpReq.start_time = bpf_ktime_get_ns();
 
-    // Get method from request
-    void *method_ptr = 0;
-    bpf_probe_read(&method_ptr, sizeof(method_ptr), (void *)(req_ptr + method_ptr_pos));
-    u64 method_len = 0;
-    bpf_probe_read(&method_len, sizeof(method_len), (void *)(req_ptr + (method_ptr_pos + 8)));
-    u64 method_size = sizeof(httpReq.method);
-    method_size = method_size < method_len ? method_size : method_len;
-    bpf_probe_read(&httpReq.method, method_size, method_ptr);
-
+    // // Get method from request
+    if (!get_go_string_from_user_ptr((void *)(req_ptr + method_ptr_pos), httpReq.method, sizeof(httpReq.method))) {
+        bpf_printk("failed to get method from request");
+        return 0;
+    }
     // get path from Request.URL
     void *url_ptr = 0;
     bpf_probe_read(&url_ptr, sizeof(url_ptr), (void *)(req_ptr + url_ptr_pos));
-    void *path_ptr = 0;
-    bpf_probe_read(&path_ptr, sizeof(path_ptr), (void *)(url_ptr + path_ptr_pos));
-    u64 path_len = 0;
-    bpf_probe_read(&path_len, sizeof(path_len), (void *)(url_ptr + (path_ptr_pos + 8)));
-    u64 path_size = sizeof(httpReq.path);
-    path_size = path_size < path_len ? path_size : path_len;
-    bpf_probe_read(&httpReq.path, path_size, path_ptr);
+    if (!get_go_string_from_user_ptr((void *)(url_ptr + path_ptr_pos), httpReq.path, sizeof(httpReq.path))) {
+        bpf_printk("failed to get path from Request.URL");
+        return 0;
+    }
 
     // Propagate context
-    struct span_context *parent_ctx = extract_context_from_req_headers(req_ptr + headers_ptr_pos);
+    struct span_context *parent_ctx = extract_context_from_req_headers((void*)(req_ptr + headers_ptr_pos));
     if (parent_ctx != NULL)
     {
         // found parent context in http headers
@@ -241,4 +228,4 @@ int uprobe_HandlerFunc_ServeHTTP(struct pt_regs *ctx)
     return 0;
 }
 
-UPROBE_RETURN(HandlerFunc_ServeHTTP, struct http_request_t, &ServeHTTP_ctx_loc, http_events, events, true)
+UPROBE_RETURN(HandlerFunc_ServeHTTP, struct http_request_t, http_events, events, true, 4, ctx_ptr_pos, false)

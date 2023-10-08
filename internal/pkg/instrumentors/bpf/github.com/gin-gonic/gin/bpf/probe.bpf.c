@@ -46,12 +46,6 @@ volatile const u64 url_ptr_pos;
 volatile const u64 path_ptr_pos;
 volatile const u64 ctx_ptr_pos;
 
-volatile const struct go_context_loc GinEngine_ServeHTTP_ctx_loc = {
-    .context_pos = 4,
-    .passed_as_arg = false,
-    .context_offset_ptr = &ctx_ptr_pos,
-};
-
 // This instrumentation attaches uprobe to the following function:
 // func (engine *Engine) ServeHTTP(w http.ResponseWriter, r *http.Request)
 SEC("uprobe/GinEngine_ServeHTTP")
@@ -62,7 +56,7 @@ int uprobe_GinEngine_ServeHTTP(struct pt_regs *ctx) {
 
     // Get request struct
     void *req_ptr = get_argument(ctx, request_pos);
-    void *req_ctx_ptr = get_Go_context(ctx, &GinEngine_ServeHTTP_ctx_loc);
+    void *req_ctx_ptr = get_Go_context(ctx, 4, ctx_ptr_pos, false);
 
     // Get method from request
     void *method_ptr = 0;
@@ -94,4 +88,4 @@ int uprobe_GinEngine_ServeHTTP(struct pt_regs *ctx) {
     return 0;
 }
 
-UPROBE_RETURN(GinEngine_ServeHTTP, struct http_request_t, &GinEngine_ServeHTTP_ctx_loc, http_events, events, true)
+UPROBE_RETURN(GinEngine_ServeHTTP, struct http_request_t, http_events, events, true, 4, ctx_ptr_pos, false)

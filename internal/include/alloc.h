@@ -102,29 +102,6 @@ static __always_inline void *write_target_data(void *data, s32 size)
         return NULL;
     }
 
-    // Add padding to align to 8 bytes
-    if (size % 8 != 0) {
-        size += 8 - (size % 8);
-
-        // Write to the buffer
-        u32 key = 0;
-        void *buffer = bpf_map_lookup_elem(&alignment_buffer, &key);
-        if (buffer == NULL) {
-            bpf_printk("failed to get alignment buffer");
-            return NULL;
-        }
-
-        // Copy size bytes from data to buffer
-        size = bound_number(size, MIN_BUFFER_SIZE, MAX_BUFFER_SIZE);
-        long success = bpf_probe_read(buffer, size, data);
-        if (success != 0) {
-            bpf_printk("failed to copy data to alignment buffer");
-            return NULL;
-        }
-
-        data = buffer;
-    }
-
     u64 start = get_area_start();
     u64 end = get_area_end(start);
     if (end - start < size)
@@ -150,9 +127,9 @@ static __always_inline void *write_target_data(void *data, s32 size)
         u64 updated_start = start + size;
 
         // align updated_start to 8 bytes
-        // if (updated_start % 8 != 0) {
-        //     updated_start += 8 - (updated_start % 8);
-        // }
+        if (updated_start % 8 != 0) {
+            updated_start += 8 - (updated_start % 8);
+        }
 
         bpf_map_update_elem(&alloc_map, &start_index, &updated_start, BPF_ANY);
         bpf_printk("wrote %d bytes to userspace at addr: %lx", size, target);

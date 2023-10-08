@@ -89,7 +89,6 @@ static __always_inline void append_item_to_slice(struct go_slice *slice, void *n
 {
     if (slice->len < slice->cap)
     {
-        bpf_printk("room in slice ! len %d cap %d", slice->len, slice->cap);
         // Room available on current array
         bpf_probe_write_user(slice->array + (item_size * slice->len), new_item, item_size);
     }
@@ -157,5 +156,30 @@ static __always_inline void append_item_to_slice(struct go_slice *slice, void *n
         bpf_printk("append_item_to_slice: failed to update len in userspace");
         return;
     }
+}
+
+static __always_inline bool get_go_string_from_user_ptr(void *user_str_ptr, char *dst, u64 max_len)
+{
+    if (user_str_ptr == NULL)
+    {
+        return false;
+    }
+
+    struct go_string user_str = {0};
+    long success = 0;
+    success = bpf_probe_read(&user_str, sizeof(struct go_string), user_str_ptr);
+    if (success != 0 || user_str.len < 1)
+    {
+        return false;
+    }
+
+    u64 size_to_read = user_str.len > max_len ? max_len : user_str.len;
+    success = bpf_probe_read(dst, size_to_read, user_str.str);
+    if (success != 0)
+    {
+        return false;
+    }
+
+    return true;
 }
 #endif

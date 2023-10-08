@@ -38,22 +38,6 @@ struct
     __uint(pinning, LIBBPF_PIN_BY_NAME);
 } tracked_spans_by_sc SEC(".maps");
 
-// Identifies the location of the context.Context in the function arguments
-struct go_context_loc
-{
-    // The argument position of the context.Context data pointer
-    // In case the context.Context is passed as an argument,
-    // this is the argument index of the pointer (starting from 1).
-    // In case the context.Context is a member of a struct,
-    // this is the argument index of the struct pointer (starting from 1).
-    int context_pos;
-    // In case the context.Context is a member of a struct,
-    // this is the offset of the context.Context member in the struct.
-    const volatile u64 *context_offset_ptr;
-    // Indicates whether context.Context is passed as an argument or is a member of a struct
-    bool passed_as_arg;
-};
-
 typedef struct span_context* (*get_parent_fb)(void*);
 
 static __always_inline void *get_parent_go_context(void *ctx, void *map) {
@@ -127,20 +111,24 @@ static __always_inline void stop_tracking_span(struct span_context *sc, bool isR
     bpf_map_delete_elem(&tracked_spans_by_sc, sc);
 }
 
-static __always_inline void *get_Go_context(void *ctx, struct go_context_loc *loc) {
-    if (loc == NULL) {
-        bpf_printk("go_context_loc is null");
-        return NULL;
-    }
-    void *arg = get_argument(ctx, loc->context_pos);
-    if (loc->passed_as_arg) {
+// Extract the go context.Context data pointer from the function arguments
+// context_pos:
+    // The argument position of the context.Context data pointer
+    // In case the context.Context is passed as an argument,
+    // this is the argument index of the pointer (starting from 1).
+    // In case the context.Context is a member of a struct,
+    // this is the argument index of the struct pointer (starting from 1). 
+// context_offset:
+    // In case the context.Context is a member of a struct,
+    // this is the offset of the context.Context member in the struct.
+// passed_as_arg:
+    // Indicates whether context.Context is passed as an argument or is a member of a struct
+static __always_inline void *get_Go_context(void *ctx, int context_pos, const volatile u64 context_offset, bool passed_as_arg) {
+    void *arg = get_argument(ctx, context_pos);
+    if (passed_as_arg) {
         return arg;
     }
-    if (loc->context_offset_ptr == NULL) {
-        bpf_printk("context offset ptr is null while context is not passed directly as an argument");
-        return NULL;
-    }
-    void *ctx_addr = get_go_interface_instance(arg + (*loc->context_offset_ptr));
+    void *ctx_addr = get_go_interface_instance((void*)(arg + context_offset));
     void *ctx_val = 0;
     bpf_probe_read_user(&ctx_val, sizeof(ctx_val), ctx_addr);
     return ctx_val;
