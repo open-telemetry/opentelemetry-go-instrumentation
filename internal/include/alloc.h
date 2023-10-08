@@ -53,9 +53,6 @@ static __always_inline u64 get_area_start()
     if (start == NULL || *start == 0)
     {
         u64 current_start_addr = start_addr + (partition_size * current_cpu);
-        if (current_start_addr % 8 != 0) {
-            current_start_addr += 8 - (current_start_addr % 8);
-        }
         bpf_map_update_elem(&alloc_map, &start_index, &current_start_addr, BPF_ANY);
         return current_start_addr;
     }
