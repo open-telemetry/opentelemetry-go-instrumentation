@@ -131,6 +131,10 @@ static __always_inline struct span_context *extract_context_from_req_headers(voi
             {
                 continue;
             }
+            if (map_value->keys[i].str == NULL)
+            {
+                continue;
+            }
             char current_header_key[W3C_KEY_LENGTH];
             bpf_probe_read(current_header_key, sizeof(current_header_key), map_value->keys[i].str);
             if (!bpf_memcmp(current_header_key, "traceparent", W3C_KEY_LENGTH) && !bpf_memcmp(current_header_key, "Traceparent", W3C_KEY_LENGTH))
@@ -167,7 +171,7 @@ static __always_inline struct span_context *extract_context_from_req_headers(voi
     return NULL;
 }
 
-struct go_context_loc ServeHTTP_ctx_loc = {
+volatile const struct go_context_loc ServeHTTP_ctx_loc = {
     .context_pos = 4,
     .passed_as_arg = false,
     .context_offset_ptr = &ctx_ptr_pos,
@@ -182,6 +186,10 @@ int uprobe_HandlerFunc_ServeHTTP(struct pt_regs *ctx)
     u64 request_pos = 4;
     void *req_ptr = get_argument(ctx, request_pos);
     void *req_ctx_ptr = get_Go_context(ctx, &ServeHTTP_ctx_loc);
+    if (req_ctx_ptr == NULL)
+    {
+        return 0;
+    }
     void *key = get_consistent_key(ctx, req_ctx_ptr);
     void *httpReq_ptr = bpf_map_lookup_elem(&http_events, &key);
     if (httpReq_ptr != NULL)

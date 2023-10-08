@@ -128,9 +128,17 @@ static __always_inline void stop_tracking_span(struct span_context *sc, bool isR
 }
 
 static __always_inline void *get_Go_context(void *ctx, struct go_context_loc *loc) {
+    if (loc == NULL) {
+        bpf_printk("go_context_loc is null");
+        return NULL;
+    }
     void *arg = get_argument(ctx, loc->context_pos);
     if (loc->passed_as_arg) {
         return arg;
+    }
+    if (loc->context_offset_ptr == NULL) {
+        bpf_printk("context offset ptr is null while context is not passed directly as an argument");
+        return NULL;
     }
     void *ctx_addr = get_go_interface_instance(arg + (*loc->context_offset_ptr));
     void *ctx_val = 0;

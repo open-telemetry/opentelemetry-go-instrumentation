@@ -68,7 +68,7 @@ volatile const u64 frame_stream_id_pod;
 volatile const u64 stream_id_pos;
 volatile const u64 stream_ctx_pos;
 
-struct go_context_loc stream_ctx_loc = {
+volatile const struct go_context_loc stream_ctx_loc = {
     .context_pos = 4,
     .passed_as_arg = false,
     .context_offset_ptr = &stream_ctx_pos,

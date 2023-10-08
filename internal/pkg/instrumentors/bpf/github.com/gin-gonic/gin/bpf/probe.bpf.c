@@ -46,7 +46,7 @@ volatile const u64 url_ptr_pos;
 volatile const u64 path_ptr_pos;
 volatile const u64 ctx_ptr_pos;
 
-struct go_context_loc GinEngine_ServeHTTP_ctx_loc = {
+volatile const struct go_context_loc GinEngine_ServeHTTP_ctx_loc = {
     .context_pos = 4,
     .passed_as_arg = false,
     .context_offset_ptr = &ctx_ptr_pos,

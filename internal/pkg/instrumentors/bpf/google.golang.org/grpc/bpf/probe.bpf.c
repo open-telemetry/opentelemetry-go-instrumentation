@@ -78,7 +78,7 @@ volatile const u64 httpclient_nextid_pos;
 volatile const u64 headerFrame_streamid_pos;
 volatile const u64 headerFrame_hf_pos;
 
-struct go_context_loc ClientConn_Invoke_ctx_loc = {
+volatile const struct go_context_loc ClientConn_Invoke_ctx_loc = {
     .context_pos = 3,
     .passed_as_arg = true,
     .context_offset_ptr = NULL,

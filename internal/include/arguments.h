@@ -57,7 +57,7 @@ void *get_argument_by_stack(struct pt_regs *ctx, int index)
     return ptr;
 }
 
-void *get_argument(struct pt_regs *ctx, int index)
+void __always_inline *get_argument(struct pt_regs *ctx, int index)
 {
     if (is_registers_abi)
     {

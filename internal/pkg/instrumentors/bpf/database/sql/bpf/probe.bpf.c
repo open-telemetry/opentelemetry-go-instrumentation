@@ -42,7 +42,7 @@ struct {
 // Injected in init
 volatile const bool should_include_db_statement;
 
-struct go_context_loc queryDC_ctx_loc = {
+volatile const struct go_context_loc queryDC_ctx_loc = {
     .context_pos = 3,
     .passed_as_arg = true,
     .context_offset_ptr = NULL,

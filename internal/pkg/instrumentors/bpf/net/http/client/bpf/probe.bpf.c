@@ -145,7 +145,7 @@ static __always_inline long inject_header(void* headers_ptr, struct span_context
     return 0;
 }
 
-struct go_context_loc HttpClient_ctx_loc = {
+volatile const struct go_context_loc HttpClient_ctx_loc = {
     .context_pos = 2,
     .passed_as_arg = false,
     .context_offset_ptr = &ctx_ptr_pos,
