@@ -167,17 +167,21 @@ static __always_inline struct span_context *extract_context_from_req_headers(voi
     return NULL;
 }
 
+struct go_context_loc ServeHTTP_ctx_loc = {
+    .context_pos = 4,
+    .passed_as_arg = false,
+    .context_offset_ptr = &ctx_ptr_pos,
+};
+
 // This instrumentation attaches uprobe to the following function:
-// func (mux *ServeMux) ServeHTTP(w ResponseWriter, r *Request)
-SEC("uprobe/ServerMux_ServeHTTP")
-int uprobe_ServerMux_ServeHTTP(struct pt_regs *ctx)
+// func (f HandlerFunc) ServeHTTP(w ResponseWriter, r *Request)
+SEC("uprobe/HandlerFunc_ServeHTTP")
+int uprobe_HandlerFunc_ServeHTTP(struct pt_regs *ctx)
 {
     // Get key
     u64 request_pos = 4;
     void *req_ptr = get_argument(ctx, request_pos);
-    void *req_ctx_ptr = 0;
-    void *ctx_address = get_go_interface_instance(req_ptr + ctx_ptr_pos);
-    bpf_probe_read(&req_ctx_ptr, sizeof(req_ctx_ptr), ctx_address);
+    void *req_ctx_ptr = get_Go_context(ctx, &ServeHTTP_ctx_loc);
     void *key = get_consistent_key(ctx, req_ctx_ptr);
     void *httpReq_ptr = bpf_map_lookup_elem(&http_events, &key);
     if (httpReq_ptr != NULL)
@@ -229,4 +233,4 @@ int uprobe_ServerMux_ServeHTTP(struct pt_regs *ctx)
     return 0;
 }
 
-UPROBE_RETURN(ServerMux_ServeHTTP, struct http_request_t, 4, ctx_ptr_pos, http_events, events, true, false)
+UPROBE_RETURN(HandlerFunc_ServeHTTP, struct http_request_t, &ServeHTTP_ctx_loc, http_events, events, true)

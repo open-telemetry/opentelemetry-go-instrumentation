@@ -78,6 +78,12 @@ volatile const u64 httpclient_nextid_pos;
 volatile const u64 headerFrame_streamid_pos;
 volatile const u64 headerFrame_hf_pos;
 
+struct go_context_loc ClientConn_Invoke_ctx_loc = {
+    .context_pos = 3,
+    .passed_as_arg = true,
+    .context_offset_ptr = NULL,
+};
+
 // This instrumentation attaches uprobe to the following function:
 // func (cc *ClientConn) Invoke(ctx context.Context, method string, args, reply interface{}, opts ...CallOption) error
 SEC("uprobe/ClientConn_Invoke")
@@ -85,7 +91,6 @@ int uprobe_ClientConn_Invoke(struct pt_regs *ctx)
 {
     // positions
     u64 clientconn_pos = 1;
-    u64 context_pos = 3;
     u64 method_ptr_pos = 4;
     u64 method_len_pos = 5;
 
@@ -110,9 +115,7 @@ int uprobe_ClientConn_Invoke(struct pt_regs *ctx)
     bpf_probe_read(&grpcReq.target, target_size, target_ptr);
 
     // Get parent if exists 
-    void *context_ptr = get_argument(ctx, context_pos);
-    // void *context_ptr_val = 0;
-    // bpf_probe_read(&context_ptr_val, sizeof(context_ptr_val), context_ptr);
+    void *context_ptr = get_Go_context(ctx, &ClientConn_Invoke_ctx_loc);
     struct span_context *parent_span_ctx = get_parent_span_context(context_ptr);
     if (parent_span_ctx != NULL)
     {
@@ -134,7 +137,7 @@ int uprobe_ClientConn_Invoke(struct pt_regs *ctx)
     return 0;
 }
 
-UPROBE_RETURN(ClientConn_Invoke, struct grpc_request_t, 3, 0, grpc_events, events, false, true)
+UPROBE_RETURN(ClientConn_Invoke, struct grpc_request_t, &ClientConn_Invoke_ctx_loc, grpc_events, events, false)
 
 // func (l *loopyWriter) headerHandler(h *headerFrame) error
 SEC("uprobe/loopyWriter_headerHandler")

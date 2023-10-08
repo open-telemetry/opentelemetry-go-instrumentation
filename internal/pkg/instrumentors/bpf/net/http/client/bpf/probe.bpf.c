@@ -145,6 +145,12 @@ static __always_inline long inject_header(void* headers_ptr, struct span_context
     return 0;
 }
 
+struct go_context_loc HttpClient_ctx_loc = {
+    .context_pos = 2,
+    .passed_as_arg = false,
+    .context_offset_ptr = &ctx_ptr_pos,
+};
+
 // This instrumentation attaches uprobe to the following function:
 // func net/http/client.Do(req *Request)
 SEC("uprobe/HttpClient_Do")
@@ -156,9 +162,7 @@ int uprobe_HttpClient_Do(struct pt_regs *ctx) {
     void *req_ptr = get_argument(ctx, request_pos);
 
     // Get parent if exists
-    void *context_ptr = get_go_interface_instance(req_ptr+ctx_ptr_pos);
-    void *context_ptr_val = 0;
-    bpf_probe_read(&context_ptr_val, sizeof(context_ptr_val), context_ptr);
+    void *context_ptr_val = get_Go_context(ctx, &HttpClient_ctx_loc);
     void *key = get_consistent_key(ctx, context_ptr_val);
     void *httpReq_ptr = bpf_map_lookup_elem(&http_events, &key);
     if (httpReq_ptr != NULL)
@@ -207,9 +211,6 @@ int uprobe_HttpClient_Do(struct pt_regs *ctx) {
         bpf_printk("uprobe_HttpClient_Do: Failed to inject header");
     }
 
-    // Get key
-    // void *key = get_consistent_key(ctx, context_ptr);
-
     // Write event
     bpf_map_update_elem(&http_events, &key, &httpReq, 0);
     start_tracking_span(context_ptr_val, &httpReq.sc);
@@ -218,4 +219,4 @@ int uprobe_HttpClient_Do(struct pt_regs *ctx) {
 
 // This instrumentation attaches uretprobe to the following function:
 // func net/http/client.Do(req *Request)
-UPROBE_RETURN(HttpClient_Do, struct http_request_t, 2, ctx_ptr_pos, http_events, events, true, false)
+UPROBE_RETURN(HttpClient_Do, struct http_request_t, &HttpClient_ctx_loc, http_events, events, true)

@@ -42,6 +42,12 @@ struct {
 // Injected in init
 volatile const bool should_include_db_statement;
 
+struct go_context_loc queryDC_ctx_loc = {
+    .context_pos = 3,
+    .passed_as_arg = true,
+    .context_offset_ptr = NULL,
+};
+
 // This instrumentation attaches uprobe to the following function:
 // func (db *DB) queryDC(ctx, txctx context.Context, dc *driverConn, releaseConn func(error), query string, args []any)
 SEC("uprobe/queryDC")
@@ -63,9 +69,7 @@ int uprobe_queryDC(struct pt_regs *ctx) {
     }
 
     // Get parent if exists
-    void *context_ptr = get_argument(ctx, context_ptr_pos);
-    void *context_ptr_val = 0;
-    bpf_probe_read(&context_ptr_val, sizeof(context_ptr_val), context_ptr);
+    void *context_ptr_val = get_Go_context(ctx, &queryDC_ctx_loc);
     struct span_context *span_ctx = get_parent_span_context(context_ptr_val);
     if (span_ctx != NULL) {
         // Set the parent context
@@ -77,7 +81,7 @@ int uprobe_queryDC(struct pt_regs *ctx) {
     }
 
     // Get key
-    void *key = get_consistent_key(ctx, context_ptr);
+    void *key = get_consistent_key(ctx, context_ptr_val);
 
     bpf_map_update_elem(&sql_events, &key, &sql_request, 0);
     start_tracking_span(context_ptr_val, &sql_request.sc);
@@ -86,4 +90,4 @@ int uprobe_queryDC(struct pt_regs *ctx) {
 
 // This instrumentation attaches uprobe to the following function:
 // func (db *DB) queryDC(ctx, txctx context.Context, dc *driverConn, releaseConn func(error), query string, args []any)
-UPROBE_RETURN(queryDC, struct sql_request_t, 3, 0, sql_events, events, false, true)
+UPROBE_RETURN(queryDC, struct sql_request_t, &queryDC_ctx_loc, sql_events, events, false)

@@ -152,7 +152,7 @@ func (h *Instrumentor) registerProbes(ctx *context.InstrumentorContext, funcName
 		return
 	}
 
-	up, err := ctx.Executable.Uprobe("", h.bpfObjects.UprobeServerMuxServeHTTP, &link.UprobeOptions{
+	up, err := ctx.Executable.Uprobe("", h.bpfObjects.UprobeHandlerFuncServeHTTP, &link.UprobeOptions{
 		Address: offset,
 	})
 	if err != nil {
@@ -164,7 +164,7 @@ func (h *Instrumentor) registerProbes(ctx *context.InstrumentorContext, funcName
 	h.uprobes = append(h.uprobes, up)
 
 	for _, ret := range retOffsets {
-		retProbe, err := ctx.Executable.Uprobe("", h.bpfObjects.UprobeServerMuxServeHTTP_Returns, &link.UprobeOptions{
+		retProbe, err := ctx.Executable.Uprobe("", h.bpfObjects.UprobeHandlerFuncServeHTTP_Returns, &link.UprobeOptions{
 			Address: ret,
 		})
 		if err != nil {

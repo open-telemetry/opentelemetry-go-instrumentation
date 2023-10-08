@@ -68,6 +68,12 @@ volatile const u64 frame_stream_id_pod;
 volatile const u64 stream_id_pos;
 volatile const u64 stream_ctx_pos;
 
+struct go_context_loc stream_ctx_loc = {
+    .context_pos = 4,
+    .passed_as_arg = false,
+    .context_offset_ptr = &stream_ctx_pos,
+};
+
 // This instrumentation attaches uprobe to the following function:
 // func (s *Server) handleStream(t transport.ServerTransport, stream *transport.Stream, trInfo *traceInfo) {
 SEC("uprobe/server_handleStream")
@@ -104,9 +110,7 @@ int uprobe_server_handleStream(struct pt_regs *ctx)
     bpf_probe_read(&grpcReq.method, method_size, method_ptr);
 
     // Get key
-    void *ctx_address = get_go_interface_instance(stream_ptr + stream_ctx_pos);
-    void *ctx_iface = 0;
-    bpf_probe_read(&ctx_iface, sizeof(ctx_iface), ctx_address);
+    void *ctx_iface = get_Go_context(ctx, &stream_ctx_loc);
     void *key = get_consistent_key(ctx, ctx_iface);
 
     // Write event
@@ -115,7 +119,7 @@ int uprobe_server_handleStream(struct pt_regs *ctx)
     return 0;
 }
 
-UPROBE_RETURN(server_handleStream, struct grpc_request_t, 4, stream_ctx_pos, grpc_events, events, true, false)
+UPROBE_RETURN(server_handleStream, struct grpc_request_t, &stream_ctx_loc, grpc_events, events, true)
 
 // func (d *decodeState) decodeHeader(frame *http2.MetaHeadersFrame) error
 SEC("uprobe/decodeState_decodeHeader")

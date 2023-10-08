@@ -68,14 +68,15 @@ type bpfSpecs struct {
 //
 // It can be passed ebpf.CollectionSpec.Assign.
 type bpfProgramSpecs struct {
-	UprobeServerMuxServeHTTP         *ebpf.ProgramSpec `ebpf:"uprobe_ServerMux_ServeHTTP"`
-	UprobeServerMuxServeHTTP_Returns *ebpf.ProgramSpec `ebpf:"uprobe_ServerMux_ServeHTTP_Returns"`
+	UprobeHandlerFuncServeHTTP         *ebpf.ProgramSpec `ebpf:"uprobe_HandlerFunc_ServeHTTP"`
+	UprobeHandlerFuncServeHTTP_Returns *ebpf.ProgramSpec `ebpf:"uprobe_HandlerFunc_ServeHTTP_Returns"`
 }
 
 // bpfMapSpecs contains maps before they are loaded into the kernel.
 //
 // It can be passed ebpf.CollectionSpec.Assign.
 type bpfMapSpecs struct {
+	AlignmentBuffer             *ebpf.MapSpec `ebpf:"alignment_buffer"`
 	AllocMap                    *ebpf.MapSpec `ebpf:"alloc_map"`
 	Events                      *ebpf.MapSpec `ebpf:"events"`
 	GolangMapbucketStorageMap   *ebpf.MapSpec `ebpf:"golang_mapbucket_storage_map"`
@@ -104,6 +105,7 @@ func (o *bpfObjects) Close() error {
 //
 // It can be passed to loadBpfObjects or ebpf.CollectionSpec.LoadAndAssign.
 type bpfMaps struct {
+	AlignmentBuffer             *ebpf.Map `ebpf:"alignment_buffer"`
 	AllocMap                    *ebpf.Map `ebpf:"alloc_map"`
 	Events                      *ebpf.Map `ebpf:"events"`
 	GolangMapbucketStorageMap   *ebpf.Map `ebpf:"golang_mapbucket_storage_map"`
@@ -115,6 +117,7 @@ type bpfMaps struct {
 
 func (m *bpfMaps) Close() error {
 	return _BpfClose(
+		m.AlignmentBuffer,
 		m.AllocMap,
 		m.Events,
 		m.GolangMapbucketStorageMap,
@@ -129,14 +132,14 @@ func (m *bpfMaps) Close() error {
 //
 // It can be passed to loadBpfObjects or ebpf.CollectionSpec.LoadAndAssign.
 type bpfPrograms struct {
-	UprobeServerMuxServeHTTP         *ebpf.Program `ebpf:"uprobe_ServerMux_ServeHTTP"`
-	UprobeServerMuxServeHTTP_Returns *ebpf.Program `ebpf:"uprobe_ServerMux_ServeHTTP_Returns"`
+	UprobeHandlerFuncServeHTTP         *ebpf.Program `ebpf:"uprobe_HandlerFunc_ServeHTTP"`
+	UprobeHandlerFuncServeHTTP_Returns *ebpf.Program `ebpf:"uprobe_HandlerFunc_ServeHTTP_Returns"`
 }
 
 func (p *bpfPrograms) Close() error {
 	return _BpfClose(
-		p.UprobeServerMuxServeHTTP,
-		p.UprobeServerMuxServeHTTP_Returns,
+		p.UprobeHandlerFuncServeHTTP,
+		p.UprobeHandlerFuncServeHTTP_Returns,
 	)
 }
 

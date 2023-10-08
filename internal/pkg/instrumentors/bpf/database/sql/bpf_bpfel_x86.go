@@ -75,6 +75,7 @@ type bpfProgramSpecs struct {
 //
 // It can be passed ebpf.CollectionSpec.Assign.
 type bpfMapSpecs struct {
+	AlignmentBuffer  *ebpf.MapSpec `ebpf:"alignment_buffer"`
 	AllocMap         *ebpf.MapSpec `ebpf:"alloc_map"`
 	Events           *ebpf.MapSpec `ebpf:"events"`
 	SqlEvents        *ebpf.MapSpec `ebpf:"sql_events"`
@@ -101,6 +102,7 @@ func (o *bpfObjects) Close() error {
 //
 // It can be passed to loadBpfObjects or ebpf.CollectionSpec.LoadAndAssign.
 type bpfMaps struct {
+	AlignmentBuffer  *ebpf.Map `ebpf:"alignment_buffer"`
 	AllocMap         *ebpf.Map `ebpf:"alloc_map"`
 	Events           *ebpf.Map `ebpf:"events"`
 	SqlEvents        *ebpf.Map `ebpf:"sql_events"`
@@ -110,6 +112,7 @@ type bpfMaps struct {
 
 func (m *bpfMaps) Close() error {
 	return _BpfClose(
+		m.AlignmentBuffer,
 		m.AllocMap,
 		m.Events,
 		m.SqlEvents,
