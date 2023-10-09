@@ -42,96 +42,96 @@ volatile const u64 url_ptr_pos;
 volatile const u64 path_ptr_pos;
 volatile const u64 headers_ptr_pos;
 volatile const u64 ctx_ptr_pos;
+volatile const u64 buckets_ptr_pos;
 
 static __always_inline long inject_header(void* headers_ptr, struct span_context* propagated_ctx) {
+    // Read the key-value count - this field must be the first one in the hmap struct as documented in src/runtime/map.go
+    u64 curr_keyvalue_count = 0;
+    long res = bpf_probe_read_user(&curr_keyvalue_count, sizeof(curr_keyvalue_count), headers_ptr);
 
-    // Read headers map count
-    u64 map_keyvalue_count = 0;
-    bpf_probe_read(&map_keyvalue_count, sizeof(map_keyvalue_count), headers_ptr);
-
-    // Currently only maps with less than 8 keys are supported for injection
-    if (map_keyvalue_count >= 8) {
-        bpf_printk("Map size is bigger than 8, skipping context propagation");
-        return 0;
-    }
-
-    long res;
-    if (map_keyvalue_count == 0) {
-        u32 map_id = 0;
-        struct map_bucket *map_value = bpf_map_lookup_elem(&golang_mapbucket_storage_map, &map_id);
-        if (!map_value) {
-            return -1;
-        }
-        void *bucket_ptr = write_target_data(map_value, sizeof(struct map_bucket));
-        res = bpf_probe_write_user(headers_ptr + 16, &bucket_ptr, sizeof(bucket_ptr));
-
-        if(res < 0) {
-            bpf_printk("Failed to write bucket ptr, return code: %d", res);
-            return -1;
-        }
-
-    }
-
-    void *map_keyvalues_ptr = NULL;
-    bpf_probe_read(&map_keyvalues_ptr, sizeof(map_keyvalues_ptr), headers_ptr + 16);
-    void *injected_key_ptr = map_keyvalues_ptr + 8 + (16 * map_keyvalue_count);
-    char traceparent_tophash = 0xee;
-    void *tophashes_ptr = map_keyvalues_ptr +  map_keyvalue_count;
-    res = bpf_probe_write_user(tophashes_ptr, &traceparent_tophash, 1);
-
-    if(res < 0) {
-        bpf_printk("Failed to write tophash, return code: %d", res);
+    if (res < 0) {
+        bpf_printk("Couldn't read map key-value count from user");
         return -1;
     }
 
+    if (curr_keyvalue_count >= 8) {
+        bpf_printk("Map size is bigger than 8, skipping context propagation");
+        return -1;
+    }
+
+    // Get pointer to temp bucket struct we store in a map (avoiding large local variable on the stack)
+    // Performing read-modify-write on the bucket
+    u32 map_id = 0;
+    struct map_bucket *bucket_map_value = bpf_map_lookup_elem(&golang_mapbucket_storage_map, &map_id);
+    if (!bucket_map_value) {
+        return -1;
+    }
+
+    void *buckets_ptr_ptr = (void*) (headers_ptr + buckets_ptr_pos);
+    void *bucket_ptr = 0; // The actual pointer to the buckets
+
+    if (curr_keyvalue_count == 0) {
+        // No key-value pairs in the Go map, need to "allocate" memory for the user
+        bucket_ptr = write_target_data(bucket_map_value, sizeof(struct map_bucket));
+        // Update the buckets pointer in the hmap struct to point to newly allocated bucket
+        res = bpf_probe_write_user(buckets_ptr_ptr, &bucket_ptr, sizeof(bucket_ptr));
+        if (res < 0) {
+            bpf_printk("Failed to update the map bucket pointer for the user");
+            return -1;
+        }
+    } else {
+        // There is at least 1 key-value pair, hence the bucket pointer from the user is valid
+        // Read the bucket pointer
+        res = bpf_probe_read_user(&bucket_ptr, sizeof(bucket_ptr), buckets_ptr_ptr);
+        // Read the user's bucket to the eBPF map entry
+        bpf_probe_read_user(bucket_map_value, sizeof(struct map_bucket), bucket_ptr);
+    }
+
+    u8 bucket_index = curr_keyvalue_count & 0x7;
+
+    char traceparent_tophash = 0xee;
+    bucket_map_value->tophash[bucket_index] = traceparent_tophash;
+
+    // Prepare the key string for the user
     char key[W3C_KEY_LENGTH] = "traceparent";
     void *ptr = write_target_data(key, W3C_KEY_LENGTH);
+    bucket_map_value->keys[bucket_index] = (struct go_string) {.len = W3C_KEY_LENGTH, .str = ptr};
 
-    res = bpf_probe_write_user(injected_key_ptr, &ptr, sizeof(ptr));
-    if(res < 0) {
-        return -1;
-    }
-
-    u64 header_key_length = W3C_KEY_LENGTH;
-    res = bpf_probe_write_user(injected_key_ptr + 8, &header_key_length, sizeof(header_key_length));
-
-    if(res < 0) {
-        return -1;
-    }
-
-    void *injected_value_ptr = injected_key_ptr + (16 * (8 - map_keyvalue_count)) + 24 * map_keyvalue_count;
+    // Prepare the value string slice
+    // First the value string which constains the span context
     char val[W3C_VAL_LENGTH];
     span_context_to_w3c_string(propagated_ctx, val);
-
     ptr = write_target_data(val, sizeof(val));
-    struct go_string header_value = {};
-    header_value.str = ptr;
-    header_value.len = W3C_VAL_LENGTH;
-
-    ptr = write_target_data((void*)&header_value, sizeof(header_value));
-
     if(ptr == NULL) {
         return -1;
     }
 
-    struct go_slice values_slice = {};
-    values_slice.array = ptr;
-    values_slice.len = 1;
-    values_slice.cap = 1;
-
-    res = bpf_probe_write_user(injected_value_ptr, &values_slice, sizeof(values_slice));
-
-    if(res < 0) {
+    // The go string pointing to the above val
+    struct go_string header_value = {.len = W3C_VAL_LENGTH, .str = ptr};
+    ptr = write_target_data((void*)&header_value, sizeof(header_value));
+    if(ptr == NULL) {
         return -1;
     }
 
-    map_keyvalue_count += 1;
-    res = bpf_probe_write_user(headers_ptr, &map_keyvalue_count, sizeof(map_keyvalue_count));
+    // Last, go_slice pointing to the above go_string
+    bucket_map_value->values[bucket_index] = (struct go_slice) {.array = ptr, .cap = 1, .len = 1};
 
-    if(res < 0) {
+    // Update the map header count field
+    curr_keyvalue_count += 1;
+    res = bpf_probe_write_user(headers_ptr, &curr_keyvalue_count, sizeof(curr_keyvalue_count));
+    if (res < 0) {
+        bpf_printk("Failed to update key-value count in map header");
         return -1;
     }
 
+    // Update the bucket
+    res = bpf_probe_write_user(bucket_ptr, bucket_map_value, sizeof(struct map_bucket));
+    if (res < 0) {
+        bpf_printk("Failed to update bucket content");
+        return -1;
+    }
+
+    bpf_memset((unsigned char *)bucket_map_value, sizeof(struct map_bucket), 0);
     return 0;
 }
 

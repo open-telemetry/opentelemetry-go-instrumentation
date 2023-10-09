@@ -98,7 +98,7 @@ offsets: | $(OFFSETS)
 
 .PHONY: docker-offsets
 docker-offsets:
-	docker run --rm -v $(shell pwd):/app golang:1.21 /bin/sh -c "cd ../app && make offsets"
+	docker run --rm -v $(shell pwd):/app golang:1.21.2 /bin/sh -c "cd ../app && make offsets"
 
 .PHONY: update-licenses
 update-licenses: generate $(GOLICENSES)
@@ -145,7 +145,7 @@ fixture-databasesql: fixtures/databasesql
 fixtures/%: LIBRARY=$*
 fixtures/%:
 	$(MAKE) docker-build
-	cd test/e2e/$(LIBRARY) && docker build -t sample-app .
+	cd internal/test/e2e/$(LIBRARY) && docker build -t sample-app .
 	kind create cluster
 	kind load docker-image otel-go-instrumentation sample-app
 	helm repo add open-telemetry https://open-telemetry.github.io/opentelemetry-helm-charts
@@ -156,9 +156,9 @@ fixtures/%:
 	kubectl wait --for=condition=Ready --timeout=60s pod/test-opentelemetry-collector-0
 	kubectl -n default create -f .github/workflows/e2e/k8s/sample-job.yml
 	kubectl wait --for=condition=Complete --timeout=60s job/sample-job
-	kubectl cp -c filecp default/test-opentelemetry-collector-0:tmp/trace.json ./test/e2e/$(LIBRARY)/traces-orig.json
-	rm -f ./test/e2e/$(LIBRARY)/traces.json
-	bats ./test/e2e/$(LIBRARY)/verify.bats
+	kubectl cp -c filecp default/test-opentelemetry-collector-0:tmp/trace.json ./internal/test/e2e/$(LIBRARY)/traces-orig.json
+	rm -f ./internal/test/e2e/$(LIBRARY)/traces.json
+	bats ./internal/test/e2e/$(LIBRARY)/verify.bats
 	kind delete cluster
 
 .PHONY: prerelease
