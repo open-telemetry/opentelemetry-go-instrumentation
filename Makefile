@@ -98,7 +98,7 @@ offsets: | $(OFFSETS)
 
 .PHONY: docker-offsets
 docker-offsets:
-	docker run --rm -v $(shell pwd):/app golang:1.21 /bin/sh -c "cd ../app && make offsets"
+	docker run --rm -v $(shell pwd):/app golang:1.21.2 /bin/sh -c "cd ../app && make offsets"
 
 .PHONY: update-licenses
 update-licenses: generate $(GOLICENSES)
