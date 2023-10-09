@@ -84,6 +84,12 @@ func NewInstrumentation(opts ...InstrumentationOption) (*Instrumentation, error)
 		return nil, err
 	}
 
+	allocDetails, err := process.Allocate(pid)
+	if err != nil {
+		return nil, err
+	}
+	td.AllocationDetails = allocDetails
+
 	if log.Logger.IsZero() {
 		err := log.Init()
 		if err != nil {
