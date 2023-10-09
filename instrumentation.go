@@ -50,8 +50,8 @@ type Instrumentation struct {
 	manager  *instrumentors.Manager
 }
 
-// Error message returned when instrumentation is launched without a target
-// binary.
+// Error message returned when instrumentation is launched without a valid target
+// binary or pid.
 var errUndefinedTarget = fmt.Errorf("undefined target Go binary, consider setting the %s environment variable pointing to the target binary to instrument", envTargetExeKey)
 
 // NewInstrumentation returns a new [Instrumentation] configured with the
@@ -83,6 +83,14 @@ func NewInstrumentation(opts ...InstrumentationOption) (*Instrumentation, error)
 		mngr.Close()
 		return nil, err
 	}
+
+	if log.Logger.IsZero() {
+		err := log.Init()
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	log.Logger.V(0).Info(
 		"target process analysis completed",
 		"pid", td.PID,
@@ -122,9 +130,11 @@ type instConfig struct {
 }
 
 func newInstConfig(opts []InstrumentationOption) instConfig {
-	var c instConfig
+	c := instConfig{target: &process.TargetArgs{}}
 	for _, opt := range opts {
-		c = opt.apply(c)
+		if opt != nil {
+			c = opt.apply(c)
+		}
 	}
 	c = c.applyEnv()
 	return c
@@ -132,7 +142,7 @@ func newInstConfig(opts []InstrumentationOption) instConfig {
 
 func (c instConfig) applyEnv() instConfig {
 	if v, ok := os.LookupEnv(envTargetExeKey); ok {
-		c.target = &process.TargetArgs{ExePath: v}
+		c.target.ExePath = v
 	}
 	if v, ok := os.LookupEnv(envServiceNameKey); ok {
 		c.serviceName = v
@@ -146,7 +156,7 @@ func (c instConfig) applyEnv() instConfig {
 }
 
 func (c instConfig) setDefualtServiceName() instConfig {
-	if c.target != nil {
+	if c.target.ExePath != "" {
 		c.serviceName = fmt.Sprintf("%s:%s", serviceNameDefault, filepath.Base(c.target.ExePath))
 	} else {
 		c.serviceName = serviceNameDefault
@@ -190,6 +200,9 @@ func (o fnOpt) apply(c instConfig) instConfig { return o(c) }
 // WithTarget returns an [InstrumentationOption] defining the target binary for
 // [Instrumentation] that is being executed at the provided path.
 //
+// This option conflicts with [WithPID]. If both are used, [WithPID] will take
+// precedence and be used.
+//
 // If multiple of these options are provided to an [Instrumentation], the last
 // one will be used.
 //
@@ -197,7 +210,7 @@ func (o fnOpt) apply(c instConfig) instConfig { return o(c) }
 // passed here.
 func WithTarget(path string) InstrumentationOption {
 	return fnOpt(func(c instConfig) instConfig {
-		c.target = &process.TargetArgs{ExePath: path}
+		c.target.ExePath = path
 		return c
 	})
 }
@@ -212,6 +225,22 @@ func WithTarget(path string) InstrumentationOption {
 func WithServiceName(serviceName string) InstrumentationOption {
 	return fnOpt(func(c instConfig) instConfig {
 		c.serviceName = serviceName
+		return c
+	})
+}
+
+// WithPID returns an [InstrumentationOption] corresponding to the executable
+// used by the provided pid.
+//
+// This option conflicts with [WithTarget]. If both are used, [WithPID]
+// will take precedence and be used. If OTEL_GO_AUTO_TARGET_EXE is defined,
+// the pid passed here will take precedence.
+//
+// If multiple of these options are provided to an [Instrumentation], the last
+// one will be used.
+func WithPID(pid int) InstrumentationOption {
+	return fnOpt(func(c instConfig) instConfig {
+		c.target.Pid = pid
 		return c
 	})
 }
