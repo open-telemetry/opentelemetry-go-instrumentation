@@ -103,6 +103,10 @@ var manifests = []inspect.Manifest{
 			PkgPath: "runtime",
 			Struct:  "g",
 			Field:   "goid",
+		}, {
+			PkgPath: "runtime",
+			Struct:  "hmap",
+			Field:   "buckets",
 		}},
 	},
 	{
