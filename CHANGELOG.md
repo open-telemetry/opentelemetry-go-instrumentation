@@ -11,9 +11,11 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 ### Added
 
 - Add `WithServiceName` config option for instrumentation. ([#353](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/353))
+- Add `WithPID` config option for instrumentation. ([#355](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/355))
 
 ### Changed
 
+- Fix bug in the `net/http` server instrumentation which always created a new span context. ([#266]https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/266)
 - Fix runtime panic if OTEL_GO_AUTO_TARGET_EXE is not set. ([#339](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/339))
 
 ### Deprecated
