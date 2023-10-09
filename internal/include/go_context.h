@@ -38,8 +38,6 @@ struct
     __uint(pinning, LIBBPF_PIN_BY_NAME);
 } tracked_spans_by_sc SEC(".maps");
 
-typedef struct span_context* (*get_parent_fb)(void*);
-
 static __always_inline void *get_parent_go_context(void *ctx, void *map) {
     void *data = ctx;
     for (int i = 0; i < MAX_DISTANCE; i++)
