@@ -53,3 +53,18 @@ func TestWithServiceName(t *testing.T) {
 	c = newInstConfig([]InstrumentationOption{WithServiceName((testServiceName))})
 	assert.Equal(t, envServiceName, c.serviceName)
 }
+
+func TestWithPID(t *testing.T) {
+	// Current PID
+	currPID := os.Getpid()
+	c := newInstConfig([]InstrumentationOption{WithPID(currPID)})
+	currExe, err := os.Executable()
+	if err != nil {
+		t.Error(err)
+	}
+	assert.Equal(t, currPID, c.target.Pid)
+
+	// PID should override valid target exe
+	c = newInstConfig([]InstrumentationOption{WithPID(currPID), WithTarget(currExe)})
+	assert.Equal(t, currPID, c.target.Pid)
+}
