@@ -28,7 +28,6 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/go-logr/stdr"
-	"github.com/hashicorp/go-version"
 
 	"go.opentelemetry.io/auto/internal/tools/inspect"
 )
@@ -49,9 +48,6 @@ var (
 	// verbosity is the log verbosity level flag value.
 	verbosity int
 
-	// goVers are the versions of Go supported.
-	goVers []*version.Version
-
 	logger logr.Logger
 )
 
@@ -67,131 +63,116 @@ func init() {
 
 	flag.Parse()
 
-	var err error
-	goVers, err = GoVersions(">= " + minGoVersion)
-	if err != nil {
-		fmt.Printf("failed to get Go versions: %v", err)
-		os.Exit(1)
-	}
-
 	stdr.SetVerbosity(verbosity)
 	logger = stdr.New(log.New(os.Stderr, "", log.LstdFlags))
 }
 
-func ren(src string) inspect.Renderer {
-	return inspect.NewRenderer(logger, src, inspect.DefaultFS)
-}
-
-func getGoVers() []*version.Version {
-	if goVers == nil {
-		var err error
-		goVers, err = GoVersions(">= " + minGoVersion)
-		if err != nil {
-			fmt.Printf("failed to get Go versions: %v", err)
-			logger.Error(err, "failed to get Go versions: %v")
-			os.Exit(1)
-		}
+func manifests() ([]inspect.Manifest, error) {
+	goVers, err := GoVersions(">= " + minGoVersion)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get Go versions: %w", err)
 	}
-	return goVers
-}
 
-var manifests = []inspect.Manifest{
-	{
-		Application: inspect.Application{
-			Renderer:  ren("templates/runtime/*.tmpl"),
-			GoVerions: getGoVers(),
+	grpcVers, err := PkgVersions("google.golang.org/grpc")
+	if err != nil {
+		return nil, fmt.Errorf("failed to get \"google.golang.org/grpc\" versions: %w", err)
+	}
+
+	ren := func(src string) inspect.Renderer {
+		return inspect.NewRenderer(logger, src, inspect.DefaultFS)
+	}
+
+	return []inspect.Manifest{
+		{
+			Application: inspect.Application{
+				Renderer:  ren("templates/runtime/*.tmpl"),
+				GoVerions: goVers,
+			},
+			StructFields: []inspect.StructField{{
+				PkgPath: "runtime",
+				Struct:  "g",
+				Field:   "goid",
+			}, {
+				PkgPath: "runtime",
+				Struct:  "hmap",
+				Field:   "buckets",
+			}},
 		},
-		StructFields: []inspect.StructField{{
-			PkgPath: "runtime",
-			Struct:  "g",
-			Field:   "goid",
-		}, {
-			PkgPath: "runtime",
-			Struct:  "hmap",
-			Field:   "buckets",
-		}},
-	},
-	{
-		Application: inspect.Application{
-			Renderer:  ren("templates/net/http/*.tmpl"),
-			GoVerions: getGoVers(),
+		{
+			Application: inspect.Application{
+				Renderer:  ren("templates/net/http/*.tmpl"),
+				GoVerions: goVers,
+			},
+			StructFields: []inspect.StructField{{
+				PkgPath: "net/http",
+				Struct:  "Request",
+				Field:   "Method",
+			}, {
+				PkgPath: "net/http",
+				Struct:  "Request",
+				Field:   "URL",
+			}, {
+				PkgPath: "net/http",
+				Struct:  "Request",
+				Field:   "RemoteAddr",
+			}, {
+				PkgPath: "net/http",
+				Struct:  "Request",
+				Field:   "Header",
+			}, {
+				PkgPath: "net/http",
+				Struct:  "Request",
+				Field:   "ctx",
+			}, {
+				PkgPath: "net/url",
+				Struct:  "URL",
+				Field:   "Path",
+			}},
 		},
-		StructFields: []inspect.StructField{{
-			PkgPath: "net/http",
-			Struct:  "Request",
-			Field:   "Method",
-		}, {
-			PkgPath: "net/http",
-			Struct:  "Request",
-			Field:   "URL",
-		}, {
-			PkgPath: "net/http",
-			Struct:  "Request",
-			Field:   "RemoteAddr",
-		}, {
-			PkgPath: "net/http",
-			Struct:  "Request",
-			Field:   "Header",
-		}, {
-			PkgPath: "net/http",
-			Struct:  "Request",
-			Field:   "ctx",
-		}, {
-			PkgPath: "net/url",
-			Struct:  "URL",
-			Field:   "Path",
-		}},
-	},
-	{
-		Application: inspect.Application{
-			Renderer: ren("templates/google.golang.org/grpc/*.tmpl"),
-			Versions: func() []*version.Version {
-				v, err := PkgVersions("google.golang.org/grpc")
-				if err != nil {
-					logger.Error(err, "failed to \"google.golang.org/grpc\" versions")
-					os.Exit(1)
-				}
-				return v
-			}(),
+		{
+			Application: inspect.Application{
+				Renderer: ren("templates/google.golang.org/grpc/*.tmpl"),
+				Versions: grpcVers,
+			},
+			StructFields: []inspect.StructField{{
+				PkgPath: "google.golang.org/grpc/internal/transport",
+				Struct:  "Stream",
+				Field:   "method",
+			}, {
+				PkgPath: "google.golang.org/grpc/internal/transport",
+				Struct:  "Stream",
+				Field:   "id",
+			}, {
+				PkgPath: "google.golang.org/grpc/internal/transport",
+				Struct:  "Stream",
+				Field:   "ctx",
+			}, {
+				PkgPath: "google.golang.org/grpc",
+				Struct:  "ClientConn",
+				Field:   "target",
+			}, {
+				PkgPath: "golang.org/x/net/http2",
+				Struct:  "MetaHeadersFrame",
+				Field:   "Fields",
+			}, {
+				PkgPath: "golang.org/x/net/http2",
+				Struct:  "FrameHeader",
+				Field:   "StreamID",
+			}, {
+				PkgPath: "google.golang.org/grpc/internal/transport",
+				Struct:  "http2Client",
+				Field:   "nextID",
+			}, {
+				PkgPath: "google.golang.org/grpc/internal/transport",
+				Struct:  "headerFrame",
+				Field:   "streamID",
+			}, {
+				PkgPath: "google.golang.org/grpc/internal/transport",
+				Struct:  "headerFrame",
+				Field:   "hf",
+			}},
 		},
-		StructFields: []inspect.StructField{{
-			PkgPath: "google.golang.org/grpc/internal/transport",
-			Struct:  "Stream",
-			Field:   "method",
-		}, {
-			PkgPath: "google.golang.org/grpc/internal/transport",
-			Struct:  "Stream",
-			Field:   "id",
-		}, {
-			PkgPath: "google.golang.org/grpc/internal/transport",
-			Struct:  "Stream",
-			Field:   "ctx",
-		}, {
-			PkgPath: "google.golang.org/grpc",
-			Struct:  "ClientConn",
-			Field:   "target",
-		}, {
-			PkgPath: "golang.org/x/net/http2",
-			Struct:  "MetaHeadersFrame",
-			Field:   "Fields",
-		}, {
-			PkgPath: "golang.org/x/net/http2",
-			Struct:  "FrameHeader",
-			Field:   "StreamID",
-		}, {
-			PkgPath: "google.golang.org/grpc/internal/transport",
-			Struct:  "http2Client",
-			Field:   "nextID",
-		}, {
-			PkgPath: "google.golang.org/grpc/internal/transport",
-			Struct:  "headerFrame",
-			Field:   "streamID",
-		}, {
-			PkgPath: "google.golang.org/grpc/internal/transport",
-			Struct:  "headerFrame",
-			Field:   "hf",
-		}},
-	},
+	}, nil
 }
 
 func main() {
@@ -201,13 +182,19 @@ func main() {
 }
 
 func run() error {
+	m, err := manifests()
+	if err != nil {
+		logger.Error(err, "failed to load manifests")
+		return err
+	}
+
 	c, err := inspect.NewCache(logger, cacheFile)
 	if err != nil {
 		logger.Error(err, "failed to load cache", "path", cacheFile)
 		// Use an empty cache.
 	}
 
-	i, err := inspect.New(logger, c, manifests...)
+	i, err := inspect.New(logger, c, m...)
 	if err != nil {
 		logger.Error(err, "failed to setup inspector")
 		return err
