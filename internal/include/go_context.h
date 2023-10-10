@@ -95,17 +95,37 @@ static __always_inline void start_tracking_span(void *contextContext, struct spa
     }
 }
 
-static __always_inline void stop_tracking_span(struct span_context *sc, bool isRoot) {
-    if (isRoot)
-    {
-        void *ctx = bpf_map_lookup_elem(&tracked_spans_by_sc, sc);
-        if (ctx == NULL)
-        {
-            return;
-        }
-
-        bpf_map_delete_elem(&tracked_spans, ctx);
+static __always_inline void stop_tracking_span(struct span_context *sc, struct span_context *psc) {
+    if (psc == NULL || sc == NULL) {
+        bpf_printk("stop_tracking_span: psc or sc is null");
+        return;
     }
+
+    void *ctx = bpf_map_lookup_elem(&tracked_spans_by_sc, sc);
+    if (ctx == NULL)
+    {
+        bpf_printk("stop_tracking_span: cant find span context");
+        return;
+    }
+
+    void *parent_ctx = bpf_map_lookup_elem(&tracked_spans_by_sc, psc);
+    if (parent_ctx == NULL)
+    {
+        bpf_map_delete_elem(&tracked_spans, ctx);
+    } else 
+    {
+        void *ctx_val = 0;
+        bpf_probe_read_user(&ctx_val, sizeof(ctx_val), ctx);
+        void *parent_ctx_val = 0;
+        bpf_probe_read_user(&parent_ctx_val, sizeof(parent_ctx_val), parent_ctx);
+
+        if (ctx_val != parent_ctx_val)
+        {
+            bpf_printk("stop_tracking_span: ctx_val != parent_ctx_val");
+            bpf_map_delete_elem(&tracked_spans, ctx);
+        }
+    }
+
     bpf_map_delete_elem(&tracked_spans_by_sc, sc);
 }
 

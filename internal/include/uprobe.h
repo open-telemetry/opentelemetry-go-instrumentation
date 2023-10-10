@@ -44,8 +44,7 @@ int uprobe_##name##_Returns(struct pt_regs *ctx) {                              
     tmpReq.end_time = bpf_ktime_get_ns();                                                                           \
     bpf_perf_event_output(ctx, &events_map, BPF_F_CURRENT_CPU, &tmpReq, sizeof(tmpReq));                            \
     bpf_map_delete_elem(&uprobe_context_map, &key);                                                                 \
-    bool is_local_root = (is_root || bpf_is_zero(tmpReq.psc.SpanID, sizeof(tmpReq.psc.SpanID)));                    \
-    stop_tracking_span(&tmpReq.sc, is_local_root);                                                                  \
+    stop_tracking_span(&tmpReq.sc, &tmpReq.psc);                                                                    \
     return 0;                                                                                                       \
 } 
 
