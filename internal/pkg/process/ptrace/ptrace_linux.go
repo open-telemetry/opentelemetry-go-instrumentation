@@ -24,6 +24,7 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/hashicorp/go-version"
 	"github.com/pkg/errors"
+
 	"go.opentelemetry.io/auto/internal/pkg/instrumentors/utils"
 	"go.opentelemetry.io/auto/internal/pkg/log"
 )
@@ -31,8 +32,10 @@ import (
 const waitPidErrorMessage = "waitpid ret value: %d"
 
 const (
-	MADV_POPULATE_READ  = 0x16
-	MADV_POPULATE_WRITE = 0x17
+	// MADV_POPULATE_READ.
+	MadvisePopulateRead = 0x16
+	// MADV_POPULATE_WRITE.
+	MadvisePopulateWrite = 0x17
 )
 
 var threadRetryLimit = 10
@@ -229,7 +232,7 @@ func (p *TracedProgram) Madvise(addr uint64, length uint64) error {
 	minVersion := version.Must(version.NewVersion("5.14"))
 	log.Logger.V(0).Info("Detected linux kernel version", "version", ver)
 	if ver.GreaterThanOrEqual(minVersion) {
-		advice = syscall.MADV_WILLNEED | MADV_POPULATE_WRITE | MADV_POPULATE_READ
+		advice = syscall.MADV_WILLNEED | MadvisePopulateRead | MadvisePopulateWrite
 	}
 
 	_, err = p.Syscall(syscall.SYS_MADVISE, addr, length, advice, 0, 0, 0)

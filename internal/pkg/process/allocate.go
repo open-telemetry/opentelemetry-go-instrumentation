@@ -33,7 +33,6 @@ type AllocationDetails struct {
 func Allocate(pid int) (*AllocationDetails, error) {
 	mapSize := uint64(os.Getpagesize() * runtime.NumCPU() * 8)
 	addr, err := remoteAllocate(pid, mapSize)
-
 	if err != nil {
 		log.Logger.Error(err, "Failed to mmap")
 		return nil, err
