@@ -195,6 +195,12 @@ var manifests = []inspect.Manifest{
 }
 
 func main() {
+	if err := run(); err != nil {
+		os.Exit(1)
+	}
+}
+
+func run() error {
 	c, err := inspect.NewCache(logger, cacheFile)
 	if err != nil {
 		logger.Error(err, "failed to load cache", "path", cacheFile)
@@ -204,7 +210,7 @@ func main() {
 	i, err := inspect.New(logger, c, manifests...)
 	if err != nil {
 		logger.Error(err, "failed to setup inspector")
-		os.Exit(1)
+		return err
 	}
 	i.NWorkers = numCPU
 
@@ -215,19 +221,19 @@ func main() {
 	to, err := i.Do(ctx)
 	if err != nil {
 		logger.Error(err, "failed get offsets")
-		os.Exit(1)
+		return err
 	}
 
 	if to == nil {
 		logger.Info("no offsets found")
-		return
+		return nil
 	}
 
 	logger.Info("writing offsets", "dest", outputFile)
 	f, err := os.Create(outputFile)
 	if err != nil {
 		logger.Error(err, "failed to open output file", "dest", outputFile)
-		os.Exit(1)
+		return err
 	}
 	defer f.Close()
 
@@ -235,6 +241,7 @@ func main() {
 	enc.SetIndent("", "  ")
 	if err := enc.Encode(to); err != nil {
 		logger.Error(err, "failed to write offsets", "dest", outputFile)
-		os.Exit(1)
+		return err
 	}
+	return nil
 }
