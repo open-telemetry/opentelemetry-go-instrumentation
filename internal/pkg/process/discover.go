@@ -43,6 +43,9 @@ func NewAnalyzer() *Analyzer {
 // DiscoverProcessID searches for the target as an actively running process,
 // returning its PID if found.
 func (a *Analyzer) DiscoverProcessID(target *TargetArgs) (int, error) {
+	if target.Pid != 0 {
+		return target.Pid, nil
+	}
 	for {
 		select {
 		case <-a.done:

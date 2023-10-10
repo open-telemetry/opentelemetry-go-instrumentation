@@ -19,6 +19,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"runtime"
 
 	"github.com/hashicorp/go-version"
 
@@ -84,6 +85,8 @@ func (t *TargetDetails) GetFunctionReturns(name string) ([]uint64, error) {
 }
 
 func (a *Analyzer) remoteMmap(pid int, mapSize uint64) (uint64, error) {
+	runtime.LockOSThread()
+	defer runtime.UnlockOSThread()
 	program, err := ptrace.NewTracedProgram(pid, log.Logger)
 	if err != nil {
 		log.Logger.Error(err, "Failed to attach ptrace", "pid", pid)
