@@ -39,6 +39,9 @@ int uprobe_##name##_Returns(struct pt_regs *ctx) {                              
     void *ctx_address = get_Go_context(ctx, context_pos, context_offset, passed_as_arg);                            \
     void *key = get_consistent_key(ctx, ctx_address);                                                               \
     void *req_ptr_map = bpf_map_lookup_elem(&uprobe_context_map, &key);                                             \
+    if (req_ptr_map == NULL) {                                                                                      \
+        return 0;                                                                                                   \
+    }                                                                                                               \
     event_type tmpReq = {0};                                                                                        \
     bpf_probe_read(&tmpReq, sizeof(tmpReq), req_ptr_map);                                                           \
     tmpReq.end_time = bpf_ktime_get_ns();                                                                           \
