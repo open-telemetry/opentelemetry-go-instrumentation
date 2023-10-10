@@ -16,7 +16,6 @@ package process
 
 import (
 	"fmt"
-	"os"
 )
 
 const (
@@ -28,7 +27,7 @@ const (
 
 // TargetArgs are the binary target information.
 type TargetArgs struct {
-	ExecPath    string
+	ExePath     string
 	ServiceName string
 	MonitorAll  bool
 }
@@ -38,7 +37,7 @@ func (t *TargetArgs) Validate() error {
 	if t.MonitorAll {
 		return nil
 	}
-	if t.ExecPath == "" {
+	if t.ExePath == "" {
 		return fmt.Errorf("execPath is nil")
 	}
 	if t.ServiceName == "" {
@@ -46,22 +45,4 @@ func (t *TargetArgs) Validate() error {
 	}
 
 	return nil
-}
-
-// ParseTargetArgs returns TargetArgs for the target pointed to by the
-// environment variable OTEL_GO_AUTO_TARGET_EXE.
-func ParseTargetArgs() *TargetArgs {
-	result := &TargetArgs{}
-	// We are reading only one variable for backwards compatibility.
-	val, exists := os.LookupEnv(ExePathEnvVar)
-
-	if exists {
-		serviceName, _ := os.LookupEnv(otelServiceNameEnvVar)
-		result.ExecPath = val
-		result.ServiceName = serviceName
-	} else {
-		result.MonitorAll = true
-	}
-
-	return result
 }

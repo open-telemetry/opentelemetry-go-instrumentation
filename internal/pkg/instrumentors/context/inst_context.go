@@ -12,33 +12,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package main
+package context
 
 import (
-	"fmt"
-	"os"
+	"github.com/cilium/ebpf/link"
 
-	"go.opentelemetry.io/auto"
-	"go.opentelemetry.io/auto/internal/pkg/log"
+	"go.opentelemetry.io/auto/internal/pkg/inject"
+	"go.opentelemetry.io/auto/internal/pkg/process"
 )
 
-func main() {
-	err := log.Init()
-	if err != nil {
-		fmt.Printf("could not init logger: %s\n", err)
-		os.Exit(1)
-	}
-
-	log.Logger.V(0).Info("building OpenTelemetry Go instrumentation ...")
-
-	r, err := auto.NewInstrumentation()
-	if err != nil {
-		log.Logger.Error(err, "failed to create instrumentation")
-		return
-	}
-
-	log.Logger.V(0).Info("starting Go OpenTelemetry Agent ...")
-	if err = r.Run(); err != nil {
-		log.Logger.Error(err, "running orchestrator")
-	}
+// InstrumentorContext holds the state of the auto-instrumentation system.
+type InstrumentorContext struct {
+	TargetDetails *process.TargetDetails
+	Executable    *link.Executable
+	Injector      *inject.Injector
 }

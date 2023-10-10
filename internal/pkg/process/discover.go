@@ -18,7 +18,6 @@ import (
 	"debug/elf"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"path"
 	"strconv"
@@ -48,7 +47,7 @@ func (a *Analyzer) Close() {
 }
 
 // FindAllProcesses returns all go processes by reading `/proc/`.
-func (a *Analyzer) FindAllProcesses(target *TargetArgs) (map[int]string, error) {
+func (a *Analyzer) FindAllProcesses(exePath string, serviceName string) (map[int]string, error) {
 	proc, err := os.Open("/proc")
 	if err != nil {
 		return nil, err
@@ -89,8 +88,8 @@ func (a *Analyzer) FindAllProcesses(target *TargetArgs) (map[int]string, error) 
 				exeFullPath = string(cmdline)
 			}
 
-			if !target.MonitorAll && strings.Contains(exeFullPath, target.ExecPath) {
-				pids[pid] = target.ServiceName
+			if exePath != "" && strings.Contains(exeFullPath, exePath) {
+				pids[pid] = serviceName
 				break
 			}
 
@@ -131,7 +130,7 @@ func (a *Analyzer) isGo(pid int) bool {
 }
 
 func getEnvVars(pid int) (map[string]string, error) {
-	bytes, err := ioutil.ReadFile(fmt.Sprintf("/proc/%d/environ", pid))
+	bytes, err := os.ReadFile(fmt.Sprintf("/proc/%d/environ", pid))
 	if err != nil {
 		return nil, err
 	}

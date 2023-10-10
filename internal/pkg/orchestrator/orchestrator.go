@@ -18,8 +18,6 @@ import (
 	"context"
 	"time"
 
-	sdktrace "go.opentelemetry.io/otel/sdk/trace"
-
 	"go.opentelemetry.io/auto/internal/pkg/errors"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentors"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentors/bpffs"
@@ -33,34 +31,25 @@ type pidServiceName struct {
 	pid         int
 }
 
-// Service is responsible for managing all instrumentation.
-type Service struct {
-	ctx         context.Context
-	analyzer    *process.Analyzer
-	targetArgs  *process.TargetArgs
-	processch   chan *pidServiceName
-	deadProcess chan int
-	managers    map[int]*instrumentors.Manager
-	exporter    sdktrace.SpanExporter
-	pidTicker   <-chan time.Time
-}
-
 // New creates a new Implementation of orchestrator Service.
 func New(
 	ctx context.Context,
-	targetArgs *process.TargetArgs,
-	exporter sdktrace.SpanExporter,
+	opts ...ServiceOpt,
 ) (*Service, error) {
-	return &Service{
+	s := Service{
 		ctx:         ctx,
 		analyzer:    process.NewAnalyzer(),
-		targetArgs:  targetArgs,
-		exporter:    exporter,
 		processch:   make(chan *pidServiceName, 10),
 		deadProcess: make(chan int, 10),
 		managers:    make(map[int]*instrumentors.Manager),
 		pidTicker:   time.NewTicker(2 * time.Second).C,
-	}, nil
+	}
+	for _, o := range opts {
+		s = o.apply(s)
+	}
+
+	s = s.applyEnv()
+	return &s, nil
 }
 
 // Run manages the lifecycle of instrumentors for a go process.
@@ -127,7 +116,7 @@ func (s *Service) Run() error {
 			go func() {
 				log.Logger.V(0).Info("invoking instrumentors")
 
-				err = instManager.Run(targetDetails)
+				err = instManager.Run(s.ctx, targetDetails)
 				if err != nil && err != errors.ErrInterrupted {
 					log.Logger.Error(err, "error while running instrumentors")
 				}
@@ -143,7 +132,7 @@ func (s *Service) findProcess() {
 			return
 		case <-s.pidTicker:
 
-			pids, err := s.analyzer.FindAllProcesses(s.targetArgs)
+			pids, err := s.analyzer.FindAllProcesses(s.exePath, s.serviceName)
 			if err != nil {
 				log.Logger.Error(err, "FindAllProcesses failed")
 				continue
@@ -170,6 +159,9 @@ func (s *Service) findProcess() {
 						serviceName: serviceName,
 					}
 				}
+			}
+			if s.monitorAll {
+				break
 			}
 		}
 	}
