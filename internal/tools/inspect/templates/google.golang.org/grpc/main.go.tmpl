@@ -1,0 +1,12 @@
+package main
+
+import "google.golang.org/grpc"
+
+func main() {
+	cc := &grpc.ClientConn{}
+	srv := &grpc.Server{}
+	for {
+		srv.Serve(nil)
+		cc.Invoke(nil, "", nil, nil)
+	}
+}
