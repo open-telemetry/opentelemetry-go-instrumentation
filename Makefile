@@ -96,9 +96,10 @@ build: generate
 docker-build:
 	docker buildx build -t $(IMG_NAME) .
 
+OFFSETS_OUTPUT_FILE="$(REPODIR)/internal/pkg/inject/offset_results.json"
 .PHONY: offsets
 offsets: | $(OFFSETGEN)
-	OFFSETS_OUTPUT_FILE="$(REPODIR)/internal/pkg/inject/offset_results.json" $(OFFSETGEN)
+	$(OFFSETGEN) -output=$(OFFSETS_OUTPUT_FILE) -cache=$(OFFSETS_OUTPUT_FILE)
 
 .PHONY: docker-offsets
 docker-offsets:
