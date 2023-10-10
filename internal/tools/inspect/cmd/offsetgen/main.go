@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Offsetgen is a utility to generate a static file containing offsets for Go
+// struct fields.
 package main
 
 import (
