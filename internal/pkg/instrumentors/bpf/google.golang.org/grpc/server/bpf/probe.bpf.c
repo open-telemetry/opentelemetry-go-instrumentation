@@ -111,7 +111,7 @@ int uprobe_server_handleStream(struct pt_regs *ctx)
     return 0;
 }
 
-UPROBE_RETURN(server_handleStream, struct grpc_request_t, grpc_events, events, true, 4, stream_ctx_pos, false)
+UPROBE_RETURN(server_handleStream, struct grpc_request_t, grpc_events, events, 4, stream_ctx_pos, false)
 
 // func (d *decodeState) decodeHeader(frame *http2.MetaHeadersFrame) error
 SEC("uprobe/decodeState_decodeHeader")

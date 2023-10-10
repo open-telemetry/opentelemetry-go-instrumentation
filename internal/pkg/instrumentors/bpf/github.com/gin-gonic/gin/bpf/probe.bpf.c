@@ -88,4 +88,4 @@ int uprobe_GinEngine_ServeHTTP(struct pt_regs *ctx) {
     return 0;
 }
 
-UPROBE_RETURN(GinEngine_ServeHTTP, struct http_request_t, http_events, events, true, 4, ctx_ptr_pos, false)
+UPROBE_RETURN(GinEngine_ServeHTTP, struct http_request_t, http_events, events, 4, ctx_ptr_pos, false)

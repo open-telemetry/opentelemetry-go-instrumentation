@@ -203,4 +203,4 @@ int uprobe_HttpClient_Do(struct pt_regs *ctx) {
 
 // This instrumentation attaches uretprobe to the following function:
 // func net/http/client.Do(req *Request)
-UPROBE_RETURN(HttpClient_Do, struct http_request_t, http_events, events, true, 2, ctx_ptr_pos, false)
+UPROBE_RETURN(HttpClient_Do, struct http_request_t, http_events, events, 2, ctx_ptr_pos, false)

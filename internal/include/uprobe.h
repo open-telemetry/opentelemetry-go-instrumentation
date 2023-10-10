@@ -33,7 +33,7 @@
 // 4. Submit the constructed event to the agent code using perf buffer events_map
 // 5. Delete the span from the uprobe_context_map
 // 6. Delete the span from the global active spans map
-#define UPROBE_RETURN(name, event_type, uprobe_context_map, events_map, is_root, context_pos, context_offset, passed_as_arg) \
+#define UPROBE_RETURN(name, event_type, uprobe_context_map, events_map, context_pos, context_offset, passed_as_arg) \
 SEC("uprobe/##name##")                                                                                              \
 int uprobe_##name##_Returns(struct pt_regs *ctx) {                                                                  \
     void *ctx_address = get_Go_context(ctx, context_pos, context_offset, passed_as_arg);                            \
