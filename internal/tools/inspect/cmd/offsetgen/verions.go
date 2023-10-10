@@ -27,11 +27,7 @@ import (
 	"github.com/hashicorp/go-version"
 )
 
-const (
-	shell = "bash"
-
-	jsonURL = "https://go.dev/dl/?mode=json&include=all"
-)
+const jsonURL = "https://go.dev/dl/?mode=json&include=all"
 
 type goListResponse struct {
 	Path     string   `json:"Path"`
@@ -42,7 +38,7 @@ type goListResponse struct {
 // moduleName.
 func PkgVersions(name string) ([]*version.Version, error) {
 	command := fmt.Sprintf("go list -m -json -versions %s", name)
-	cmd := exec.Command(shell, "-c", command)
+	cmd := exec.Command("bash", "-c", command)
 
 	var stdout bytes.Buffer
 	cmd.Stdout = &stdout
