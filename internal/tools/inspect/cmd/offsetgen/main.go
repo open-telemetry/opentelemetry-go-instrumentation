@@ -33,7 +33,7 @@ import (
 )
 
 const (
-	defaultOutputFile = "/tmp/offset_results.json"
+	defaultOutputFile = "offset_results.json"
 
 	minGoVersion = "1.12"
 )
@@ -52,12 +52,8 @@ var (
 )
 
 func init() {
-	outputFilename := defaultOutputFile
-	if len(os.Getenv("OFFSETS_OUTPUT_FILE")) > 0 {
-		outputFilename = os.Getenv("OFFSETS_OUTPUT_FILE")
-	}
-	flag.StringVar(&outputFile, "output", outputFilename, "output file")
-	flag.StringVar(&cacheFile, "cache", outputFilename, "offset cache")
+	flag.StringVar(&outputFile, "output", defaultOutputFile, "output file")
+	flag.StringVar(&cacheFile, "cache", "", "offset cache")
 	flag.IntVar(&numCPU, "workers", runtime.NumCPU(), "max number of Goroutine workers")
 	flag.IntVar(&verbosity, "v", 0, "log verbosity")
 
@@ -188,13 +184,16 @@ func run() error {
 		return err
 	}
 
-	c, err := inspect.NewCache(logger, cacheFile)
-	if err != nil {
-		logger.Error(err, "failed to load cache", "path", cacheFile)
-		// Use an empty cache.
+	var cache *inspect.Cache
+	if cacheFile != "" {
+		cache, err = inspect.NewCache(logger, cacheFile)
+		if err != nil {
+			logger.Error(err, "failed to load cache", "path", cacheFile)
+			// Use an empty cache.
+		}
 	}
 
-	i, err := inspect.New(logger, c, m...)
+	i, err := inspect.New(logger, cache, m...)
 	if err != nil {
 		logger.Error(err, "failed to setup inspector")
 		return err
