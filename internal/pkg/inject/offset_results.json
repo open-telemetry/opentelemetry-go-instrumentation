@@ -403,24 +403,12 @@
         {
           "versions": {
             "oldest": "1.12.0",
-            "newest": "1.13.15"
-          },
-          "offsets": [
-            {
-              "offset": 16,
-              "since": "1.12.0"
-            }
-          ]
-        },
-        {
-          "versions": {
-            "oldest": "1.14.1",
             "newest": "1.21.2"
           },
           "offsets": [
             {
               "offset": 16,
-              "since": "1.14.1"
+              "since": "1.12.0"
             }
           ]
         }
