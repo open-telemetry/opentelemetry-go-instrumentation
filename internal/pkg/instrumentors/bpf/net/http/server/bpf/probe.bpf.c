@@ -191,7 +191,7 @@ int uprobe_HandlerFunc_ServeHTTP(struct pt_regs *ctx)
     struct http_request_t httpReq = {};
     httpReq.start_time = bpf_ktime_get_ns();
 
-    // // Get method from request
+    // Get method from request
     if (!get_go_string_from_user_ptr((void *)(req_ptr + method_ptr_pos), httpReq.method, sizeof(httpReq.method))) {
         bpf_printk("failed to get method from request");
         return 0;

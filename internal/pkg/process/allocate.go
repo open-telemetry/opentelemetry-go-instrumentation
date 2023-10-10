@@ -50,7 +50,7 @@ func Allocate(pid int) (*AllocationDetails, error) {
 
 func remoteAllocate(pid int, mapSize uint64) (uint64, error) {
 	runtime.LockOSThread()
- 	defer runtime.UnlockOSThread()
+	defer runtime.UnlockOSThread()
 	program, err := ptrace.NewTracedProgram(pid, log.Logger)
 	if err != nil {
 		log.Logger.Error(err, "Failed to attach ptrace", "pid", pid)

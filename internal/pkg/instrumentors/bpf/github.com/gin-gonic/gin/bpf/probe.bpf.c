@@ -59,24 +59,18 @@ int uprobe_GinEngine_ServeHTTP(struct pt_regs *ctx) {
     void *req_ctx_ptr = get_Go_context(ctx, 4, ctx_ptr_pos, false);
 
     // Get method from request
-    void *method_ptr = 0;
-    bpf_probe_read(&method_ptr, sizeof(method_ptr), (void *)(req_ptr + method_ptr_pos));
-    u64 method_len = 0;
-    bpf_probe_read(&method_len, sizeof(method_len), (void *)(req_ptr + (method_ptr_pos + 8)));
-    u64 method_size = sizeof(httpReq.method);
-    method_size = method_size < method_len ? method_size : method_len;
-    bpf_probe_read(&httpReq.method, method_size, method_ptr);
+    if (!get_go_string_from_user_ptr((void *)(req_ptr + method_ptr_pos), httpReq.method, sizeof(httpReq.method))) {
+        bpf_printk("failed to get method from request");
+        return 0;
+    }
 
     // get path from Request.URL
     void *url_ptr = 0;
     bpf_probe_read(&url_ptr, sizeof(url_ptr), (void *)(req_ptr + url_ptr_pos));
-    void *path_ptr = 0;
-    bpf_probe_read(&path_ptr, sizeof(path_ptr), (void *)(url_ptr + path_ptr_pos));
-    u64 path_len = 0;
-    bpf_probe_read(&path_len, sizeof(path_len), (void *)(url_ptr + (path_ptr_pos + 8)));
-    u64 path_size = sizeof(httpReq.path);
-    path_size = path_size < path_len ? path_size : path_len;
-    bpf_probe_read(&httpReq.path, path_size, path_ptr);
+    if (!get_go_string_from_user_ptr((void *)(url_ptr + path_ptr_pos), httpReq.path, sizeof(httpReq.path))) {
+        bpf_printk("failed to get path from Request.URL");
+        return 0;
+    }
 
     // Get key
     void *key = get_consistent_key(ctx, req_ctx_ptr);

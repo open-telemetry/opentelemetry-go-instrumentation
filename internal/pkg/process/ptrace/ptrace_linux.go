@@ -22,9 +22,9 @@ import (
 	"syscall"
 
 	"github.com/go-logr/logr"
+	"github.com/hashicorp/go-version"
 	"github.com/pkg/errors"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentors/utils"
-	"github.com/hashicorp/go-version"
 	"go.opentelemetry.io/auto/internal/pkg/log"
 )
 
