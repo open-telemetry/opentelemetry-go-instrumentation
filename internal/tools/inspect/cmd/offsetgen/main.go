@@ -75,7 +75,7 @@ func init() {
 	}
 
 	stdr.SetVerbosity(verbosity)
-	logger = stdr.New(log.New(os.Stdout, "", log.LstdFlags))
+	logger = stdr.New(log.New(os.Stderr, "", log.LstdFlags))
 }
 
 func ren(src string) inspect.Renderer {
