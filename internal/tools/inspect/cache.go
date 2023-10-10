@@ -20,6 +20,7 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/hashicorp/go-version"
+
 	"go.opentelemetry.io/auto/internal/pkg/inject"
 )
 
