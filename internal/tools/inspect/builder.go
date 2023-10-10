@@ -168,8 +168,6 @@ func (b *builder) runContainer(ctx context.Context, id string) error {
 
 	statusCh, errCh := b.cli.ContainerWait(ctx, id, container.WaitConditionNotRunning)
 	select {
-	case <-ctx.Done():
-		return ctx.Err()
 	case err := <-errCh:
 		if err != nil {
 			return err
