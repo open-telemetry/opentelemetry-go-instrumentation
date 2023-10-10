@@ -17,7 +17,6 @@ package inspect
 import (
 	"encoding/json"
 	"os"
-	"sync"
 
 	"github.com/go-logr/logr"
 	"github.com/hashicorp/go-version"
@@ -26,10 +25,8 @@ import (
 
 // Cache is a cache of struct field offsets.
 type Cache struct {
-	log logr.Logger
-
-	dataMu sync.Mutex
-	data   *inject.TrackedOffsets
+	log  logr.Logger
+	data *inject.TrackedOffsets
 }
 
 // NewCache loads struct field offsets from offsetFile and returns them as a
