@@ -196,6 +196,7 @@ func main() {
 	c, err := inspect.NewCache(logger, cacheFile)
 	if err != nil {
 		logger.Error(err, "failed to load cache", "path", cacheFile)
+		// Use an empty cache.
 	}
 
 	i, err := inspect.New(logger, c, manifests...)
