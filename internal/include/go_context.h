@@ -19,6 +19,7 @@
 #include "go_types.h"
 
 #define MAX_DISTANCE 10
+#define MAX_CONCURRENT_SPANS 1000
 
 struct
 {
