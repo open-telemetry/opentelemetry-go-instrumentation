@@ -111,6 +111,7 @@ static __always_inline void stop_tracking_span(struct span_context *sc, struct s
     void *parent_ctx = bpf_map_lookup_elem(&tracked_spans_by_sc, psc);
     if (parent_ctx == NULL)
     {
+        // No parent span, delete the context
         bpf_map_delete_elem(&tracked_spans, ctx);
     } else 
     {
@@ -123,6 +124,10 @@ static __always_inline void stop_tracking_span(struct span_context *sc, struct s
         {
             bpf_printk("stop_tracking_span: ctx_val != parent_ctx_val");
             bpf_map_delete_elem(&tracked_spans, ctx);
+        } else {
+            // Parent with the same context, update the entry to point to the parent span
+            bpf_printk("stop_tracking_span: ctx_val == parent_ctx_val");
+            bpf_map_update_elem(&tracked_spans, ctx, psc, BPF_ANY);
         }
     }
 
