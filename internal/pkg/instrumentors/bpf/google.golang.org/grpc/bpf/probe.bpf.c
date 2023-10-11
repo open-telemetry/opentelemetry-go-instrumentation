@@ -88,6 +88,20 @@ int uprobe_ClientConn_Invoke(struct pt_regs *ctx)
     u64 method_ptr_pos = 4;
     u64 method_len_pos = 5;
 
+    void *context_ptr = get_Go_context(ctx, 3, 0, true);
+    if (context_ptr == NULL)
+    {
+        return 0;
+    }
+    // Get key
+    void *key = get_consistent_key(ctx, context_ptr);
+    void *grpcReq_ptr = bpf_map_lookup_elem(&grpc_events, &key);
+    if (grpcReq_ptr != NULL)
+    {
+        bpf_printk("uprobe/ClientConn_Invoke already tracked with the current context");
+        return 0;
+    }
+
     struct grpc_request_t grpcReq = {};
     grpcReq.start_time = bpf_ktime_get_ns();
 
@@ -107,7 +121,6 @@ int uprobe_ClientConn_Invoke(struct pt_regs *ctx)
     }
 
     // Get parent if exists 
-    void *context_ptr = get_Go_context(ctx, 3, 0, true);
     struct span_context *parent_span_ctx = get_parent_span_context(context_ptr);
     if (parent_span_ctx != NULL)
     {
@@ -119,9 +132,6 @@ int uprobe_ClientConn_Invoke(struct pt_regs *ctx)
     {
         grpcReq.sc = generate_span_context();
     }
-
-    // Get key
-    void *key = get_consistent_key(ctx, context_ptr);
 
     // Write event
     bpf_map_update_elem(&grpc_events, &key, &grpcReq, 0);

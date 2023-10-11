@@ -184,7 +184,7 @@ int uprobe_HandlerFunc_ServeHTTP(struct pt_regs *ctx)
     void *httpReq_ptr = bpf_map_lookup_elem(&http_events, &key);
     if (httpReq_ptr != NULL)
     {
-        bpf_printk("httpReq_ptr is not null");
+        bpf_printk("uprobe/HandlerFunc_ServeHTTP already tracked with the current context");
         return 0;
     }
 

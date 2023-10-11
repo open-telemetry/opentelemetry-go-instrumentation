@@ -157,11 +157,15 @@ int uprobe_HttpClient_Do(struct pt_regs *ctx) {
 
     // Get parent if exists
     void *context_ptr_val = get_Go_context(ctx, 2, ctx_ptr_pos, false);
+    if (context_ptr_val == NULL)
+    {
+        return 0;
+    }
     void *key = get_consistent_key(ctx, context_ptr_val);
     void *httpReq_ptr = bpf_map_lookup_elem(&http_events, &key);
     if (httpReq_ptr != NULL)
     {
-        bpf_printk("client: httpReq_ptr is not null");
+        bpf_printk("uprobe/HttpClient_Do already tracked with the current context");
         return 0;
     }
 

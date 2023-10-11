@@ -75,6 +75,19 @@ int uprobe_server_handleStream(struct pt_regs *ctx)
 {
     u64 stream_pos = 4;
     void *stream_ptr = get_argument(ctx, stream_pos);
+    // Get key
+    void *ctx_iface = get_Go_context(ctx, 4, stream_ctx_pos, false);
+    if (ctx_iface == NULL)
+    {
+        return 0;
+    }
+    void *key = get_consistent_key(ctx, ctx_iface);
+    void *grpcReq_event_ptr = bpf_map_lookup_elem(&grpc_events, &key);
+    if (grpcReq_event_ptr != NULL)
+    {
+        bpf_printk("uprobe/server_handleStream already tracked with the current context");
+        return 0;
+    }
 
     // Get parent context if exists
     u32 stream_id = 0;
@@ -100,10 +113,6 @@ int uprobe_server_handleStream(struct pt_regs *ctx)
         bpf_printk("method write failed, aborting ebpf probe");
         return 0;
     }
-
-    // Get key
-    void *ctx_iface = get_Go_context(ctx, 4, stream_ctx_pos, false);
-    void *key = get_consistent_key(ctx, ctx_iface);
 
     // Write event
     bpf_map_update_elem(&grpc_events, &key, &grpcReq, 0);
