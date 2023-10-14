@@ -97,8 +97,8 @@ static __always_inline void start_tracking_span(void *contextContext, struct spa
 }
 
 static __always_inline void stop_tracking_span(struct span_context *sc, struct span_context *psc) {
-    if (psc == NULL || sc == NULL) {
-        bpf_printk("stop_tracking_span: psc or sc is null");
+    if (sc == NULL) {
+        bpf_printk("stop_tracking_span: sc is null");
         return;
     }
 
@@ -109,7 +109,7 @@ static __always_inline void stop_tracking_span(struct span_context *sc, struct s
         return;
     }
 
-    void *parent_ctx = bpf_map_lookup_elem(&tracked_spans_by_sc, psc);
+    void *parent_ctx = ((psc == NULL) ? NULL : bpf_map_lookup_elem(&tracked_spans_by_sc, psc));
     if (parent_ctx == NULL)
     {
         // No parent span, delete the context
