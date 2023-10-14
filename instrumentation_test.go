@@ -15,13 +15,9 @@
 package auto
 
 import (
-	"fmt"
-	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-
-	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
 )
 
 func TestWithServiceName(t *testing.T) {
@@ -30,26 +26,4 @@ func TestWithServiceName(t *testing.T) {
 	// Use WithServiceName to config the service name
 	c := newInstConfig([]InstrumentationOption{WithServiceName((testServiceName))})
 	assert.Equal(t, testServiceName, c.serviceName)
-
-	// No service name provided - check for default value
-	c = newInstConfig([]InstrumentationOption{})
-	assert.Equal(t, serviceNameDefault, c.serviceName)
-
-	// OTEL_RESOURCE_ATTRIBUTES
-	resServiceName := "resValue"
-	err := os.Setenv(envResourceAttrKey, fmt.Sprintf("key1=val1,%s=%s", string(semconv.ServiceNameKey), resServiceName))
-	if err != nil {
-		t.Error(err)
-	}
-	c = newInstConfig([]InstrumentationOption{WithServiceName((testServiceName))})
-	assert.Equal(t, resServiceName, c.serviceName)
-
-	// Add env var to take precedence
-	envServiceName := "env_serviceName"
-	err = os.Setenv(envServiceNameKey, envServiceName)
-	if err != nil {
-		t.Error(err)
-	}
-	c = newInstConfig([]InstrumentationOption{WithServiceName((testServiceName))})
-	assert.Equal(t, envServiceName, c.serviceName)
 }

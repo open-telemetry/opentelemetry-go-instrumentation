@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"syscall"
 	"time"
 
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
@@ -23,11 +24,11 @@ type Service struct {
 	serviceName string
 	monitorAll  bool
 
-	targetArgs  *process.TargetArgs
 	processch   chan *pidServiceName
 	deadProcess chan int
 	managers    map[int]*instrumentors.Manager
 	exporter    sdktrace.SpanExporter
+	pid         int
 	pidTicker   <-chan time.Time
 }
 
@@ -105,13 +106,29 @@ func (s Service) Validate() error {
 	if s.monitorAll {
 		return nil
 	}
-	if s.exePath == "" {
-		return fmt.Errorf("execPath is nil")
-	}
 	if s.serviceName == "" {
 		return fmt.Errorf("serviceName is nil")
 	}
 
+	if s.pid != 0 {
+		return validatePID(s.pid)
+	}
+	if s.exePath == "" {
+		return fmt.Errorf("execPath is nil")
+	}
+
+	return nil
+}
+
+func validatePID(pid int) error {
+	p, err := os.FindProcess(pid)
+	if err != nil {
+		return fmt.Errorf("can't find process with pid %d", pid)
+	}
+	err = p.Signal(syscall.Signal(0))
+	if err != nil {
+		return fmt.Errorf("process with pid %d does not exist", pid)
+	}
 	return nil
 }
 
@@ -158,6 +175,13 @@ func WithMonitorAll(monitorAll bool) ServiceOpt {
 func WithExporter(expoter sdktrace.SpanExporter) ServiceOpt {
 	return fnOpt(func(c Service) Service {
 		c.exporter = expoter
+		return c
+	})
+}
+
+func WithPID(pid int) ServiceOpt {
+	return fnOpt(func(c Service) Service {
+		c.pid = pid
 		return c
 	})
 }

@@ -118,12 +118,15 @@ type InstrumentationOption interface {
 type instConfig struct {
 	exePath     string
 	serviceName string
+	pid         int
 }
 
 func newInstConfig(opts []InstrumentationOption) instConfig {
-	var c instConfig
+	c := instConfig{}
 	for _, opt := range opts {
-		c = opt.apply(c)
+		if opt != nil {
+			c = opt.apply(c)
+		}
 	}
 	return c
 }
@@ -134,6 +137,9 @@ func (o fnOpt) apply(c instConfig) instConfig { return o(c) }
 
 // WithTarget returns an [InstrumentationOption] defining the target binary for
 // [Instrumentation] that is being executed at the provided path.
+//
+// This option conflicts with [WithPID]. If both are used, the last one
+// provided to an [Instrumentation] will be used.
 //
 // If multiple of these options are provided to an [Instrumentation], the last
 // one will be used.
@@ -157,6 +163,24 @@ func WithTarget(path string) InstrumentationOption {
 func WithServiceName(serviceName string) InstrumentationOption {
 	return fnOpt(func(c instConfig) instConfig {
 		c.serviceName = serviceName
+		return c
+	})
+}
+
+// WithPID returns an [InstrumentationOption] defining the target binary for
+// [instrumentation] that is being run with the provided PID.
+//
+// This option conflicts with [WithTarget]. If both are used, the last one
+// provided to an [Instrumentation] will be used.
+//
+// If multiple of these options are provided to an [Instrumentation], the last
+// one will be used.
+//
+// If OTEL_GO_AUTO_TARGET_EXE is defined it will take precedence over any value
+// passed here.
+func WithPID(pid int) InstrumentationOption {
+	return fnOpt(func(c instConfig) instConfig {
+		c.pid = pid
 		return c
 	})
 }

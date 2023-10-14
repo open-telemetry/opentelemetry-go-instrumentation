@@ -16,6 +16,7 @@ package orchestrator
 
 import (
 	"context"
+	"strings"
 	"time"
 
 	"go.opentelemetry.io/auto/internal/pkg/errors"
@@ -126,13 +127,38 @@ func (s *Service) Run() error {
 }
 
 func (s *Service) findProcess() {
+	if s.pid != 0 {
+		s.processch <- &pidServiceName{
+			pid:         s.pid,
+			serviceName: s.serviceName,
+		}
+		return
+	}
+
+	if s.exePath != "" {
+		pids, err := s.analyzer.FindAllProcesses(s.exePath)
+		if err != nil {
+			log.Logger.Error(err, "FindAllProcesses failed for exePath", "exePath", s.exePath)
+			return
+		}
+		if len(pids) > 1 {
+			log.Logger.Error(err, "Found more than one pid for exePath", "exePath", s.exePath, "no of pids", len(pids))
+			return
+		}
+		s.processch <- &pidServiceName{
+			pid:         s.pid,
+			serviceName: s.serviceName,
+		}
+		return
+	}
+
 	for {
 		select {
 		case <-s.ctx.Done():
 			return
 		case <-s.pidTicker:
 
-			pids, err := s.analyzer.FindAllProcesses(s.exePath, s.serviceName)
+			pids, err := s.analyzer.FindAllProcesses("")
 			if err != nil {
 				log.Logger.Error(err, "FindAllProcesses failed")
 				continue
@@ -152,16 +178,29 @@ func (s *Service) findProcess() {
 					s.deadProcess <- pid
 				}
 			}
-			for p, serviceName := range pids {
+			for p, envs := range pids {
+				serviceName := ""
+				if v, ok := envs[envServiceNameKey]; ok {
+					serviceName = v
+				} else {
+					if v, ok := envs[envResourceAttrKey]; ok {
+						attrs := strings.TrimSpace(v)
+						serviceName = serviceNameFromAttrs(attrs)
+					}
+				}
+
+				// couldn't determine serviceName
+				// pid wouldn't monitored
+				if serviceName == "" {
+					continue
+				}
+
 				if _, ok := s.managers[p]; !ok {
 					s.processch <- &pidServiceName{
 						pid:         p,
 						serviceName: serviceName,
 					}
 				}
-			}
-			if s.monitorAll {
-				break
 			}
 		}
 	}

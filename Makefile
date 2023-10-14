@@ -46,11 +46,11 @@ IMG_NAME ?= otel-go-instrumentation
 GOLANGCI_LINT = $(TOOLS)/golangci-lint
 $(TOOLS)/golangci-lint: PACKAGE=github.com/golangci/golangci-lint/cmd/golangci-lint
 
-OFFSETS = $(TOOLS)/offsets
-$(TOOLS)/offsets: PACKAGE=go.opentelemetry.io/auto/$(TOOLS_MOD_DIR)/offsets
+OFFSETGEN = $(TOOLS)/offsetgen
+$(TOOLS)/offsetgen: PACKAGE=go.opentelemetry.io/auto/$(TOOLS_MOD_DIR)/inspect/cmd/offsetgen
 
 .PHONY: tools
-tools: $(GOLICENSES) $(MULTIMOD) $(GOLANGCI_LINT) $(DBOTCONF) $(OFFSETS)
+tools: $(GOLICENSES) $(MULTIMOD) $(GOLANGCI_LINT) $(DBOTCONF) $(OFFSETGEN)
 
 ALL_GO_MODS := $(shell find . -type f -name 'go.mod' ! -path '$(TOOLS_MOD_DIR)/*' ! -path './LICENSES/*' | sort)
 GO_MODS_TO_TEST := $(ALL_GO_MODS:%=test/%)
@@ -70,6 +70,10 @@ generate:
 .PHONY: docker-generate
 docker-generate:
 	docker run --rm -v $(shell pwd):/app golang:1.20 /bin/sh -c "apt-get update && apt-get install -y clang llvm libbpf-dev && cd ../app && make generate"
+
+.PHONY: docker-test
+docker-test:
+	docker run --rm -v $(shell pwd):/app golang:1.20 /bin/sh -c "apt-get update && apt-get install -y clang llvm libbpf-dev && cd ../app && make test"
 
 .PHONY: go-mod-tidy
 go-mod-tidy: $(ALL_GO_MOD_DIRS:%=go-mod-tidy/%)
@@ -95,13 +99,14 @@ build: generate
 docker-build:
 	docker buildx build -t $(IMG_NAME) .
 
+OFFSETS_OUTPUT_FILE="$(REPODIR)/internal/pkg/inject/offset_results.json"
 .PHONY: offsets
-offsets: | $(OFFSETS)
-	OFFSETS_OUTPUT_FILE="$(REPODIR)/internal/pkg/inject/offset_results.json" $(OFFSETS)
+offsets: | $(OFFSETGEN)
+	$(OFFSETGEN) -output=$(OFFSETS_OUTPUT_FILE) -cache=$(OFFSETS_OUTPUT_FILE)
 
 .PHONY: docker-offsets
 docker-offsets:
-	docker run --rm -v $(shell pwd):/app golang:1.21 /bin/sh -c "cd ../app && make offsets"
+	docker run --rm -v /tmp:/tmp -v /var/run/docker.sock:/var/run/docker.sock -v $(shell pwd):/app golang:1.21.2 /bin/sh -c "cd ../app && make offsets"
 
 .PHONY: update-licenses
 update-licenses: generate $(GOLICENSES)

@@ -47,13 +47,13 @@ func (a *Analyzer) Close() {
 }
 
 // FindAllProcesses returns all go processes by reading `/proc/`.
-func (a *Analyzer) FindAllProcesses(exePath string, serviceName string) (map[int]string, error) {
+func (a *Analyzer) FindAllProcesses(exePath string) (map[int]map[string]string, error) {
 	proc, err := os.Open("/proc")
 	if err != nil {
 		return nil, err
 	}
 
-	pids := make(map[int]string)
+	pids := make(map[int]map[string]string)
 	for {
 		dirs, err := proc.Readdir(15)
 		if err == io.EOF {
@@ -89,7 +89,7 @@ func (a *Analyzer) FindAllProcesses(exePath string, serviceName string) (map[int
 			}
 
 			if exePath != "" && strings.Contains(exeFullPath, exePath) {
-				pids[pid] = serviceName
+				pids[pid] = map[string]string{}
 				break
 			}
 
@@ -102,9 +102,7 @@ func (a *Analyzer) FindAllProcesses(exePath string, serviceName string) (map[int
 				continue
 			}
 
-			if v, ok := envs[otelServiceNameEnvVar]; ok {
-				pids[pid] = v
-			}
+			pids[pid] = envs
 		}
 	}
 

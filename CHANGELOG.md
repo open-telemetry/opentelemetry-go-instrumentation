@@ -14,6 +14,7 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 =======
 
 - Add `WithServiceName` config option for instrumentation. ([#353](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/353))
+- Add `WithPID` config option for instrumentation. ([#355](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/355))
 
 ### Changed
 
