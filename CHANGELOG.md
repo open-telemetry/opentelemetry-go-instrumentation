@@ -17,6 +17,7 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 
 - Fix bug in the `net/http` server instrumentation which always created a new span context. ([#266]https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/266)
 - Fix runtime panic if OTEL_GO_AUTO_TARGET_EXE is not set. ([#339](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/339))
+- Improve eBPF context propagation stability ([#368]https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/368)
 
 ### Deprecated
 

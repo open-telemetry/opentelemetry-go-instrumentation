@@ -83,3 +83,16 @@ static __always_inline void bpf_memset(unsigned char *dst, u32 size, unsigned ch
         dst[i] = value;
     }
 }
+
+static __always_inline bool bpf_is_zero(unsigned char *buff, u32 size)
+{
+    for (int i = 0; i < size; i++)
+    {
+        if (buff[i] != 0)
+        {
+            return false;
+        }
+    }
+
+    return true;
+}

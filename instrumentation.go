@@ -57,6 +57,13 @@ var errUndefinedTarget = fmt.Errorf("undefined target Go binary, consider settin
 // NewInstrumentation returns a new [Instrumentation] configured with the
 // provided opts.
 func NewInstrumentation(opts ...InstrumentationOption) (*Instrumentation, error) {
+	if log.Logger.IsZero() {
+		err := log.Init()
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	c := newInstConfig(opts)
 	if err := c.validate(); err != nil {
 		return nil, err
@@ -84,12 +91,11 @@ func NewInstrumentation(opts ...InstrumentationOption) (*Instrumentation, error)
 		return nil, err
 	}
 
-	if log.Logger.IsZero() {
-		err := log.Init()
-		if err != nil {
-			return nil, err
-		}
+	allocDetails, err := process.Allocate(pid)
+	if err != nil {
+		return nil, err
 	}
+	td.AllocationDetails = allocDetails
 
 	log.Logger.V(0).Info(
 		"target process analysis completed",

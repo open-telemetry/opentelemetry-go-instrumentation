@@ -73,6 +73,10 @@ static __always_inline long inject_header(void* headers_ptr, struct span_context
     if (curr_keyvalue_count == 0) {
         // No key-value pairs in the Go map, need to "allocate" memory for the user
         bucket_ptr = write_target_data(bucket_map_value, sizeof(struct map_bucket));
+        if (bucket_ptr == NULL) {
+            bpf_printk("inject_header: Failed to write bucket to user");
+            return -1;
+        }
         // Update the buckets pointer in the hmap struct to point to newly allocated bucket
         res = bpf_probe_write_user(buckets_ptr_ptr, &bucket_ptr, sizeof(bucket_ptr));
         if (res < 0) {
@@ -95,6 +99,10 @@ static __always_inline long inject_header(void* headers_ptr, struct span_context
     // Prepare the key string for the user
     char key[W3C_KEY_LENGTH] = "traceparent";
     void *ptr = write_target_data(key, W3C_KEY_LENGTH);
+    if (ptr == NULL) {
+        bpf_printk("inject_header: Failed to write key to user");
+        return -1;
+    }
     bucket_map_value->keys[bucket_index] = (struct go_string) {.len = W3C_KEY_LENGTH, .str = ptr};
 
     // Prepare the value string slice
@@ -103,6 +111,7 @@ static __always_inline long inject_header(void* headers_ptr, struct span_context
     span_context_to_w3c_string(propagated_ctx, val);
     ptr = write_target_data(val, sizeof(val));
     if(ptr == NULL) {
+        bpf_printk("inject_header: Failed to write value to user");
         return -1;
     }
 
@@ -110,6 +119,7 @@ static __always_inline long inject_header(void* headers_ptr, struct span_context
     struct go_string header_value = {.len = W3C_VAL_LENGTH, .str = ptr};
     ptr = write_target_data((void*)&header_value, sizeof(header_value));
     if(ptr == NULL) {
+        bpf_printk("inject_header: Failed to write go_string to user");
         return -1;
     }
 
@@ -146,9 +156,19 @@ int uprobe_HttpClient_Do(struct pt_regs *ctx) {
     void *req_ptr = get_argument(ctx, request_pos);
 
     // Get parent if exists
-    void *context_ptr = (void *)(req_ptr+ctx_ptr_pos);
-    void *context_ptr_val = 0;
-    bpf_probe_read(&context_ptr_val, sizeof(context_ptr_val), context_ptr);
+    void *context_ptr_val = get_Go_context(ctx, 2, ctx_ptr_pos, false);
+    if (context_ptr_val == NULL)
+    {
+        return 0;
+    }
+    void *key = get_consistent_key(ctx, context_ptr_val);
+    void *httpReq_ptr = bpf_map_lookup_elem(&http_events, &key);
+    if (httpReq_ptr != NULL)
+    {
+        bpf_printk("uprobe/HttpClient_Do already tracked with the current context");
+        return 0;
+    }
+
     struct span_context *parent_span_ctx = get_parent_span_context(context_ptr_val);
     if (parent_span_ctx != NULL) {
         bpf_probe_read(&httpReq.psc, sizeof(httpReq.psc), parent_span_ctx);
@@ -158,38 +178,26 @@ int uprobe_HttpClient_Do(struct pt_regs *ctx) {
         httpReq.sc = generate_span_context();
     }
 
-    void *method_ptr = 0;
-    bpf_probe_read(&method_ptr, sizeof(method_ptr), (void *)(req_ptr+method_ptr_pos));
-    u64 method_len = 0;
-    bpf_probe_read(&method_len, sizeof(method_len), (void *)(req_ptr+(method_ptr_pos+8)));
-    u64 method_size = sizeof(httpReq.method);
-    method_size = method_size < method_len ? method_size : method_len;
-    bpf_probe_read(&httpReq.method, method_size, method_ptr);
+    if (!get_go_string_from_user_ptr((void *)(req_ptr+method_ptr_pos), httpReq.method, sizeof(httpReq.method))) {
+        bpf_printk("uprobe_HttpClient_Do: Failed to get method from request");
+        return 0;
+    }
 
     // get path from Request.URL
     void *url_ptr = 0;
     bpf_probe_read(&url_ptr, sizeof(url_ptr), (void *)(req_ptr+url_ptr_pos));
-    void *path_ptr = 0;
-    bpf_probe_read(&path_ptr, sizeof(path_ptr), (void *)(url_ptr+path_ptr_pos));
-
-    u64 path_len = 0;
-    bpf_probe_read(&path_len, sizeof(path_len), (void *)(url_ptr+(path_ptr_pos+8)));
-    u64 path_size = sizeof(httpReq.path);
-    path_size = path_size < path_len ? path_size : path_len;
-    bpf_probe_read(&httpReq.path, path_size, path_ptr);
+    if (!get_go_string_from_user_ptr((void *)(url_ptr+path_ptr_pos), httpReq.path, sizeof(httpReq.path))) {
+        bpf_printk("uprobe_HttpClient_Do: Failed to get path from Request.URL");
+        return 0;
+    }
 
     // get headers from Request
     void *headers_ptr = 0;
     bpf_probe_read(&headers_ptr, sizeof(headers_ptr), (void *)(req_ptr+headers_ptr_pos));
-    u64 map_keyvalue_count = 0;
-    bpf_probe_read(&map_keyvalue_count, sizeof(map_keyvalue_count), headers_ptr);
     long res = inject_header(headers_ptr, &httpReq.sc);
     if (res < 0) {
         bpf_printk("uprobe_HttpClient_Do: Failed to inject header");
     }
-
-    // Get key
-    void *key = get_consistent_key(ctx, context_ptr);
 
     // Write event
     bpf_map_update_elem(&http_events, &key, &httpReq, 0);
@@ -199,4 +207,4 @@ int uprobe_HttpClient_Do(struct pt_regs *ctx) {
 
 // This instrumentation attaches uretprobe to the following function:
 // func net/http/client.Do(req *Request)
-UPROBE_RETURN(HttpClient_Do, struct http_request_t, 2, ctx_ptr_pos, http_events, events)
+UPROBE_RETURN(HttpClient_Do, struct http_request_t, http_events, events, 2, ctx_ptr_pos, false)

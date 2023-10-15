@@ -75,6 +75,19 @@ int uprobe_server_handleStream(struct pt_regs *ctx)
 {
     u64 stream_pos = 4;
     void *stream_ptr = get_argument(ctx, stream_pos);
+    // Get key
+    void *ctx_iface = get_Go_context(ctx, 4, stream_ctx_pos, false);
+    if (ctx_iface == NULL)
+    {
+        return 0;
+    }
+    void *key = get_consistent_key(ctx, ctx_iface);
+    void *grpcReq_event_ptr = bpf_map_lookup_elem(&grpc_events, &key);
+    if (grpcReq_event_ptr != NULL)
+    {
+        bpf_printk("uprobe/server_handleStream already tracked with the current context");
+        return 0;
+    }
 
     // Get parent context if exists
     u32 stream_id = 0;
@@ -93,20 +106,13 @@ int uprobe_server_handleStream(struct pt_regs *ctx)
         grpcReq.sc = generate_span_context();
     }
 
-    // Set attributes
     grpcReq.start_time = bpf_ktime_get_ns();
-    void *method_ptr = 0;
-    bpf_probe_read(&method_ptr, sizeof(method_ptr), (void *)(stream_ptr + stream_method_ptr_pos));
-    u64 method_len = 0;
-    bpf_probe_read(&method_len, sizeof(method_len), (void *)(stream_ptr + (stream_method_ptr_pos + 8)));
-    u64 method_size = sizeof(grpcReq.method);
-    method_size = method_size < method_len ? method_size : method_len;
-    bpf_probe_read(&grpcReq.method, method_size, method_ptr);
-
-    // Get key
-    void *ctx_iface = 0;
-    bpf_probe_read(&ctx_iface, sizeof(ctx_iface), (void *)(stream_ptr + stream_ctx_pos));
-    void *key = get_consistent_key(ctx, (void *)(stream_ptr + stream_ctx_pos));
+    // Set attributes
+    if (!get_go_string_from_user_ptr((void *)(stream_ptr + stream_method_ptr_pos), grpcReq.method, sizeof(grpcReq.method)))
+    {
+        bpf_printk("method write failed, aborting ebpf probe");
+        return 0;
+    }
 
     // Write event
     bpf_map_update_elem(&grpc_events, &key, &grpcReq, 0);
@@ -114,7 +120,7 @@ int uprobe_server_handleStream(struct pt_regs *ctx)
     return 0;
 }
 
-UPROBE_RETURN(server_handleStream, struct grpc_request_t, 4, stream_ctx_pos, grpc_events, events)
+UPROBE_RETURN(server_handleStream, struct grpc_request_t, grpc_events, events, 4, stream_ctx_pos, false)
 
 // func (d *decodeState) decodeHeader(frame *http2.MetaHeadersFrame) error
 SEC("uprobe/decodeState_decodeHeader")

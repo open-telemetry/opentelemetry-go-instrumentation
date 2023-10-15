@@ -57,7 +57,7 @@ void *get_argument_by_stack(struct pt_regs *ctx, int index)
     return ptr;
 }
 
-void *get_argument(struct pt_regs *ctx, int index)
+void __always_inline *get_argument(struct pt_regs *ctx, int index)
 {
     if (is_registers_abi)
     {
@@ -80,9 +80,7 @@ static __always_inline void *get_consistent_key(struct pt_regs *ctx, void *conte
         return (void *)GOROUTINE(ctx);
     }
 
-    void *ctx_ptr = 0;
-    bpf_probe_read(&ctx_ptr, sizeof(ctx_ptr), contextContext);
-    return ctx_ptr;
+    return contextContext;
 }
 
 #endif

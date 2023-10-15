@@ -85,9 +85,22 @@ int uprobe_ClientConn_Invoke(struct pt_regs *ctx)
 {
     // positions
     u64 clientconn_pos = 1;
-    u64 context_pos = 3;
     u64 method_ptr_pos = 4;
     u64 method_len_pos = 5;
+
+    void *context_ptr = get_Go_context(ctx, 3, 0, true);
+    if (context_ptr == NULL)
+    {
+        return 0;
+    }
+    // Get key
+    void *key = get_consistent_key(ctx, context_ptr);
+    void *grpcReq_ptr = bpf_map_lookup_elem(&grpc_events, &key);
+    if (grpcReq_ptr != NULL)
+    {
+        bpf_printk("uprobe/ClientConn_Invoke already tracked with the current context");
+        return 0;
+    }
 
     struct grpc_request_t grpcReq = {};
     grpcReq.start_time = bpf_ktime_get_ns();
@@ -101,19 +114,14 @@ int uprobe_ClientConn_Invoke(struct pt_regs *ctx)
 
     // Read ClientConn.Target
     void *clientconn_ptr = get_argument(ctx, clientconn_pos);
-    void *target_ptr = 0;
-    bpf_probe_read(&target_ptr, sizeof(target_ptr), (void *)(clientconn_ptr + (clientconn_target_ptr_pos)));
-    u64 target_len = 0;
-    bpf_probe_read(&target_len, sizeof(target_len), (void *)(clientconn_ptr + (clientconn_target_ptr_pos + 8)));
-    u64 target_size = sizeof(grpcReq.target);
-    target_size = target_size < target_len ? target_size : target_len;
-    bpf_probe_read(&grpcReq.target, target_size, target_ptr);
+    if (!get_go_string_from_user_ptr((void*)(clientconn_ptr + clientconn_target_ptr_pos), grpcReq.target, sizeof(grpcReq.target)))
+    {
+        bpf_printk("target write failed, aborting ebpf probe");
+        return 0;
+    }
 
-    // Get parent if exists
-    void *context_ptr = get_argument(ctx, context_pos);
-    void *context_ptr_val = 0;
-    bpf_probe_read(&context_ptr_val, sizeof(context_ptr_val), context_ptr);
-    struct span_context *parent_span_ctx = get_parent_span_context(context_ptr_val);
+    // Get parent if exists 
+    struct span_context *parent_span_ctx = get_parent_span_context(context_ptr);
     if (parent_span_ctx != NULL)
     {
         bpf_probe_read(&grpcReq.psc, sizeof(grpcReq.psc), parent_span_ctx);
@@ -125,16 +133,13 @@ int uprobe_ClientConn_Invoke(struct pt_regs *ctx)
         grpcReq.sc = generate_span_context();
     }
 
-    // Get key
-    void *key = get_consistent_key(ctx, context_ptr);
-
     // Write event
     bpf_map_update_elem(&grpc_events, &key, &grpcReq, 0);
-    start_tracking_span(context_ptr_val, &grpcReq.sc);
+    start_tracking_span(context_ptr, &grpcReq.sc);
     return 0;
 }
 
-UPROBE_RETURN(ClientConn_Invoke, struct grpc_request_t, 3, 0, grpc_events, events)
+UPROBE_RETURN(ClientConn_Invoke, struct grpc_request_t, grpc_events, events, 3, 0, true)
 
 // func (l *loopyWriter) headerHandler(h *headerFrame) error
 SEC("uprobe/loopyWriter_headerHandler")
@@ -165,7 +170,7 @@ int uprobe_LoopyWriter_HeaderHandler(struct pt_regs *ctx)
     char tp_key[11] = "traceparent";
     struct go_string key_str = write_user_go_string(tp_key, sizeof(tp_key));
     if (key_str.len == 0) {
-        bpf_printk("write failed, aborting ebpf probe");
+        bpf_printk("key write failed, aborting ebpf probe");
         return 0;
     }
 
@@ -173,6 +178,10 @@ int uprobe_LoopyWriter_HeaderHandler(struct pt_regs *ctx)
     char val[SPAN_CONTEXT_STRING_SIZE];
     span_context_to_w3c_string(&current_span_context, val);
     struct go_string val_str = write_user_go_string(val, sizeof(val));
+    if (val_str.len == 0) {
+        bpf_printk("val write failed, aborting ebpf probe");
+        return 0;
+    }
     struct hpack_header_field hf = {};
     hf.name = key_str;
     hf.value = val_str;
@@ -185,14 +194,10 @@ SEC("uprobe/http2Client_NewStream")
 int uprobe_http2Client_NewStream(struct pt_regs *ctx)
 {
     void *context_ptr = get_argument(ctx, 3);
-    void *context_ptr_val = 0;
-    bpf_probe_read(&context_ptr_val, sizeof(context_ptr_val), context_ptr);
-
     void *httpclient_ptr = get_argument(ctx, 1);
     u32 nextid = 0;
     bpf_probe_read(&nextid, sizeof(nextid), (void *)(httpclient_ptr + (httpclient_nextid_pos)));
-
-    struct span_context *current_span_context = get_parent_span_context(context_ptr_val);
+    struct span_context *current_span_context = get_parent_span_context(context_ptr);
     if (current_span_context != NULL) {
         bpf_map_update_elem(&streamid_to_span_contexts, &nextid, current_span_context, 0);
     }
