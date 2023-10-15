@@ -54,6 +54,13 @@ type Instrumentation struct {
 // NewInstrumentation returns a new [Instrumentation] configured with the
 // provided opts.
 func NewInstrumentation(opts ...InstrumentationOption) (*Instrumentation, error) {
+	if log.Logger.IsZero() {
+		err := log.Init()
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	c := newInstConfig(opts)
 
 	ctx := contextWithSigterm(context.Background())
@@ -70,7 +77,9 @@ func NewInstrumentation(opts ...InstrumentationOption) (*Instrumentation, error)
 		orchestrator.WithServiceName(c.serviceName),
 		orchestrator.WithTarget(c.exePath),
 		orchestrator.WithExporter(traceExporter),
-		orchestrator.WithMonitorAll(true))
+		orchestrator.WithPID(c.pid),
+		orchestrator.WithMonitorAll(true),
+	)
 	if err != nil {
 		log.Logger.V(0).Error(err, "creating orchestrator")
 	}

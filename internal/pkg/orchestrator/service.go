@@ -102,6 +102,10 @@ func serviceNameFromAttrs(attrs string) string {
 }
 
 func (s Service) Validate() error {
+	if s.pid != 0 {
+		return validatePID(s.pid)
+	}
+
 	if s.monitorAll {
 		return nil
 	}
@@ -109,9 +113,6 @@ func (s Service) Validate() error {
 		return fmt.Errorf("serviceName is nil")
 	}
 
-	if s.pid != 0 {
-		return validatePID(s.pid)
-	}
 	if s.exePath == "" {
 		return fmt.Errorf("execPath is nil")
 	}

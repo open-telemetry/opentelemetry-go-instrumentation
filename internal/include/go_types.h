@@ -54,13 +54,25 @@ struct map_bucket {
     void *overflow;
 };
 
+// In Go, interfaces are represented as a pair of pointers: a pointer to the
+// interface data, and a pointer to the interface table.
+// See: runtime.iface in https://golang.org/src/runtime/runtime2.go
+static __always_inline void* get_go_interface_instance(void *iface)
+{
+    return (void*)(iface + 8);
+}
+
 static __always_inline struct go_string write_user_go_string(char *str, u32 len)
 {
     // Copy chars to userspace
+    struct go_string new_string = {.str = NULL, .len = 0};
     char *addr = write_target_data((void *)str, len);
+    if (addr == NULL) {
+        bpf_printk("write_user_go_string: failed to copy string to userspace");
+        return new_string;
+    }
 
     // Build string struct in kernel space
-    struct go_string new_string = {};
     new_string.str = addr;
     new_string.len = len;
 
@@ -82,7 +94,7 @@ static __always_inline void append_item_to_slice(struct go_slice *slice, void *n
     }
     else
     {
-        // No room on current array - copy to new one of size item_size * (len + 1)
+        //No room on current array - copy to new one of size item_size * (len + 1)
         if (slice->len > MAX_DATA_SIZE || slice->len < 1)
         {
             return;
@@ -111,19 +123,63 @@ static __always_inline void append_item_to_slice(struct go_slice *slice, void *n
         }
 
         void *new_array = write_target_data(map_buff, new_array_size);
+        if (new_array == NULL)
+        {
+            bpf_printk("append_item_to_slice: failed to copy new array to userspace");
+            return;
+        }
 
         // Update array
         slice->array = new_array;
         long success = bpf_probe_write_user(slice_user_ptr->array, &slice->array, sizeof(slice->array));
+        if (success != 0)
+        {
+            bpf_printk("append_item_to_slice: failed to update array pointer in userspace");
+            return;
+        }
 
         // Update cap
         slice->cap++;
         success = bpf_probe_write_user(slice_user_ptr->cap, &slice->cap, sizeof(slice->cap));
+        if (success != 0)
+        {
+            bpf_printk("append_item_to_slice: failed to update cap in userspace");
+            return;
+        }
     }
 
     // Update len
     slice->len++;
     long success = bpf_probe_write_user(slice_user_ptr->len, &slice->len, sizeof(slice->len));
+    if (success != 0)
+    {
+        bpf_printk("append_item_to_slice: failed to update len in userspace");
+        return;
+    }
 }
 
+static __always_inline bool get_go_string_from_user_ptr(void *user_str_ptr, char *dst, u64 max_len)
+{
+    if (user_str_ptr == NULL)
+    {
+        return false;
+    }
+
+    struct go_string user_str = {0};
+    long success = 0;
+    success = bpf_probe_read(&user_str, sizeof(struct go_string), user_str_ptr);
+    if (success != 0 || user_str.len < 1)
+    {
+        return false;
+    }
+
+    u64 size_to_read = user_str.len > max_len ? max_len : user_str.len;
+    success = bpf_probe_read(dst, size_to_read, user_str.str);
+    if (success != 0)
+    {
+        return false;
+    }
+
+    return true;
+}
 #endif
