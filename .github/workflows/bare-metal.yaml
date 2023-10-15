@@ -33,7 +33,7 @@ jobs:
           docker run -d -e OTEL_EXPORTER_OTLP_ENDPOINT="http://172.17.0.1:4317"  --privileged --pid=host  otel-go-instrumentation
       - name: Build sample app
         run: |
-          cd test/e2e/${{ matrix.library }}
+          cd internal/test/e2e/${{ matrix.library }}
           go build .
           cd ../../..
       - name: run app
