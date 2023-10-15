@@ -39,12 +39,12 @@ jobs:
       - name: run app
         run: |
           export OTEL_SERVICE_NAME=sample-app
-          ./test/e2e/${{matrix.library}}/${{matrix.library}}
+          ./internal/test/e2e/${{matrix.library}}/${{matrix.library}}
       - name: copy traces
         run: |
           sudo chmod 666 /tmp/trace.json
-          cp /tmp/trace.json ./test/e2e/${{ matrix.library }}/traces-orig.json
+          cp /tmp/trace.json ./internal/test/e2e/${{ matrix.library }}/traces-orig.json
           rm -f ./test/e2e/${{ matrix.library }}/traces.json
       - name: verify output and redact to traces.json
         run: |
-          bats ./test/e2e/${{ matrix.library }}/verify.bats
+          bats ./internal/test/e2e/${{ matrix.library }}/verify.bats
