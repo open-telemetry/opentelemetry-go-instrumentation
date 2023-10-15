@@ -9,10 +9,8 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 ## [Unreleased]
 
 ### Added
-<<<<<<< HEAD
-- Add ability to monitor multiple processes. ([#197](https://github.com/open-telemetry/opentelemetry-go-instrumentation/issues/197))
-=======
 
+- Add ability to monitor multiple processes. ([#197](https://github.com/open-telemetry/opentelemetry-go-instrumentation/issues/197))
 - Add `WithServiceName` config option for instrumentation. ([#353](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/353))
 - Add `WithPID` config option for instrumentation. ([#355](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/355))
 
@@ -59,7 +57,6 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 
 ### Added
 
->>>>>>> main
 - Add database/sql instrumentation ([#240](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/240))
 - Support Go 1.21. ([#264](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/264))
 - Add `Instrumentation` to `go.opentelemetry.io/auto` to manage and run the auto-instrumentation provided by the project. ([#284](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/284))
@@ -68,22 +65,18 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 
 ### Changed
 
-- The `FilterUnusedInstrumentors` method of  `"go.opentelemetry.io/auto/pkg/instrumentors".Manager` is removed. ([#208](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/208))
-- The function signature of `"go.opentelemetry.io/auto/pkg/opentelemtry".NewController` has changed.
-  It now accepts `context.Context` and `ControllerSettings` parameters. ([#208](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/208))
-- The `Close` method of `"go.opentelemetry.io/auto/pkg/process".Analyzer` is removed. ([#208](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/208))
 - The function signature of `"go.opentelemetry.io/auto/offsets-tracker/downloader".DownloadBinary` has changed.
-  It now has an additional flag indicating whether it'll build a dummy app for Go stdlib packages or not. ([#256](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/256))
+  It now has an additional flag indicating whether it'll build a dummy app for Go stdlib packages or not. ([#256]https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/256)
 - The function signature of `"go.opentelemetry.io/auto/offsets-tracker/target".New` has changed.
-  It now accepts a flag to determine if the returned `Data` is from the Go stdlib or not. ([#256]<https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/256>)
-- Use UPROBE_RETURN to declare the common uprobe return logic (finding the corresponding context, setting up end time, and sending the event via perf buffer) ([#257]<https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/257>)
-- BASE_SPAN_PROPERTIES as common fields (start time, end time, SpanContext and ParentSpanContext) for all instrumentations events (consistent between C and Go structs). ([#257]<https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/257>)
-- Header guards in eBPF code. ([#257]<https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/257>)
+  It now accepts a flag to determine if the returned `Data` is from the Go stdlib or not. ([#256]https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/256)
+- Use UPROBE_RETURN to declare the common uprobe return logic (finding the corresponding context, setting up end time, and sending the event via perf buffer) ([#257]https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/257)
+- BASE_SPAN_PROPERTIES as common fields (start time, end time, SpanContext and ParentSpanContext) for all instrumentations events (consistent between C and Go structs). ([#257]https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/257)
+- Header guards in eBPF code. ([#257]https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/257)
 
 ### Fixed
 
 - Fix context propagation across different goroutines. ([#118](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/118))
-- The offset tracker can once again build binaries for the Go stdlib. ([#256](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/256))
+- The offset tracker can once again build binaries for the Go stdlib. ([#256]https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/256)
 
 ### Deprecated
 
