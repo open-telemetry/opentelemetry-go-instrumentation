@@ -14,7 +14,7 @@
 //go:build arm64
 // +build arm64
 
-package process
+package binary
 
 import (
 	"golang.org/x/arch/arm64/arm64asm"
