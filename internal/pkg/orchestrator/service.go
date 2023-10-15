@@ -23,7 +23,6 @@ type Service struct {
 	exePath     string
 	serviceName string
 	monitorAll  bool
-
 	processch   chan *pidServiceName
 	deadProcess chan int
 	managers    map[int]*instrumentors.Manager
