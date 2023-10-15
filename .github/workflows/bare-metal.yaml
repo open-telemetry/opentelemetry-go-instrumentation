@@ -30,7 +30,7 @@ jobs:
           IMG=otel-go-instrumentation:latest make docker-build
       - name: run auto-instrumentation
         run: |
-          docker run -d -e OTEL_EXPORTER_OTLP_ENDPOINT="http://172.17.0.1:4317"  --privileged --pid=host  otel-go-instrumentation
+          docker run -d -e OTEL_EXPORTER_OTLP_ENDPOINT="http://172.17.0.1:4317" -e OTEL_GO_AUTO_INCLUDE_DB_STATEMENT=true --privileged --pid=host  otel-go-instrumentation
       - name: Build sample app
         run: |
           cd internal/test/e2e/${{ matrix.library }}

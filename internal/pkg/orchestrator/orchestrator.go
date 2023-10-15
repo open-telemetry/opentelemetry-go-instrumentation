@@ -205,6 +205,7 @@ func (s *Service) findProcess() {
 				// couldn't determine serviceName
 				// pid wouldn't monitored
 				if serviceName == "" {
+					log.Logger.Info("Ignoring pid as serviceName isn't set", "pid", p)
 					continue
 				}
 

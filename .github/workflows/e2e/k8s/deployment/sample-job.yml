@@ -44,6 +44,8 @@ spec:
           value: "http://test-opentelemetry-collector:4317"
         - name: OTEL_PROPAGATORS
           value: "tracecontext,baggage"
+        - name: OTEL_GO_AUTO_INCLUDE_DB_STATEMENT
+          value: "true"
       resources: {}
       securityContext:
         runAsUser: 0
