@@ -40,6 +40,7 @@ type Controller struct {
 type ControllerSetting struct {
 	ServiceName string
 	Exporter    sdktrace.SpanExporter
+	Version     string
 }
 
 func (c *Controller) getTracer(libName string) trace.Tracer {
@@ -89,7 +90,7 @@ func NewController(
 		resource.WithAttributes(
 			semconv.ServiceNameKey.String(settings.ServiceName),
 			semconv.TelemetrySDKLanguageGo,
-			//			semconv.TelemetryAutoVersionKey.String(auto.Version()),
+			semconv.TelemetryAutoVersionKey.String(settings.Version),
 		),
 	)
 	if err != nil {

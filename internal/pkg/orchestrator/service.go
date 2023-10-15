@@ -33,6 +33,7 @@ import (
 // Service is responsible for managing all instrumentation.
 type Service struct {
 	ctx         context.Context
+	version     string
 	analyzer    *process.Analyzer
 	exePath     string
 	serviceName string
@@ -196,6 +197,13 @@ func WithExporter(expoter sdktrace.SpanExporter) ServiceOpt {
 func WithPID(pid int) ServiceOpt {
 	return fnOpt(func(c Service) Service {
 		c.pid = pid
+		return c
+	})
+}
+
+func WithVersion(version string) ServiceOpt {
+	return fnOpt(func(c Service) Service {
+		c.version = version
 		return c
 	})
 }

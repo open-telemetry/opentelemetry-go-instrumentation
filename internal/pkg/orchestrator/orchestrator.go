@@ -60,12 +60,14 @@ func (s *Service) Run() error {
 		select {
 		case <-s.ctx.Done():
 
+			log.Logger.Info("Got context done")
 			for _, m := range s.managers {
 				m.Close()
 			}
 
 			close(s.deadProcess)
 			close(s.processch)
+			log.Logger.Info("cleaning done, shutting down")
 
 			return nil
 		case d := <-s.deadProcess:
@@ -93,6 +95,7 @@ func (s *Service) Run() error {
 			controller, err := opentelemetry.NewController(s.ctx, opentelemetry.ControllerSetting{
 				ServiceName: p.serviceName,
 				Exporter:    s.exporter,
+				Version:     s.version,
 			})
 			if err != nil {
 				log.Logger.Error(err, "error creating opentelemetry controller")
@@ -105,19 +108,27 @@ func (s *Service) Run() error {
 				continue
 			}
 
-			targetDetails, err := s.analyzer.Analyze(p.pid, instManager.GetRelevantFuncs())
+			td, err := s.analyzer.Analyze(p.pid, instManager.GetRelevantFuncs())
 			if err != nil {
 				log.Logger.Error(err, "error while analyzing target process")
 				continue
 			}
-			log.Logger.V(0).Info("target process analysis completed", "pid", targetDetails.PID,
-				"go_version", targetDetails.GoVersion, "dependencies", targetDetails.Libraries,
-				"total_functions_found", len(targetDetails.Functions))
-			s.managers[targetDetails.PID] = instManager
+			log.Logger.V(0).Info("target process analysis completed", "pid", td.PID,
+				"go_version", td.GoVersion, "dependencies", td.Libraries,
+				"total_functions_found", len(td.Functions))
+
+			allocDetails, err := process.Allocate(p.pid)
+			if err != nil {
+				log.Logger.Error(err, "error allocating")
+				continue
+			}
+			td.AllocationDetails = allocDetails
+
+			s.managers[td.PID] = instManager
 			go func() {
 				log.Logger.V(0).Info("invoking instrumentors")
 
-				err = instManager.Run(s.ctx, targetDetails)
+				err = instManager.Run(td)
 				if err != nil && err != errors.ErrInterrupted {
 					log.Logger.Error(err, "error while running instrumentors")
 				}
@@ -145,9 +156,11 @@ func (s *Service) findProcess() {
 			log.Logger.Error(err, "Found more than one pid for exePath", "exePath", s.exePath, "no of pids", len(pids))
 			return
 		}
-		s.processch <- &pidServiceName{
-			pid:         s.pid,
-			serviceName: s.serviceName,
+		for k := range pids {
+			s.processch <- &pidServiceName{
+				pid:         k,
+				serviceName: s.serviceName,
+			}
 		}
 		return
 	}

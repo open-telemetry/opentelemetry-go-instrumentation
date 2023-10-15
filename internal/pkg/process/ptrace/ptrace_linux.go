@@ -110,12 +110,7 @@ func NewTracedProgram(pid int, logger logr.Logger) (*TracedProgram, error) {
 					retryCount[tid]++
 				}
 				if retryCount[tid] < threadRetryLimit {
-					logger.Error(err,
-						"retry attaching thread",
-						"tid", tid,
-						"retryCount", retryCount[tid],
-						"limit", threadRetryLimit,
-					)
+					logger.Info("retry attaching thread", "tid", tid, "retryCount", retryCount[tid], "limit", threadRetryLimit)
 					continue
 				}
 

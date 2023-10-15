@@ -77,6 +77,7 @@ func NewInstrumentation(opts ...InstrumentationOption) (*Instrumentation, error)
 		orchestrator.WithServiceName(c.serviceName),
 		orchestrator.WithTarget(c.exePath),
 		orchestrator.WithExporter(traceExporter),
+		orchestrator.WithVersion(Version()),
 		orchestrator.WithPID(c.pid),
 		orchestrator.WithMonitorAll(true),
 	)

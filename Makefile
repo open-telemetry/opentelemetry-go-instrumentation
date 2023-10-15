@@ -161,7 +161,8 @@ fixtures/%:
 		git clone https://github.com/open-telemetry/opentelemetry-helm-charts.git; \
 	fi
 	helm install test -f .github/workflows/e2e/k8s/$(FIXTURE_MODE)/collector-helm-values.yml opentelemetry-helm-charts/charts/opentelemetry-collector
-	sleep 5
+	until kubectl get pods test-opentelemetry-collector-0 > /dev/null 2>&1; do sleep 1; done
+	echo "Pod test-opentelemetry-collector-0 been created!"
 	kubectl wait --for=condition=Ready --timeout=60s pod/test-opentelemetry-collector-0
 	kubectl -n default create -f .github/workflows/e2e/k8s/$(FIXTURE_MODE)/sample-job.yml
 	kubectl wait --for=condition=Complete --timeout=60s job/sample-job
@@ -188,4 +189,4 @@ check-clean-work-tree:
 		git --no-pager diff; \
 		echo 'Working tree is not clean, did you forget to run "make precommit", "make generate" or "make offsets"?'; \
 		exit 1; \
-	fi
+fi
