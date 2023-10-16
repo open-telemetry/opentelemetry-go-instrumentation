@@ -57,6 +57,13 @@ var errUndefinedTarget = fmt.Errorf("undefined target Go binary, consider settin
 // NewInstrumentation returns a new [Instrumentation] configured with the
 // provided opts.
 func NewInstrumentation(opts ...InstrumentationOption) (*Instrumentation, error) {
+	if log.Logger.IsZero() {
+		err := log.Init()
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	c := newInstConfig(opts)
 	if err := c.validate(); err != nil {
 		return nil, err
@@ -84,12 +91,11 @@ func NewInstrumentation(opts ...InstrumentationOption) (*Instrumentation, error)
 		return nil, err
 	}
 
-	if log.Logger.IsZero() {
-		err := log.Init()
-		if err != nil {
-			return nil, err
-		}
+	allocDetails, err := process.Allocate(pid)
+	if err != nil {
+		return nil, err
 	}
+	td.AllocationDetails = allocDetails
 
 	log.Logger.V(0).Info(
 		"target process analysis completed",
@@ -143,6 +149,8 @@ func newInstConfig(opts []InstrumentationOption) instConfig {
 func (c instConfig) applyEnv() instConfig {
 	if v, ok := os.LookupEnv(envTargetExeKey); ok {
 		c.target.ExePath = v
+		// The environment variable takes precedence over a passed PID option.
+		c.target.Pid = 0
 	}
 	if v, ok := os.LookupEnv(envServiceNameKey); ok {
 		c.serviceName = v
@@ -200,8 +208,8 @@ func (o fnOpt) apply(c instConfig) instConfig { return o(c) }
 // WithTarget returns an [InstrumentationOption] defining the target binary for
 // [Instrumentation] that is being executed at the provided path.
 //
-// This option conflicts with [WithPID]. If both are used, [WithPID] will take
-// precedence and be used.
+// This option conflicts with [WithPID]. If both are used, the last one
+// provided to an [Instrumentation] will be used.
 //
 // If multiple of these options are provided to an [Instrumentation], the last
 // one will be used.
@@ -229,15 +237,17 @@ func WithServiceName(serviceName string) InstrumentationOption {
 	})
 }
 
-// WithPID returns an [InstrumentationOption] corresponding to the executable
-// used by the provided pid.
+// WithPID returns an [InstrumentationOption] defining the target binary for
+// [instrumentation] that is being run with the provided PID.
 //
-// This option conflicts with [WithTarget]. If both are used, [WithPID]
-// will take precedence and be used. If OTEL_GO_AUTO_TARGET_EXE is defined,
-// the pid passed here will take precedence.
+// This option conflicts with [WithTarget]. If both are used, the last one
+// provided to an [Instrumentation] will be used.
 //
 // If multiple of these options are provided to an [Instrumentation], the last
 // one will be used.
+//
+// If OTEL_GO_AUTO_TARGET_EXE is defined it will take precedence over any value
+// passed here.
 func WithPID(pid int) InstrumentationOption {
 	return fnOpt(func(c instConfig) instConfig {
 		c.target.Pid = pid

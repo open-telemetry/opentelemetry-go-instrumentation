@@ -11,32 +11,32 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-//go:build 386 || amd64
-// +build 386 amd64
 
-package process
+package utils
 
 import (
-	"fmt"
+	"strings"
+	"syscall"
 
-	"golang.org/x/arch/x86/x86asm"
+	"github.com/hashicorp/go-version"
 )
 
-func findRetInstructions(data []byte) ([]uint64, error) {
-	var returnOffsets []uint64
-	index := 0
-	for index < len(data) {
-		instruction, err := x86asm.Decode(data[index:], 64)
-		if err != nil {
-			return nil, fmt.Errorf("failed to decode x64 instruction at offset %d: %w", index, err)
-		}
+func GetLinuxKernelVersion() (*version.Version, error) {
+	var utsname syscall.Utsname
 
-		if instruction.Op == x86asm.RET {
-			returnOffsets = append(returnOffsets, uint64(index))
-		}
-
-		index += instruction.Len
+	if err := syscall.Uname(&utsname); err != nil {
+		return nil, err
 	}
 
-	return returnOffsets, nil
+	var buf [65]byte
+	for i, v := range utsname.Release {
+		buf[i] = byte(v)
+	}
+
+	ver := string(buf[:])
+	if strings.Contains(ver, "-") {
+		ver = strings.Split(ver, "-")[0]
+	}
+
+	return version.NewVersion(ver)
 }

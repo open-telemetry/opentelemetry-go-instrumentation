@@ -12,9 +12,20 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package auto
+package binary
 
-// Version is the current release version of OpenTelemetry Go auto-instrumentation in use.
-func Version() string {
-	return "v0.7.0-alpha"
+import "go.opentelemetry.io/auto/internal/pkg/log"
+
+// Func represents a function target.
+type Func struct {
+	Name          string
+	Offset        uint64
+	ReturnOffsets []uint64
+}
+
+func logFoundFunction(name string, offset uint64, returns []uint64) {
+	log.Logger.V(0).Info("found relevant function for instrumentation",
+		"function", name,
+		"start", offset,
+		"returns", returns)
 }

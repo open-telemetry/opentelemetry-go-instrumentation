@@ -50,7 +50,7 @@ for module version in ${(kv)mods}; do
     done
 done
 
-make go-mod-tidy lint build
+make go-mod-tidy golangci-lint-fix build
 
 git add go.sum go.mod
 git add "**/go.sum" "**/go.mod"
