@@ -85,7 +85,7 @@ To instrument an application running in Kubernetes, follow these steps:
 
    ```yaml
    - name: <your_application_name>
-     image: otel-go-instrumentation
+     image: otel/autoinstrumentation-go
      imagePullPolicy: IfNotPresent
      env:
        - name: OTEL_GO_AUTO_TARGET_EXE
