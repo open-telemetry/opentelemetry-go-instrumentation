@@ -47,6 +47,8 @@ network , a shared volume, and a service for the application
         - <name_of_your_application_service>
       image: otel/autoinstrumentation-go
       privileged: true
+      cap_add:
+        - SYS_PTRACE
       pid: "host"
       environment:
         - OTEL_EXPORTER_OTLP_ENDPOINT=http://<address_in_docker_network>:4317
