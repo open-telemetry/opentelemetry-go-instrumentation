@@ -10,7 +10,7 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 
 ### Changed
 
-- Documentation does no longer say that `SYS_PTRACE` capabilty is needed. ([#388]https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/388)
+- Documentation does no longer say that `SYS_PTRACE` capabilty is needed. ([#388](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/388))
 
 ## [v0.7.0-alpha] - 2023-10-15
 
@@ -21,9 +21,9 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 
 ### Changed
 
-- Fix bug in the `net/http` server instrumentation which always created a new span context. ([#266]https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/266)
+- Fix bug in the `net/http` server instrumentation which always created a new span context. ([#266](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/266))
 - Fix runtime panic if OTEL_GO_AUTO_TARGET_EXE is not set. ([#339](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/339))
-- Improve eBPF context propagation stability ([#368]https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/368)
+- Improve eBPF context propagation stability ([#368](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/368))
 
 ### Deprecated
 
