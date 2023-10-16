@@ -45,9 +45,7 @@ network , a shared volume, and a service for the application
     go-auto:
       depends_on:
         - <name_of_your_application_service>
-      build:
-        context: <relative_path_to_instrumentation_Dockerfile>
-        dockerfile: Dockerfile
+      image: otel/autoinstrumentation-go
       privileged: true
       pid: "host"
       environment:
