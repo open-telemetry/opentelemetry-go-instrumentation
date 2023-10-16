@@ -32,7 +32,7 @@ To instrument an application on the same host, follow these steps:
 
 3. Run the OpenTelemetry Go instrumentation with root privileges.
 
-## Instrument an application in Docker
+## Instrument an application in Docker Compose
 
 To instrument a containerized application, follow these steps:
 
