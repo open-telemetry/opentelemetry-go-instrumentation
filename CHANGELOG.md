@@ -8,6 +8,8 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 
 ## [Unreleased]
 
+## [v0.7.0-alpha] - 2023-10-15
+
 ### Added
 
 - Add ability to monitor multiple processes. ([#197](https://github.com/open-telemetry/opentelemetry-go-instrumentation/issues/197))
@@ -181,7 +183,8 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 
 This is the first release of OpenTelemetry Go Automatic Instrumentation.
 
-[Unreleased]: https://github.com/open-telemetry/opentelemetry-go-instrumentation/compare/v0.3.0-alpha...HEAD
+[Unreleased]: https://github.com/open-telemetry/opentelemetry-go-instrumentation/compare/v0.7.0-alpha...HEAD
+[v0.7.0-alpha]: https://github.com/open-telemetry/opentelemetry-go-instrumentation/releases/tag/v0.7.0-alpha
 [v0.3.0-alpha]: https://github.com/open-telemetry/opentelemetry-go-instrumentation/releases/tag/v0.3.0-alpha
 [v0.2.2-alpha]: https://github.com/open-telemetry/opentelemetry-go-instrumentation/releases/tag/v0.2.2-alpha
 [v0.2.1-alpha]: https://github.com/open-telemetry/opentelemetry-go-instrumentation/releases/tag/v0.2.1-alpha
