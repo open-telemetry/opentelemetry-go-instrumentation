@@ -47,8 +47,6 @@ network , a shared volume, and a service for the application.
 
   ```yaml
     go-auto:
-      depends_on:
-        - <name_of_your_application_service>
       image: otel/autoinstrumentation-go
       privileged: true
       pid: "host"
