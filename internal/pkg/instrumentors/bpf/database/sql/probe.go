@@ -78,12 +78,20 @@ func (h *Instrumentor) FuncNames() []string {
 
 // Load loads all instrumentation offsets.
 func (h *Instrumentor) Load(ctx *context.InstrumentorContext) error {
-	spec, err := ctx.Injector.Inject(loadBpf, "go", ctx.TargetDetails.GoVersion, nil, []*inject.FlagField{
-		{
-			VarName: "should_include_db_statement",
-			Value:   shouldIncludeDBStatement(),
-		},
-	}, true)
+	spec, err := loadBpf()
+	if err != nil {
+		return err
+	}
+	if ctx.TargetDetails.AllocationDetails == nil {
+		// This Instrumentor requires allocation.
+		return errors.New("no allocation details")
+	}
+	err = inject.Constants(
+		spec,
+		inject.WithRegistersABI(ctx.TargetDetails.IsRegistersABI()),
+		inject.WithAllocationDetails(*ctx.TargetDetails.AllocationDetails),
+		inject.WithKeyValue("should_include_db_statement", shouldIncludeDBStatement()),
+	)
 	if err != nil {
 		return err
 	}

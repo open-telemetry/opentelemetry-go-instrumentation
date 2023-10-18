@@ -21,7 +21,6 @@ import (
 	"github.com/cilium/ebpf/link"
 	"github.com/cilium/ebpf/rlimit"
 
-	"go.opentelemetry.io/auto/internal/pkg/inject"
 	iCtx "go.opentelemetry.io/auto/internal/pkg/instrumentors/context"
 	"go.opentelemetry.io/auto/internal/pkg/log"
 	"go.opentelemetry.io/auto/internal/pkg/process"
@@ -65,11 +64,6 @@ func (m *Manager) load(target *process.TargetDetails) error {
 		return err
 	}
 
-	injector, err := inject.New(target)
-	if err != nil {
-		return err
-	}
-
 	exe, err := link.OpenExecutable(fmt.Sprintf("/proc/%d/exe", target.PID))
 	if err != nil {
 		return err
@@ -77,7 +71,6 @@ func (m *Manager) load(target *process.TargetDetails) error {
 	ctx := &iCtx.InstrumentorContext{
 		TargetDetails: target,
 		Executable:    exe,
-		Injector:      injector,
 	}
 
 	if err := m.allocator.Load(ctx); err != nil {

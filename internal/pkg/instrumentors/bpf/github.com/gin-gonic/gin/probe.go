@@ -76,28 +76,20 @@ func (h *Instrumentor) FuncNames() []string {
 
 // Load loads all instrumentation offsets.
 func (h *Instrumentor) Load(ctx *context.InstrumentorContext) error {
-	spec, err := ctx.Injector.Inject(loadBpf, "go", ctx.TargetDetails.GoVersion, []*inject.StructField{
-		{
-			VarName:    "method_ptr_pos",
-			StructName: "net/http.Request",
-			Field:      "Method",
-		},
-		{
-			VarName:    "url_ptr_pos",
-			StructName: "net/http.Request",
-			Field:      "URL",
-		},
-		{
-			VarName:    "ctx_ptr_pos",
-			StructName: "net/http.Request",
-			Field:      "ctx",
-		},
-		{
-			VarName:    "path_ptr_pos",
-			StructName: "net/url.URL",
-			Field:      "Path",
-		},
-	}, nil, false)
+	ver := ctx.TargetDetails.GoVersion
+
+	spec, err := loadBpf()
+	if err != nil {
+		return err
+	}
+	err = inject.Constants(
+		spec,
+		inject.WithRegistersABI(ctx.TargetDetails.IsRegistersABI()),
+		inject.WithOffset("method_ptr_pos", "net/http.Request", "Method", ver),
+		inject.WithOffset("url_ptr_pos", "net/http.Request", "URL", ver),
+		inject.WithOffset("ctx_ptr_pos", "net/http.Request", "ctx", ver),
+		inject.WithOffset("path_ptr_pos", "net/url.URL", "Path", ver),
+	)
 	if err != nil {
 		return err
 	}

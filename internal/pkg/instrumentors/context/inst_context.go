@@ -17,7 +17,6 @@ package context
 import (
 	"github.com/cilium/ebpf/link"
 
-	"go.opentelemetry.io/auto/internal/pkg/inject"
 	"go.opentelemetry.io/auto/internal/pkg/process"
 )
 
@@ -25,5 +24,4 @@ import (
 type InstrumentorContext struct {
 	TargetDetails *process.TargetDetails
 	Executable    *link.Executable
-	Injector      *inject.Injector
 }
