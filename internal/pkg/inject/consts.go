@@ -88,7 +88,7 @@ func (o option) apply(m map[string]interface{}) {
 }
 
 // WithRegistersABI returns an option that will set the "is_registers_abi" to
-// value. This information can be deteremined from the IsRegistersABI method of
+// value. This information can be determined from the IsRegistersABI method of
 // the TargetDetails in "go.opentelemetry.io/auto/internal/pkg/process".
 //
 // Commonly this is called like the following:
