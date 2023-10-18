@@ -40,7 +40,7 @@ You can instrument a Go executable using OpenTelemetry without having
 to write additional code. All you need to do is configure a few environment
 variables and run the instrumentation with elevated privileges.
 
-The following example shows how to instrument a simple Go application
+The following example shows how to instrument a Go application
 automatically on a Linux host, through Docker, and using Kubernetes.
 
 ### Prerequisites
