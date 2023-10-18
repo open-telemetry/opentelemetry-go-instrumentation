@@ -13,7 +13,7 @@ To instrument an application automatically, you need the following:
 
 - Linux with kernel version 4.19 or higher
 - x64 or ARM processor
-- Docker image or compiled binary of OpenTelemetry Go instrumentation
+- Docker image or compiled binary of OpenTelemetry Go Automatic Instrumentation
 
 To compile the instrumentation binary, use Go 1.18 or higher.
 
