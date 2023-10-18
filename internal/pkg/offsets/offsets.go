@@ -120,6 +120,10 @@ type Offsets struct {
 // Get returns the offset in bytes and true if known. Otherwise, 0 and false
 // are returned.
 func (o *Offsets) Get(ver *version.Version) (uint64, bool) {
+	if o == nil {
+		return 0, false
+	}
+
 	o.mu.RLock()
 	v, ok := o.values[newVerKey(ver)]
 	o.mu.RUnlock()

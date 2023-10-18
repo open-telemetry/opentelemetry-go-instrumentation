@@ -21,6 +21,7 @@ import (
 	"io"
 
 	"github.com/hashicorp/go-version"
+	"go.opentelemetry.io/auto/internal/pkg/offsets"
 )
 
 // Manifest contains all information that needs to be inspected for an
@@ -70,6 +71,15 @@ type StructField struct {
 // structName returns the package path prefixed struct name of s.
 func (s StructField) structName() string {
 	return fmt.Sprintf("%s.%s", s.PkgPath, s.Struct)
+}
+
+// id returns StructField as an offsets.ID.
+func (s StructField) id() offsets.ID {
+	return offsets.ID{
+		PkgPath: s.PkgPath,
+		Struct:  s.Struct,
+		Field:   s.Field,
+	}
 }
 
 // offset returns the field offset found in the DWARF data d and true. If the
