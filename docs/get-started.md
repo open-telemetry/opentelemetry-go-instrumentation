@@ -11,10 +11,11 @@ automatically on a Linux host, through Docker, and using Kubernetes.
 
 To instrument an application automatically, you need the following:
 
-- Binary file or Docker image of OpenTelemetry Go instrumentation
-- Go 1.17 and higher in your system
-- Linux with kernel version 4.4 and higher
+- Linux with kernel version 4.19 or higher
 - x64 or ARM processor
+- Docker image or compiled binary of OpenTelemetry Go instrumentation
+
+To compile the instrumentation binary, use Go 1.18 or higher.
 
 ## Instrument an application on the same host
 
@@ -23,10 +24,13 @@ To instrument an application on the same host, follow these steps:
 1. Set the following environment variables:
 
   - `OTEL_GO_AUTO_TARGET_EXE`: Full path of the executable you want to
-  instrument
-  - `OTEL_EXPORTER_OTLP_ENDPOINT`: Your observability backend. For example,
-  `localhost:4317`
+  instrument. For example, `/home/bin/service_executable`
   - `OTEL_SERVICE_NAME`: Name of your service or application
+  - `OTEL_EXPORTER_OTLP_ENDPOINT`: Your observability backend. For example,
+  `http://localhost:4317. If you're sending data to the OpenTelemetry Collector
+  over HTTPS, set TLS settings in the OTLP exporter. See the
+  [OTLP Receiver documentation](https://github.com/open-telemetry/opentelemetry-collector/blob/main/receiver/otlpreceiver/README.md)
+  for instructions
 
 2. Run the target application.
 
@@ -37,7 +41,7 @@ To instrument an application on the same host, follow these steps:
 To instrument a containerized application, follow these steps:
 
 1. Create or edit the docker-compose.yaml file. Make sure to add a Docker
-network , a shared volume, and a service for the application  
+network , a shared volume, and a service for the application.
 
 2. Edit the docker-compose file to add a new service for the instrumentation:
 
@@ -72,21 +76,6 @@ To instrument an application running in Kubernetes, follow these steps:
    - name: <your_application_name>
      image: otel/autoinstrumentation-go
      imagePullPolicy: IfNotPresent
-     # env variables go here
-     securityContext:
-       runAsUser: 0
-       capabilities:
-         add:
-           - SYS_PTRACE
-       privileged: true
-   ```
-
-2. Add the OTel Go environment variables. For example:
-
-   ```yaml
-   - name: <your_application_name>
-     image: otel/autoinstrumentation-go
-     imagePullPolicy: IfNotPresent
      env:
        - name: OTEL_GO_AUTO_TARGET_EXE
          value: <location_of_target_application_binary>
@@ -96,72 +85,7 @@ To instrument an application running in Kubernetes, follow these steps:
          value: "<name_of_service>"
      securityContext:
        runAsUser: 0
-       capabilities:
-         add:
-           - SYS_PTRACE
        privileged: true
    ```
 
-The following is a full example of the instrumented emojivoto demo application running in Kubernetes:
-
-```yaml
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: web
-  namespace: emojivoto
-  labels:
-    app.kubernetes.io/name: web
-    app.kubernetes.io/part-of: emojivoto
-    app.kubernetes.io/version: v11
-spec:
-  replicas: 1
-  selector:
-    matchLabels:
-      app: web-svc
-      version: v11
-  template:
-    metadata:
-      labels:
-        app: web-svc
-        version: v11
-    spec:
-      serviceAccountName: web
-      shareProcessNamespace: true
-      terminationGracePeriodSeconds: 0
-      containers:
-        - env:
-            - name: WEB_PORT
-              value: "8080"
-            - name: EMOJISVC_HOST
-              value: emoji-svc.emojivoto:8080
-            - name: VOTINGSVC_HOST
-              value: voting-svc.emojivoto:8080
-            - name: INDEX_BUNDLE
-              value: dist/index_bundle.js
-          image: docker.l5d.io/buoyantio/emojivoto-web:v11
-          name: web-svc
-          ports:
-            - containerPort: 8080
-              name: http
-          resources:
-            requests:
-              cpu: 100m
-        - name: <your_application_name>
-          image: otel-go-instrumentation
-          imagePullPolicy: IfNotPresent
-          env:
-            - name: OTEL_GO_AUTO_TARGET_EXE
-              value: <location_of_target_application_binary>
-            - name: OTEL_EXPORTER_OTLP_ENDPOINT
-              value: "http://<address_in_network>:4317"
-            - name: OTEL_SERVICE_NAME
-              value: "<name_of_service>"
-          securityContext:
-            runAsUser: 0
-            capabilities:
-              add:
-                - SYS_PTRACE
-            privileged: true
-```
-
+2. Deploy the application and the instrumentation using the manifest.
