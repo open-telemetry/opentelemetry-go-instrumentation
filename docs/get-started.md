@@ -71,7 +71,7 @@ To instrument an application running in Kubernetes, follow these steps:
 1. Add the container image of the OpenTelemetry Go Automatic Instrumentation to your manifest. Make sure that `runAsUser` is set to `0`, `privileged` is set to `true`:
 
    ```yaml
-   - name: <your_application_name>
+   - name: autoinstrumentation-go
      image: otel/autoinstrumentation-go
      imagePullPolicy: IfNotPresent
      env:
