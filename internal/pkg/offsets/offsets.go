@@ -22,7 +22,7 @@ import (
 	"github.com/hashicorp/go-version"
 )
 
-// Index holds all strict field offsets.
+// Index holds all struct field offsets.
 type Index map[ID]*Offsets
 
 // UnmarshalJSON unmarshals the offset JSON data into i.
