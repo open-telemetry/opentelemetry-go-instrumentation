@@ -65,7 +65,7 @@ To instrument an application on the same host, follow these steps:
   instrument. For example, `/home/bin/service_executable`
   - `OTEL_SERVICE_NAME`: Name of your service or application
   - `OTEL_EXPORTER_OTLP_ENDPOINT`: Your observability backend. For example,
-  `http://localhost:4317. If you're sending data to the OpenTelemetry Collector
+  `http://localhost:4317`. If you're sending data to the OpenTelemetry Collector
   over a secure gRPC transport, set TLS settings in the OTLP exporter. See the
   [OTLP Receiver documentation](https://github.com/open-telemetry/opentelemetry-collector/blob/main/receiver/otlpreceiver/README.md)
   for instructions
