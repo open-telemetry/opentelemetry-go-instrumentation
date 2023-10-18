@@ -15,11 +15,21 @@ join the meeting or get in touch on
 
 ### Compiling the project
 
-Linux users can build this repository by running:
+The project can be build only on Linux with kernel above 4.4.
+Additionaly it requires (the latest versions are prefered):
+
+- `clang` - Clang C Language Family Frontend for LLVM
+- `gcc` - GNU Compiler Collection
+- `go` - Go
+- `libbpf-dev` - eBPF helper library
+- `llvm` - LLVM
+- `make` - Make
+
+You can build the Go Automatic Instrumnentation binary by running:
 `make build`
 
-Windows/Mac users will need to compile this project inside a Linux docker container by running:
-`make docker-build`
+You may also compile this project inside a Linux docker container by running:
+`make docker-build`.
 
 ### Issues
 
