@@ -80,7 +80,7 @@ To instrument an application on the same host, follow these steps:
 To instrument a containerized application, follow these steps:
 
 1. Create or edit the docker-compose.yaml file. Make sure to add a Docker
-network , a shared volume, and a service for the application.
+network, a shared volume, and a service for the application.
 
 2. Edit the docker-compose file to add a new service for the instrumentation:
 
