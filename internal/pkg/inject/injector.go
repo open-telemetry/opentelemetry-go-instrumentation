@@ -41,14 +41,14 @@ type Injector struct {
 
 // New returns an [Injector] configured for the target.
 func New(target *process.TargetDetails) (*Injector, error) {
-	offsets := make(offsets.Index)
-	err := json.Unmarshal([]byte(offsetsData), &offsets)
+	off := make(offsets.Index)
+	err := json.Unmarshal([]byte(offsetsData), &off)
 	if err != nil {
 		return nil, err
 	}
 
 	return &Injector{
-		data:              offsets,
+		data:              off,
 		isRegAbi:          target.IsRegistersABI(),
 		TotalCPUs:         uint32(runtime.NumCPU()),
 		AllocationDetails: target.AllocationDetails,
