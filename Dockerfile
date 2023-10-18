@@ -1,9 +1,15 @@
-FROM debian:12 as builder
+FROM golang:1.21.3-bullseye as builder
+
 ARG TARGETARCH
-RUN apt-get update && apt-get install -y curl clang gcc llvm make libbpf-dev -y
-RUN curl -LO https://go.dev/dl/go1.20.linux-${TARGETARCH}.tar.gz && tar -C /usr/local -xzf go*.linux-${TARGETARCH}.tar.gz
-ENV PATH="/usr/local/go/bin:${PATH}"
 WORKDIR /app
+
+RUN apt-get update && apt-get install -y curl clang gcc llvm make libbpf-dev
+
+# pre-copy/cache go.mod for pre-downloading dependencies and only redownloading
+# them in subsequent builds if they change
+COPY go.mod go.sum ./
+RUN go mod download && go mod verify
+
 COPY . .
 RUN make build
 
