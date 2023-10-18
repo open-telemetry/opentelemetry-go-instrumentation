@@ -24,6 +24,7 @@ import (
 	"github.com/hashicorp/go-version"
 
 	"go.opentelemetry.io/auto/internal/pkg/log"
+	"go.opentelemetry.io/auto/internal/pkg/offsets"
 	"go.opentelemetry.io/auto/internal/pkg/process"
 )
 
@@ -32,7 +33,7 @@ var offsetsData string
 
 // Injector injects OpenTelemetry instrumentation Go packages.
 type Injector struct {
-	data              *TrackedOffsets
+	data              offsets.Index
 	isRegAbi          bool
 	TotalCPUs         uint32
 	AllocationDetails *process.AllocationDetails
@@ -40,14 +41,14 @@ type Injector struct {
 
 // New returns an [Injector] configured for the target.
 func New(target *process.TargetDetails) (*Injector, error) {
-	var offsets TrackedOffsets
+	offsets := make(offsets.Index)
 	err := json.Unmarshal([]byte(offsetsData), &offsets)
 	if err != nil {
 		return nil, err
 	}
 
 	return &Injector{
-		data:              &offsets,
+		data:              offsets,
 		isRegAbi:          target.IsRegistersABI(),
 		TotalCPUs:         uint32(runtime.NumCPU()),
 		AllocationDetails: target.AllocationDetails,
@@ -59,9 +60,18 @@ type loadBpfFunc func() (*ebpf.CollectionSpec, error)
 // StructField is the definition of a structure field for which instrumentation
 // is injected.
 type StructField struct {
-	VarName    string
-	StructName string
-	Field      string
+	VarName string
+	PkgPath string
+	Struct  string
+	Field   string
+}
+
+func (s StructField) id() offsets.ID {
+	return offsets.ID{
+		PkgPath: s.PkgPath,
+		Struct:  s.Struct,
+		Field:   s.Field,
+	}
 }
 
 // FlagField is used for configuring the ebpf programs by injecting boolean values.
@@ -80,9 +90,10 @@ func (i *Injector) Inject(loadBpf loadBpfFunc, library string, ver *version.Vers
 	injectedVars := make(map[string]interface{})
 
 	for _, dm := range fields {
-		offset, found := i.data.GetOffset(dm.StructName, dm.Field, ver)
+		key := dm.id()
+		offset, found := i.data[key].Get(ver)
 		if !found {
-			log.Logger.V(0).Info("could not find offset", "lib", library, "version", ver, "struct", dm.StructName, "field", dm.Field)
+			log.Logger.V(0).Info("could not find offset", "lib", library, "version", ver, "package", dm.PkgPath, "struct", dm.Struct, "field", dm.Field)
 		} else {
 			injectedVars[dm.VarName] = offset
 		}
