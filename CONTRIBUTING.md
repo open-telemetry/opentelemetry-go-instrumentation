@@ -15,20 +15,20 @@ join the meeting or get in touch on
 
 ### Compiling the project
 
-The project can be build only on Linux with kernel above 4.4.
-Additionaly it requires (the latest versions are prefered):
+Building requires Linux with kernel 4.4 or higher.
+In addition, use the latest versions of the following components:
 
-- `clang` - Clang C Language Family Frontend for LLVM
-- `gcc` - GNU Compiler Collection
-- `go` - Go
-- `libbpf-dev` - eBPF helper library
-- `llvm` - LLVM
-- `make` - Make
+- `clang`
+- `gcc`
+- `go`
+- `libbpf-dev`
+- `llvm`
+- `make`
 
-You can build the Go Automatic Instrumnentation binary by running:
+Build the Go Automatic Instrumnentation binary by running:
 `make build`
 
-Alternatively, you build inside a Linux Docker container by running:
+Alternatively, you can create a Linux Docker container:
 `make docker-build`.
 
 ### Issues
