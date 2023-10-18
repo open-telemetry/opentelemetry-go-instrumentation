@@ -74,34 +74,40 @@ func (h *Instrumentor) FuncNames() []string {
 func (h *Instrumentor) Load(ctx *context.InstrumentorContext) error {
 	spec, err := ctx.Injector.Inject(loadBpf, "go", ctx.TargetDetails.GoVersion, []*inject.StructField{
 		{
-			VarName:    "method_ptr_pos",
-			StructName: "net/http.Request",
-			Field:      "Method",
+			VarName: "method_ptr_pos",
+			PkgPath: "net/http",
+			Struct:  "Request",
+			Field:   "Method",
 		},
 		{
-			VarName:    "url_ptr_pos",
-			StructName: "net/http.Request",
-			Field:      "URL",
+			VarName: "url_ptr_pos",
+			PkgPath: "net/http",
+			Struct:  "Request",
+			Field:   "URL",
 		},
 		{
-			VarName:    "path_ptr_pos",
-			StructName: "net/url.URL",
-			Field:      "Path",
+			VarName: "path_ptr_pos",
+			PkgPath: "net/url",
+			Struct:  "URL",
+			Field:   "Path",
 		},
 		{
-			VarName:    "headers_ptr_pos",
-			StructName: "net/http.Request",
-			Field:      "Header",
+			VarName: "headers_ptr_pos",
+			PkgPath: "net/http",
+			Struct:  "Request",
+			Field:   "Header",
 		},
 		{
-			VarName:    "ctx_ptr_pos",
-			StructName: "net/http.Request",
-			Field:      "ctx",
+			VarName: "ctx_ptr_pos",
+			PkgPath: "net/http",
+			Struct:  "Request",
+			Field:   "ctx",
 		},
 		{
-			VarName:    "buckets_ptr_pos",
-			StructName: "runtime.hmap",
-			Field:      "buckets",
+			VarName: "buckets_ptr_pos",
+			PkgPath: "runtime",
+			Struct:  "hmap",
+			Field:   "buckets",
 		},
 	}, nil, true)
 	if err != nil {

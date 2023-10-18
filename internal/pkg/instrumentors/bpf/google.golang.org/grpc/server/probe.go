@@ -87,29 +87,34 @@ func (g *Instrumentor) Load(ctx *context.InstrumentorContext) error {
 
 	spec, err := ctx.Injector.Inject(loadBpf, "google.golang.org/grpc", ver, []*inject.StructField{
 		{
-			VarName:    "stream_method_ptr_pos",
-			StructName: "google.golang.org/grpc/internal/transport.Stream",
-			Field:      "method",
+			VarName: "stream_method_ptr_pos",
+			PkgPath: "google.golang.org/grpc/internal/transport",
+			Struct:  "Stream",
+			Field:   "method",
 		},
 		{
-			VarName:    "stream_id_pos",
-			StructName: "google.golang.org/grpc/internal/transport.Stream",
-			Field:      "id",
+			VarName: "stream_id_pos",
+			PkgPath: "google.golang.org/grpc/internal/transport",
+			Struct:  "Stream",
+			Field:   "id",
 		},
 		{
-			VarName:    "stream_ctx_pos",
-			StructName: "google.golang.org/grpc/internal/transport.Stream",
-			Field:      "ctx",
+			VarName: "stream_ctx_pos",
+			PkgPath: "google.golang.org/grpc/internal/transport",
+			Struct:  "Stream",
+			Field:   "ctx",
 		},
 		{
-			VarName:    "frame_fields_pos",
-			StructName: "golang.org/x/net/http2.MetaHeadersFrame",
-			Field:      "Fields",
+			VarName: "frame_fields_pos",
+			PkgPath: "golang.org/x/net/http2",
+			Struct:  "MetaHeadersFrame",
+			Field:   "Fields",
 		},
 		{
-			VarName:    "frame_stream_id_pod",
-			StructName: "golang.org/x/net/http2.FrameHeader",
-			Field:      "StreamID",
+			VarName: "frame_stream_id_pod",
+			PkgPath: "golang.org/x/net/http2",
+			Struct:  "FrameHeader",
+			Field:   "StreamID",
 		},
 	}, nil, true)
 	if err != nil {

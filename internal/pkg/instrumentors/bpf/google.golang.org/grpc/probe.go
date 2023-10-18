@@ -88,24 +88,28 @@ func (g *Instrumentor) Load(ctx *context.InstrumentorContext) error {
 
 	spec, err := ctx.Injector.Inject(loadBpf, g.LibraryName(), ver, []*inject.StructField{
 		{
-			VarName:    "clientconn_target_ptr_pos",
-			StructName: "google.golang.org/grpc.ClientConn",
-			Field:      "target",
+			VarName: "clientconn_target_ptr_pos",
+			PkgPath: "google.golang.org/grpc",
+			Struct:  "ClientConn",
+			Field:   "target",
 		},
 		{
-			VarName:    "httpclient_nextid_pos",
-			StructName: "google.golang.org/grpc/internal/transport.http2Client",
-			Field:      "nextID",
+			VarName: "httpclient_nextid_pos",
+			PkgPath: "google.golang.org/grpc/internal/transport",
+			Struct:  "http2Client",
+			Field:   "nextID",
 		},
 		{
-			VarName:    "headerFrame_hf_pos",
-			StructName: "google.golang.org/grpc/internal/transport.headerFrame",
-			Field:      "hf",
+			VarName: "headerFrame_hf_pos",
+			PkgPath: "google.golang.org/grpc/internal/transport",
+			Struct:  "headerFrame",
+			Field:   "hf",
 		},
 		{
-			VarName:    "headerFrame_streamid_pos",
-			StructName: "google.golang.org/grpc/internal/transport.headerFrame",
-			Field:      "streamID",
+			VarName: "headerFrame_streamid_pos",
+			PkgPath: "google.golang.org/grpc/internal/transport",
+			Struct:  "headerFrame",
+			Field:   "streamID",
 		},
 	}, nil, true)
 	if err != nil {
