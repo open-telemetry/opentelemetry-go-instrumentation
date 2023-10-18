@@ -28,7 +28,7 @@ Additionaly it requires (the latest versions are prefered):
 You can build the Go Automatic Instrumnentation binary by running:
 `make build`
 
-You may also compile this project inside a Linux docker container by running:
+You may also compile this project inside a Linux Docker container by running:
 `make docker-build`.
 
 ### Issues
