@@ -69,16 +69,16 @@ To instrument an application on the same host, follow these steps:
 
   For example:
 
-  ```sh
-  sudo OTEL_GO_AUTO_TARGET_EXE=/home/bin/service_executable OTEL_SERVICE_NAME=my_service OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4317./otel-go-instrumentation`
-  ```
+   ```sh
+   sudo OTEL_GO_AUTO_TARGET_EXE=/home/bin/service_executable OTEL_SERVICE_NAME=my_service OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4317./otel-go-instrumentation`
+   ```
 
 3. Run the OpenTelemetry Go Automatic Instrumentation with root privileges.
 
 > **Note:** If the target application isn't running yet, the instrumentation
 > waits for the process to start.
 
-### Instrument an application in Docker Compose
+### Instrument an application in Docker Compose
 
 To instrument a containerized application, follow these steps:
 
