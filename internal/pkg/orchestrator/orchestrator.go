@@ -34,11 +34,9 @@ type pidServiceName struct {
 
 // New creates a new Implementation of orchestrator Service.
 func New(
-	ctx context.Context,
 	opts ...ServiceOpt,
 ) (*Service, error) {
 	s := Service{
-		ctx:         ctx,
 		analyzer:    process.NewAnalyzer(),
 		processch:   make(chan *pidServiceName, 10),
 		deadProcess: make(chan int, 10),
@@ -54,11 +52,11 @@ func New(
 }
 
 // Run manages the lifecycle of instrumentors for a go process.
-func (s *Service) Run() error {
-	go s.findProcess()
+func (s *Service) Run(ctx context.Context) error {
+	go s.findProcess(ctx)
 	for {
 		select {
-		case <-s.ctx.Done():
+		case <-ctx.Done():
 
 			log.Logger.Info("Got context done")
 			for _, m := range s.managers {
@@ -92,7 +90,7 @@ func (s *Service) Run() error {
 				"serviceName",
 				p.serviceName,
 			)
-			controller, err := opentelemetry.NewController(s.ctx, opentelemetry.ControllerSetting{
+			controller, err := opentelemetry.NewController(ctx, opentelemetry.ControllerSetting{
 				ServiceName: p.serviceName,
 				Exporter:    s.exporter,
 				Version:     s.version,
@@ -137,7 +135,7 @@ func (s *Service) Run() error {
 	}
 }
 
-func (s *Service) findProcess() {
+func (s *Service) findProcess(ctx context.Context) {
 	if s.pid != 0 {
 		s.processch <- &pidServiceName{
 			pid:         s.pid,
@@ -167,7 +165,7 @@ func (s *Service) findProcess() {
 
 	for {
 		select {
-		case <-s.ctx.Done():
+		case <-ctx.Done():
 			return
 		case <-s.pidTicker:
 

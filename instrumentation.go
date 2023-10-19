@@ -49,6 +49,7 @@ var (
 // auto-instrumentation.
 type Instrumentation struct {
 	orchestrator *orchestrator.Service
+	ctx          context.Context
 }
 
 // NewInstrumentation returns a new [Instrumentation] configured with the
@@ -73,7 +74,7 @@ func NewInstrumentation(opts ...InstrumentationOption) (*Instrumentation, error)
 		log.Logger.Error(err, "unable to connect to OTLP endpoint")
 		return nil, err
 	}
-	r, err := orchestrator.New(ctx,
+	r, err := orchestrator.New(
 		orchestrator.WithServiceName(c.serviceName),
 		orchestrator.WithTarget(c.exePath),
 		orchestrator.WithExporter(traceExporter),
@@ -91,12 +92,13 @@ func NewInstrumentation(opts ...InstrumentationOption) (*Instrumentation, error)
 
 	return &Instrumentation{
 		orchestrator: r,
+		ctx:          ctx,
 	}, nil
 }
 
 // Run starts the instrumentation.
 func (i *Instrumentation) Run() error {
-	return i.orchestrator.Run()
+	return i.orchestrator.Run(i.ctx)
 }
 
 func contextWithSigterm(parent context.Context) context.Context {

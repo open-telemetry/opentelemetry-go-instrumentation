@@ -15,7 +15,6 @@
 package orchestrator
 
 import (
-	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -32,7 +31,6 @@ import (
 
 // Service is responsible for managing all instrumentation.
 type Service struct {
-	ctx         context.Context
 	version     string
 	analyzer    *process.Analyzer
 	exePath     string
@@ -46,6 +44,7 @@ type Service struct {
 	pidTicker   <-chan time.Time
 }
 
+// ServiceOpt applies a configuration option to [Service].
 type ServiceOpt interface {
 	apply(Service) Service
 }
@@ -116,6 +115,7 @@ func serviceNameFromAttrs(attrs string) string {
 	return serviceName
 }
 
+// Validate validates [Service] and returns an error if not valid.
 func (s Service) Validate() error {
 	if s.pid != 0 {
 		return validatePID(s.pid)
