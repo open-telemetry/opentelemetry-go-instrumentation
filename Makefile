@@ -189,4 +189,4 @@ check-clean-work-tree:
 		git --no-pager diff; \
 		echo 'Working tree is not clean, did you forget to run "make precommit", "make generate" or "make offsets"?'; \
 		exit 1; \
-fi
+	fi
