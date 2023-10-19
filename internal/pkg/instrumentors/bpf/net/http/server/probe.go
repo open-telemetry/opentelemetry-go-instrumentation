@@ -114,7 +114,8 @@ func (h *Instrumentor) Load(ctx *context.InstrumentorContext) error {
 		},
 		{
 			VarName: "buckets_ptr_pos",
-			PkgPath: "runtime.hmap",
+			PkgPath: "runtime",
+			Struct:  "hmap",
 			Field:   "buckets",
 		},
 	}, nil, false)
