@@ -26,7 +26,8 @@ import (
 
 func TestWithRegistersABI(t *testing.T) {
 	opts := []Option{WithRegistersABI(true)}
-	got := newConsts(opts)
+	got, err := newConsts(opts)
+	require.NoError(t, err)
 	require.Contains(t, got, keyIsRegistersABI)
 
 	v := got[keyIsRegistersABI]
@@ -42,7 +43,8 @@ func TestWithAllocationDetails(t *testing.T) {
 	}
 
 	opts := []Option{WithAllocationDetails(details)}
-	got := newConsts(opts)
+	got, err := newConsts(opts)
+	require.NoError(t, err)
 	require.Contains(t, got, keyTotalCPUs)
 	require.Contains(t, got, keyStartAddr)
 	require.Contains(t, got, keyEndAddr)
@@ -92,10 +94,16 @@ func TestWithOffset(t *testing.T) {
 
 	const name = "test_name"
 	opts := []Option{WithOffset(name, strct, field, v10)}
-	got := newConsts(opts)
+	got, err := newConsts(opts)
+	require.NoError(t, err)
 	require.Contains(t, got, name)
 
 	v := got[name]
 	require.IsType(t, *(new(uint64)), v)
 	assert.Equal(t, off, v.(uint64))
+
+	// Failed look-ups need to be returned as an error.
+	opts = []Option{WithOffset(name, strct+"Alt", field, v10)}
+	_, err = newConsts(opts)
+	assert.ErrorIs(t, err, errNotFound)
 }

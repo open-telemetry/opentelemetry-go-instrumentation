@@ -18,12 +18,12 @@ import (
 	_ "embed"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"runtime"
 
 	"github.com/cilium/ebpf"
 	"github.com/hashicorp/go-version"
 
-	"go.opentelemetry.io/auto/internal/pkg/log"
 	"go.opentelemetry.io/auto/internal/pkg/process"
 )
 
@@ -33,8 +33,6 @@ var (
 
 	offsets     TrackedOffsets
 	errNotFound = errors.New("offset not found")
-
-	logger = log.Logger.WithName("inject")
 
 	nCPU = uint32(runtime.NumCPU())
 )
@@ -59,32 +57,45 @@ func init() {
 //
 // If duplicate or colliding Options are passed, the last one passed is used.
 func Constants(spec *ebpf.CollectionSpec, opts ...Option) error {
-	consts := newConsts(opts)
+	consts, err := newConsts(opts)
+	if err != nil {
+		return err
+	}
 	if len(consts) == 0 {
 		return nil
 	}
 	return spec.RewriteConstants(consts)
 }
 
-func newConsts(opts []Option) map[string]interface{} {
+func newConsts(opts []Option) (map[string]interface{}, error) {
 	consts := make(map[string]interface{})
+	var err error
 	for _, o := range opts {
-		o.apply(consts)
+		err = errors.Join(err, o.apply(consts))
 	}
-	return consts
+	return consts, err
 }
 
 // Option configures key-values to be injected into an [ebpf.CollectionSpec].
 type Option interface {
-	apply(map[string]interface{})
+	apply(map[string]interface{}) error
 }
 
 type option map[string]interface{}
 
-func (o option) apply(m map[string]interface{}) {
+func (o option) apply(m map[string]interface{}) error {
 	for key, val := range o {
 		m[key] = val
 	}
+	return nil
+}
+
+type errOpt struct {
+	err error
+}
+
+func (o errOpt) apply(map[string]interface{}) error {
+	return o.err
 }
 
 // WithRegistersABI returns an option that will set the "is_registers_abi" to
@@ -121,13 +132,9 @@ func WithKeyValue(key string, value interface{}) Option {
 func WithOffset(key, strct, field string, ver *version.Version) Option {
 	off, ok := offsets.GetOffset(strct, field, ver)
 	if !ok {
-		logger.Error(
-			errNotFound, "skipping",
-			"struct", strct,
-			"field", field,
-			"version", ver,
-		)
-		return option{}
+		return errOpt{
+			err: fmt.Errorf("%w: %s.%s (%s)", errNotFound, strct, field, ver),
+		}
 	}
 	return WithKeyValue(key, off)
 }
