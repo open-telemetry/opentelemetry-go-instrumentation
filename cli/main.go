@@ -37,7 +37,7 @@ func main() {
 		return
 	}
 
-	log.Logger.V(0).Info("starting Go OpenTelemetry Agent ...")
+	log.Logger.V(0).Info("starting OpenTelemetry Go Agent ...")
 	if err = r.Run(); err != nil {
 		log.Logger.Error(err, "running orchestrator")
 	}
