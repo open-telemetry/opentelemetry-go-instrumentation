@@ -8,11 +8,12 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 
 ## [Unreleased]
 
+- Add ability to monitor multiple processes. ([#197](https://github.com/open-telemetry/opentelemetry-go-instrumentation/issues/197))
+
 ## [v0.7.0-alpha] - 2023-10-15
 
 ### Added
 
-- Add ability to monitor multiple processes. ([#197](https://github.com/open-telemetry/opentelemetry-go-instrumentation/issues/197))
 - Add `WithServiceName` config option for instrumentation. ([#353](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/353))
 - Add `WithPID` config option for instrumentation. ([#355](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/355))
 
