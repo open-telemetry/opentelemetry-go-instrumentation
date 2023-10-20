@@ -17,7 +17,6 @@ package instrumentors
 import (
 	"fmt"
 
-	"go.opentelemetry.io/auto/internal/pkg/instrumentors/allocator"
 	dbSql "go.opentelemetry.io/auto/internal/pkg/instrumentors/bpf/database/sql"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentors/bpf/github.com/gin-gonic/gin"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentors/bpf/google.golang.org/grpc"
@@ -39,7 +38,6 @@ type Manager struct {
 	done           chan bool
 	incomingEvents chan *events.Event
 	otelController *opentelemetry.Controller
-	allocator      *allocator.Allocator
 }
 
 // NewManager returns a new [Manager].
@@ -49,7 +47,6 @@ func NewManager(otelController *opentelemetry.Controller) (*Manager, error) {
 		done:           make(chan bool, 1),
 		incomingEvents: make(chan *events.Event),
 		otelController: otelController,
-		allocator:      allocator.New(),
 	}
 
 	err := registerInstrumentors(m)
