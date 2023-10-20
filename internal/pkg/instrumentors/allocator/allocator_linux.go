@@ -16,7 +16,6 @@ package allocator
 
 import (
 	"go.opentelemetry.io/auto/internal/pkg/instrumentors/bpffs"
-	"go.opentelemetry.io/auto/internal/pkg/instrumentors/context"
 	"go.opentelemetry.io/auto/internal/pkg/log"
 	"go.opentelemetry.io/auto/internal/pkg/process"
 )
@@ -30,16 +29,16 @@ func New() *Allocator {
 }
 
 // Load loads the BPF file-system.
-func (a *Allocator) Load(ctx *context.InstrumentorContext) error {
+func (a *Allocator) Load(target *process.TargetDetails) error {
 	logger := log.Logger.WithName("allocator")
-	if ctx.TargetDetails.AllocationDetails != nil {
+	if target.AllocationDetails != nil {
 		logger = logger.WithValues(
-			"start_addr", ctx.TargetDetails.AllocationDetails.StartAddr,
-			"end_addr", ctx.TargetDetails.AllocationDetails.EndAddr)
+			"start_addr", target.AllocationDetails.StartAddr,
+			"end_addr", target.AllocationDetails.EndAddr)
 	}
 	logger.V(0).Info("Loading allocator")
 
-	err := bpffs.Mount(ctx.TargetDetails)
+	err := bpffs.Mount(target)
 	if err != nil {
 		return err
 	}
