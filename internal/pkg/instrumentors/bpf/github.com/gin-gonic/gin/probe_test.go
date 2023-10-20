@@ -18,6 +18,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/go-logr/logr/testr"
 	"github.com/stretchr/testify/assert"
 
 	"go.opentelemetry.io/otel/attribute"
@@ -35,7 +36,7 @@ func TestInstrumentorConvertEvent(t *testing.T) {
 	traceID := trace.TraceID{1}
 	spanID := trace.SpanID{1}
 
-	i := New()
+	i := New(testr.New(t))
 	got := i.convertEvent(&Event{
 		BaseSpanProperties: context.BaseSpanProperties{
 			StartTime:   uint64(start.UnixNano()),

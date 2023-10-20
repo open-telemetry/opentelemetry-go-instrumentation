@@ -23,14 +23,13 @@ import (
 
 	"go.opentelemetry.io/auto/internal/pkg/inject"
 	iCtx "go.opentelemetry.io/auto/internal/pkg/instrumentors/context"
-	"go.opentelemetry.io/auto/internal/pkg/log"
 	"go.opentelemetry.io/auto/internal/pkg/process"
 )
 
 // Run runs the event processing loop for all managed Instrumentors.
 func (m *Manager) Run(ctx context.Context, target *process.TargetDetails) error {
 	if len(m.instrumentors) == 0 {
-		log.Logger.V(0).Info("there are no available instrumentations for target process")
+		m.logger.Info("there are no available instrumentations for target process")
 		return nil
 	}
 
@@ -50,7 +49,7 @@ func (m *Manager) Run(ctx context.Context, target *process.TargetDetails) error 
 			m.cleanup(target)
 			return ctx.Err()
 		case <-m.done:
-			log.Logger.V(0).Info("shutting down all instrumentors due to signal")
+			m.logger.Info("shutting down all instrumentors due to signal")
 			m.cleanup(target)
 			return nil
 		case e := <-m.incomingEvents:
@@ -65,7 +64,7 @@ func (m *Manager) load(target *process.TargetDetails) error {
 		return err
 	}
 
-	injector, err := inject.New(target)
+	injector, err := inject.New(m.logger, target)
 	if err != nil {
 		return err
 	}
@@ -81,22 +80,22 @@ func (m *Manager) load(target *process.TargetDetails) error {
 	}
 
 	if err := m.allocator.Load(ctx); err != nil {
-		log.Logger.Error(err, "failed to load allocator")
+		m.logger.Error(err, "failed to load allocator")
 		return err
 	}
 
 	// Load instrumentors
 	for name, i := range m.instrumentors {
-		log.Logger.V(0).Info("loading instrumentor", "name", name)
+		m.logger.Info("loading instrumentor", "name", name)
 		err := i.Load(ctx)
 		if err != nil {
-			log.Logger.Error(err, "error while loading instrumentors, cleaning up", "name", name)
+			m.logger.Error(err, "error while loading instrumentors, cleaning up", "name", name)
 			m.cleanup(target)
 			return err
 		}
 	}
 
-	log.Logger.V(0).Info("loaded instrumentors to memory", "total_instrumentors", len(m.instrumentors))
+	m.logger.Info("loaded instrumentors to memory", "total_instrumentors", len(m.instrumentors))
 	return nil
 }
 
@@ -106,10 +105,10 @@ func (m *Manager) cleanup(target *process.TargetDetails) {
 		i.Close()
 	}
 
-	log.Logger.V(0).Info("Cleaning bpffs")
+	m.logger.Info("Cleaning bpffs")
 	err := m.allocator.Clean(target)
 	if err != nil {
-		log.Logger.Error(err, "Failed to clean bpffs")
+		m.logger.Error(err, "Failed to clean bpffs")
 	}
 }
 

@@ -17,27 +17,41 @@ package main
 import (
 	"context"
 	"errors"
-	"fmt"
+	"log"
 	"os"
 	"os/signal"
 	"syscall"
 
+	"github.com/go-logr/logr"
+	"github.com/go-logr/stdr"
+	"github.com/go-logr/zapr"
+	"go.uber.org/zap"
+
 	"go.opentelemetry.io/auto"
-	"go.opentelemetry.io/auto/internal/pkg/log"
 	"go.opentelemetry.io/auto/internal/pkg/process"
 )
 
-func main() {
-	err := log.Init()
+func newLogger() logr.Logger {
+	zapLog, err := zap.NewProduction()
+
+	var logger logr.Logger
 	if err != nil {
-		fmt.Printf("could not init logger: %s\n", err)
-		os.Exit(1)
+		// Fallback to stdr logger.
+		logger = stdr.New(log.New(os.Stderr, "", log.LstdFlags))
+	} else {
+		logger = zapr.NewLogger(zapLog)
 	}
 
-	log.Logger.V(0).Info("building OpenTelemetry Go instrumentation ...")
+	return logger
+}
+
+func main() {
+	logger := newLogger().WithName("OpenTelemetry-Go-Auto")
+
+	logger.Info("building OpenTelemetry Go instrumentation ...")
 	inst, err := auto.NewInstrumentation()
 	if err != nil {
-		log.Logger.Error(err, "failed to create instrumentation")
+		logger.Error(err, "failed to create instrumentation")
 		return
 	}
 
@@ -57,8 +71,8 @@ func main() {
 		}
 	}()
 
-	log.Logger.V(0).Info("starting instrumentors...")
+	logger.Info("starting instrumentors...")
 	if err = inst.Run(ctx); err != nil && !errors.Is(err, process.ErrInterrupted) {
-		log.Logger.Error(err, "instrumentation crashed")
+		logger.Error(err, "instrumentation crashed")
 	}
 }

@@ -17,6 +17,8 @@ package instrumentors
 import (
 	"fmt"
 
+	"github.com/go-logr/logr"
+
 	"go.opentelemetry.io/auto/internal/pkg/instrumentors/allocator"
 	dbSql "go.opentelemetry.io/auto/internal/pkg/instrumentors/bpf/database/sql"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentors/bpf/github.com/gin-gonic/gin"
@@ -25,7 +27,6 @@ import (
 	httpClient "go.opentelemetry.io/auto/internal/pkg/instrumentors/bpf/net/http/client"
 	httpServer "go.opentelemetry.io/auto/internal/pkg/instrumentors/bpf/net/http/server"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentors/events"
-	"go.opentelemetry.io/auto/internal/pkg/log"
 	"go.opentelemetry.io/auto/internal/pkg/opentelemetry"
 	"go.opentelemetry.io/auto/internal/pkg/process"
 )
@@ -35,6 +36,7 @@ var errNotAllFuncsFound = fmt.Errorf("not all functions found for instrumentatio
 
 // Manager handles the management of [Instrumentor] instances.
 type Manager struct {
+	logger         logr.Logger
 	instrumentors  map[string]Instrumentor
 	done           chan bool
 	incomingEvents chan *events.Event
@@ -43,16 +45,18 @@ type Manager struct {
 }
 
 // NewManager returns a new [Manager].
-func NewManager(otelController *opentelemetry.Controller) (*Manager, error) {
+func NewManager(logger logr.Logger, otelController *opentelemetry.Controller) (*Manager, error) {
+	logger = logger.WithName("Manager")
 	m := &Manager{
+		logger:         logger,
 		instrumentors:  make(map[string]Instrumentor),
 		done:           make(chan bool, 1),
 		incomingEvents: make(chan *events.Event),
 		otelController: otelController,
-		allocator:      allocator.New(),
+		allocator:      allocator.New(logger),
 	}
 
-	err := registerInstrumentors(m)
+	err := m.registerInstrumentors()
 	if err != nil {
 		return nil, err
 	}
@@ -100,21 +104,21 @@ func (m *Manager) FilterUnusedInstrumentors(target *process.TargetDetails) {
 
 		if funcsFound != len(inst.FuncNames()) {
 			if funcsFound > 0 {
-				log.Logger.Error(errNotAllFuncsFound, "some of expected functions not found - check instrumented functions", "instrumentation_name", name, "funcs_found", funcsFound, "funcs_expected", len(inst.FuncNames()))
+				m.logger.Error(errNotAllFuncsFound, "some of expected functions not found - check instrumented functions", "instrumentation_name", name, "funcs_found", funcsFound, "funcs_expected", len(inst.FuncNames()))
 			}
 			delete(m.instrumentors, name)
 		}
 	}
 }
 
-func registerInstrumentors(m *Manager) error {
+func (m *Manager) registerInstrumentors() error {
 	insts := []Instrumentor{
-		grpc.New(),
-		grpcServer.New(),
-		httpServer.New(),
-		httpClient.New(),
-		gin.New(),
-		dbSql.New(),
+		grpc.New(m.logger),
+		grpcServer.New(m.logger),
+		httpServer.New(m.logger),
+		httpClient.New(m.logger),
+		gin.New(m.logger),
+		dbSql.New(m.logger),
 	}
 
 	for _, i := range insts {

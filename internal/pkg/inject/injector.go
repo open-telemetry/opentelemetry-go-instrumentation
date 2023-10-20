@@ -21,9 +21,9 @@ import (
 	"runtime"
 
 	"github.com/cilium/ebpf"
+	"github.com/go-logr/logr"
 	"github.com/hashicorp/go-version"
 
-	"go.opentelemetry.io/auto/internal/pkg/log"
 	"go.opentelemetry.io/auto/internal/pkg/process"
 )
 
@@ -32,6 +32,7 @@ var offsetsData string
 
 // Injector injects OpenTelemetry instrumentation Go packages.
 type Injector struct {
+	logger            logr.Logger
 	data              *TrackedOffsets
 	isRegAbi          bool
 	TotalCPUs         uint32
@@ -39,7 +40,7 @@ type Injector struct {
 }
 
 // New returns an [Injector] configured for the target.
-func New(target *process.TargetDetails) (*Injector, error) {
+func New(logger logr.Logger, target *process.TargetDetails) (*Injector, error) {
 	var offsets TrackedOffsets
 	err := json.Unmarshal([]byte(offsetsData), &offsets)
 	if err != nil {
@@ -47,6 +48,7 @@ func New(target *process.TargetDetails) (*Injector, error) {
 	}
 
 	return &Injector{
+		logger:            logger.WithName("Injector"),
 		data:              &offsets,
 		isRegAbi:          target.IsRegistersABI(),
 		TotalCPUs:         uint32(runtime.NumCPU()),
@@ -82,7 +84,7 @@ func (i *Injector) Inject(loadBpf loadBpfFunc, library string, ver *version.Vers
 	for _, dm := range fields {
 		offset, found := i.data.GetOffset(dm.StructName, dm.Field, ver)
 		if !found {
-			log.Logger.V(0).Info("could not find offset", "lib", library, "version", ver, "struct", dm.StructName, "field", dm.Field)
+			i.logger.Info("could not find offset", "lib", library, "version", ver, "struct", dm.StructName, "field", dm.Field)
 		} else {
 			injectedVars[dm.VarName] = offset
 		}
@@ -96,7 +98,7 @@ func (i *Injector) Inject(loadBpf loadBpfFunc, library string, ver *version.Vers
 		return nil, fmt.Errorf("adding flags injections: %w", err)
 	}
 
-	log.Logger.V(0).Info("Injecting variables", "vars", injectedVars)
+	i.logger.Info("Injecting variables", "vars", injectedVars)
 	if len(injectedVars) > 0 {
 		err = spec.RewriteConstants(injectedVars)
 		if err != nil {
