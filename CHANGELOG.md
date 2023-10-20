@@ -12,6 +12,10 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 
 - Documentation no longer says that `SYS_PTRACE` capabilty is needed. ([#388](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/388))
 
+### Fixed
+
+- Parse Go versions that contain `GOEXPERIMENT` suffixes. ([#389](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/389))
+
 ## [v0.7.0-alpha] - 2023-10-15
 
 ### Added
