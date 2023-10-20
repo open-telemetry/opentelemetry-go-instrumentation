@@ -67,7 +67,7 @@ func (a *Analyzer) DiscoverProcessID(target *TargetArgs) (int, error) {
 				log.Logger.V(0).Info("found process", "pid", pid)
 				return pid, nil
 			}
-			if err == ErrProcessNotFound {
+			if errors.Is(err, ErrProcessNotFound) {
 				log.Logger.V(0).Info("process not found yet, trying again soon", "exe_path", target.ExePath)
 			} else {
 				log.Logger.Error(err, "error while searching for process", "exe_path", target.ExePath)
@@ -84,7 +84,7 @@ func (a *Analyzer) findProcessID(target *TargetArgs) (int, error) {
 
 	for {
 		dirs, err := proc.Readdir(15)
-		if err == io.EOF {
+		if errors.Is(err, io.EOF) {
 			break
 		}
 		if err != nil {
