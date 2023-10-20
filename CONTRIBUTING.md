@@ -15,11 +15,21 @@ join the meeting or get in touch on
 
 ### Compiling the project
 
-Linux users can build this repository by running:
+Building requires Linux with kernel 4.4 or higher.
+In addition, use the latest versions of the following components:
+
+- `clang`
+- `gcc`
+- `go`
+- `libbpf-dev`
+- `llvm`
+- `make`
+
+Build the Go Automatic Instrumnentation binary by running:
 `make build`
 
-Windows/Mac users will need to compile this project inside a Linux docker container by running:
-`make docker-build`
+Alternatively, you can create a Linux Docker container:
+`make docker-build`.
 
 ### Issues
 

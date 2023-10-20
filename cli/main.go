@@ -16,14 +16,15 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"os/signal"
 	"syscall"
 
 	"go.opentelemetry.io/auto"
-	"go.opentelemetry.io/auto/internal/pkg/errors"
 	"go.opentelemetry.io/auto/internal/pkg/log"
+	"go.opentelemetry.io/auto/internal/pkg/process"
 )
 
 func main() {
@@ -57,7 +58,7 @@ func main() {
 	}()
 
 	log.Logger.V(0).Info("starting instrumentors...")
-	if err = inst.Run(ctx); err != nil && err != errors.ErrInterrupted {
+	if err = inst.Run(ctx); err != nil && !errors.Is(err, process.ErrInterrupted) {
 		log.Logger.Error(err, "instrumentation crashed")
 	}
 }
