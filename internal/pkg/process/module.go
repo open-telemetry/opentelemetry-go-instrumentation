@@ -54,6 +54,10 @@ func (a *Analyzer) getModuleDetails(f *elf.File) (*version.Version, map[string]s
 
 func parseGoVersion(vers string) (*version.Version, error) {
 	vers = strings.ReplaceAll(vers, "go", "")
+	// Trims GOEXPERIMENT version suffix if present.
+	if idx := strings.Index(vers, " X:"); idx > 0 {
+		vers = vers[:idx]
+	}
 	return version.NewVersion(vers)
 }
 

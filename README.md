@@ -75,10 +75,11 @@ To instrument an application on the same host, follow these steps:
 
 3. Run the OpenTelemetry Go Automatic Instrumentation with root privileges.
 
-> **Note:** If the target application isn't running yet, the instrumentation
-> waits for the process to start.
+> **Note**
+> If the target application isn't running yet, the instrumentation waits for
+> the process to start.
 
-### Instrument an application in Docker Compose
+### Instrument an application in Docker Compose
 
 To instrument a containerized application, follow these steps:
 
