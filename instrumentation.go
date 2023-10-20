@@ -238,7 +238,7 @@ func WithServiceName(serviceName string) InstrumentationOption {
 }
 
 // WithPID returns an [InstrumentationOption] defining the target binary for
-// [instrumentation] that is being run with the provided PID.
+// [Instrumentation] that is being run with the provided PID.
 //
 // This option conflicts with [WithTarget]. If both are used, the last one
 // provided to an [Instrumentation] will be used.
