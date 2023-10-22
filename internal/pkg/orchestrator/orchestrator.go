@@ -19,7 +19,6 @@ import (
 	"strings"
 	"time"
 
-	"go.opentelemetry.io/auto/internal/pkg/errors"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentors"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentors/bpffs"
 	"go.opentelemetry.io/auto/internal/pkg/log"
@@ -127,7 +126,7 @@ func (s *Service) Run(ctx context.Context) error {
 				log.Logger.V(0).Info("invoking instrumentors")
 
 				err = instManager.Run(td)
-				if err != nil && err != errors.ErrInterrupted {
+				if err != nil && err != process.ErrInterrupted {
 					log.Logger.Error(err, "error while running instrumentors")
 				}
 			}()

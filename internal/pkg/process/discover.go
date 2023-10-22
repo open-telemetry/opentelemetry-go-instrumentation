@@ -16,6 +16,7 @@ package process
 
 import (
 	"debug/elf"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -25,6 +26,16 @@ import (
 	"time"
 
 	"go.opentelemetry.io/auto/internal/pkg/log"
+)
+
+var (
+	// ErrInterrupted is returned when a process was interrupted but didn't
+	// fail in any other way.
+	ErrInterrupted = errors.New("interrupted")
+
+	// ErrProcessNotFound is returned when a requested process is not currently
+	// running.
+	ErrProcessNotFound = errors.New("process not found")
 )
 
 // Analyzer is used to find actively running processes.
