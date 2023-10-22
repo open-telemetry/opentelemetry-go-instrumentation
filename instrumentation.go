@@ -80,7 +80,6 @@ func NewInstrumentation(opts ...InstrumentationOption) (*Instrumentation, error)
 		orchestrator.WithExporter(traceExporter),
 		orchestrator.WithVersion(Version()),
 		orchestrator.WithPID(c.pid),
-		orchestrator.WithMonitorAll(true),
 	)
 	if err != nil {
 		log.Logger.V(0).Error(err, "creating orchestrator")

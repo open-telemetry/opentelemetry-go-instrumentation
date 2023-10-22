@@ -41,6 +41,7 @@ func New(
 		deadProcess: make(chan int, 10),
 		managers:    make(map[int]*instrumentors.Manager),
 		pidTicker:   time.NewTicker(2 * time.Second).C,
+		monitorAll:  true,
 	}
 	for _, o := range opts {
 		s = o.apply(s)

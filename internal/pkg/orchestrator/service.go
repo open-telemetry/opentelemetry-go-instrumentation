@@ -151,10 +151,10 @@ type fnOpt func(Service) Service
 
 func (o fnOpt) apply(c Service) Service { return o(c) }
 
-// WithTarget returns an [InstrumentationOption] defining the target binary for
+// WithTarget returns an [ServiceOpt] defining the target binary for
 // [Instrumentation] that is being executed at the provided path.
 //
-// If multiple of these options are provided to an [Instrumentation], the last
+// If multiple of these options are provided to an [Service], the last
 // one will be used.
 //
 // If OTEL_GO_AUTO_TARGET_EXE is defined it will take precedence over any value
@@ -166,9 +166,9 @@ func WithTarget(path string) ServiceOpt {
 	})
 }
 
-// WithServiceName returns an [InstrumentationOption] defining the name of the service running.
+// WithServiceName returns an [ServiceOpt] defining the name of the service running.
 //
-// If multiple of these options are provided to an [Instrumentation], the last
+// If multiple of these options are provided to an [Service], the last
 // one will be used.
 //
 // If OTEL_SERVICE_NAME is defined it will take precedence over any value
@@ -180,13 +180,8 @@ func WithServiceName(serviceName string) ServiceOpt {
 	})
 }
 
-func WithMonitorAll(monitorAll bool) ServiceOpt {
-	return fnOpt(func(c Service) Service {
-		c.monitorAll = monitorAll
-		return c
-	})
-}
-
+// WithExporter returns an [ServiceOpt] defining the SpanExporter
+// [Service] that is being run with.
 func WithExporter(expoter sdktrace.SpanExporter) ServiceOpt {
 	return fnOpt(func(c Service) Service {
 		c.exporter = expoter
@@ -194,6 +189,17 @@ func WithExporter(expoter sdktrace.SpanExporter) ServiceOpt {
 	})
 }
 
+// WithPID returns an [ServiceOpt] defining the target binary for
+// [Service] that is being run with the provided PID.
+//
+// This option conflicts with [WithTarget]. If both are used, the last one
+// provided to an [Instrumentation] will be used.
+//
+// If multiple of these options are provided to an [Service], the last
+// one will be used.
+//
+// If OTEL_GO_AUTO_TARGET_EXE is defined it will take precedence over any value
+// passed here.
 func WithPID(pid int) ServiceOpt {
 	return fnOpt(func(c Service) Service {
 		c.pid = pid
@@ -201,6 +207,8 @@ func WithPID(pid int) ServiceOpt {
 	})
 }
 
+// WithVersion returns an [ServiceOpt] defining the auto instrumentation version
+// [Service] that is being run.
 func WithVersion(version string) ServiceOpt {
 	return fnOpt(func(c Service) Service {
 		c.version = version
