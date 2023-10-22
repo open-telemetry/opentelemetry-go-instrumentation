@@ -31,14 +31,14 @@ func TestWithServiceName(t *testing.T) {
 	testServiceName := "test_serviceName"
 
 	// Use WithServiceName to config the service name
-	c, err := New(WithServiceName(testServiceName))
+	c, err := NewService(WithServiceName(testServiceName))
 	if err != nil {
 		t.Error(err)
 	}
 	assert.Equal(t, testServiceName, c.serviceName)
 
 	// No service name provided - check for default value
-	c, err = New()
+	c, err = NewService()
 	if err != nil {
 		t.Error(err)
 	}
@@ -50,7 +50,7 @@ func TestWithServiceName(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	c, err = New(WithServiceName((testServiceName)))
+	c, err = NewService(WithServiceName((testServiceName)))
 	if err != nil {
 		t.Error(err)
 	}
@@ -62,7 +62,7 @@ func TestWithServiceName(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	c, err = New(WithServiceName((testServiceName)))
+	c, err = NewService(WithServiceName((testServiceName)))
 	if err != nil {
 		t.Error(err)
 	}
@@ -72,7 +72,7 @@ func TestWithServiceName(t *testing.T) {
 func TestWithPID(t *testing.T) {
 	// Current PID
 	currPID := os.Getpid()
-	c, err := New(WithPID(currPID))
+	c, err := NewService(WithPID(currPID))
 	if err != nil {
 		t.Error(err)
 	}
@@ -83,7 +83,7 @@ func TestWithPID(t *testing.T) {
 	assert.Equal(t, currPID, c.pid)
 
 	// PID should override valid target exe
-	c, err = New(WithPID(currPID), WithTarget(currExe))
+	c, err = NewService(WithPID(currPID), WithTarget(currExe))
 	if err != nil {
 		t.Error(err)
 	}
