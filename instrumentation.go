@@ -74,7 +74,7 @@ func NewInstrumentation(opts ...InstrumentationOption) (*Instrumentation, error)
 		log.Logger.Error(err, "unable to connect to OTLP endpoint")
 		return nil, err
 	}
-	r, err := orchestrator.New(
+	r, err := orchestrator.NewService(
 		orchestrator.WithServiceName(c.serviceName),
 		orchestrator.WithTarget(c.exePath),
 		orchestrator.WithExporter(traceExporter),

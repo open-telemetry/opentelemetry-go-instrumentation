@@ -31,8 +31,8 @@ type pidServiceName struct {
 	pid         int
 }
 
-// New creates a new Implementation of orchestrator Service.
-func New(
+// NewService creates a new Implementation of orchestrator Service.
+func NewService(
 	opts ...ServiceOpt,
 ) (*Service, error) {
 	s := Service{
@@ -40,7 +40,7 @@ func New(
 		processch:   make(chan *pidServiceName, 10),
 		deadProcess: make(chan int, 10),
 		managers:    make(map[int]*instrumentors.Manager),
-		pidTicker:   time.NewTicker(2 * time.Second).C,
+		pidTicker:   time.NewTicker(2 * time.Second),
 		monitorAll:  true,
 	}
 	for _, o := range opts {
@@ -57,8 +57,9 @@ func (s *Service) Run(ctx context.Context) error {
 	for {
 		select {
 		case <-ctx.Done():
-
 			log.Logger.Info("Got context done")
+			s.pidTicker.Stop()
+
 			for _, m := range s.managers {
 				m.Close()
 			}
@@ -167,7 +168,7 @@ func (s *Service) findProcess(ctx context.Context) {
 		select {
 		case <-ctx.Done():
 			return
-		case <-s.pidTicker:
+		case <-s.pidTicker.C:
 
 			pids, err := s.analyzer.FindAllProcesses("")
 			if err != nil {

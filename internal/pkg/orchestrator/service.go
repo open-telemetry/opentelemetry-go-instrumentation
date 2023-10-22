@@ -41,7 +41,7 @@ type Service struct {
 	managers    map[int]*instrumentors.Manager
 	exporter    sdktrace.SpanExporter
 	pid         int
-	pidTicker   <-chan time.Time
+	pidTicker   *time.Ticker
 }
 
 // ServiceOpt applies a configuration option to [Service].
