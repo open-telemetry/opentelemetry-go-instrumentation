@@ -18,7 +18,6 @@ import (
 	"debug/dwarf"
 	"errors"
 	"fmt"
-	"io"
 
 	"github.com/hashicorp/go-version"
 )
@@ -105,7 +104,10 @@ func gotoEntry(r *dwarf.Reader, tag dwarf.Tag, name string) bool {
 func findEntry(r *dwarf.Reader, tag dwarf.Tag, name string) (*dwarf.Entry, error) {
 	for {
 		entry, err := r.Next()
-		if errors.Is(err, io.EOF) || entry == nil {
+		if err != nil {
+			return nil, err
+		}
+		if entry == nil {
 			break
 		}
 
