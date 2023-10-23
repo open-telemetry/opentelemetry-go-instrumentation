@@ -15,15 +15,19 @@
 package instrumentors
 
 import (
+	"context"
 	"fmt"
 
-	"go.opentelemetry.io/auto/internal/pkg/instrumentors/allocator"
+	"github.com/cilium/ebpf/link"
+	"github.com/cilium/ebpf/rlimit"
+
 	dbSql "go.opentelemetry.io/auto/internal/pkg/instrumentors/bpf/database/sql"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentors/bpf/github.com/gin-gonic/gin"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentors/bpf/google.golang.org/grpc"
 	grpcServer "go.opentelemetry.io/auto/internal/pkg/instrumentors/bpf/google.golang.org/grpc/server"
 	httpClient "go.opentelemetry.io/auto/internal/pkg/instrumentors/bpf/net/http/client"
 	httpServer "go.opentelemetry.io/auto/internal/pkg/instrumentors/bpf/net/http/server"
+	"go.opentelemetry.io/auto/internal/pkg/instrumentors/bpffs"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentors/events"
 	"go.opentelemetry.io/auto/internal/pkg/log"
 	"go.opentelemetry.io/auto/internal/pkg/opentelemetry"
@@ -39,7 +43,6 @@ type Manager struct {
 	done           chan bool
 	incomingEvents chan *events.Event
 	otelController *opentelemetry.Controller
-	allocator      *allocator.Allocator
 }
 
 // NewManager returns a new [Manager].
@@ -49,7 +52,6 @@ func NewManager(otelController *opentelemetry.Controller) (*Manager, error) {
 		done:           make(chan bool, 1),
 		incomingEvents: make(chan *events.Event),
 		otelController: otelController,
-		allocator:      allocator.New(),
 	}
 
 	err := registerInstrumentors(m)
@@ -105,6 +107,95 @@ func (m *Manager) FilterUnusedInstrumentors(target *process.TargetDetails) {
 			delete(m.instrumentors, name)
 		}
 	}
+}
+
+// Run runs the event processing loop for all managed Instrumentors.
+func (m *Manager) Run(ctx context.Context, target *process.TargetDetails) error {
+	if len(m.instrumentors) == 0 {
+		log.Logger.V(0).Info("there are no available instrumentations for target process")
+		return nil
+	}
+
+	err := m.load(target)
+	if err != nil {
+		return err
+	}
+
+	for _, i := range m.instrumentors {
+		go i.Run(m.incomingEvents)
+	}
+
+	for {
+		select {
+		case <-ctx.Done():
+			m.Close()
+			m.cleanup(target)
+			return ctx.Err()
+		case <-m.done:
+			log.Logger.V(0).Info("shutting down all instrumentors due to signal")
+			m.cleanup(target)
+			return nil
+		case e := <-m.incomingEvents:
+			m.otelController.Trace(e)
+		}
+	}
+}
+
+func (m *Manager) load(target *process.TargetDetails) error {
+	// Allow the current process to lock memory for eBPF resources.
+	if err := rlimit.RemoveMemlock(); err != nil {
+		return err
+	}
+
+	exe, err := link.OpenExecutable(fmt.Sprintf("/proc/%d/exe", target.PID))
+	if err != nil {
+		return err
+	}
+
+	if err := m.mount(target); err != nil {
+		return err
+	}
+
+	// Load instrumentors
+	for name, i := range m.instrumentors {
+		log.Logger.V(0).Info("loading instrumentor", "name", name)
+		err := i.Load(exe, target)
+		if err != nil {
+			log.Logger.Error(err, "error while loading instrumentors, cleaning up", "name", name)
+			m.cleanup(target)
+			return err
+		}
+	}
+
+	log.Logger.V(0).Info("loaded instrumentors to memory", "total_instrumentors", len(m.instrumentors))
+	return nil
+}
+
+func (m *Manager) mount(target *process.TargetDetails) error {
+	if target.AllocationDetails != nil {
+		log.Logger.Info("Mounting bpffs", target.AllocationDetails)
+	} else {
+		log.Logger.Info("Mounting bpffs")
+	}
+	return bpffs.Mount(target)
+}
+
+func (m *Manager) cleanup(target *process.TargetDetails) {
+	close(m.incomingEvents)
+	for _, i := range m.instrumentors {
+		i.Close()
+	}
+
+	log.Logger.V(0).Info("Cleaning bpffs")
+	err := bpffs.Cleanup(target)
+	if err != nil {
+		log.Logger.Error(err, "Failed to clean bpffs")
+	}
+}
+
+// Close closes m.
+func (m *Manager) Close() {
+	m.done <- true
 }
 
 func registerInstrumentors(m *Manager) error {
