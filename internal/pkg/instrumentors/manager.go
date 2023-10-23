@@ -15,17 +15,22 @@
 package instrumentors
 
 import (
+	"context"
 	"fmt"
 
+	"github.com/cilium/ebpf/link"
+	"github.com/cilium/ebpf/rlimit"
 	"github.com/go-logr/logr"
 
-	"go.opentelemetry.io/auto/internal/pkg/instrumentors/allocator"
+	"go.opentelemetry.io/auto/internal/pkg/inject"
 	dbSql "go.opentelemetry.io/auto/internal/pkg/instrumentors/bpf/database/sql"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentors/bpf/github.com/gin-gonic/gin"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentors/bpf/google.golang.org/grpc"
 	grpcServer "go.opentelemetry.io/auto/internal/pkg/instrumentors/bpf/google.golang.org/grpc/server"
 	httpClient "go.opentelemetry.io/auto/internal/pkg/instrumentors/bpf/net/http/client"
 	httpServer "go.opentelemetry.io/auto/internal/pkg/instrumentors/bpf/net/http/server"
+	"go.opentelemetry.io/auto/internal/pkg/instrumentors/bpffs"
+	iCtx "go.opentelemetry.io/auto/internal/pkg/instrumentors/context"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentors/events"
 	"go.opentelemetry.io/auto/internal/pkg/opentelemetry"
 	"go.opentelemetry.io/auto/internal/pkg/process"
@@ -41,7 +46,6 @@ type Manager struct {
 	done           chan bool
 	incomingEvents chan *events.Event
 	otelController *opentelemetry.Controller
-	allocator      *allocator.Allocator
 }
 
 // NewManager returns a new [Manager].
@@ -53,7 +57,6 @@ func NewManager(logger logr.Logger, otelController *opentelemetry.Controller) (*
 		done:           make(chan bool, 1),
 		incomingEvents: make(chan *events.Event),
 		otelController: otelController,
-		allocator:      allocator.New(logger),
 	}
 
 	err := m.registerInstrumentors()
@@ -109,6 +112,105 @@ func (m *Manager) FilterUnusedInstrumentors(target *process.TargetDetails) {
 			delete(m.instrumentors, name)
 		}
 	}
+}
+
+// Run runs the event processing loop for all managed Instrumentors.
+func (m *Manager) Run(ctx context.Context, target *process.TargetDetails) error {
+	if len(m.instrumentors) == 0 {
+		m.logger.Info("there are no available instrumentations for target process")
+		return nil
+	}
+
+	err := m.load(target)
+	if err != nil {
+		return err
+	}
+
+	for _, i := range m.instrumentors {
+		go i.Run(m.incomingEvents)
+	}
+
+	for {
+		select {
+		case <-ctx.Done():
+			m.Close()
+			m.cleanup(target)
+			return ctx.Err()
+		case <-m.done:
+			m.logger.Info("shutting down all instrumentors due to signal")
+			m.cleanup(target)
+			return nil
+		case e := <-m.incomingEvents:
+			m.otelController.Trace(e)
+		}
+	}
+}
+
+func (m *Manager) load(target *process.TargetDetails) error {
+	// Allow the current process to lock memory for eBPF resources.
+	if err := rlimit.RemoveMemlock(); err != nil {
+		return err
+	}
+
+	injector, err := inject.New(m.logger, target)
+	if err != nil {
+		return err
+	}
+
+	exe, err := link.OpenExecutable(fmt.Sprintf("/proc/%d/exe", target.PID))
+	if err != nil {
+		return err
+	}
+	ctx := &iCtx.InstrumentorContext{
+		TargetDetails: target,
+		Executable:    exe,
+		Injector:      injector,
+	}
+
+	if err := m.mount(target); err != nil {
+		return err
+	}
+
+	// Load instrumentors
+	for name, i := range m.instrumentors {
+		m.logger.Info("loading instrumentor", "name", name)
+		err := i.Load(ctx)
+		if err != nil {
+			m.logger.Error(err, "error while loading instrumentors, cleaning up", "name", name)
+			m.cleanup(target)
+			return err
+		}
+	}
+
+	m.logger.Info("loaded instrumentors to memory", "total_instrumentors", len(m.instrumentors))
+	return nil
+}
+
+func (m *Manager) mount(target *process.TargetDetails) error {
+	if target.AllocationDetails != nil {
+		m.logger.Info("Mounting bpffs", target.AllocationDetails)
+	} else {
+		m.logger.Info("Mounting bpffs")
+	}
+	return bpffs.Mount(target)
+}
+
+func (m *Manager) cleanup(target *process.TargetDetails) {
+	close(m.incomingEvents)
+	for _, i := range m.instrumentors {
+		i.Close()
+	}
+
+	m.logger.Info("Cleaning bpffs")
+	err := bpffs.Cleanup(target)
+	if err != nil {
+		m.logger.Error(err, "Failed to clean bpffs")
+	}
+}
+
+// Close closes m.
+func (m *Manager) Close() {
+	m.done <- true
 }
 
 func (m *Manager) registerInstrumentors() error {
