@@ -15,8 +15,11 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"os"
+	"os/signal"
+	"syscall"
 
 	"go.opentelemetry.io/auto"
 	"go.opentelemetry.io/auto/internal/pkg/log"
@@ -31,14 +34,36 @@ func main() {
 
 	log.Logger.V(0).Info("building OpenTelemetry Go instrumentation ...")
 
-	r, err := auto.NewInstrumentation()
+	ctx := contextWithSigterm(context.Background())
+	r, err := auto.NewInstrumentation(ctx)
 	if err != nil {
 		log.Logger.Error(err, "failed to create instrumentation")
 		return
 	}
 
 	log.Logger.V(0).Info("starting OpenTelemetry Go Agent ...")
-	if err = r.Run(); err != nil {
+	if err = r.Run(ctx); err != nil {
 		log.Logger.Error(err, "running orchestrator")
 	}
+}
+
+func contextWithSigterm(parent context.Context) context.Context {
+	ctx, cancel := context.WithCancel(parent)
+
+	ch := make(chan os.Signal, 1)
+	signal.Notify(ch, os.Interrupt, syscall.SIGTERM)
+
+	go func() {
+		defer close(ch)
+		defer signal.Stop(ch)
+
+		select {
+		case <-parent.Done(): // if parent is cancelled, return
+			return
+		case <-ch: // if SIGTERM is received, cancel this context
+			cancel()
+		}
+	}()
+
+	return ctx
 }

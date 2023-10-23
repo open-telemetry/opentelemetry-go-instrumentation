@@ -17,11 +17,8 @@ package auto
 import (
 	"context"
 	"fmt"
-	"os"
-	"os/signal"
 	"runtime"
 	"strings"
-	"syscall"
 
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
@@ -49,12 +46,11 @@ var (
 // auto-instrumentation.
 type Instrumentation struct {
 	orchestrator *orchestrator.Service
-	ctx          context.Context
 }
 
 // NewInstrumentation returns a new [Instrumentation] configured with the
 // provided opts.
-func NewInstrumentation(opts ...InstrumentationOption) (*Instrumentation, error) {
+func NewInstrumentation(ctx context.Context, opts ...InstrumentationOption) (*Instrumentation, error) {
 	if log.Logger.IsZero() {
 		err := log.Init()
 		if err != nil {
@@ -63,8 +59,6 @@ func NewInstrumentation(opts ...InstrumentationOption) (*Instrumentation, error)
 	}
 
 	c := newInstConfig(opts)
-
-	ctx := contextWithSigterm(context.Background())
 	log.Logger.V(0).Info("Establishing connection to OTLP receiver ...")
 	otlpTraceClient := otlptracegrpc.NewClient(
 		otlptracegrpc.WithDialOption(grpc.WithUserAgent(autoinstUserAgent)),
@@ -91,34 +85,12 @@ func NewInstrumentation(opts ...InstrumentationOption) (*Instrumentation, error)
 
 	return &Instrumentation{
 		orchestrator: r,
-		ctx:          ctx,
 	}, nil
 }
 
 // Run starts the instrumentation.
-func (i *Instrumentation) Run() error {
-	return i.orchestrator.Run(i.ctx)
-}
-
-func contextWithSigterm(parent context.Context) context.Context {
-	ctx, cancel := context.WithCancel(parent)
-
-	ch := make(chan os.Signal, 1)
-	signal.Notify(ch, os.Interrupt, syscall.SIGTERM)
-
-	go func() {
-		defer close(ch)
-		defer signal.Stop(ch)
-
-		select {
-		case <-parent.Done(): // if parent is cancelled, return
-			return
-		case <-ch: // if SIGTERM is received, cancel this context
-			cancel()
-		}
-	}()
-
-	return ctx
+func (i *Instrumentation) Run(ctx context.Context) error {
+	return i.orchestrator.Run(ctx)
 }
 
 // InstrumentationOption applies a configuration option to [Instrumentation].
