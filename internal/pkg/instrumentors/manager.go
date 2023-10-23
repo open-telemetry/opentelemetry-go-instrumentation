@@ -22,15 +22,14 @@ import (
 	"github.com/cilium/ebpf/rlimit"
 
 	"go.opentelemetry.io/auto/internal/pkg/inject"
-	iCtx "go.opentelemetry.io/auto/internal/pkg/instrumentors/context"
-
-	"go.opentelemetry.io/auto/internal/pkg/instrumentors/allocator"
 	dbSql "go.opentelemetry.io/auto/internal/pkg/instrumentors/bpf/database/sql"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentors/bpf/github.com/gin-gonic/gin"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentors/bpf/google.golang.org/grpc"
 	grpcServer "go.opentelemetry.io/auto/internal/pkg/instrumentors/bpf/google.golang.org/grpc/server"
 	httpClient "go.opentelemetry.io/auto/internal/pkg/instrumentors/bpf/net/http/client"
 	httpServer "go.opentelemetry.io/auto/internal/pkg/instrumentors/bpf/net/http/server"
+	"go.opentelemetry.io/auto/internal/pkg/instrumentors/bpffs"
+	iCtx "go.opentelemetry.io/auto/internal/pkg/instrumentors/context"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentors/events"
 	"go.opentelemetry.io/auto/internal/pkg/log"
 	"go.opentelemetry.io/auto/internal/pkg/opentelemetry"
@@ -46,7 +45,6 @@ type Manager struct {
 	done           chan bool
 	incomingEvents chan *events.Event
 	otelController *opentelemetry.Controller
-	allocator      *allocator.Allocator
 }
 
 // NewManager returns a new [Manager].
@@ -56,7 +54,6 @@ func NewManager(otelController *opentelemetry.Controller) (*Manager, error) {
 		done:           make(chan bool, 1),
 		incomingEvents: make(chan *events.Event),
 		otelController: otelController,
-		allocator:      allocator.New(),
 	}
 
 	err := registerInstrumentors(m)
@@ -167,8 +164,7 @@ func (m *Manager) load(target *process.TargetDetails) error {
 		Injector:      injector,
 	}
 
-	if err := m.allocator.Load(ctx); err != nil {
-		log.Logger.Error(err, "failed to load allocator")
+	if err := m.mount(target); err != nil {
 		return err
 	}
 
@@ -187,6 +183,15 @@ func (m *Manager) load(target *process.TargetDetails) error {
 	return nil
 }
 
+func (m *Manager) mount(target *process.TargetDetails) error {
+	if target.AllocationDetails != nil {
+		log.Logger.Info("Mounting bpffs", target.AllocationDetails)
+	} else {
+		log.Logger.Info("Mounting bpffs")
+	}
+	return bpffs.Mount(target)
+}
+
 func (m *Manager) cleanup(target *process.TargetDetails) {
 	close(m.incomingEvents)
 	for _, i := range m.instrumentors {
@@ -194,7 +199,7 @@ func (m *Manager) cleanup(target *process.TargetDetails) {
 	}
 
 	log.Logger.V(0).Info("Cleaning bpffs")
-	err := m.allocator.Clean(target)
+	err := bpffs.Cleanup(target)
 	if err != nil {
 		log.Logger.Error(err, "Failed to clean bpffs")
 	}
