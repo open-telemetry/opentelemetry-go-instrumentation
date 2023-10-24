@@ -65,6 +65,19 @@ func (jp *jsonPackage) addOffsets(strct, field string, off *Offsets) {
 	js.addOffsets(field, off)
 }
 
+type jsonModule struct {
+	Module   string         `json:"module"`
+	Packages []*jsonPackage `json:"packages"`
+}
+
+func (jm *jsonModule) addOffsets(pkg, strct, field string, off *Offsets) {
+	jp := find(&jm.Packages, func(p *jsonPackage) bool {
+		return pkg == p.Package
+	})
+	jp.Package = pkg
+	jp.addOffsets(strct, field, off)
+}
+
 // find returns the value in slice where f evaluates to true. If none exists a
 // new value of *T is created and appended to slice.
 func find[T any](slice *[]*T, f func(*T) bool) *T {

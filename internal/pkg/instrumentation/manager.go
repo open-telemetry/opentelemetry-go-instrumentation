@@ -66,11 +66,12 @@ func NewManager(logger logr.Logger, otelController *opentelemetry.Controller) (*
 }
 
 func (m *Manager) registerProbe(p probe.Probe) error {
-	if _, exists := m.probes[p.LibraryName()]; exists {
-		return fmt.Errorf("library %s registered twice, aborting", p.LibraryName())
+	name := p.Manifest().Name
+	if _, exists := m.probes[name]; exists {
+		return fmt.Errorf("instrumentation %q registered twice, aborting", name)
 	}
 
-	m.probes[p.LibraryName()] = p
+	m.probes[name] = p
 	return nil
 }
 
@@ -78,8 +79,8 @@ func (m *Manager) registerProbe(p probe.Probe) error {
 func (m *Manager) GetRelevantFuncs() map[string]interface{} {
 	funcsMap := make(map[string]interface{})
 	for _, i := range m.probes {
-		for _, f := range i.FuncNames() {
-			funcsMap[f] = nil
+		for _, s := range i.Manifest().Symbols {
+			funcsMap[s] = nil
 		}
 	}
 
@@ -96,15 +97,15 @@ func (m *Manager) FilterUnusedProbes(target *process.TargetDetails) {
 
 	for name, inst := range m.probes {
 		funcsFound := 0
-		for _, instF := range inst.FuncNames() {
-			if _, exists := existingFuncMap[instF]; exists {
+		for _, s := range inst.Manifest().Symbols {
+			if _, exists := existingFuncMap[s]; exists {
 				funcsFound++
 			}
 		}
 
-		if funcsFound != len(inst.FuncNames()) {
+		if n := len(inst.Manifest().Symbols); funcsFound != n {
 			if funcsFound > 0 {
-				m.logger.Error(errNotAllFuncsFound, "some of expected functions not found - check instrumented functions", "instrumentation_name", name, "funcs_found", funcsFound, "funcs_expected", len(inst.FuncNames()))
+				m.logger.Error(errNotAllFuncsFound, "some of expected functions not found - check instrumented functions", "instrumentation_name", name, "funcs_found", funcsFound, "funcs_expected", n)
 			}
 			delete(m.probes, name)
 		}
@@ -160,7 +161,7 @@ func (m *Manager) load(target *process.TargetDetails) error {
 
 	// Load probes
 	for name, i := range m.probes {
-		m.logger.Info("loading probes", "name", name)
+		m.logger.Info("loading probe", "name", name)
 		err := i.Load(exe, target)
 		if err != nil {
 			m.logger.Error(err, "error while loading probes, cleaning up", "name", name)
