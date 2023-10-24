@@ -93,12 +93,14 @@ func (i *Inspector) AddManifest(manifest Manifest) error {
 		b := newBuilder(i.log, i.client, nil)
 		for _, ver := range manifest.Application.Versions {
 			v := ver
-			i.jobs = append(i.jobs, job{
-				Renderer: manifest.Application.Renderer,
-				Builder:  b,
-				AppVer:   v,
-				Fields:   manifest.StructFields,
-			})
+			for _, p := range manifest.Packages {
+				i.jobs = append(i.jobs, job{
+					Renderer: manifest.Application.Renderer,
+					Builder:  b,
+					AppVer:   v,
+					Package:  p,
+				})
+			}
 		}
 		return nil
 	}
@@ -106,12 +108,14 @@ func (i *Inspector) AddManifest(manifest Manifest) error {
 	if manifest.Application.Versions == nil {
 		for _, gVer := range goVer {
 			v := gVer
-			i.jobs = append(i.jobs, job{
-				Renderer: manifest.Application.Renderer,
-				Builder:  newBuilder(i.log, i.client, v),
-				AppVer:   v,
-				Fields:   manifest.StructFields,
-			})
+			for _, p := range manifest.Packages {
+				i.jobs = append(i.jobs, job{
+					Renderer: manifest.Application.Renderer,
+					Builder:  newBuilder(i.log, i.client, v),
+					AppVer:   v,
+					Package:  p,
+				})
+			}
 		}
 		return nil
 	}
@@ -120,12 +124,14 @@ func (i *Inspector) AddManifest(manifest Manifest) error {
 		b := newBuilder(i.log, i.client, gV)
 		for _, ver := range manifest.Application.Versions {
 			v := ver
-			i.jobs = append(i.jobs, job{
-				Renderer: manifest.Application.Renderer,
-				Builder:  b,
-				AppVer:   v,
-				Fields:   manifest.StructFields,
-			})
+			for _, p := range manifest.Packages {
+				i.jobs = append(i.jobs, job{
+					Renderer: manifest.Application.Renderer,
+					Builder:  b,
+					AppVer:   v,
+					Package:  p,
+				})
+			}
 		}
 	}
 	return nil
@@ -135,11 +141,125 @@ type job struct {
 	Renderer Renderer
 	Builder  *builder
 	AppVer   *version.Version
-	Fields   []StructField
+	Package  Package
+}
+
+// Supported returns a map of packages (the package import path) and their
+// supported versions.
+func (i *Inspector) Supported(ctx context.Context) (map[string][]*version.Version, error) {
+	// TODO: support version range returns. i.e.
+	//
+	//  map[string]inject.VersionInfo
+
+	g, ctx := errgroup.WithContext(ctx)
+	todo := make(chan job)
+
+	g.Go(func() error {
+		defer close(todo)
+		for _, j := range i.jobs {
+			select {
+			case todo <- j:
+			case <-ctx.Done():
+				return ctx.Err()
+			}
+		}
+		return nil
+	})
+
+	// TODO: rename to result and move file-level result into "do".
+	type res struct {
+		Package   Package
+		Version   *version.Version
+		Supported bool
+	}
+
+	c := make(chan res)
+	for n := 0; n < max(1, i.NWorkers-1); n++ {
+		g.Go(func() error {
+			for m := range todo {
+				// TODO: this loops all pkg and then we loop again below. Do in
+				// one loop.
+				out, err := i.do(ctx, m)
+				if err != nil {
+					return err
+				}
+
+				for _, o := range out {
+					r := res{
+						Package: m.Package,
+						Version: m.AppVer,
+					}
+					if o.Found {
+						// Only look for funcs if all structs fields are
+						// supported.
+						r.Supported, err = i.hasFuncs(ctx, m)
+						if err != nil {
+							return err
+						}
+					}
+					select {
+					case c <- r:
+					case <-ctx.Done():
+						return ctx.Err()
+					}
+				}
+			}
+			return nil
+		})
+	}
+	go func() {
+		_ = g.Wait()
+		close(c)
+	}()
+
+	results := make(map[string][]*version.Version)
+	for r := range c {
+		if r.Supported {
+			results[r.Package.ImportPath] = append(results[r.Package.ImportPath], r.Version)
+		}
+	}
+
+	if err := g.Wait(); err != nil {
+		return nil, err
+	}
+	return results, nil
+}
+
+func (i *Inspector) hasFuncs(ctx context.Context, j job) (bool, error) {
+	// TODO: unify; this was copied from "do".
+	app, err := newApp(ctx, i.log, j)
+	buildErr := &errBuild{}
+	if errors.As(err, &buildErr) {
+		i.log.V(1).Info(
+			"failed to build app, skipping",
+			"version", j.AppVer,
+			"src", j.Renderer.src,
+			"Go", j.Builder.GoImage,
+			"rc", buildErr.ReturnCode,
+			"stdout", buildErr.Stdout,
+			"stderr", buildErr.Stderr,
+		)
+		return false, nil
+	} else if err != nil {
+		return false, err
+	}
+	defer app.Close()
+
+	for _, f := range j.Package.funcs() {
+		ok, err := app.HasSubprogram(f)
+		if err != nil {
+			return false, err
+		}
+		if !ok {
+			return false, nil
+		}
+	}
+	return true, nil
 }
 
 // Do performs the inspections and returns all found offsets.
 func (i *Inspector) Do(ctx context.Context) (*inject.TrackedOffsets, error) {
+	// TODO: rename to Offsets.
 	g, ctx := errgroup.WithContext(ctx)
 	todo := make(chan job)
 
@@ -206,7 +326,7 @@ type result struct {
 
 func (i *Inspector) do(ctx context.Context, j job) (out []result, err error) {
 	var uncachedIndices []int
-	for _, f := range j.Fields {
+	for _, f := range j.Package.structFields() {
 		o, ok := i.Cache.GetOffset(j.AppVer, f)
 		out = append(out, result{
 			StructField: f,

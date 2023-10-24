@@ -15,55 +15,143 @@
 package main
 
 import (
-	"embed"
+	"context"
 	"flag"
 	"fmt"
+	"log"
 	"os"
-	"path/filepath"
-	"strings"
-	"text/template"
+	"os/signal"
+	"runtime"
+
+	"github.com/go-logr/logr"
+	"github.com/go-logr/stdr"
+
+	"go.opentelemetry.io/auto/internal/tools/inspect"
+)
+
+const (
+	minGoVersion = "1.12"
 )
 
 var (
-	out = flag.String("out", "../../../../../", "output directory")
+	// cacheFile is the offset cache file path flag value.
+	cacheFile string
+	// numCPU is the number of CPUs to use flag value.
+	numCPU int
+	// verbosity is the log verbosity level flag value.
+	verbosity int
 
-	//go:embed templates/*.tmpl
-	//go:embed templates/database/sql/*.tmpl
-	//go:embed templates/github.com/gin-gonic/gin/*.tmpl
-	//go:embed templates/github.com/gorilla/mux/*.tmpl
-	//go:embed templates/google.golang.org/grpc/*.tmpl
-	//go:embed templates/net/http/*.tmpl
-	rootFS embed.FS
+	logger logr.Logger
 )
 
-func main() {
+func init() {
+	flag.StringVar(&cacheFile, "cache", "../../../../pkg/inject/offset_results.json", "offset cache")
+	flag.IntVar(&numCPU, "workers", runtime.NumCPU(), "max number of Goroutine workers")
+	flag.IntVar(&verbosity, "v", 0, "log verbosity")
+
 	flag.Parse()
 
-	dest := filepath.Join(*out, "COMPATIBILITY.md")
-	fmt.Printf("Generating compatibility documentation at %s ...\n", dest)
-	render("templates/COMPATIBILITY.md.tmpl", *out, Packages)
-
-	fmt.Println("Done!")
+	stdr.SetVerbosity(verbosity)
+	logger = stdr.New(log.New(os.Stderr, "", log.LstdFlags))
 }
 
-// render renders all templates to the dest directory using the data.
-func render(src, dest string, data any) error {
-	tmpls, err := template.ParseFS(rootFS, src)
+func manifests() ([]inspect.Manifest, error) {
+	goVers, err := GoVersions(">= " + minGoVersion)
 	if err != nil {
+		return nil, fmt.Errorf("failed to get Go versions: %w", err)
+	}
+
+	ren := func(src string) inspect.Renderer {
+		return inspect.NewRenderer(logger, src, inspect.DefaultFS)
+	}
+
+	return []inspect.Manifest{
+		{
+			Application: inspect.Application{
+				Renderer:  ren("templates/net/http/*.tmpl"),
+				GoVerions: goVers,
+			},
+			Packages: []inspect.Package{
+				{
+					ImportPath: "net/http",
+					Structs: []inspect.Struct{
+						{
+							Name: "Request",
+							Fields: []inspect.Field{
+								{Name: "Method"},
+								{Name: "URL"},
+								{Name: "RemoteAddr"},
+								{Name: "Header"},
+								{Name: "ctx"},
+							},
+							Methods: []inspect.Method{
+								{Name: "do", Indirect: true},
+							},
+						},
+					},
+				},
+				{
+					ImportPath: "net/url",
+					Structs: []inspect.Struct{
+						{
+							Name: "URL",
+							Fields: []inspect.Field{
+								{Name: "Path"},
+							},
+						},
+					},
+				},
+			},
+		},
+	}, nil
+}
+
+func main() {
+	if err := run(); err != nil {
+		os.Exit(1)
+	}
+}
+
+func run() error {
+	m, err := manifests()
+	if err != nil {
+		logger.Error(err, "failed to load manifests")
 		return err
 	}
-	for _, tmpl := range tmpls.Templates() {
-		target := filepath.Join(dest, strings.TrimSuffix(tmpl.Name(), ".tmpl"))
-		wr, err := os.Create(target)
-		if err != nil {
-			return err
-		}
+	logger.V(2).Info("loaded manifests", "manifests", m)
 
-		err = tmpl.Execute(wr, data)
+	var cache *inspect.Cache
+	if cacheFile != "" {
+		cache, err = inspect.NewCache(logger, cacheFile)
 		if err != nil {
-			return err
+			logger.Error(err, "failed to load cache", "path", cacheFile)
+			// Use an empty cache.
 		}
+		logger.V(2).Info("loaded cache")
 	}
 
+	i, err := inspect.New(logger, cache, m...)
+	if err != nil {
+		logger.Error(err, "failed to setup inspector")
+		return err
+	}
+	i.NWorkers = numCPU
+	logger.V(2).Info("created Inspector", "Inspector", i)
+
+	// Trap Ctrl+C and call cancel on the context.
+	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
+	defer cancel()
+
+	logger.V(1).Info("inspecting supported package versions...")
+	to, err := i.Supported(ctx)
+	if err != nil {
+		logger.Error(err, "failed get supported")
+		return err
+	}
+	logger.V(1).Info("found supported package versions")
+
+	for p, v := range to {
+		fmt.Printf("%s: %s\n", p, v)
+	}
 	return nil
 }

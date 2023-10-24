@@ -18,6 +18,7 @@ import (
 	"context"
 	"debug/dwarf"
 	"debug/elf"
+	"errors"
 	"os"
 
 	"github.com/go-logr/logr"
@@ -29,7 +30,6 @@ type app struct {
 	Renderer Renderer
 	Builder  *builder
 	AppVer   *version.Version
-	Fields   []StructField
 
 	log    logr.Logger
 	tmpDir string
@@ -47,7 +47,6 @@ func newApp(ctx context.Context, l logr.Logger, j job) (*app, error) {
 		Renderer: j.Renderer,
 		Builder:  j.Builder,
 		AppVer:   j.AppVer,
-		Fields:   j.Fields,
 		log:      l.WithName("app"),
 	}
 
@@ -89,6 +88,17 @@ func newApp(ctx context.Context, l logr.Logger, j job) (*app, error) {
 func (a *app) GetOffset(sf StructField) (uint64, bool) {
 	a.log.V(1).Info("analyzing binary...", "package", sf.PkgPath, "binary", a.exec)
 	return sf.offset(a.data)
+}
+
+func (a *app) HasSubprogram(name string) (bool, error) {
+	_, err := findEntry(a.data.Reader(), dwarf.TagSubprogram, name)
+	switch {
+	case errors.Is(err, errNotFound):
+		return false, nil
+	case err != nil:
+		return false, err
+	}
+	return true, nil
 }
 
 // Close closes the app, releasing all held resources.
