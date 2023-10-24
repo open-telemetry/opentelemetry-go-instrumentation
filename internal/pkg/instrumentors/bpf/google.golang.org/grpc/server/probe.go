@@ -18,7 +18,6 @@ import (
 	"bytes"
 	"encoding/binary"
 	"errors"
-	"fmt"
 	"os"
 
 	"go.opentelemetry.io/auto/internal/pkg/instrumentors/bpffs"
@@ -26,7 +25,6 @@ import (
 	"github.com/cilium/ebpf"
 	"github.com/cilium/ebpf/link"
 	"github.com/cilium/ebpf/perf"
-	"github.com/hashicorp/go-version"
 	"golang.org/x/sys/unix"
 
 	"go.opentelemetry.io/otel/attribute"
@@ -79,12 +77,7 @@ func (g *Instrumentor) FuncNames() []string {
 // Load loads all instrumentation offsets.
 func (g *Instrumentor) Load(ctx *context.InstrumentorContext) error {
 	targetLib := "google.golang.org/grpc"
-	v := ctx.TargetDetails.Libraries[targetLib]
-	ver, err := version.NewVersion(v)
-	if err != nil {
-		return fmt.Errorf("invalid package version: %w", err)
-	}
-
+	ver := ctx.TargetDetails.Libraries[targetLib]
 	spec, err := ctx.Injector.Inject(loadBpf, "google.golang.org/grpc", ver, []*inject.StructField{
 		{
 			VarName:    "stream_method_ptr_pos",
