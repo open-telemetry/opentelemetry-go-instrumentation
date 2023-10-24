@@ -72,6 +72,10 @@ type FlagField struct {
 
 // Inject injects instrumentation for the provided library data type.
 func (i *Injector) Inject(loadBpf loadBpfFunc, library string, ver *version.Version, fields []*StructField, flagFields []*FlagField, initAlloc bool) (*ebpf.CollectionSpec, error) {
+	if ver == nil {
+		return nil, fmt.Errorf("missing version: %s", library)
+	}
+
 	spec, err := loadBpf()
 	if err != nil {
 		return nil, err
