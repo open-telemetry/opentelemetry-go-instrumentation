@@ -28,7 +28,6 @@ import (
 	httpClient "go.opentelemetry.io/auto/internal/pkg/instrumentors/bpf/net/http/client"
 	httpServer "go.opentelemetry.io/auto/internal/pkg/instrumentors/bpf/net/http/server"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentors/bpffs"
-	iCtx "go.opentelemetry.io/auto/internal/pkg/instrumentors/context"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentors/events"
 	"go.opentelemetry.io/auto/internal/pkg/log"
 	"go.opentelemetry.io/auto/internal/pkg/opentelemetry"
@@ -152,10 +151,6 @@ func (m *Manager) load(target *process.TargetDetails) error {
 	if err != nil {
 		return err
 	}
-	ctx := &iCtx.InstrumentorContext{
-		TargetDetails: target,
-		Executable:    exe,
-	}
 
 	if err := m.mount(target); err != nil {
 		return err
@@ -164,7 +159,7 @@ func (m *Manager) load(target *process.TargetDetails) error {
 	// Load instrumentors
 	for name, i := range m.instrumentors {
 		log.Logger.V(0).Info("loading instrumentor", "name", name)
-		err := i.Load(ctx)
+		err := i.Load(exe, target)
 		if err != nil {
 			log.Logger.Error(err, "error while loading instrumentors, cleaning up", "name", name)
 			m.cleanup(target)
