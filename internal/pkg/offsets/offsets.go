@@ -24,7 +24,52 @@ import (
 )
 
 // Index holds all struct field offsets.
-type Index map[ID]*Offsets
+type Index struct {
+	data map[ID]*Offsets
+}
+
+// NewIndex returns a new empty Index.
+func NewIndex() Index {
+	return Index{data: make(map[ID]*Offsets)}
+}
+
+// Get returns the Offsets and true for an id contained in the Index i. It will
+// return nil and false for any id not contained in i.
+func (i Index) Get(id ID) (*Offsets, bool) {
+	o, ok := i.data[id]
+	return o, ok
+}
+
+// GetOffset returns the offset value and true for the version ver of id
+// contained in the Index i. It will return zero and false for any id not
+// contained in i.
+func (i Index) GetOffset(id ID, ver *version.Version) (uint64, bool) {
+	offs, ok := i.data[id]
+	if !ok {
+		return 0, false
+	}
+	o, ok := offs.Get(ver)
+	return o, ok
+}
+
+// Put stores offsets in the Index i for id.
+//
+// Any existing offsets stored for id will be replaced. Use PutOffset if you
+// would like to update existing offsets for id with an offset value.
+func (i Index) Put(id ID, offsets *Offsets) { i.data[id] = offsets }
+
+// PutOffset stores the offset value for version ver of id within the Index i.
+//
+// This will update any existing offsets stored for id with offset. If ver
+// already exists within those offsets it will overwrite that value.
+func (i Index) PutOffset(id ID, ver *version.Version, offset uint64) {
+	off, ok := i.Get(id)
+	if !ok {
+		off = NewOffsets()
+		i.Put(id, off)
+	}
+	off.Put(ver, offset)
+}
 
 // UnmarshalJSON unmarshals the offset JSON data into i.
 func (i *Index) UnmarshalJSON(data []byte) error {
@@ -59,7 +104,7 @@ func (i *Index) UnmarshalJSON(data []byte) error {
 		}
 	}
 
-	*i = m
+	i.data = m
 
 	return nil
 }
@@ -67,7 +112,7 @@ func (i *Index) UnmarshalJSON(data []byte) error {
 // MarshalJSON marshals i into JSON data.
 func (i Index) MarshalJSON() ([]byte, error) {
 	var out []*jsonPackage
-	for id, off := range i {
+	for id, off := range i.data {
 		jp := find(&out, func(p *jsonPackage) bool {
 			return id.PkgPath == p.Package
 		})
@@ -126,6 +171,11 @@ type Offsets struct {
 
 	// values is a map between version and offset value.
 	values map[verKey]offsetVersion
+}
+
+// NewOffsets returns a new empty *Offsets.
+func NewOffsets() *Offsets {
+	return &Offsets{values: make(map[verKey]offsetVersion)}
 }
 
 // Get returns the offset in bytes and true if known. Otherwise, 0 and false

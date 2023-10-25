@@ -32,7 +32,7 @@ var (
 	//go:embed offset_results.json
 	offsetsData string
 
-	offIdx      = make(offsets.Index)
+	offIdx      = offsets.NewIndex()
 	errNotFound = errors.New("offset not found")
 
 	nCPU = uint32(runtime.NumCPU())
@@ -131,7 +131,7 @@ func WithKeyValue(key string, value interface{}) Option {
 // If the offset value is not known, an error is returned when the returned
 // Option is used.
 func WithOffset(key string, id offsets.ID, ver *version.Version) Option {
-	off, ok := offIdx[id].Get(ver)
+	off, ok := offIdx.GetOffset(id, ver)
 	if !ok {
 		return errOpt{
 			err: fmt.Errorf("%w: %s (%s)", errNotFound, id, ver),

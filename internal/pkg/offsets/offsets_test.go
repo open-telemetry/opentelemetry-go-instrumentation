@@ -67,28 +67,30 @@ func TestOffsets(t *testing.T) {
 }
 
 var index = Index{
-	ID{PkgPath: "net/http", Struct: "Request", Field: "Method"}: &Offsets{
-		values: map[verKey]offsetVersion{
-			newVerKey(v120): {offset: 1, version: v120},
-			newVerKey(v121): {offset: 1, version: v121},
-			newVerKey(v130): {offset: 1, version: v130},
+	data: map[ID]*Offsets{
+		NewID("net/http", "Request", "Method"): {
+			values: map[verKey]offsetVersion{
+				newVerKey(v120): {offset: 1, version: v120},
+				newVerKey(v121): {offset: 1, version: v121},
+				newVerKey(v130): {offset: 1, version: v130},
+			},
 		},
-	},
-	ID{PkgPath: "net/http", Struct: "Request", Field: "URL"}: &Offsets{
-		values: map[verKey]offsetVersion{
-			newVerKey(v120): {offset: 0, version: v120},
-			newVerKey(v121): {offset: 1, version: v121},
-			newVerKey(v130): {offset: 2, version: v130},
+		NewID("net/http", "Request", "URL"): {
+			values: map[verKey]offsetVersion{
+				newVerKey(v120): {offset: 0, version: v120},
+				newVerKey(v121): {offset: 1, version: v121},
+				newVerKey(v130): {offset: 2, version: v130},
+			},
 		},
-	},
-	ID{PkgPath: "net/http", Struct: "Response", Field: "Status"}: &Offsets{
-		values: map[verKey]offsetVersion{
-			newVerKey(v120): {offset: 0, version: v120},
+		NewID("net/http", "Response", "Status"): {
+			values: map[verKey]offsetVersion{
+				newVerKey(v120): {offset: 0, version: v120},
+			},
 		},
-	},
-	ID{PkgPath: "google.golang.org/grpc", Struct: "ClientConn", Field: "target"}: &Offsets{
-		values: map[verKey]offsetVersion{
-			newVerKey(v120): {offset: 0, version: v120},
+		NewID("google.golang.org/grpc", "ClientConn", "target"): {
+			values: map[verKey]offsetVersion{
+				newVerKey(v120): {offset: 0, version: v120},
+			},
 		},
 	},
 }

@@ -74,11 +74,9 @@ func TestWithOffset(t *testing.T) {
 
 	origOff := offIdx
 	t.Cleanup(func() { offIdx = origOff })
-	offIdx = make(offsets.Index)
-	o := new(offsets.Offsets)
-	o.Put(v10, off)
-	o.Put(v18, off)
-	offIdx[id] = o
+	offIdx = offsets.NewIndex()
+	offIdx.PutOffset(id, v10, off)
+	offIdx.PutOffset(id, v18, off)
 
 	const name = "test_name"
 	opts := []Option{WithOffset(name, id, v10)}
