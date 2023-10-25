@@ -1,0 +1,10 @@
+package main
+
+import "database/sql"
+
+func main() {
+	db := &sql.DB{}
+	for {
+		db.QueryContext(nil, "")
+	}
+}

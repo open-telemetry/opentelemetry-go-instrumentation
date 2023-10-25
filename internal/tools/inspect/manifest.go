@@ -28,6 +28,9 @@ import (
 type Manifest struct {
 	// Application is the application to extract binary data from.
 	Application Application
+
+	// Packages are the package declarations to inspect.
+	Packages []Package
 	// StructFields are struct fields the application should contain that need
 	// offsets to be found.
 	StructFields []StructField
@@ -55,6 +58,83 @@ type Application struct {
 	//
 	// If this is nil, the latest version of Go will be used.
 	GoVerions []*version.Version
+}
+
+// Package contains all the declarations from a package to inspect.
+type Package struct {
+	// ImportPath is the unique import path of the package.
+	ImportPath string
+
+	// Structs are the structs within the package to inspect.
+	Structs []Struct
+
+	// TODO: If functions are every instrumented (i.e. not methods) they can be
+	// added here.
+}
+
+// funcs returns the fully-qualified names of all the instrumented functions
+// (including methods) within a package. The package names are constructed to
+// match the DWARF symbol names of a Go package.
+func (p Package) funcs() []string {
+	var out []string
+	for _, s := range p.Structs {
+		out = append(out, s.funcs(p.ImportPath)...)
+	}
+	return out
+}
+
+func (p Package) structFields() []StructField {
+	var out []StructField
+	for _, s := range p.Structs {
+		for _, f := range s.Fields {
+			out = append(out, StructField{
+				PkgPath: p.ImportPath,
+				Struct:  s.Name,
+				Field:   f.Name,
+			})
+		}
+	}
+	return out
+}
+
+// Struct is a Go struct type within a package that to inspect.
+type Struct struct {
+	// Name is the struct type name.
+	Name string
+	// Fields are the fields within the struct to inspect.
+	Fields []Field
+	// Methods are the struct methods to inspect.
+	Methods []Method
+}
+
+func (s Struct) funcs(pkg string) []string {
+	var out []string
+	for _, m := range s.Methods {
+		out = append(out, m.name(pkg, s.Name))
+	}
+	return out
+}
+
+// Method is a method of a struct within a package being inspected.
+type Method struct {
+	// Name is the method name.
+	Name string
+	// Indirect defines if the method is called with an indirect receiver.
+	Indirect bool
+}
+
+// name returns the fully-qualified method name.
+func (m Method) name(pkg, strct string) string {
+	if m.Indirect {
+		return fmt.Sprintf("%s.(*%s).%s", pkg, strct, m.Name)
+	}
+	return fmt.Sprintf("%s.%s.%s", pkg, strct, m.Name)
+}
+
+// Field is a field of a struct within a package being inspected.
+type Field struct {
+	// Name is the field name.
+	Name string
 }
 
 // StructField defines a field of a struct from a package.
@@ -100,6 +180,8 @@ func gotoEntry(r *dwarf.Reader, tag dwarf.Tag, name string) bool {
 	return err == nil
 }
 
+var errNotFound = errors.New("not found")
+
 // findEntry returns the DWARF entry with a tag equal to name read from r. An
 // error is returned if the entry cannot be found.
 func findEntry(r *dwarf.Reader, tag dwarf.Tag, name string) (*dwarf.Entry, error) {
@@ -117,7 +199,7 @@ func findEntry(r *dwarf.Reader, tag dwarf.Tag, name string) (*dwarf.Entry, error
 			}
 		}
 	}
-	return nil, errors.New("not found")
+	return nil, errNotFound
 }
 
 // entryField returns the DWARF field from DWARF entry e that has the passed
