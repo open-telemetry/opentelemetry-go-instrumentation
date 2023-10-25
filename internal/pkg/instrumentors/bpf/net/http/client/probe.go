@@ -21,6 +21,7 @@ import (
 	"os"
 
 	"go.opentelemetry.io/auto/internal/pkg/instrumentors/bpffs"
+	"go.opentelemetry.io/auto/internal/pkg/offsets"
 
 	"github.com/cilium/ebpf"
 	"github.com/cilium/ebpf/link"
@@ -35,6 +36,7 @@ import (
 	"go.opentelemetry.io/auto/internal/pkg/instrumentors/context"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentors/events"
 	"go.opentelemetry.io/auto/internal/pkg/log"
+	"go.opentelemetry.io/auto/internal/pkg/process"
 )
 
 //go:generate go run github.com/cilium/ebpf/cmd/bpf2go -target amd64,arm64 -cc clang -cflags $CFLAGS bpf ./bpf/probe.bpf.c
@@ -71,45 +73,28 @@ func (h *Instrumentor) FuncNames() []string {
 }
 
 // Load loads all instrumentation offsets.
-func (h *Instrumentor) Load(ctx *context.InstrumentorContext) error {
-	spec, err := ctx.Injector.Inject(loadBpf, "go", ctx.TargetDetails.GoVersion, []*inject.StructField{
-		{
-			VarName: "method_ptr_pos",
-			PkgPath: "net/http",
-			Struct:  "Request",
-			Field:   "Method",
-		},
-		{
-			VarName: "url_ptr_pos",
-			PkgPath: "net/http",
-			Struct:  "Request",
-			Field:   "URL",
-		},
-		{
-			VarName: "path_ptr_pos",
-			PkgPath: "net/url",
-			Struct:  "URL",
-			Field:   "Path",
-		},
-		{
-			VarName: "headers_ptr_pos",
-			PkgPath: "net/http",
-			Struct:  "Request",
-			Field:   "Header",
-		},
-		{
-			VarName: "ctx_ptr_pos",
-			PkgPath: "net/http",
-			Struct:  "Request",
-			Field:   "ctx",
-		},
-		{
-			VarName: "buckets_ptr_pos",
-			PkgPath: "runtime",
-			Struct:  "hmap",
-			Field:   "buckets",
-		},
-	}, nil, true)
+func (h *Instrumentor) Load(exec *link.Executable, target *process.TargetDetails) error {
+	ver := target.GoVersion
+
+	spec, err := loadBpf()
+	if err != nil {
+		return err
+	}
+	if target.AllocationDetails == nil {
+		// This Instrumentor requires allocation.
+		return errors.New("no allocation details")
+	}
+	err = inject.Constants(
+		spec,
+		inject.WithRegistersABI(target.IsRegistersABI()),
+		inject.WithAllocationDetails(*target.AllocationDetails),
+		inject.WithOffset("method_ptr_pos", offsets.NewID("net/http", "Request", "Method"), ver),
+		inject.WithOffset("url_ptr_pos", offsets.NewID("net/http", "Request", "URL"), ver),
+		inject.WithOffset("path_ptr_pos", offsets.NewID("net/url", "URL", "Path"), ver),
+		inject.WithOffset("headers_ptr_pos", offsets.NewID("net/http", "Request", "Header"), ver),
+		inject.WithOffset("ctx_ptr_pos", offsets.NewID("net/http", "Request", "ctx"), ver),
+		inject.WithOffset("buckets_ptr_pos", offsets.NewID("runtime", "hmap", "buckets"), ver),
+	)
 	if err != nil {
 		return err
 	}
@@ -117,7 +102,7 @@ func (h *Instrumentor) Load(ctx *context.InstrumentorContext) error {
 	h.bpfObjects = &bpfObjects{}
 	err = spec.LoadAndAssign(h.bpfObjects, &ebpf.CollectionOptions{
 		Maps: ebpf.MapOptions{
-			PinPath: bpffs.PathForTargetApplication(ctx.TargetDetails),
+			PinPath: bpffs.PathForTargetApplication(target),
 		},
 	})
 
@@ -125,12 +110,12 @@ func (h *Instrumentor) Load(ctx *context.InstrumentorContext) error {
 		return err
 	}
 
-	offset, err := ctx.TargetDetails.GetFunctionOffset(h.FuncNames()[0])
+	offset, err := target.GetFunctionOffset(h.FuncNames()[0])
 	if err != nil {
 		return err
 	}
 
-	up, err := ctx.Executable.Uprobe("", h.bpfObjects.UprobeHttpClientDo, &link.UprobeOptions{
+	up, err := exec.Uprobe("", h.bpfObjects.UprobeHttpClientDo, &link.UprobeOptions{
 		Address: offset,
 	})
 	if err != nil {
@@ -139,13 +124,13 @@ func (h *Instrumentor) Load(ctx *context.InstrumentorContext) error {
 
 	h.uprobes = append(h.uprobes, up)
 
-	retOffsets, err := ctx.TargetDetails.GetFunctionReturns(h.FuncNames()[0])
+	retOffsets, err := target.GetFunctionReturns(h.FuncNames()[0])
 	if err != nil {
 		return err
 	}
 
 	for _, ret := range retOffsets {
-		retProbe, err := ctx.Executable.Uprobe("", h.bpfObjects.UprobeHttpClientDoReturns, &link.UprobeOptions{
+		retProbe, err := exec.Uprobe("", h.bpfObjects.UprobeHttpClientDoReturns, &link.UprobeOptions{
 			Address: ret,
 		})
 		if err != nil {

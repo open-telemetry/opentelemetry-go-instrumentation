@@ -16,6 +16,7 @@ package offsets
 
 import (
 	"encoding/json"
+	"fmt"
 	"sort"
 	"sync"
 
@@ -105,6 +106,16 @@ type ID struct {
 	Struct string
 	// Field is the field name.
 	Field string
+}
+
+// NewID returns a new ID using pkg for the PkgPath, strct for the Struct, and
+// field for the Field.
+func NewID(pkg, strct, field string) ID {
+	return ID{PkgPath: pkg, Struct: strct, Field: field}
+}
+
+func (i ID) String() string {
+	return fmt.Sprintf("%s.%s:%s", i.PkgPath, i.Struct, i.Field)
 }
 
 // Offsets are the byte offsets for a struct field at specific versions of the
