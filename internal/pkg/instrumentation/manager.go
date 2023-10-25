@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package instrumentors
+package instrumentation
 
 import (
 	"context"
@@ -22,14 +22,14 @@ import (
 	"github.com/cilium/ebpf/rlimit"
 	"github.com/go-logr/logr"
 
-	dbSql "go.opentelemetry.io/auto/internal/pkg/instrumentors/bpf/database/sql"
-	"go.opentelemetry.io/auto/internal/pkg/instrumentors/bpf/github.com/gin-gonic/gin"
-	"go.opentelemetry.io/auto/internal/pkg/instrumentors/bpf/google.golang.org/grpc"
-	grpcServer "go.opentelemetry.io/auto/internal/pkg/instrumentors/bpf/google.golang.org/grpc/server"
-	httpClient "go.opentelemetry.io/auto/internal/pkg/instrumentors/bpf/net/http/client"
-	httpServer "go.opentelemetry.io/auto/internal/pkg/instrumentors/bpf/net/http/server"
-	"go.opentelemetry.io/auto/internal/pkg/instrumentors/bpffs"
-	"go.opentelemetry.io/auto/internal/pkg/instrumentors/events"
+	dbSql "go.opentelemetry.io/auto/internal/pkg/instrumentation/bpf/database/sql"
+	"go.opentelemetry.io/auto/internal/pkg/instrumentation/bpf/github.com/gin-gonic/gin"
+	"go.opentelemetry.io/auto/internal/pkg/instrumentation/bpf/google.golang.org/grpc"
+	grpcServer "go.opentelemetry.io/auto/internal/pkg/instrumentation/bpf/google.golang.org/grpc/server"
+	httpClient "go.opentelemetry.io/auto/internal/pkg/instrumentation/bpf/net/http/client"
+	httpServer "go.opentelemetry.io/auto/internal/pkg/instrumentation/bpf/net/http/server"
+	"go.opentelemetry.io/auto/internal/pkg/instrumentation/bpffs"
+	"go.opentelemetry.io/auto/internal/pkg/instrumentation/events"
 	"go.opentelemetry.io/auto/internal/pkg/opentelemetry"
 	"go.opentelemetry.io/auto/internal/pkg/process"
 )

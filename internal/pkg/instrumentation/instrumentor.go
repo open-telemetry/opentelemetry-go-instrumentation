@@ -12,12 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package instrumentors
+package instrumentation
 
 import (
 	"github.com/cilium/ebpf/link"
 
-	"go.opentelemetry.io/auto/internal/pkg/instrumentors/events"
+	"go.opentelemetry.io/auto/internal/pkg/instrumentation/events"
 	"go.opentelemetry.io/auto/internal/pkg/process"
 )
 
