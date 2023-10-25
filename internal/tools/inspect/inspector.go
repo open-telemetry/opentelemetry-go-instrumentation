@@ -138,7 +138,7 @@ type job struct {
 }
 
 // Do performs the inspections and returns all found offsets.
-func (i *Inspector) Do(ctx context.Context) (offsets.Index, error) {
+func (i *Inspector) Do(ctx context.Context) (*offsets.Index, error) {
 	g, ctx := errgroup.WithContext(ctx)
 	todo := make(chan job)
 
@@ -177,7 +177,7 @@ func (i *Inspector) Do(ctx context.Context) (offsets.Index, error) {
 		close(c)
 	}()
 
-	index := make(offsets.Index)
+	index := offsets.NewIndex()
 	for results := range c {
 		for _, r := range results {
 			i.logResult(r)
@@ -185,13 +185,7 @@ func (i *Inspector) Do(ctx context.Context) (offsets.Index, error) {
 				continue
 			}
 
-			key := r.StructField.id()
-			off, ok := index[key]
-			if !ok {
-				off = new(offsets.Offsets)
-				index[key] = off
-			}
-			off.Put(r.Version, r.Offset)
+			index.PutOffset(r.StructField.id(), r.Version, r.Offset)
 		}
 	}
 

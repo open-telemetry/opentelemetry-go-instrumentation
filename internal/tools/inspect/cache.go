@@ -27,7 +27,7 @@ import (
 // Cache is a cache of struct field offsets.
 type Cache struct {
 	log  logr.Logger
-	data offsets.Index
+	data *offsets.Index
 }
 
 // NewCache loads struct field offsets from offsetFile and returns them as a
@@ -41,7 +41,7 @@ func NewCache(l logr.Logger, offsetFile string) (*Cache, error) {
 	}
 	defer f.Close()
 
-	c.data = make(offsets.Index)
+	c.data = offsets.NewIndex()
 	err = json.NewDecoder(f).Decode(&c.data)
 	return c, err
 }
@@ -58,7 +58,7 @@ func (c *Cache) GetOffset(ver *version.Version, sf StructField) (uint64, bool) {
 		return 0, false
 	}
 
-	off, ok := c.data[sf.id()].Get(ver)
+	off, ok := c.data.GetOffset(sf.id(), ver)
 	msg := "cache "
 	if ok {
 		msg += "hit"
