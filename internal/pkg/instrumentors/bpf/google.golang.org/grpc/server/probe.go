@@ -38,6 +38,7 @@ import (
 	"go.opentelemetry.io/auto/internal/pkg/instrumentors/events"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentors/utils"
 	"go.opentelemetry.io/auto/internal/pkg/log"
+	"go.opentelemetry.io/auto/internal/pkg/process"
 )
 
 //go:generate go run github.com/cilium/ebpf/cmd/bpf2go -target amd64,arm64 -cc clang -cflags $CFLAGS bpf ./bpf/probe.bpf.c
@@ -77,41 +78,32 @@ func (g *Instrumentor) FuncNames() []string {
 }
 
 // Load loads all instrumentation offsets.
-func (g *Instrumentor) Load(ctx *context.InstrumentorContext) error {
+func (g *Instrumentor) Load(exec *link.Executable, target *process.TargetDetails) error {
 	targetLib := "google.golang.org/grpc"
-	v := ctx.TargetDetails.Libraries[targetLib]
+	v := target.Libraries[targetLib]
 	ver, err := version.NewVersion(v)
 	if err != nil {
 		return fmt.Errorf("invalid package version: %w", err)
 	}
 
-	spec, err := ctx.Injector.Inject(loadBpf, "google.golang.org/grpc", ver, []*inject.StructField{
-		{
-			VarName:    "stream_method_ptr_pos",
-			StructName: "google.golang.org/grpc/internal/transport.Stream",
-			Field:      "method",
-		},
-		{
-			VarName:    "stream_id_pos",
-			StructName: "google.golang.org/grpc/internal/transport.Stream",
-			Field:      "id",
-		},
-		{
-			VarName:    "stream_ctx_pos",
-			StructName: "google.golang.org/grpc/internal/transport.Stream",
-			Field:      "ctx",
-		},
-		{
-			VarName:    "frame_fields_pos",
-			StructName: "golang.org/x/net/http2.MetaHeadersFrame",
-			Field:      "Fields",
-		},
-		{
-			VarName:    "frame_stream_id_pod",
-			StructName: "golang.org/x/net/http2.FrameHeader",
-			Field:      "StreamID",
-		},
-	}, nil, true)
+	spec, err := loadBpf()
+	if err != nil {
+		return err
+	}
+	if target.AllocationDetails == nil {
+		// This Instrumentor requires allocation.
+		return errors.New("no allocation details")
+	}
+	err = inject.Constants(
+		spec,
+		inject.WithRegistersABI(target.IsRegistersABI()),
+		inject.WithAllocationDetails(*target.AllocationDetails),
+		inject.WithOffset("stream_method_ptr_pos", "google.golang.org/grpc/internal/transport.Stream", "method", ver),
+		inject.WithOffset("stream_id_pos", "google.golang.org/grpc/internal/transport.Stream", "id", ver),
+		inject.WithOffset("stream_ctx_pos", "google.golang.org/grpc/internal/transport.Stream", "ctx", ver),
+		inject.WithOffset("frame_fields_pos", "golang.org/x/net/http2.MetaHeadersFrame", "Fields", ver),
+		inject.WithOffset("frame_stream_id_pod", "golang.org/x/net/http2.FrameHeader", "StreamID", ver),
+	)
 	if err != nil {
 		return err
 	}
@@ -119,19 +111,19 @@ func (g *Instrumentor) Load(ctx *context.InstrumentorContext) error {
 	g.bpfObjects = &bpfObjects{}
 	err = utils.LoadEBPFObjects(spec, g.bpfObjects, &ebpf.CollectionOptions{
 		Maps: ebpf.MapOptions{
-			PinPath: bpffs.PathForTargetApplication(ctx.TargetDetails),
+			PinPath: bpffs.PathForTargetApplication(target),
 		},
 	})
 	if err != nil {
 		return err
 	}
 
-	offset, err := ctx.TargetDetails.GetFunctionOffset(g.FuncNames()[0])
+	offset, err := target.GetFunctionOffset(g.FuncNames()[0])
 	if err != nil {
 		return err
 	}
 
-	up, err := ctx.Executable.Uprobe("", g.bpfObjects.UprobeServerHandleStream, &link.UprobeOptions{
+	up, err := exec.Uprobe("", g.bpfObjects.UprobeServerHandleStream, &link.UprobeOptions{
 		Address: offset,
 	})
 	if err != nil {
@@ -139,13 +131,13 @@ func (g *Instrumentor) Load(ctx *context.InstrumentorContext) error {
 	}
 
 	g.uprobe = up
-	retOffsets, err := ctx.TargetDetails.GetFunctionReturns(g.FuncNames()[0])
+	retOffsets, err := target.GetFunctionReturns(g.FuncNames()[0])
 	if err != nil {
 		return err
 	}
 
 	for _, ret := range retOffsets {
-		retProbe, err := ctx.Executable.Uprobe("", g.bpfObjects.UprobeServerHandleStreamReturns, &link.UprobeOptions{
+		retProbe, err := exec.Uprobe("", g.bpfObjects.UprobeServerHandleStreamReturns, &link.UprobeOptions{
 			Address: ret,
 		})
 		if err != nil {
@@ -154,11 +146,11 @@ func (g *Instrumentor) Load(ctx *context.InstrumentorContext) error {
 		g.returnProbs = append(g.returnProbs, retProbe)
 	}
 
-	headerOffset, err := ctx.TargetDetails.GetFunctionOffset(g.FuncNames()[1])
+	headerOffset, err := target.GetFunctionOffset(g.FuncNames()[1])
 	if err != nil {
 		return err
 	}
-	hProbe, err := ctx.Executable.Uprobe("", g.bpfObjects.UprobeDecodeStateDecodeHeader, &link.UprobeOptions{
+	hProbe, err := exec.Uprobe("", g.bpfObjects.UprobeDecodeStateDecodeHeader, &link.UprobeOptions{
 		Address: headerOffset,
 	})
 	if err != nil {
