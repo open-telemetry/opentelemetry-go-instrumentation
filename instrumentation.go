@@ -123,7 +123,7 @@ func NewInstrumentation(opts ...InstrumentationOption) (*Instrumentation, error)
 		"dependencies", td.Libraries,
 		"total_functions_found", len(td.Functions),
 	)
-	mngr.FilterUnusedInstrumentors(td)
+	mngr.FilterUnusedProbes(td)
 
 	return &Instrumentation{
 		target:   td,

@@ -30,6 +30,7 @@ import (
 	httpServer "go.opentelemetry.io/auto/internal/pkg/instrumentation/bpf/net/http/server"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/bpffs"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/events"
+	"go.opentelemetry.io/auto/internal/pkg/instrumentation/probe"
 	"go.opentelemetry.io/auto/internal/pkg/opentelemetry"
 	"go.opentelemetry.io/auto/internal/pkg/process"
 )
@@ -37,10 +38,10 @@ import (
 // Error message returned when unable to find all instrumentation functions.
 var errNotAllFuncsFound = fmt.Errorf("not all functions found for instrumentation")
 
-// Manager handles the management of [Instrumentor] instances.
+// Manager handles the management of [probe.Probe] instances.
 type Manager struct {
 	logger         logr.Logger
-	instrumentors  map[string]Instrumentor
+	probes         map[string]probe.Probe
 	done           chan bool
 	incomingEvents chan *events.Event
 	otelController *opentelemetry.Controller
@@ -51,13 +52,13 @@ func NewManager(logger logr.Logger, otelController *opentelemetry.Controller) (*
 	logger = logger.WithName("Manager")
 	m := &Manager{
 		logger:         logger,
-		instrumentors:  make(map[string]Instrumentor),
+		probes:         make(map[string]probe.Probe),
 		done:           make(chan bool, 1),
 		incomingEvents: make(chan *events.Event),
 		otelController: otelController,
 	}
 
-	err := m.registerInstrumentors()
+	err := m.registerProbes()
 	if err != nil {
 		return nil, err
 	}
@@ -65,20 +66,19 @@ func NewManager(logger logr.Logger, otelController *opentelemetry.Controller) (*
 	return m, nil
 }
 
-func (m *Manager) registerInstrumentor(instrumentor Instrumentor) error {
-	if _, exists := m.instrumentors[instrumentor.LibraryName()]; exists {
-		return fmt.Errorf("library %s registered twice, aborting", instrumentor.LibraryName())
+func (m *Manager) registerProbe(p probe.Probe) error {
+	if _, exists := m.probes[p.LibraryName()]; exists {
+		return fmt.Errorf("library %s registered twice, aborting", p.LibraryName())
 	}
 
-	m.instrumentors[instrumentor.LibraryName()] = instrumentor
+	m.probes[p.LibraryName()] = p
 	return nil
 }
 
-// GetRelevantFuncs returns the instrumented functions for all managed
-// Instrumentors.
+// GetRelevantFuncs returns the instrumented functions for all managed probes.
 func (m *Manager) GetRelevantFuncs() map[string]interface{} {
 	funcsMap := make(map[string]interface{})
-	for _, i := range m.instrumentors {
+	for _, i := range m.probes {
 		for _, f := range i.FuncNames() {
 			funcsMap[f] = nil
 		}
@@ -87,15 +87,15 @@ func (m *Manager) GetRelevantFuncs() map[string]interface{} {
 	return funcsMap
 }
 
-// FilterUnusedInstrumentors filterers Instrumentors whose functions are
-// already instrumented out of the Manager.
-func (m *Manager) FilterUnusedInstrumentors(target *process.TargetDetails) {
+// FilterUnusedProbes filterers probes whose functions are already instrumented
+// out of the Manager.
+func (m *Manager) FilterUnusedProbes(target *process.TargetDetails) {
 	existingFuncMap := make(map[string]interface{})
 	for _, f := range target.Functions {
 		existingFuncMap[f.Name] = nil
 	}
 
-	for name, inst := range m.instrumentors {
+	for name, inst := range m.probes {
 		funcsFound := 0
 		for _, instF := range inst.FuncNames() {
 			if _, exists := existingFuncMap[instF]; exists {
@@ -107,14 +107,14 @@ func (m *Manager) FilterUnusedInstrumentors(target *process.TargetDetails) {
 			if funcsFound > 0 {
 				m.logger.Error(errNotAllFuncsFound, "some of expected functions not found - check instrumented functions", "instrumentation_name", name, "funcs_found", funcsFound, "funcs_expected", len(inst.FuncNames()))
 			}
-			delete(m.instrumentors, name)
+			delete(m.probes, name)
 		}
 	}
 }
 
-// Run runs the event processing loop for all managed Instrumentors.
+// Run runs the event processing loop for all managed probes.
 func (m *Manager) Run(ctx context.Context, target *process.TargetDetails) error {
-	if len(m.instrumentors) == 0 {
+	if len(m.probes) == 0 {
 		m.logger.Info("there are no available instrumentations for target process")
 		return nil
 	}
@@ -124,7 +124,7 @@ func (m *Manager) Run(ctx context.Context, target *process.TargetDetails) error 
 		return err
 	}
 
-	for _, i := range m.instrumentors {
+	for _, i := range m.probes {
 		go i.Run(m.incomingEvents)
 	}
 
@@ -135,7 +135,7 @@ func (m *Manager) Run(ctx context.Context, target *process.TargetDetails) error 
 			m.cleanup(target)
 			return ctx.Err()
 		case <-m.done:
-			m.logger.Info("shutting down all instrumentors due to signal")
+			m.logger.Info("shutting down all probes due to signal")
 			m.cleanup(target)
 			return nil
 		case e := <-m.incomingEvents:
@@ -159,18 +159,18 @@ func (m *Manager) load(target *process.TargetDetails) error {
 		return err
 	}
 
-	// Load instrumentors
-	for name, i := range m.instrumentors {
-		m.logger.Info("loading instrumentor", "name", name)
+	// Load probes
+	for name, i := range m.probes {
+		m.logger.Info("loading probes", "name", name)
 		err := i.Load(exe, target)
 		if err != nil {
-			m.logger.Error(err, "error while loading instrumentors, cleaning up", "name", name)
+			m.logger.Error(err, "error while loading probes, cleaning up", "name", name)
 			m.cleanup(target)
 			return err
 		}
 	}
 
-	m.logger.Info("loaded instrumentors to memory", "total_instrumentors", len(m.instrumentors))
+	m.logger.Info("loaded probes to memory", "total_probes", len(m.probes))
 	return nil
 }
 
@@ -185,7 +185,7 @@ func (m *Manager) mount(target *process.TargetDetails) error {
 
 func (m *Manager) cleanup(target *process.TargetDetails) {
 	close(m.incomingEvents)
-	for _, i := range m.instrumentors {
+	for _, i := range m.probes {
 		i.Close()
 	}
 
@@ -201,8 +201,8 @@ func (m *Manager) Close() {
 	m.done <- true
 }
 
-func (m *Manager) registerInstrumentors() error {
-	insts := []Instrumentor{
+func (m *Manager) registerProbes() error {
+	insts := []probe.Probe{
 		grpc.New(m.logger),
 		grpcServer.New(m.logger),
 		httpServer.New(m.logger),
@@ -212,7 +212,7 @@ func (m *Manager) registerInstrumentors() error {
 	}
 
 	for _, i := range insts {
-		err := m.registerInstrumentor(i)
+		err := m.registerProbe(i)
 		if err != nil {
 			return err
 		}

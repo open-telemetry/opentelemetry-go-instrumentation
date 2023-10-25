@@ -12,7 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package instrumentation
+// Package probe provides instrumentation probe types and definitions.
+package probe
 
 import (
 	"github.com/cilium/ebpf/link"
@@ -21,8 +22,8 @@ import (
 	"go.opentelemetry.io/auto/internal/pkg/process"
 )
 
-// Instrumentor provides instrumentation for a Go package.
-type Instrumentor interface {
+// Probe provides instrumentation for a Go package.
+type Probe interface {
 	// LibraryName returns the package name being instrumented.
 	LibraryName() string
 
@@ -36,6 +37,6 @@ type Instrumentor interface {
 	// Run runs the events processing loop.
 	Run(eventsChan chan<- *events.Event)
 
-	// Close stops the Instrumentor.
+	// Close stops the Probe.
 	Close()
 }
