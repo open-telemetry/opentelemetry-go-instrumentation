@@ -40,3 +40,5 @@ type Probe interface {
 	// Close stops the Probe.
 	Close()
 }
+
+// TODO(#420): provide a default implementation of a probe for instrumentation.
