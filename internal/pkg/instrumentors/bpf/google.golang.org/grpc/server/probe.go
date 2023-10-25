@@ -86,37 +86,24 @@ func (g *Instrumentor) Load(exec *link.Executable, target *process.TargetDetails
 		return fmt.Errorf("invalid package version: %w", err)
 	}
 
-	injector, err := inject.New(target)
+	spec, err := loadBpf()
 	if err != nil {
 		return err
 	}
-	spec, err := injector.Inject(loadBpf, "google.golang.org/grpc", ver, []*inject.StructField{
-		{
-			VarName:    "stream_method_ptr_pos",
-			StructName: "google.golang.org/grpc/internal/transport.Stream",
-			Field:      "method",
-		},
-		{
-			VarName:    "stream_id_pos",
-			StructName: "google.golang.org/grpc/internal/transport.Stream",
-			Field:      "id",
-		},
-		{
-			VarName:    "stream_ctx_pos",
-			StructName: "google.golang.org/grpc/internal/transport.Stream",
-			Field:      "ctx",
-		},
-		{
-			VarName:    "frame_fields_pos",
-			StructName: "golang.org/x/net/http2.MetaHeadersFrame",
-			Field:      "Fields",
-		},
-		{
-			VarName:    "frame_stream_id_pod",
-			StructName: "golang.org/x/net/http2.FrameHeader",
-			Field:      "StreamID",
-		},
-	}, nil, true)
+	if target.AllocationDetails == nil {
+		// This Instrumentor requires allocation.
+		return errors.New("no allocation details")
+	}
+	err = inject.Constants(
+		spec,
+		inject.WithRegistersABI(target.IsRegistersABI()),
+		inject.WithAllocationDetails(*target.AllocationDetails),
+		inject.WithOffset("stream_method_ptr_pos", "google.golang.org/grpc/internal/transport.Stream", "method", ver),
+		inject.WithOffset("stream_id_pos", "google.golang.org/grpc/internal/transport.Stream", "id", ver),
+		inject.WithOffset("stream_ctx_pos", "google.golang.org/grpc/internal/transport.Stream", "ctx", ver),
+		inject.WithOffset("frame_fields_pos", "golang.org/x/net/http2.MetaHeadersFrame", "Fields", ver),
+		inject.WithOffset("frame_stream_id_pod", "golang.org/x/net/http2.FrameHeader", "StreamID", ver),
+	)
 	if err != nil {
 		return err
 	}

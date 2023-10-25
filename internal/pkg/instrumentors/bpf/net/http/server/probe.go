@@ -76,47 +76,23 @@ func (h *Instrumentor) FuncNames() []string {
 
 // Load loads all instrumentation offsets.
 func (h *Instrumentor) Load(exec *link.Executable, target *process.TargetDetails) error {
-	injector, err := inject.New(target)
+	ver := target.GoVersion
+
+	spec, err := loadBpf()
 	if err != nil {
 		return err
 	}
-	spec, err := injector.Inject(loadBpf, "go", target.GoVersion, []*inject.StructField{
-		{
-			VarName:    "method_ptr_pos",
-			StructName: "net/http.Request",
-			Field:      "Method",
-		},
-		{
-			VarName:    "url_ptr_pos",
-			StructName: "net/http.Request",
-			Field:      "URL",
-		},
-		{
-			VarName:    "ctx_ptr_pos",
-			StructName: "net/http.Request",
-			Field:      "ctx",
-		},
-		{
-			VarName:    "path_ptr_pos",
-			StructName: "net/url.URL",
-			Field:      "Path",
-		},
-		{
-			VarName:    "ctx_ptr_pos",
-			StructName: "net/http.Request",
-			Field:      "ctx",
-		},
-		{
-			VarName:    "headers_ptr_pos",
-			StructName: "net/http.Request",
-			Field:      "Header",
-		},
-		{
-			VarName:    "buckets_ptr_pos",
-			StructName: "runtime.hmap",
-			Field:      "buckets",
-		},
-	}, nil, false)
+	err = inject.Constants(
+		spec,
+		inject.WithRegistersABI(target.IsRegistersABI()),
+		inject.WithOffset("method_ptr_pos", "net/http.Request", "Method", ver),
+		inject.WithOffset("url_ptr_pos", "net/http.Request", "URL", ver),
+		inject.WithOffset("ctx_ptr_pos", "net/http.Request", "ctx", ver),
+		inject.WithOffset("path_ptr_pos", "net/url.URL", "Path", ver),
+		inject.WithOffset("ctx_ptr_pos", "net/http.Request", "ctx", ver),
+		inject.WithOffset("headers_ptr_pos", "net/http.Request", "Header", ver),
+		inject.WithOffset("buckets_ptr_pos", "runtime.hmap", "buckets", ver),
+	)
 	if err != nil {
 		return err
 	}

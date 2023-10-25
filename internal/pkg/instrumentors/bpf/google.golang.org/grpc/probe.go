@@ -87,32 +87,23 @@ func (g *Instrumentor) Load(exec *link.Executable, target *process.TargetDetails
 		return fmt.Errorf("invalid package version: %w", err)
 	}
 
-	injector, err := inject.New(target)
+	spec, err := loadBpf()
 	if err != nil {
 		return err
 	}
-	spec, err := injector.Inject(loadBpf, g.LibraryName(), ver, []*inject.StructField{
-		{
-			VarName:    "clientconn_target_ptr_pos",
-			StructName: "google.golang.org/grpc.ClientConn",
-			Field:      "target",
-		},
-		{
-			VarName:    "httpclient_nextid_pos",
-			StructName: "google.golang.org/grpc/internal/transport.http2Client",
-			Field:      "nextID",
-		},
-		{
-			VarName:    "headerFrame_hf_pos",
-			StructName: "google.golang.org/grpc/internal/transport.headerFrame",
-			Field:      "hf",
-		},
-		{
-			VarName:    "headerFrame_streamid_pos",
-			StructName: "google.golang.org/grpc/internal/transport.headerFrame",
-			Field:      "streamID",
-		},
-	}, nil, true)
+	if target.AllocationDetails == nil {
+		// This Instrumentor requires allocation.
+		return errors.New("no allocation details")
+	}
+	err = inject.Constants(
+		spec,
+		inject.WithRegistersABI(target.IsRegistersABI()),
+		inject.WithAllocationDetails(*target.AllocationDetails),
+		inject.WithOffset("clientconn_target_ptr_pos", "google.golang.org/grpc.ClientConn", "target", ver),
+		inject.WithOffset("httpclient_nextid_pos", "google.golang.org/grpc/internal/transport.http2Client", "nextID", ver),
+		inject.WithOffset("headerFrame_hf_pos", "google.golang.org/grpc/internal/transport.headerFrame", "hf", ver),
+		inject.WithOffset("headerFrame_streamid_pos", "google.golang.org/grpc/internal/transport.headerFrame", "streamID", ver),
+	)
 	if err != nil {
 		return err
 	}
