@@ -17,14 +17,18 @@ package auto
 import (
 	"context"
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 	"strings"
 
+	"github.com/go-logr/logr"
+	"github.com/go-logr/stdr"
+	"github.com/go-logr/zapr"
 	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
+	"go.uber.org/zap"
 
 	"go.opentelemetry.io/auto/internal/pkg/instrumentors"
-	"go.opentelemetry.io/auto/internal/pkg/log"
 	"go.opentelemetry.io/auto/internal/pkg/opentelemetry"
 	"go.opentelemetry.io/auto/internal/pkg/process"
 )
@@ -52,36 +56,51 @@ type Instrumentation struct {
 // binary or pid.
 var errUndefinedTarget = fmt.Errorf("undefined target Go binary, consider setting the %s environment variable pointing to the target binary to instrument", envTargetExeKey)
 
+func newLogger() logr.Logger {
+	zapLog, err := zap.NewProduction()
+
+	var logger logr.Logger
+	if err != nil {
+		// Fallback to stdr logger.
+		logger = stdr.New(log.New(os.Stderr, "", log.LstdFlags))
+	} else {
+		logger = zapr.NewLogger(zapLog)
+	}
+
+	return logger
+}
+
 // NewInstrumentation returns a new [Instrumentation] configured with the
 // provided opts.
 //
 // If conflicting or duplicate options are provided, the last one will have
 // precedence and be used.
 func NewInstrumentation(opts ...InstrumentationOption) (*Instrumentation, error) {
-	if log.Logger.IsZero() {
-		err := log.Init()
-		if err != nil {
-			return nil, err
-		}
-	}
+	// TODO: pass this in as an option.
+	//
+	// We likely want to use slog instead of logr in the longterm. Wait until
+	// that package has enough Go version support and then switch to that so we
+	// can expose it in an option.
+	logger := newLogger()
+	logger = logger.WithName("Instrumentation")
 
 	c := newInstConfig(opts)
 	if err := c.validate(); err != nil {
 		return nil, err
 	}
 
-	pa := process.NewAnalyzer()
+	pa := process.NewAnalyzer(logger)
 	pid, err := pa.DiscoverProcessID(&c.target)
 	if err != nil {
 		return nil, err
 	}
 
-	ctrl, err := opentelemetry.NewController(Version(), c.serviceName)
+	ctrl, err := opentelemetry.NewController(logger, Version(), c.serviceName)
 	if err != nil {
 		return nil, err
 	}
 
-	mngr, err := instrumentors.NewManager(ctrl)
+	mngr, err := instrumentors.NewManager(logger, ctrl)
 	if err != nil {
 		return nil, err
 	}
@@ -92,13 +111,13 @@ func NewInstrumentation(opts ...InstrumentationOption) (*Instrumentation, error)
 		return nil, err
 	}
 
-	allocDetails, err := process.Allocate(pid)
+	allocDetails, err := process.Allocate(logger, pid)
 	if err != nil {
 		return nil, err
 	}
 	td.AllocationDetails = allocDetails
 
-	log.Logger.V(0).Info(
+	logger.Info(
 		"target process analysis completed",
 		"pid", td.PID,
 		"go_version", td.GoVersion,

@@ -20,6 +20,7 @@ import (
 
 	"github.com/cilium/ebpf/link"
 	"github.com/cilium/ebpf/rlimit"
+	"github.com/go-logr/logr"
 
 	dbSql "go.opentelemetry.io/auto/internal/pkg/instrumentors/bpf/database/sql"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentors/bpf/github.com/gin-gonic/gin"
@@ -29,7 +30,6 @@ import (
 	httpServer "go.opentelemetry.io/auto/internal/pkg/instrumentors/bpf/net/http/server"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentors/bpffs"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentors/events"
-	"go.opentelemetry.io/auto/internal/pkg/log"
 	"go.opentelemetry.io/auto/internal/pkg/opentelemetry"
 	"go.opentelemetry.io/auto/internal/pkg/process"
 )
@@ -39,6 +39,7 @@ var errNotAllFuncsFound = fmt.Errorf("not all functions found for instrumentatio
 
 // Manager handles the management of [Instrumentor] instances.
 type Manager struct {
+	logger         logr.Logger
 	instrumentors  map[string]Instrumentor
 	done           chan bool
 	incomingEvents chan *events.Event
@@ -46,15 +47,17 @@ type Manager struct {
 }
 
 // NewManager returns a new [Manager].
-func NewManager(otelController *opentelemetry.Controller) (*Manager, error) {
+func NewManager(logger logr.Logger, otelController *opentelemetry.Controller) (*Manager, error) {
+	logger = logger.WithName("Manager")
 	m := &Manager{
+		logger:         logger,
 		instrumentors:  make(map[string]Instrumentor),
 		done:           make(chan bool, 1),
 		incomingEvents: make(chan *events.Event),
 		otelController: otelController,
 	}
 
-	err := registerInstrumentors(m)
+	err := m.registerInstrumentors()
 	if err != nil {
 		return nil, err
 	}
@@ -102,7 +105,7 @@ func (m *Manager) FilterUnusedInstrumentors(target *process.TargetDetails) {
 
 		if funcsFound != len(inst.FuncNames()) {
 			if funcsFound > 0 {
-				log.Logger.Error(errNotAllFuncsFound, "some of expected functions not found - check instrumented functions", "instrumentation_name", name, "funcs_found", funcsFound, "funcs_expected", len(inst.FuncNames()))
+				m.logger.Error(errNotAllFuncsFound, "some of expected functions not found - check instrumented functions", "instrumentation_name", name, "funcs_found", funcsFound, "funcs_expected", len(inst.FuncNames()))
 			}
 			delete(m.instrumentors, name)
 		}
@@ -112,7 +115,7 @@ func (m *Manager) FilterUnusedInstrumentors(target *process.TargetDetails) {
 // Run runs the event processing loop for all managed Instrumentors.
 func (m *Manager) Run(ctx context.Context, target *process.TargetDetails) error {
 	if len(m.instrumentors) == 0 {
-		log.Logger.V(0).Info("there are no available instrumentations for target process")
+		m.logger.Info("there are no available instrumentations for target process")
 		return nil
 	}
 
@@ -132,7 +135,7 @@ func (m *Manager) Run(ctx context.Context, target *process.TargetDetails) error 
 			m.cleanup(target)
 			return ctx.Err()
 		case <-m.done:
-			log.Logger.V(0).Info("shutting down all instrumentors due to signal")
+			m.logger.Info("shutting down all instrumentors due to signal")
 			m.cleanup(target)
 			return nil
 		case e := <-m.incomingEvents:
@@ -158,24 +161,24 @@ func (m *Manager) load(target *process.TargetDetails) error {
 
 	// Load instrumentors
 	for name, i := range m.instrumentors {
-		log.Logger.V(0).Info("loading instrumentor", "name", name)
+		m.logger.Info("loading instrumentor", "name", name)
 		err := i.Load(exe, target)
 		if err != nil {
-			log.Logger.Error(err, "error while loading instrumentors, cleaning up", "name", name)
+			m.logger.Error(err, "error while loading instrumentors, cleaning up", "name", name)
 			m.cleanup(target)
 			return err
 		}
 	}
 
-	log.Logger.V(0).Info("loaded instrumentors to memory", "total_instrumentors", len(m.instrumentors))
+	m.logger.Info("loaded instrumentors to memory", "total_instrumentors", len(m.instrumentors))
 	return nil
 }
 
 func (m *Manager) mount(target *process.TargetDetails) error {
 	if target.AllocationDetails != nil {
-		log.Logger.Info("Mounting bpffs", target.AllocationDetails)
+		m.logger.Info("Mounting bpffs", target.AllocationDetails)
 	} else {
-		log.Logger.Info("Mounting bpffs")
+		m.logger.Info("Mounting bpffs")
 	}
 	return bpffs.Mount(target)
 }
@@ -186,10 +189,10 @@ func (m *Manager) cleanup(target *process.TargetDetails) {
 		i.Close()
 	}
 
-	log.Logger.V(0).Info("Cleaning bpffs")
+	m.logger.Info("Cleaning bpffs")
 	err := bpffs.Cleanup(target)
 	if err != nil {
-		log.Logger.Error(err, "Failed to clean bpffs")
+		m.logger.Error(err, "Failed to clean bpffs")
 	}
 }
 
@@ -198,14 +201,14 @@ func (m *Manager) Close() {
 	m.done <- true
 }
 
-func registerInstrumentors(m *Manager) error {
+func (m *Manager) registerInstrumentors() error {
 	insts := []Instrumentor{
-		grpc.New(),
-		grpcServer.New(),
-		httpServer.New(),
-		httpClient.New(),
-		gin.New(),
-		dbSql.New(),
+		grpc.New(m.logger),
+		grpcServer.New(m.logger),
+		httpServer.New(m.logger),
+		httpClient.New(m.logger),
+		gin.New(m.logger),
+		dbSql.New(m.logger),
 	}
 
 	for _, i := range insts {

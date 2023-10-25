@@ -14,18 +14,9 @@
 
 package binary
 
-import "go.opentelemetry.io/auto/internal/pkg/log"
-
 // Func represents a function target.
 type Func struct {
 	Name          string
 	Offset        uint64
 	ReturnOffsets []uint64
-}
-
-func logFoundFunction(name string, offset uint64, returns []uint64) {
-	log.Logger.V(0).Info("found relevant function for instrumentation",
-		"function", name,
-		"start", offset,
-		"returns", returns)
 }
