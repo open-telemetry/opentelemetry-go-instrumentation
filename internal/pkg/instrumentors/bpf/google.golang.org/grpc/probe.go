@@ -40,6 +40,7 @@ import (
 	"go.opentelemetry.io/auto/internal/pkg/instrumentors/events"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentors/utils"
 	"go.opentelemetry.io/auto/internal/pkg/log"
+	"go.opentelemetry.io/auto/internal/pkg/process"
 )
 
 //go:generate go run github.com/cilium/ebpf/cmd/bpf2go -target amd64,arm64 -cc clang -cflags $CFLAGS bpf ./bpf/probe.bpf.c
@@ -79,14 +80,18 @@ func (g *Instrumentor) FuncNames() []string {
 }
 
 // Load loads all instrumentation offsets.
-func (g *Instrumentor) Load(ctx *context.InstrumentorContext) error {
-	v := ctx.TargetDetails.Libraries[g.LibraryName()]
+func (g *Instrumentor) Load(exec *link.Executable, target *process.TargetDetails) error {
+	v := target.Libraries[g.LibraryName()]
 	ver, err := version.NewVersion(v)
 	if err != nil {
 		return fmt.Errorf("invalid package version: %w", err)
 	}
 
-	spec, err := ctx.Injector.Inject(loadBpf, g.LibraryName(), ver, []*inject.StructField{
+	injector, err := inject.New(target)
+	if err != nil {
+		return err
+	}
+	spec, err := injector.Inject(loadBpf, g.LibraryName(), ver, []*inject.StructField{
 		{
 			VarName:    "clientconn_target_ptr_pos",
 			StructName: "google.golang.org/grpc.ClientConn",
@@ -115,7 +120,7 @@ func (g *Instrumentor) Load(ctx *context.InstrumentorContext) error {
 	g.bpfObjects = &bpfObjects{}
 	err = utils.LoadEBPFObjects(spec, g.bpfObjects, &ebpf.CollectionOptions{
 		Maps: ebpf.MapOptions{
-			PinPath: bpffs.PathForTargetApplication(ctx.TargetDetails),
+			PinPath: bpffs.PathForTargetApplication(target),
 		},
 	})
 
@@ -123,12 +128,12 @@ func (g *Instrumentor) Load(ctx *context.InstrumentorContext) error {
 		return err
 	}
 
-	offset, err := ctx.TargetDetails.GetFunctionOffset(g.FuncNames()[0])
+	offset, err := target.GetFunctionOffset(g.FuncNames()[0])
 	if err != nil {
 		return err
 	}
 
-	up, err := ctx.Executable.Uprobe("", g.bpfObjects.UprobeClientConnInvoke, &link.UprobeOptions{
+	up, err := exec.Uprobe("", g.bpfObjects.UprobeClientConnInvoke, &link.UprobeOptions{
 		Address: offset,
 	})
 	if err != nil {
@@ -137,13 +142,13 @@ func (g *Instrumentor) Load(ctx *context.InstrumentorContext) error {
 
 	g.uprobes = append(g.uprobes, up)
 
-	retOffsets, err := ctx.TargetDetails.GetFunctionReturns(g.FuncNames()[0])
+	retOffsets, err := target.GetFunctionReturns(g.FuncNames()[0])
 	if err != nil {
 		return err
 	}
 
 	for _, ret := range retOffsets {
-		retProbe, err := ctx.Executable.Uprobe("", g.bpfObjects.UprobeClientConnInvokeReturns, &link.UprobeOptions{
+		retProbe, err := exec.Uprobe("", g.bpfObjects.UprobeClientConnInvokeReturns, &link.UprobeOptions{
 			Address: ret,
 		})
 		if err != nil {
@@ -153,11 +158,11 @@ func (g *Instrumentor) Load(ctx *context.InstrumentorContext) error {
 	}
 
 	// SendMsg probe
-	sendMsgOffset, err := ctx.TargetDetails.GetFunctionOffset(g.FuncNames()[1])
+	sendMsgOffset, err := target.GetFunctionOffset(g.FuncNames()[1])
 	if err != nil {
 		return err
 	}
-	sendMsgProbe, err := ctx.Executable.Uprobe("", g.bpfObjects.UprobeHttp2ClientNewStream, &link.UprobeOptions{
+	sendMsgProbe, err := exec.Uprobe("", g.bpfObjects.UprobeHttp2ClientNewStream, &link.UprobeOptions{
 		Address: sendMsgOffset,
 	})
 	if err != nil {
@@ -166,12 +171,12 @@ func (g *Instrumentor) Load(ctx *context.InstrumentorContext) error {
 	g.uprobes = append(g.uprobes, sendMsgProbe)
 
 	// Write headers probe
-	whOffset, err := ctx.TargetDetails.GetFunctionOffset(g.FuncNames()[2])
+	whOffset, err := target.GetFunctionOffset(g.FuncNames()[2])
 	if err != nil {
 		return err
 	}
 
-	whProbe, err := ctx.Executable.Uprobe("", g.bpfObjects.UprobeLoopyWriterHeaderHandler, &link.UprobeOptions{
+	whProbe, err := exec.Uprobe("", g.bpfObjects.UprobeLoopyWriterHeaderHandler, &link.UprobeOptions{
 		Address: whOffset,
 	})
 	if err != nil {
