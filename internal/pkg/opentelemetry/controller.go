@@ -21,6 +21,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/go-logr/logr"
 	"golang.org/x/sys/unix"
 	"google.golang.org/grpc"
 
@@ -32,7 +33,6 @@ import (
 	"go.opentelemetry.io/otel/trace"
 
 	"go.opentelemetry.io/auto/internal/pkg/instrumentors/events"
-	"go.opentelemetry.io/auto/internal/pkg/log"
 )
 
 // Information about the runtime environment for inclusion in User-Agent, e.g. "go/1.18.2 (linux/amd64)".
@@ -40,6 +40,7 @@ var runtimeInfo = fmt.Sprintf("%s (%s/%s)", strings.Replace(runtime.Version(), "
 
 // Controller handles OpenTelemetry telemetry generation for events.
 type Controller struct {
+	logger         logr.Logger
 	tracerProvider trace.TracerProvider
 	tracersMap     map[string]trace.Tracer
 	bootTime       int64
@@ -58,11 +59,11 @@ func (c *Controller) getTracer(libName string) trace.Tracer {
 
 // Trace creates a trace span for event.
 func (c *Controller) Trace(event *events.Event) {
-	log.Logger.V(0).Info("got event", "attrs", event.Attributes)
+	c.logger.Info("got event", "attrs", event.Attributes)
 	ctx := context.Background()
 
 	if event.SpanContext == nil {
-		log.Logger.V(0).Info("got event without context - dropping")
+		c.logger.Info("got event without context - dropping")
 		return
 	}
 
@@ -85,7 +86,9 @@ func (c *Controller) convertTime(t int64) time.Time {
 }
 
 // NewController returns a new initialized [Controller].
-func NewController(version string, serviceName string) (*Controller, error) {
+func NewController(logger logr.Logger, version string, serviceName string) (*Controller, error) {
+	logger = logger.WithName("Controller")
+
 	ctx := context.Background()
 	res, err := resource.New(ctx,
 		resource.WithAttributes(
@@ -98,7 +101,7 @@ func NewController(version string, serviceName string) (*Controller, error) {
 		return nil, err
 	}
 
-	log.Logger.V(0).Info("Establishing connection to OTLP receiver ...")
+	logger.Info("Establishing connection to OTLP receiver ...")
 	// Controller-local reference to the auto-instrumentation release version.
 	// Start of this auto-instrumentation's exporter User-Agent header, e.g. ""OTel-Go-Auto-Instrumentation/1.2.3".
 	baseUserAgent := fmt.Sprintf("OTel-Go-Auto-Instrumentation/%s", version)
@@ -108,7 +111,6 @@ func NewController(version string, serviceName string) (*Controller, error) {
 	)
 	traceExporter, err := otlptrace.New(ctx, otlpTraceClient)
 	if err != nil {
-		log.Logger.Error(err, "unable to connect to OTLP endpoint")
 		return nil, err
 	}
 
@@ -126,6 +128,7 @@ func NewController(version string, serviceName string) (*Controller, error) {
 	}
 
 	return &Controller{
+		logger:         logger,
 		tracerProvider: tracerProvider,
 		tracersMap:     make(map[string]trace.Tracer),
 		bootTime:       bt,

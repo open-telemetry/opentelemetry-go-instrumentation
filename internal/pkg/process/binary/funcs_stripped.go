@@ -18,8 +18,6 @@ import (
 	"debug/elf"
 	"debug/gosym"
 	"fmt"
-
-	"go.opentelemetry.io/auto/internal/pkg/log"
 )
 
 func FindFunctionsStripped(elfF *elf.File, relevantFuncs map[string]interface{}) ([]*Func, error) {
@@ -53,7 +51,6 @@ func FindFunctionsStripped(elfF *elf.File, relevantFuncs map[string]interface{})
 				return nil, err
 			}
 
-			logFoundFunction(f.Name, start, returns)
 			function := &Func{
 				Name:          f.Name,
 				Offset:        start,
@@ -81,13 +78,11 @@ func findFuncOffsetStripped(f *gosym.Func, elfF *elf.File) (uint64, []uint64, er
 			data := make([]byte, funcLen)
 			_, err := prog.ReadAt(data, int64(f.Value-prog.Vaddr))
 			if err != nil {
-				log.Logger.Error(err, "error while finding function return")
 				return 0, nil, err
 			}
 
 			instructionIndices, err := findRetInstructions(data)
 			if err != nil {
-				log.Logger.Error(err, "error while finding function returns")
 				return 0, nil, err
 			}
 
