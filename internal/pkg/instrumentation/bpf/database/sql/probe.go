@@ -51,8 +51,8 @@ type Event struct {
 	Query [100]byte
 }
 
-// Instrumentor is the database/sql instrumentor.
-type Instrumentor struct {
+// Probe is the database/sql instrumentation probe.
+type Probe struct {
 	logger       logr.Logger
 	bpfObjects   *bpfObjects
 	uprobes      []link.Link
@@ -63,29 +63,29 @@ type Instrumentor struct {
 // IncludeDBStatementEnvVar is the environment variable to opt-in for sql query inclusion in the trace.
 const IncludeDBStatementEnvVar = "OTEL_GO_AUTO_INCLUDE_DB_STATEMENT"
 
-// New returns a new [Instrumentor].
-func New(logger logr.Logger) *Instrumentor {
-	return &Instrumentor{logger: logger.WithName("Instrumentor/db")}
+// New returns a new [Probe].
+func New(logger logr.Logger) *Probe {
+	return &Probe{logger: logger.WithName("Probe/db")}
 }
 
 // LibraryName returns the database/sql/ package name.
-func (h *Instrumentor) LibraryName() string {
+func (h *Probe) LibraryName() string {
 	return instrumentedPkg
 }
 
 // FuncNames returns the function names from "database/sql" that are instrumented.
-func (h *Instrumentor) FuncNames() []string {
+func (h *Probe) FuncNames() []string {
 	return []string{"database/sql.(*DB).queryDC"}
 }
 
 // Load loads all instrumentation offsets.
-func (h *Instrumentor) Load(exec *link.Executable, target *process.TargetDetails) error {
+func (h *Probe) Load(exec *link.Executable, target *process.TargetDetails) error {
 	spec, err := loadBpf()
 	if err != nil {
 		return err
 	}
 	if target.AllocationDetails == nil {
-		// This Instrumentor requires allocation.
+		// This Probe requires allocation.
 		return errors.New("no allocation details")
 	}
 	err = inject.Constants(
@@ -149,7 +149,7 @@ func (h *Instrumentor) Load(exec *link.Executable, target *process.TargetDetails
 }
 
 // Run runs the events processing loop.
-func (h *Instrumentor) Run(eventsChan chan<- *events.Event) {
+func (h *Probe) Run(eventsChan chan<- *events.Event) {
 	var event Event
 	for {
 		record, err := h.eventsReader.Read()
@@ -175,7 +175,7 @@ func (h *Instrumentor) Run(eventsChan chan<- *events.Event) {
 	}
 }
 
-func (h *Instrumentor) convertEvent(e *Event) *events.Event {
+func (h *Probe) convertEvent(e *Event) *events.Event {
 	query := unix.ByteSliceToString(e.Query[:])
 
 	sc := trace.NewSpanContext(trace.SpanContextConfig{
@@ -211,9 +211,9 @@ func (h *Instrumentor) convertEvent(e *Event) *events.Event {
 	}
 }
 
-// Close stops the Instrumentor.
-func (h *Instrumentor) Close() {
-	h.logger.Info("closing database/sql/sql instrumentor")
+// Close stops the Probe.
+func (h *Probe) Close() {
+	h.logger.Info("closing database/sql/sql probe")
 	if h.eventsReader != nil {
 		h.eventsReader.Close()
 	}

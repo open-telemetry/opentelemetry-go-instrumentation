@@ -48,8 +48,8 @@ type Event struct {
 	Path   [100]byte
 }
 
-// Instrumentor is the net/http instrumentor.
-type Instrumentor struct {
+// Probe is the net/http instrumentation probe.
+type Probe struct {
 	logger       logr.Logger
 	bpfObjects   *bpfObjects
 	uprobes      []link.Link
@@ -57,23 +57,23 @@ type Instrumentor struct {
 	eventsReader *perf.Reader
 }
 
-// New returns a new [Instrumentor].
-func New(logger logr.Logger) *Instrumentor {
-	return &Instrumentor{logger: logger.WithName("Instrumentor/HTTP/Client")}
+// New returns a new [Probe].
+func New(logger logr.Logger) *Probe {
+	return &Probe{logger: logger.WithName("Probe/HTTP/Client")}
 }
 
 // LibraryName returns the net/http package name.
-func (h *Instrumentor) LibraryName() string {
+func (h *Probe) LibraryName() string {
 	return "net/http/client"
 }
 
 // FuncNames returns the function names from "net/http" that are instrumented.
-func (h *Instrumentor) FuncNames() []string {
+func (h *Probe) FuncNames() []string {
 	return []string{"net/http.(*Client).do"}
 }
 
 // Load loads all instrumentation offsets.
-func (h *Instrumentor) Load(exec *link.Executable, target *process.TargetDetails) error {
+func (h *Probe) Load(exec *link.Executable, target *process.TargetDetails) error {
 	ver := target.GoVersion
 
 	spec, err := loadBpf()
@@ -81,7 +81,7 @@ func (h *Instrumentor) Load(exec *link.Executable, target *process.TargetDetails
 		return err
 	}
 	if target.AllocationDetails == nil {
-		// This Instrumentor requires allocation.
+		// This Probe requires allocation.
 		return errors.New("no allocation details")
 	}
 	err = inject.Constants(
@@ -149,7 +149,7 @@ func (h *Instrumentor) Load(exec *link.Executable, target *process.TargetDetails
 }
 
 // Run runs the events processing loop.
-func (h *Instrumentor) Run(eventsChan chan<- *events.Event) {
+func (h *Probe) Run(eventsChan chan<- *events.Event) {
 	var event Event
 	for {
 		record, err := h.eventsReader.Read()
@@ -175,7 +175,7 @@ func (h *Instrumentor) Run(eventsChan chan<- *events.Event) {
 	}
 }
 
-func (h *Instrumentor) convertEvent(e *Event) *events.Event {
+func (h *Probe) convertEvent(e *Event) *events.Event {
 	method := unix.ByteSliceToString(e.Method[:])
 	path := unix.ByteSliceToString(e.Path[:])
 
@@ -213,9 +213,9 @@ func (h *Instrumentor) convertEvent(e *Event) *events.Event {
 	}
 }
 
-// Close stops the Instrumentor.
-func (h *Instrumentor) Close() {
-	h.logger.Info("closing net/http/client instrumentor")
+// Close stops the Probe.
+func (h *Probe) Close() {
+	h.logger.Info("closing net/http/client probe")
 	if h.eventsReader != nil {
 		h.eventsReader.Close()
 	}

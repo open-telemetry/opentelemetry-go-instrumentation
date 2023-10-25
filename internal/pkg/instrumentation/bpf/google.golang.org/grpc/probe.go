@@ -52,27 +52,27 @@ type Event struct {
 	Target [50]byte
 }
 
-// Instrumentor is the gRPC client instrumentor.
-type Instrumentor struct {
+// Probe is the gRPC client instrumentation probe.
+type Probe struct {
 	logger       logr.Logger
 	bpfObjects   *bpfObjects
 	uprobes      []link.Link
 	eventsReader *perf.Reader
 }
 
-// New returns a new [Instrumentor].
-func New(logger logr.Logger) *Instrumentor {
-	return &Instrumentor{logger: logger.WithName("Instrumentor/GRPC/Client")}
+// New returns a new [Probe].
+func New(logger logr.Logger) *Probe {
+	return &Probe{logger: logger.WithName("Probe/GRPC/Client")}
 }
 
 // LibraryName returns the gRPC package import path.
-func (g *Instrumentor) LibraryName() string {
+func (g *Probe) LibraryName() string {
 	return "google.golang.org/grpc"
 }
 
 // FuncNames returns the function names from "google.golang.org/grpc" that are
 // instrumented.
-func (g *Instrumentor) FuncNames() []string {
+func (g *Probe) FuncNames() []string {
 	return []string{
 		"google.golang.org/grpc.(*ClientConn).Invoke",
 		"google.golang.org/grpc/internal/transport.(*http2Client).NewStream",
@@ -81,7 +81,7 @@ func (g *Instrumentor) FuncNames() []string {
 }
 
 // Load loads all instrumentation offsets.
-func (g *Instrumentor) Load(exec *link.Executable, target *process.TargetDetails) error {
+func (g *Probe) Load(exec *link.Executable, target *process.TargetDetails) error {
 	v := target.Libraries[g.LibraryName()]
 	ver, err := version.NewVersion(v)
 	if err != nil {
@@ -93,7 +93,7 @@ func (g *Instrumentor) Load(exec *link.Executable, target *process.TargetDetails
 		return err
 	}
 	if target.AllocationDetails == nil {
-		// This Instrumentor requires allocation.
+		// This Probe requires allocation.
 		return errors.New("no allocation details")
 	}
 	err = inject.Constants(
@@ -186,7 +186,7 @@ func (g *Instrumentor) Load(exec *link.Executable, target *process.TargetDetails
 }
 
 // Run runs the events processing loop.
-func (g *Instrumentor) Run(eventsChan chan<- *events.Event) {
+func (g *Probe) Run(eventsChan chan<- *events.Event) {
 	var event Event
 	for {
 		record, err := g.eventsReader.Read()
@@ -213,7 +213,7 @@ func (g *Instrumentor) Run(eventsChan chan<- *events.Event) {
 }
 
 // According to https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/trace/semantic_conventions/rpc.md
-func (g *Instrumentor) convertEvent(e *Event) *events.Event {
+func (g *Probe) convertEvent(e *Event) *events.Event {
 	method := unix.ByteSliceToString(e.Method[:])
 	target := unix.ByteSliceToString(e.Target[:])
 	var attrs []attribute.KeyValue
@@ -260,9 +260,9 @@ func (g *Instrumentor) convertEvent(e *Event) *events.Event {
 	}
 }
 
-// Close stops the Instrumentor.
-func (g *Instrumentor) Close() {
-	g.logger.Info("closing gRPC instrumentor")
+// Close stops the Probe.
+func (g *Probe) Close() {
+	g.logger.Info("closing gRPC probe")
 	if g.eventsReader != nil {
 		g.eventsReader.Close()
 	}

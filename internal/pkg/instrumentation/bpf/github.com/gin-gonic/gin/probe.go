@@ -51,8 +51,8 @@ type Event struct {
 	Path   [100]byte
 }
 
-// Instrumentor is the gin-gonic/gin instrumentor.
-type Instrumentor struct {
+// Probe is the gin-gonic/gin instrumentation probe.
+type Probe struct {
 	logger       logr.Logger
 	bpfObjects   *bpfObjects
 	uprobes      []link.Link
@@ -60,24 +60,24 @@ type Instrumentor struct {
 	eventsReader *perf.Reader
 }
 
-// New returns a new [Instrumentor].
-func New(logger logr.Logger) *Instrumentor {
-	return &Instrumentor{logger: logger.WithName("Instrumentor/gin")}
+// New returns a new [Probe].
+func New(logger logr.Logger) *Probe {
+	return &Probe{logger: logger.WithName("Probe/gin")}
 }
 
 // LibraryName returns the gin-gonic/gin package import path.
-func (h *Instrumentor) LibraryName() string {
+func (h *Probe) LibraryName() string {
 	return instrumentedPkg
 }
 
 // FuncNames returns the function names from "github.com/gin-gonic/gin" that are
 // instrumented.
-func (h *Instrumentor) FuncNames() []string {
+func (h *Probe) FuncNames() []string {
 	return []string{"github.com/gin-gonic/gin.(*Engine).ServeHTTP"}
 }
 
 // Load loads all instrumentation offsets.
-func (h *Instrumentor) Load(exec *link.Executable, target *process.TargetDetails) error {
+func (h *Probe) Load(exec *link.Executable, target *process.TargetDetails) error {
 	ver := target.GoVersion
 
 	spec, err := loadBpf()
@@ -119,7 +119,7 @@ func (h *Instrumentor) Load(exec *link.Executable, target *process.TargetDetails
 	return nil
 }
 
-func (h *Instrumentor) registerProbes(exec *link.Executable, target *process.TargetDetails, funcName string) {
+func (h *Probe) registerProbes(exec *link.Executable, target *process.TargetDetails, funcName string) {
 	logger := h.logger.WithValues("function", funcName)
 	offset, err := target.GetFunctionOffset(funcName)
 	if err != nil {
@@ -156,7 +156,7 @@ func (h *Instrumentor) registerProbes(exec *link.Executable, target *process.Tar
 }
 
 // Run runs the events processing loop.
-func (h *Instrumentor) Run(eventsChan chan<- *events.Event) {
+func (h *Probe) Run(eventsChan chan<- *events.Event) {
 	var event Event
 	for {
 		record, err := h.eventsReader.Read()
@@ -182,7 +182,7 @@ func (h *Instrumentor) Run(eventsChan chan<- *events.Event) {
 	}
 }
 
-func (h *Instrumentor) convertEvent(e *Event) *events.Event {
+func (h *Probe) convertEvent(e *Event) *events.Event {
 	method := unix.ByteSliceToString(e.Method[:])
 	path := unix.ByteSliceToString(e.Path[:])
 
@@ -209,9 +209,9 @@ func (h *Instrumentor) convertEvent(e *Event) *events.Event {
 	}
 }
 
-// Close stops the Instrumentor.
-func (h *Instrumentor) Close() {
-	h.logger.Info("closing gin-gonic/gin instrumentor")
+// Close stops the Probe.
+func (h *Probe) Close() {
+	h.logger.Info("closing gin-gonic/gin probe")
 	if h.eventsReader != nil {
 		h.eventsReader.Close()
 	}

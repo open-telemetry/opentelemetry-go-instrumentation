@@ -29,7 +29,7 @@ import (
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/events"
 )
 
-func TestInstrumentorConvertEvent(t *testing.T) {
+func TestProbeConvertEvent(t *testing.T) {
 	start := time.Now()
 	end := start.Add(1 * time.Second)
 
