@@ -36,6 +36,7 @@ import (
 	"go.opentelemetry.io/auto/internal/pkg/instrumentors/events"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentors/utils"
 	"go.opentelemetry.io/auto/internal/pkg/log"
+	"go.opentelemetry.io/auto/internal/pkg/process"
 )
 
 //go:generate go run github.com/cilium/ebpf/cmd/bpf2go -target amd64,arm64 -cc clang -cflags $CFLAGS bpf ./bpf/probe.bpf.c
@@ -74,44 +75,24 @@ func (h *Instrumentor) FuncNames() []string {
 }
 
 // Load loads all instrumentation offsets.
-func (h *Instrumentor) Load(ctx *context.InstrumentorContext) error {
-	spec, err := ctx.Injector.Inject(loadBpf, "go", ctx.TargetDetails.GoVersion, []*inject.StructField{
-		{
-			VarName:    "method_ptr_pos",
-			StructName: "net/http.Request",
-			Field:      "Method",
-		},
-		{
-			VarName:    "url_ptr_pos",
-			StructName: "net/http.Request",
-			Field:      "URL",
-		},
-		{
-			VarName:    "ctx_ptr_pos",
-			StructName: "net/http.Request",
-			Field:      "ctx",
-		},
-		{
-			VarName:    "path_ptr_pos",
-			StructName: "net/url.URL",
-			Field:      "Path",
-		},
-		{
-			VarName:    "ctx_ptr_pos",
-			StructName: "net/http.Request",
-			Field:      "ctx",
-		},
-		{
-			VarName:    "headers_ptr_pos",
-			StructName: "net/http.Request",
-			Field:      "Header",
-		},
-		{
-			VarName:    "buckets_ptr_pos",
-			StructName: "runtime.hmap",
-			Field:      "buckets",
-		},
-	}, nil, false)
+func (h *Instrumentor) Load(exec *link.Executable, target *process.TargetDetails) error {
+	ver := target.GoVersion
+
+	spec, err := loadBpf()
+	if err != nil {
+		return err
+	}
+	err = inject.Constants(
+		spec,
+		inject.WithRegistersABI(target.IsRegistersABI()),
+		inject.WithOffset("method_ptr_pos", "net/http.Request", "Method", ver),
+		inject.WithOffset("url_ptr_pos", "net/http.Request", "URL", ver),
+		inject.WithOffset("ctx_ptr_pos", "net/http.Request", "ctx", ver),
+		inject.WithOffset("path_ptr_pos", "net/url.URL", "Path", ver),
+		inject.WithOffset("ctx_ptr_pos", "net/http.Request", "ctx", ver),
+		inject.WithOffset("headers_ptr_pos", "net/http.Request", "Header", ver),
+		inject.WithOffset("buckets_ptr_pos", "runtime.hmap", "buckets", ver),
+	)
 	if err != nil {
 		return err
 	}
@@ -119,7 +100,7 @@ func (h *Instrumentor) Load(ctx *context.InstrumentorContext) error {
 	h.bpfObjects = &bpfObjects{}
 	err = utils.LoadEBPFObjects(spec, h.bpfObjects, &ebpf.CollectionOptions{
 		Maps: ebpf.MapOptions{
-			PinPath: bpffs.PathForTargetApplication(ctx.TargetDetails),
+			PinPath: bpffs.PathForTargetApplication(target),
 		},
 	})
 	if err != nil {
@@ -127,7 +108,7 @@ func (h *Instrumentor) Load(ctx *context.InstrumentorContext) error {
 	}
 
 	for _, funcName := range h.FuncNames() {
-		h.registerProbes(ctx, funcName)
+		h.registerProbes(exec, target, funcName)
 	}
 
 	rd, err := perf.NewReader(h.bpfObjects.Events, os.Getpagesize())
@@ -139,20 +120,20 @@ func (h *Instrumentor) Load(ctx *context.InstrumentorContext) error {
 	return nil
 }
 
-func (h *Instrumentor) registerProbes(ctx *context.InstrumentorContext, funcName string) {
+func (h *Instrumentor) registerProbes(exec *link.Executable, target *process.TargetDetails, funcName string) {
 	logger := log.Logger.WithName("net/http-instrumentor").WithValues("function", funcName)
-	offset, err := ctx.TargetDetails.GetFunctionOffset(funcName)
+	offset, err := target.GetFunctionOffset(funcName)
 	if err != nil {
 		logger.Error(err, "could not find function start offset. Skipping")
 		return
 	}
-	retOffsets, err := ctx.TargetDetails.GetFunctionReturns(funcName)
+	retOffsets, err := target.GetFunctionReturns(funcName)
 	if err != nil {
 		logger.Error(err, "could not find function end offsets. Skipping")
 		return
 	}
 
-	up, err := ctx.Executable.Uprobe("", h.bpfObjects.UprobeHandlerFuncServeHTTP, &link.UprobeOptions{
+	up, err := exec.Uprobe("", h.bpfObjects.UprobeHandlerFuncServeHTTP, &link.UprobeOptions{
 		Address: offset,
 	})
 	if err != nil {
@@ -164,7 +145,7 @@ func (h *Instrumentor) registerProbes(ctx *context.InstrumentorContext, funcName
 	h.uprobes = append(h.uprobes, up)
 
 	for _, ret := range retOffsets {
-		retProbe, err := ctx.Executable.Uprobe("", h.bpfObjects.UprobeHandlerFuncServeHTTP_Returns, &link.UprobeOptions{
+		retProbe, err := exec.Uprobe("", h.bpfObjects.UprobeHandlerFuncServeHTTP_Returns, &link.UprobeOptions{
 			Address: ret,
 		})
 		if err != nil {
