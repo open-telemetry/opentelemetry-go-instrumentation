@@ -66,7 +66,7 @@ func TestOffsets(t *testing.T) {
 	assert.Equal(t, uint64(2), off, "invalid update value for 1.2.0")
 }
 
-var index = Index{
+var index = &Index{
 	data: map[ID]*Offsets{
 		NewID("net/http", "Request", "Method"): {
 			values: map[verKey]offsetVersion{
@@ -117,5 +117,5 @@ func TestIndexUnmarshalJSON(t *testing.T) {
 
 	var got Index
 	require.NoError(t, json.NewDecoder(f).Decode(&got))
-	assert.Equal(t, index, got)
+	assert.Equal(t, index, &got)
 }

@@ -25,17 +25,25 @@ import (
 
 // Index holds all struct field offsets.
 type Index struct {
-	data map[ID]*Offsets
+	dataMu sync.RWMutex
+	data   map[ID]*Offsets
 }
 
 // NewIndex returns a new empty Index.
-func NewIndex() Index {
-	return Index{data: make(map[ID]*Offsets)}
+func NewIndex() *Index {
+	return &Index{data: make(map[ID]*Offsets)}
 }
 
 // Get returns the Offsets and true for an id contained in the Index i. It will
 // return nil and false for any id not contained in i.
-func (i Index) Get(id ID) (*Offsets, bool) {
+func (i *Index) Get(id ID) (*Offsets, bool) {
+	i.dataMu.RLock()
+	defer i.dataMu.RUnlock()
+
+	return i.get(id)
+}
+
+func (i *Index) get(id ID) (*Offsets, bool) {
 	o, ok := i.data[id]
 	return o, ok
 }
@@ -43,8 +51,15 @@ func (i Index) Get(id ID) (*Offsets, bool) {
 // GetOffset returns the offset value and true for the version ver of id
 // contained in the Index i. It will return zero and false for any id not
 // contained in i.
-func (i Index) GetOffset(id ID, ver *version.Version) (uint64, bool) {
-	offs, ok := i.data[id]
+func (i *Index) GetOffset(id ID, ver *version.Version) (uint64, bool) {
+	i.dataMu.RLock()
+	defer i.dataMu.RUnlock()
+
+	return i.getOffset(id, ver)
+}
+
+func (i *Index) getOffset(id ID, ver *version.Version) (uint64, bool) {
+	offs, ok := i.get(id)
 	if !ok {
 		return 0, false
 	}
@@ -56,17 +71,33 @@ func (i Index) GetOffset(id ID, ver *version.Version) (uint64, bool) {
 //
 // Any existing offsets stored for id will be replaced. Use PutOffset if you
 // would like to update existing offsets for id with an offset value.
-func (i Index) Put(id ID, offsets *Offsets) { i.data[id] = offsets }
+func (i *Index) Put(id ID, offsets *Offsets) {
+	i.dataMu.Lock()
+	defer i.dataMu.Unlock()
+
+	i.put(id, offsets)
+}
+
+func (i *Index) put(id ID, offsets *Offsets) {
+	i.data[id] = offsets
+}
 
 // PutOffset stores the offset value for version ver of id within the Index i.
 //
 // This will update any existing offsets stored for id with offset. If ver
 // already exists within those offsets it will overwrite that value.
-func (i Index) PutOffset(id ID, ver *version.Version, offset uint64) {
-	off, ok := i.Get(id)
+func (i *Index) PutOffset(id ID, ver *version.Version, offset uint64) {
+	i.dataMu.Lock()
+	defer i.dataMu.Unlock()
+
+	i.putOffset(id, ver, offset)
+}
+
+func (i *Index) putOffset(id ID, ver *version.Version, offset uint64) {
+	off, ok := i.get(id)
 	if !ok {
 		off = NewOffsets()
-		i.Put(id, off)
+		i.put(id, off)
 	}
 	off.Put(ver, offset)
 }
@@ -104,13 +135,18 @@ func (i *Index) UnmarshalJSON(data []byte) error {
 		}
 	}
 
+	i.dataMu.Lock()
 	i.data = m
+	i.dataMu.Unlock()
 
 	return nil
 }
 
 // MarshalJSON marshals i into JSON data.
-func (i Index) MarshalJSON() ([]byte, error) {
+func (i *Index) MarshalJSON() ([]byte, error) {
+	i.dataMu.RLock()
+	defer i.dataMu.RUnlock()
+
 	var out []*jsonPackage
 	for id, off := range i.data {
 		jp := find(&out, func(p *jsonPackage) bool {
