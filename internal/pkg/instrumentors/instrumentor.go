@@ -15,8 +15,10 @@
 package instrumentors
 
 import (
-	"go.opentelemetry.io/auto/internal/pkg/instrumentors/context"
+	"github.com/cilium/ebpf/link"
+
 	"go.opentelemetry.io/auto/internal/pkg/instrumentors/events"
+	"go.opentelemetry.io/auto/internal/pkg/process"
 )
 
 // Instrumentor provides instrumentation for a Go package.
@@ -29,7 +31,7 @@ type Instrumentor interface {
 	FuncNames() []string
 
 	// Load loads all instrumentation offsets.
-	Load(ctx *context.InstrumentorContext) error
+	Load(*link.Executable, *process.TargetDetails) error
 
 	// Run runs the events processing loop.
 	Run(eventsChan chan<- *events.Event)

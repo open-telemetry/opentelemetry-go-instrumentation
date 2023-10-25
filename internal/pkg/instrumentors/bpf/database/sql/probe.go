@@ -37,6 +37,7 @@ import (
 	"go.opentelemetry.io/auto/internal/pkg/instrumentors/events"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentors/utils"
 	"go.opentelemetry.io/auto/internal/pkg/log"
+	"go.opentelemetry.io/auto/internal/pkg/process"
 )
 
 //go:generate go run github.com/cilium/ebpf/cmd/bpf2go -target amd64,arm64 -cc clang -cflags $CFLAGS bpf ./bpf/probe.bpf.c
@@ -77,13 +78,21 @@ func (h *Instrumentor) FuncNames() []string {
 }
 
 // Load loads all instrumentation offsets.
-func (h *Instrumentor) Load(ctx *context.InstrumentorContext) error {
-	spec, err := ctx.Injector.Inject(loadBpf, "go", ctx.TargetDetails.GoVersion, nil, []*inject.FlagField{
-		{
-			VarName: "should_include_db_statement",
-			Value:   shouldIncludeDBStatement(),
-		},
-	}, true)
+func (h *Instrumentor) Load(exec *link.Executable, target *process.TargetDetails) error {
+	spec, err := loadBpf()
+	if err != nil {
+		return err
+	}
+	if target.AllocationDetails == nil {
+		// This Instrumentor requires allocation.
+		return errors.New("no allocation details")
+	}
+	err = inject.Constants(
+		spec,
+		inject.WithRegistersABI(target.IsRegistersABI()),
+		inject.WithAllocationDetails(*target.AllocationDetails),
+		inject.WithKeyValue("should_include_db_statement", shouldIncludeDBStatement()),
+	)
 	if err != nil {
 		return err
 	}
@@ -92,7 +101,7 @@ func (h *Instrumentor) Load(ctx *context.InstrumentorContext) error {
 
 	err = utils.LoadEBPFObjects(spec, h.bpfObjects, &ebpf.CollectionOptions{
 		Maps: ebpf.MapOptions{
-			PinPath: bpffs.PathForTargetApplication(ctx.TargetDetails),
+			PinPath: bpffs.PathForTargetApplication(target),
 		},
 	})
 
@@ -100,12 +109,12 @@ func (h *Instrumentor) Load(ctx *context.InstrumentorContext) error {
 		return err
 	}
 
-	offset, err := ctx.TargetDetails.GetFunctionOffset(h.FuncNames()[0])
+	offset, err := target.GetFunctionOffset(h.FuncNames()[0])
 	if err != nil {
 		return err
 	}
 
-	up, err := ctx.Executable.Uprobe("", h.bpfObjects.UprobeQueryDC, &link.UprobeOptions{
+	up, err := exec.Uprobe("", h.bpfObjects.UprobeQueryDC, &link.UprobeOptions{
 		Address: offset,
 	})
 	if err != nil {
@@ -114,13 +123,13 @@ func (h *Instrumentor) Load(ctx *context.InstrumentorContext) error {
 
 	h.uprobes = append(h.uprobes, up)
 
-	retOffsets, err := ctx.TargetDetails.GetFunctionReturns(h.FuncNames()[0])
+	retOffsets, err := target.GetFunctionReturns(h.FuncNames()[0])
 	if err != nil {
 		return err
 	}
 
 	for _, ret := range retOffsets {
-		retProbe, err := ctx.Executable.Uprobe("", h.bpfObjects.UprobeQueryDC_Returns, &link.UprobeOptions{
+		retProbe, err := exec.Uprobe("", h.bpfObjects.UprobeQueryDC_Returns, &link.UprobeOptions{
 			Address: ret,
 		})
 		if err != nil {
