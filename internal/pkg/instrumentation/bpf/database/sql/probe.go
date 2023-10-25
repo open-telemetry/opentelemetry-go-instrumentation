@@ -22,7 +22,7 @@ import (
 	"strconv"
 
 	"go.opentelemetry.io/auto/internal/pkg/inject"
-	"go.opentelemetry.io/auto/internal/pkg/instrumentors/bpffs"
+	"go.opentelemetry.io/auto/internal/pkg/instrumentation/bpffs"
 
 	"github.com/cilium/ebpf"
 	"github.com/cilium/ebpf/link"
@@ -34,9 +34,9 @@ import (
 	semconv "go.opentelemetry.io/otel/semconv/v1.18.0"
 	"go.opentelemetry.io/otel/trace"
 
-	"go.opentelemetry.io/auto/internal/pkg/instrumentors/context"
-	"go.opentelemetry.io/auto/internal/pkg/instrumentors/events"
-	"go.opentelemetry.io/auto/internal/pkg/instrumentors/utils"
+	"go.opentelemetry.io/auto/internal/pkg/instrumentation/context"
+	"go.opentelemetry.io/auto/internal/pkg/instrumentation/events"
+	"go.opentelemetry.io/auto/internal/pkg/instrumentation/utils"
 	"go.opentelemetry.io/auto/internal/pkg/process"
 )
 

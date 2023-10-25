@@ -26,7 +26,7 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/hashicorp/go-version"
 
-	"go.opentelemetry.io/auto/internal/pkg/instrumentors/bpffs"
+	"go.opentelemetry.io/auto/internal/pkg/instrumentation/bpffs"
 
 	"github.com/cilium/ebpf/link"
 	"github.com/cilium/ebpf/perf"
@@ -37,9 +37,9 @@ import (
 	"go.opentelemetry.io/otel/trace"
 
 	"go.opentelemetry.io/auto/internal/pkg/inject"
-	"go.opentelemetry.io/auto/internal/pkg/instrumentors/context"
-	"go.opentelemetry.io/auto/internal/pkg/instrumentors/events"
-	"go.opentelemetry.io/auto/internal/pkg/instrumentors/utils"
+	"go.opentelemetry.io/auto/internal/pkg/instrumentation/context"
+	"go.opentelemetry.io/auto/internal/pkg/instrumentation/events"
+	"go.opentelemetry.io/auto/internal/pkg/instrumentation/utils"
 	"go.opentelemetry.io/auto/internal/pkg/process"
 )
 

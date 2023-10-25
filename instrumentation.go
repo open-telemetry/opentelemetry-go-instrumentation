@@ -28,7 +28,7 @@ import (
 	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
 	"go.uber.org/zap"
 
-	"go.opentelemetry.io/auto/internal/pkg/instrumentors"
+	"go.opentelemetry.io/auto/internal/pkg/instrumentation"
 	"go.opentelemetry.io/auto/internal/pkg/opentelemetry"
 	"go.opentelemetry.io/auto/internal/pkg/process"
 )
@@ -51,7 +51,7 @@ const (
 type Instrumentation struct {
 	target   *process.TargetDetails
 	analyzer *process.Analyzer
-	manager  *instrumentors.Manager
+	manager  *instrumentation.Manager
 }
 
 // Error message returned when instrumentation is launched without a valid target
@@ -99,7 +99,7 @@ func NewInstrumentation(opts ...InstrumentationOption) (*Instrumentation, error)
 		return nil, err
 	}
 
-	mngr, err := instrumentors.NewManager(logger, ctrl)
+	mngr, err := instrumentation.NewManager(logger, ctrl)
 	if err != nil {
 		return nil, err
 	}
