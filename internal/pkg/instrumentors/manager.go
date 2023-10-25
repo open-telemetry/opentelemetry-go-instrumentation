@@ -22,7 +22,6 @@ import (
 	"github.com/cilium/ebpf/rlimit"
 	"github.com/go-logr/logr"
 
-	"go.opentelemetry.io/auto/internal/pkg/inject"
 	dbSql "go.opentelemetry.io/auto/internal/pkg/instrumentors/bpf/database/sql"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentors/bpf/github.com/gin-gonic/gin"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentors/bpf/google.golang.org/grpc"
@@ -30,7 +29,6 @@ import (
 	httpClient "go.opentelemetry.io/auto/internal/pkg/instrumentors/bpf/net/http/client"
 	httpServer "go.opentelemetry.io/auto/internal/pkg/instrumentors/bpf/net/http/server"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentors/bpffs"
-	iCtx "go.opentelemetry.io/auto/internal/pkg/instrumentors/context"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentors/events"
 	"go.opentelemetry.io/auto/internal/pkg/opentelemetry"
 	"go.opentelemetry.io/auto/internal/pkg/process"
@@ -152,19 +150,9 @@ func (m *Manager) load(target *process.TargetDetails) error {
 		return err
 	}
 
-	injector, err := inject.New(m.logger, target)
-	if err != nil {
-		return err
-	}
-
 	exe, err := link.OpenExecutable(fmt.Sprintf("/proc/%d/exe", target.PID))
 	if err != nil {
 		return err
-	}
-	ctx := &iCtx.InstrumentorContext{
-		TargetDetails: target,
-		Executable:    exe,
-		Injector:      injector,
 	}
 
 	if err := m.mount(target); err != nil {
@@ -174,7 +162,7 @@ func (m *Manager) load(target *process.TargetDetails) error {
 	// Load instrumentors
 	for name, i := range m.instrumentors {
 		m.logger.Info("loading instrumentor", "name", name)
-		err := i.Load(ctx)
+		err := i.Load(exe, target)
 		if err != nil {
 			m.logger.Error(err, "error while loading instrumentors, cleaning up", "name", name)
 			m.cleanup(target)
