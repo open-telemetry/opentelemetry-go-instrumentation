@@ -21,7 +21,7 @@ import (
 	"io"
 
 	"github.com/hashicorp/go-version"
-	"go.opentelemetry.io/auto/internal/pkg/offsets"
+	"go.opentelemetry.io/auto/internal/pkg/structfield"
 )
 
 // Manifest contains all information that needs to be inspected for an
@@ -74,8 +74,8 @@ func (s StructField) structName() string {
 }
 
 // id returns StructField as an offsets.ID.
-func (s StructField) id() offsets.ID {
-	return offsets.ID{
+func (s StructField) id() structfield.ID {
+	return structfield.ID{
 		PkgPath: s.PkgPath,
 		Struct:  s.Struct,
 		Field:   s.Field,

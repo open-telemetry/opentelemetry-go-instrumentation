@@ -23,7 +23,7 @@ import (
 	"github.com/hashicorp/go-version"
 	"golang.org/x/sync/errgroup"
 
-	"go.opentelemetry.io/auto/internal/pkg/offsets"
+	"go.opentelemetry.io/auto/internal/pkg/structfield"
 )
 
 const defaultNWorkers = 20
@@ -138,7 +138,7 @@ type job struct {
 }
 
 // Do performs the inspections and returns all found offsets.
-func (i *Inspector) Do(ctx context.Context) (*offsets.Index, error) {
+func (i *Inspector) Do(ctx context.Context) (*structfield.Index, error) {
 	g, ctx := errgroup.WithContext(ctx)
 	todo := make(chan job)
 
@@ -177,7 +177,7 @@ func (i *Inspector) Do(ctx context.Context) (*offsets.Index, error) {
 		close(c)
 	}()
 
-	index := offsets.NewIndex()
+	index := structfield.NewIndex()
 	for results := range c {
 		for _, r := range results {
 			i.logResult(r)

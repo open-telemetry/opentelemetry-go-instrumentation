@@ -38,8 +38,8 @@ import (
 	"go.opentelemetry.io/auto/internal/pkg/instrumentors/context"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentors/events"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentors/utils"
-	"go.opentelemetry.io/auto/internal/pkg/offsets"
 	"go.opentelemetry.io/auto/internal/pkg/process"
+	"go.opentelemetry.io/auto/internal/pkg/structfield"
 )
 
 //go:generate go run github.com/cilium/ebpf/cmd/bpf2go -target amd64,arm64 -cc clang -cflags $CFLAGS bpf ./bpf/probe.bpf.c
@@ -102,27 +102,27 @@ func (g *Instrumentor) Load(exec *link.Executable, target *process.TargetDetails
 		inject.WithAllocationDetails(*target.AllocationDetails),
 		inject.WithOffset(
 			"stream_method_ptr_pos",
-			offsets.NewID("google.golang.org/grpc/internal/transport", "Stream", "method"),
+			structfield.NewID("google.golang.org/grpc/internal/transport", "Stream", "method"),
 			ver,
 		),
 		inject.WithOffset(
 			"stream_id_pos",
-			offsets.NewID("google.golang.org/grpc/internal/transport", "Stream", "id"),
+			structfield.NewID("google.golang.org/grpc/internal/transport", "Stream", "id"),
 			ver,
 		),
 		inject.WithOffset(
 			"stream_ctx_pos",
-			offsets.NewID("google.golang.org/grpc/internal/transport", "Stream", "ctx"),
+			structfield.NewID("google.golang.org/grpc/internal/transport", "Stream", "ctx"),
 			ver,
 		),
 		inject.WithOffset(
 			"frame_fields_pos",
-			offsets.NewID("golang.org/x/net/http2", "MetaHeadersFrame", "Fields"),
+			structfield.NewID("golang.org/x/net/http2", "MetaHeadersFrame", "Fields"),
 			ver,
 		),
 		inject.WithOffset(
 			"frame_stream_id_pod",
-			offsets.NewID("golang.org/x/net/http2", "FrameHeader", "StreamID"),
+			structfield.NewID("golang.org/x/net/http2", "FrameHeader", "StreamID"),
 			ver,
 		),
 	)

@@ -21,13 +21,13 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/hashicorp/go-version"
 
-	"go.opentelemetry.io/auto/internal/pkg/offsets"
+	"go.opentelemetry.io/auto/internal/pkg/structfield"
 )
 
 // Cache is a cache of struct field offsets.
 type Cache struct {
 	log  logr.Logger
-	data *offsets.Index
+	data *structfield.Index
 }
 
 // NewCache loads struct field offsets from offsetFile and returns them as a
@@ -41,7 +41,7 @@ func NewCache(l logr.Logger, offsetFile string) (*Cache, error) {
 	}
 	defer f.Close()
 
-	c.data = offsets.NewIndex()
+	c.data = structfield.NewIndex()
 	err = json.NewDecoder(f).Decode(&c.data)
 	return c, err
 }

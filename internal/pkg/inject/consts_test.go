@@ -21,8 +21,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"go.opentelemetry.io/auto/internal/pkg/offsets"
 	"go.opentelemetry.io/auto/internal/pkg/process"
+	"go.opentelemetry.io/auto/internal/pkg/structfield"
 )
 
 func TestWithRegistersABI(t *testing.T) {
@@ -70,13 +70,13 @@ func TestWithOffset(t *testing.T) {
 	require.NoError(t, err)
 
 	const off uint64 = 1
-	id := offsets.NewID("net/http", "Request", "Method")
+	id := structfield.NewID("net/http", "Request", "Method")
 
-	origOff := offIdx
-	t.Cleanup(func() { offIdx = origOff })
-	offIdx = offsets.NewIndex()
-	offIdx.PutOffset(id, v10, off)
-	offIdx.PutOffset(id, v18, off)
+	origOff := offsets
+	t.Cleanup(func() { offsets = origOff })
+	offsets = structfield.NewIndex()
+	offsets.PutOffset(id, v10, off)
+	offsets.PutOffset(id, v18, off)
 
 	const name = "test_name"
 	opts := []Option{WithOffset(name, id, v10)}

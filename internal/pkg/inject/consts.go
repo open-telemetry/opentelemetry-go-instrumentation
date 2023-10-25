@@ -24,15 +24,15 @@ import (
 	"github.com/cilium/ebpf"
 	"github.com/hashicorp/go-version"
 
-	"go.opentelemetry.io/auto/internal/pkg/offsets"
 	"go.opentelemetry.io/auto/internal/pkg/process"
+	"go.opentelemetry.io/auto/internal/pkg/structfield"
 )
 
 var (
 	//go:embed offset_results.json
 	offsetsData string
 
-	offIdx      = offsets.NewIndex()
+	offsets     = structfield.NewIndex()
 	errNotFound = errors.New("offset not found")
 
 	nCPU = uint32(runtime.NumCPU())
@@ -46,7 +46,7 @@ const (
 )
 
 func init() {
-	err := json.Unmarshal([]byte(offsetsData), &offIdx)
+	err := json.Unmarshal([]byte(offsetsData), &offsets)
 	if err != nil {
 		// TODO: generate offsets as Go code to avoid this panic.
 		panic(err)
@@ -130,8 +130,8 @@ func WithKeyValue(key string, value interface{}) Option {
 //
 // If the offset value is not known, an error is returned when the returned
 // Option is used.
-func WithOffset(key string, id offsets.ID, ver *version.Version) Option {
-	off, ok := offIdx.GetOffset(id, ver)
+func WithOffset(key string, id structfield.ID, ver *version.Version) Option {
+	off, ok := offsets.GetOffset(id, ver)
 	if !ok {
 		return errOpt{
 			err: fmt.Errorf("%w: %s (%s)", errNotFound, id, ver),

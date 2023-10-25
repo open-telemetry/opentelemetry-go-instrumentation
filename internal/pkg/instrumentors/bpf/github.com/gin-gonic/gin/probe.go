@@ -21,7 +21,6 @@ import (
 	"os"
 
 	"go.opentelemetry.io/auto/internal/pkg/instrumentors/bpffs"
-	"go.opentelemetry.io/auto/internal/pkg/offsets"
 
 	"github.com/cilium/ebpf"
 	"github.com/cilium/ebpf/link"
@@ -38,6 +37,7 @@ import (
 	"go.opentelemetry.io/auto/internal/pkg/instrumentors/events"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentors/utils"
 	"go.opentelemetry.io/auto/internal/pkg/process"
+	"go.opentelemetry.io/auto/internal/pkg/structfield"
 )
 
 //go:generate go run github.com/cilium/ebpf/cmd/bpf2go -target amd64,arm64 -cc clang -cflags $CFLAGS bpf ./bpf/probe.bpf.c
@@ -88,10 +88,10 @@ func (h *Instrumentor) Load(exec *link.Executable, target *process.TargetDetails
 	err = inject.Constants(
 		spec,
 		inject.WithRegistersABI(target.IsRegistersABI()),
-		inject.WithOffset("method_ptr_pos", offsets.NewID("net/http", "Request", "Method"), ver),
-		inject.WithOffset("url_ptr_pos", offsets.NewID("net/http", "Request", "URL"), ver),
-		inject.WithOffset("ctx_ptr_pos", offsets.NewID("net/http", "Request", "ctx"), ver),
-		inject.WithOffset("path_ptr_pos", offsets.NewID("net/url", "URL", "Path"), ver),
+		inject.WithOffset("method_ptr_pos", structfield.NewID("net/http", "Request", "Method"), ver),
+		inject.WithOffset("url_ptr_pos", structfield.NewID("net/http", "Request", "URL"), ver),
+		inject.WithOffset("ctx_ptr_pos", structfield.NewID("net/http", "Request", "ctx"), ver),
+		inject.WithOffset("path_ptr_pos", structfield.NewID("net/url", "URL", "Path"), ver),
 	)
 	if err != nil {
 		return err
