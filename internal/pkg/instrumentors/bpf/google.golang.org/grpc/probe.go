@@ -23,6 +23,7 @@ import (
 	"strings"
 
 	"github.com/cilium/ebpf"
+	"github.com/go-logr/logr"
 	"github.com/hashicorp/go-version"
 
 	"go.opentelemetry.io/auto/internal/pkg/instrumentors/bpffs"
@@ -39,7 +40,6 @@ import (
 	"go.opentelemetry.io/auto/internal/pkg/instrumentors/context"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentors/events"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentors/utils"
-	"go.opentelemetry.io/auto/internal/pkg/log"
 	"go.opentelemetry.io/auto/internal/pkg/offsets"
 	"go.opentelemetry.io/auto/internal/pkg/process"
 )
@@ -55,14 +55,15 @@ type Event struct {
 
 // Instrumentor is the gRPC client instrumentor.
 type Instrumentor struct {
+	logger       logr.Logger
 	bpfObjects   *bpfObjects
 	uprobes      []link.Link
 	eventsReader *perf.Reader
 }
 
 // New returns a new [Instrumentor].
-func New() *Instrumentor {
-	return &Instrumentor{}
+func New(logger logr.Logger) *Instrumentor {
+	return &Instrumentor{logger: logger.WithName("Instrumentor/GRPC/Client")}
 }
 
 // LibraryName returns the gRPC package import path.
@@ -203,7 +204,6 @@ func (g *Instrumentor) Load(exec *link.Executable, target *process.TargetDetails
 
 // Run runs the events processing loop.
 func (g *Instrumentor) Run(eventsChan chan<- *events.Event) {
-	logger := log.Logger.WithName("grpc-instrumentor")
 	var event Event
 	for {
 		record, err := g.eventsReader.Read()
@@ -211,17 +211,17 @@ func (g *Instrumentor) Run(eventsChan chan<- *events.Event) {
 			if errors.Is(err, perf.ErrClosed) {
 				return
 			}
-			logger.Error(err, "error reading from perf reader")
+			g.logger.Error(err, "error reading from perf reader")
 			continue
 		}
 
 		if record.LostSamples != 0 {
-			logger.V(0).Info("perf event ring buffer full", "dropped", record.LostSamples)
+			g.logger.Info("perf event ring buffer full", "dropped", record.LostSamples)
 			continue
 		}
 
 		if err := binary.Read(bytes.NewBuffer(record.RawSample), binary.LittleEndian, &event); err != nil {
-			logger.Error(err, "error parsing perf event")
+			g.logger.Error(err, "error parsing perf event")
 			continue
 		}
 
@@ -264,7 +264,7 @@ func (g *Instrumentor) convertEvent(e *Event) *events.Event {
 		pscPtr = nil
 	}
 
-	log.Logger.V(0).Info("got spancontext", "trace_id", e.SpanContext.TraceID.String(), "span_id", e.SpanContext.SpanID.String())
+	g.logger.Info("got spancontext", "trace_id", e.SpanContext.TraceID.String(), "span_id", e.SpanContext.SpanID.String())
 	return &events.Event{
 		Library:           g.LibraryName(),
 		Name:              method,
@@ -279,7 +279,7 @@ func (g *Instrumentor) convertEvent(e *Event) *events.Event {
 
 // Close stops the Instrumentor.
 func (g *Instrumentor) Close() {
-	log.Logger.V(0).Info("closing gRPC instrumentor")
+	g.logger.Info("closing gRPC instrumentor")
 	if g.eventsReader != nil {
 		g.eventsReader.Close()
 	}

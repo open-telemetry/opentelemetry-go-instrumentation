@@ -26,6 +26,7 @@ import (
 	"github.com/cilium/ebpf"
 	"github.com/cilium/ebpf/link"
 	"github.com/cilium/ebpf/perf"
+	"github.com/go-logr/logr"
 	"golang.org/x/sys/unix"
 
 	"go.opentelemetry.io/otel/attribute"
@@ -36,7 +37,6 @@ import (
 	"go.opentelemetry.io/auto/internal/pkg/instrumentors/context"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentors/events"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentors/utils"
-	"go.opentelemetry.io/auto/internal/pkg/log"
 	"go.opentelemetry.io/auto/internal/pkg/process"
 )
 
@@ -54,6 +54,7 @@ type Event struct {
 
 // Instrumentor is the gin-gonic/gin instrumentor.
 type Instrumentor struct {
+	logger       logr.Logger
 	bpfObjects   *bpfObjects
 	uprobes      []link.Link
 	returnProbs  []link.Link
@@ -61,8 +62,8 @@ type Instrumentor struct {
 }
 
 // New returns a new [Instrumentor].
-func New() *Instrumentor {
-	return &Instrumentor{}
+func New(logger logr.Logger) *Instrumentor {
+	return &Instrumentor{logger: logger.WithName("Instrumentor/gin")}
 }
 
 // LibraryName returns the gin-gonic/gin package import path.
@@ -120,7 +121,7 @@ func (h *Instrumentor) Load(exec *link.Executable, target *process.TargetDetails
 }
 
 func (h *Instrumentor) registerProbes(exec *link.Executable, target *process.TargetDetails, funcName string) {
-	logger := log.Logger.WithName("gin-gonic/gin-instrumentor").WithValues("function", funcName)
+	logger := h.logger.WithValues("function", funcName)
 	offset, err := target.GetFunctionOffset(funcName)
 	if err != nil {
 		logger.Error(err, "could not find function start offset. Skipping")
@@ -157,7 +158,6 @@ func (h *Instrumentor) registerProbes(exec *link.Executable, target *process.Tar
 
 // Run runs the events processing loop.
 func (h *Instrumentor) Run(eventsChan chan<- *events.Event) {
-	logger := log.Logger.WithName("gin-gonic/gin-instrumentor")
 	var event Event
 	for {
 		record, err := h.eventsReader.Read()
@@ -165,17 +165,17 @@ func (h *Instrumentor) Run(eventsChan chan<- *events.Event) {
 			if errors.Is(err, perf.ErrClosed) {
 				return
 			}
-			logger.Error(err, "error reading from perf reader")
+			h.logger.Error(err, "error reading from perf reader")
 			continue
 		}
 
 		if record.LostSamples != 0 {
-			logger.V(0).Info("perf event ring buffer full", "dropped", record.LostSamples)
+			h.logger.Info("perf event ring buffer full", "dropped", record.LostSamples)
 			continue
 		}
 
 		if err := binary.Read(bytes.NewBuffer(record.RawSample), binary.LittleEndian, &event); err != nil {
-			logger.Error(err, "error parsing perf event")
+			h.logger.Error(err, "error parsing perf event")
 			continue
 		}
 
@@ -212,7 +212,7 @@ func (h *Instrumentor) convertEvent(e *Event) *events.Event {
 
 // Close stops the Instrumentor.
 func (h *Instrumentor) Close() {
-	log.Logger.V(0).Info("closing gin-gonic/gin instrumentor")
+	h.logger.Info("closing gin-gonic/gin instrumentor")
 	if h.eventsReader != nil {
 		h.eventsReader.Close()
 	}

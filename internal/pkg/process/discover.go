@@ -23,7 +23,7 @@ import (
 	"strings"
 	"time"
 
-	"go.opentelemetry.io/auto/internal/pkg/log"
+	"github.com/go-logr/logr"
 )
 
 var (
@@ -38,13 +38,15 @@ var (
 
 // Analyzer is used to find actively running processes.
 type Analyzer struct {
+	logger        logr.Logger
 	done          chan bool
 	pidTickerChan <-chan time.Time
 }
 
 // NewAnalyzer returns a new [ProcessAnalyzer].
-func NewAnalyzer() *Analyzer {
+func NewAnalyzer(logger logr.Logger) *Analyzer {
 	return &Analyzer{
+		logger:        logger.WithName("Analyzer"),
 		done:          make(chan bool, 1),
 		pidTickerChan: time.NewTicker(2 * time.Second).C,
 	}
@@ -59,18 +61,18 @@ func (a *Analyzer) DiscoverProcessID(target *TargetArgs) (int, error) {
 	for {
 		select {
 		case <-a.done:
-			log.Logger.V(0).Info("stopping process id discovery due to kill signal")
+			a.logger.Info("stopping process id discovery due to kill signal")
 			return 0, ErrInterrupted
 		case <-a.pidTickerChan:
 			pid, err := a.findProcessID(target)
 			if err == nil {
-				log.Logger.V(0).Info("found process", "pid", pid)
+				a.logger.Info("found process", "pid", pid)
 				return pid, nil
 			}
 			if err == ErrProcessNotFound {
-				log.Logger.V(0).Info("process not found yet, trying again soon", "exe_path", target.ExePath)
+				a.logger.Info("process not found yet, trying again soon", "exe_path", target.ExePath)
 			} else {
-				log.Logger.Error(err, "error while searching for process", "exe_path", target.ExePath)
+				a.logger.Error(err, "error while searching for process", "exe_path", target.ExePath)
 			}
 		}
 	}
