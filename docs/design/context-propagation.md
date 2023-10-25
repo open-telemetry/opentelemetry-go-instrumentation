@@ -51,7 +51,7 @@ Update the SpanContext map with key equals to the current gorountine id and valu
 
 #### Step 3: Create an HTTP span
 
-Current implementation of HTTP server instrumentor already creates a span for the request. The span traceId and parent spanId should be set according to the values in the eBPF map.
+Current implementation of HTTP server probe already creates a span for the request. The span traceId and parent spanId should be set according to the values in the eBPF map.
 
 #### Step 4: Update SpanContext map
 

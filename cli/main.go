@@ -71,7 +71,7 @@ func main() {
 		}
 	}()
 
-	logger.Info("starting instrumentors...")
+	logger.Info("starting instrumentation...")
 	if err = inst.Run(ctx); err != nil && !errors.Is(err, process.ErrInterrupted) {
 		logger.Error(err, "instrumentation crashed")
 	}
