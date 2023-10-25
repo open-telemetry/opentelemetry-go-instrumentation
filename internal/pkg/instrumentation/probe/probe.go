@@ -22,7 +22,8 @@ import (
 	"go.opentelemetry.io/auto/internal/pkg/process"
 )
 
-// Probe provides instrumentation for a Go package.
+// Probe is the instrument used by instrumentation for a Go package to measure
+// and report on the state of that packages operation.
 type Probe interface {
 	// LibraryName returns the package name being instrumented.
 	LibraryName() string
