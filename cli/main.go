@@ -46,7 +46,7 @@ func newLogger() logr.Logger {
 }
 
 func main() {
-	logger := newLogger().WithName("OpenTelemetry-Go-Auto")
+	logger := newLogger().WithName("go.opentelemetry.io/auto")
 
 	logger.Info("building OpenTelemetry Go instrumentation ...")
 	inst, err := auto.NewInstrumentation()
