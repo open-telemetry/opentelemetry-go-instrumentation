@@ -22,7 +22,6 @@ import (
 
 	"github.com/hashicorp/go-version"
 
-	"go.opentelemetry.io/auto/internal/pkg/log"
 	"go.opentelemetry.io/auto/internal/pkg/process/binary"
 )
 
@@ -88,10 +87,12 @@ func (a *Analyzer) Analyze(pid int, relevantFuncs map[string]interface{}) (*Targ
 	result.GoVersion = goVersion
 	result.Libraries = modules
 
-	funcs, err := findFunctions(elfF, relevantFuncs)
+	funcs, err := a.findFunctions(elfF, relevantFuncs)
 	if err != nil {
-		log.Logger.Error(err, "Failed to find functions")
 		return nil, err
+	}
+	for _, fn := range funcs {
+		a.logger.Info("found function", fn)
 	}
 
 	result.Functions = funcs
@@ -102,11 +103,11 @@ func (a *Analyzer) Analyze(pid int, relevantFuncs map[string]interface{}) (*Targ
 	return result, nil
 }
 
-func findFunctions(elfF *elf.File, relevantFuncs map[string]interface{}) ([]*binary.Func, error) {
+func (a *Analyzer) findFunctions(elfF *elf.File, relevantFuncs map[string]interface{}) ([]*binary.Func, error) {
 	result, err := binary.FindFunctionsUnStripped(elfF, relevantFuncs)
 	if err != nil {
 		if errors.Is(err, elf.ErrNoSymbols) {
-			log.Logger.V(0).Info("No symbols found in binary, trying to find functions using .gosymtab")
+			a.logger.Info("No symbols found in binary, trying to find functions using .gosymtab")
 			return binary.FindFunctionsStripped(elfF, relevantFuncs)
 		}
 		return nil, err

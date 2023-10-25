@@ -39,7 +39,6 @@ func FindFunctionsUnStripped(elfF *elf.File, relevantFuncs map[string]interface{
 				return nil, err
 			}
 
-			logFoundFunction(f.Name, offset, returns)
 			function := &Func{
 				Name:          f.Name,
 				Offset:        offset,

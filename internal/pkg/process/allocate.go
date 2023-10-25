@@ -19,7 +19,8 @@ import (
 	"os"
 	"runtime"
 
-	"go.opentelemetry.io/auto/internal/pkg/log"
+	"github.com/go-logr/logr"
+
 	"go.opentelemetry.io/auto/internal/pkg/process/ptrace"
 )
 
@@ -30,16 +31,20 @@ type AllocationDetails struct {
 }
 
 // Allocate allocates memory for the instrumented process.
-func Allocate(pid int) (*AllocationDetails, error) {
+func Allocate(logger logr.Logger, pid int) (*AllocationDetails, error) {
+	logger = logger.WithName("Allocate")
+
 	mapSize := uint64(os.Getpagesize() * runtime.NumCPU() * 8)
-	addr, err := remoteAllocate(pid, mapSize)
+	addr, err := remoteAllocate(logger, pid, mapSize)
 	if err != nil {
-		log.Logger.Error(err, "Failed to mmap")
 		return nil, err
 	}
 
-	log.Logger.V(0).Info("mmaped remote memory", "start_addr", fmt.Sprintf("%X", addr),
-		"end_addr", fmt.Sprintf("%X", addr+mapSize))
+	logger.Info(
+		"mmaped remote memory",
+		"start_addr", fmt.Sprintf("%X", addr),
+		"end_addr", fmt.Sprintf("%X", addr+mapSize),
+	)
 
 	return &AllocationDetails{
 		StartAddr: addr,
@@ -47,38 +52,34 @@ func Allocate(pid int) (*AllocationDetails, error) {
 	}, nil
 }
 
-func remoteAllocate(pid int, mapSize uint64) (uint64, error) {
+func remoteAllocate(logger logr.Logger, pid int, mapSize uint64) (uint64, error) {
 	runtime.LockOSThread()
 	defer runtime.UnlockOSThread()
-	program, err := ptrace.NewTracedProgram(pid, log.Logger)
+	program, err := ptrace.NewTracedProgram(pid, logger)
 	if err != nil {
-		log.Logger.Error(err, "Failed to attach ptrace", "pid", pid)
 		return 0, err
 	}
 
 	defer func() {
-		log.Logger.V(0).Info("Detaching from process", "pid", pid)
+		logger.Info("Detaching from process", "pid", pid)
 		err := program.Detach()
 		if err != nil {
-			log.Logger.Error(err, "Failed to detach ptrace", "pid", pid)
+			logger.Error(err, "Failed to detach ptrace", "pid", pid)
 		}
 	}()
 	fd := -1
 	addr, err := program.Mmap(mapSize, uint64(fd))
 	if err != nil {
-		log.Logger.Error(err, "Failed to mmap", "pid", pid)
 		return 0, err
 	}
 
 	err = program.Madvise(addr, mapSize)
 	if err != nil {
-		log.Logger.Error(err, "Failed to madvise", "pid", pid)
 		return 0, err
 	}
 
 	err = program.Mlock(addr, mapSize)
 	if err != nil {
-		log.Logger.Error(err, "Failed to mlock", "pid", pid)
 		return 0, err
 	}
 

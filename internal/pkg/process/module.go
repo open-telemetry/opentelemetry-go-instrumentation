@@ -23,8 +23,6 @@ import (
 	"strings"
 
 	"github.com/hashicorp/go-version"
-
-	"go.opentelemetry.io/auto/internal/pkg/log"
 )
 
 // The build info blob left by the linker is identified by
@@ -47,7 +45,7 @@ func (a *Analyzer) getModuleDetails(f *elf.File) (*version.Version, map[string]s
 		return nil, nil, err
 	}
 
-	log.Logger.V(1).Info("go version detected", "version", goVersion)
+	a.logger.V(1).Info("go version detected", "version", goVersion)
 	modsMap := parseModules(modules)
 	return v, modsMap, nil
 }

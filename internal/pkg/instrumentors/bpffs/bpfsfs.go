@@ -18,8 +18,6 @@ import (
 	"fmt"
 	"os"
 
-	"go.opentelemetry.io/auto/internal/pkg/log"
-
 	"golang.org/x/sys/unix"
 
 	"go.opentelemetry.io/auto/internal/pkg/process"
@@ -55,7 +53,6 @@ func isBPFFSMounted() bool {
 	var stat unix.Statfs_t
 	err := unix.Statfs(bpfFsPath, &stat)
 	if err != nil {
-		log.Logger.Error(err, "failed to statfs bpf filesystem")
 		return false
 	}
 

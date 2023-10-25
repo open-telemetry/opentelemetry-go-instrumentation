@@ -26,7 +26,6 @@ import (
 	"github.com/pkg/errors"
 
 	"go.opentelemetry.io/auto/internal/pkg/instrumentors/utils"
-	"go.opentelemetry.io/auto/internal/pkg/log"
 )
 
 const waitPidErrorMessage = "waitpid ret value: %d"
@@ -67,6 +66,8 @@ func waitPid(pid int) error {
 
 // NewTracedProgram ptrace all threads of a process.
 func NewTracedProgram(pid int, logger logr.Logger) (*TracedProgram, error) {
+	logger = logger.WithName("TracedProgram")
+
 	tidMap := make(map[int]bool)
 	retryCount := make(map[int]int)
 
@@ -230,7 +231,7 @@ func (p *TracedProgram) Madvise(addr uint64, length uint64) error {
 	}
 
 	minVersion := version.Must(version.NewVersion("5.14"))
-	log.Logger.V(0).Info("Detected linux kernel version", "version", ver)
+	p.logger.Info("Detected linux kernel version", "version", ver)
 	if ver.GreaterThanOrEqual(minVersion) {
 		advice = syscall.MADV_WILLNEED | MadvisePopulateRead | MadvisePopulateWrite
 	}
@@ -242,6 +243,6 @@ func (p *TracedProgram) Madvise(addr uint64, length uint64) error {
 // Mlock runs mlock syscall.
 func (p *TracedProgram) Mlock(addr uint64, length uint64) error {
 	ret, err := p.Syscall(syscall.SYS_MLOCK, addr, length, 0, 0, 0, 0)
-	log.Logger.V(0).Info("mlock ret", "ret", ret)
+	p.logger.Info("mlock ret", "ret", ret)
 	return err
 }
