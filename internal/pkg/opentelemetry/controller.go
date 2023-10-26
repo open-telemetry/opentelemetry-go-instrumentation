@@ -23,10 +23,7 @@ import (
 
 	"github.com/go-logr/logr"
 	"golang.org/x/sys/unix"
-	"google.golang.org/grpc"
 
-	"go.opentelemetry.io/otel/exporters/otlp/otlptrace"
-	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.18.0"
@@ -86,7 +83,7 @@ func (c *Controller) convertTime(t int64) time.Time {
 }
 
 // NewController returns a new initialized [Controller].
-func NewController(logger logr.Logger, version string, serviceName string) (*Controller, error) {
+func NewController(logger logr.Logger, version string, serviceName string, traceExp sdktrace.SpanExporter) (*Controller, error) {
 	logger = logger.WithName("Controller")
 
 	ctx := context.Background()
@@ -101,20 +98,7 @@ func NewController(logger logr.Logger, version string, serviceName string) (*Con
 		return nil, err
 	}
 
-	logger.Info("Establishing connection to OTLP receiver ...")
-	// Controller-local reference to the auto-instrumentation release version.
-	// Start of this auto-instrumentation's exporter User-Agent header, e.g. ""OTel-Go-Auto-Instrumentation/1.2.3".
-	baseUserAgent := fmt.Sprintf("OTel-Go-Auto-Instrumentation/%s", version)
-	autoinstUserAgent := fmt.Sprintf("%s %s", baseUserAgent, runtimeInfo)
-	otlpTraceClient := otlptracegrpc.NewClient(
-		otlptracegrpc.WithDialOption(grpc.WithUserAgent(autoinstUserAgent)),
-	)
-	traceExporter, err := otlptrace.New(ctx, otlpTraceClient)
-	if err != nil {
-		return nil, err
-	}
-
-	bsp := sdktrace.NewBatchSpanProcessor(traceExporter)
+	bsp := sdktrace.NewBatchSpanProcessor(traceExp)
 	tracerProvider := sdktrace.NewTracerProvider(
 		sdktrace.WithSampler(sdktrace.AlwaysSample()),
 		sdktrace.WithResource(res),
