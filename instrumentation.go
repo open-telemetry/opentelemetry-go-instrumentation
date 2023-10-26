@@ -42,8 +42,6 @@ const (
 	// envResourceAttrKey is the key for the environment variable value containing
 	// OpenTelemetry Resource attributes.
 	envResourceAttrKey = "OTEL_RESOURCE_ATTRIBUTES"
-	// serviceNameDefault is the default service name prefix used if a user does not provide one.
-	serviceNameDefault = "unknown_service"
 )
 
 // Instrumentation manages and controls all OpenTelemetry Go
@@ -74,6 +72,9 @@ func newLogger() logr.Logger {
 
 // NewInstrumentation returns a new [Instrumentation] configured with the
 // provided opts.
+//
+// If conflicting or duplicate options are provided, the last one will have
+// precedence and be used.
 func NewInstrumentation(opts ...InstrumentationOption) (*Instrumentation, error) {
 	// TODO: pass this in as an option.
 	//
@@ -89,7 +90,7 @@ func NewInstrumentation(opts ...InstrumentationOption) (*Instrumentation, error)
 	}
 
 	pa := process.NewAnalyzer(logger)
-	pid, err := pa.DiscoverProcessID(c.target)
+	pid, err := pa.DiscoverProcessID(&c.target)
 	if err != nil {
 		return nil, err
 	}
@@ -150,71 +151,37 @@ type InstrumentationOption interface {
 }
 
 type instConfig struct {
-	target      *process.TargetArgs
+	target      process.TargetArgs
 	serviceName string
 }
 
 func newInstConfig(opts []InstrumentationOption) instConfig {
-	c := instConfig{target: &process.TargetArgs{}}
+	var c instConfig
 	for _, opt := range opts {
 		if opt != nil {
 			c = opt.apply(c)
 		}
 	}
-	c = c.applyEnv()
+
+	// Defaults.
+	if c.serviceName == "" {
+		c.serviceName = c.defualtServiceName()
+	}
+
 	return c
 }
 
-func (c instConfig) applyEnv() instConfig {
-	if v, ok := os.LookupEnv(envTargetExeKey); ok {
-		c.target.ExePath = v
-		// The environment variable takes precedence over a passed PID option.
-		c.target.Pid = 0
-	}
-	if v, ok := os.LookupEnv(envServiceNameKey); ok {
-		c.serviceName = v
-	} else {
-		c = c.applyResourceAtrrEnv()
-		if c.serviceName == "" {
-			c = c.setDefualtServiceName()
-		}
-	}
-	return c
-}
-
-func (c instConfig) setDefualtServiceName() instConfig {
+func (c instConfig) defualtServiceName() string {
+	name := "unknown_service"
 	if c.target.ExePath != "" {
-		c.serviceName = fmt.Sprintf("%s:%s", serviceNameDefault, filepath.Base(c.target.ExePath))
-	} else {
-		c.serviceName = serviceNameDefault
+		name = fmt.Sprintf("%s:%s", name, filepath.Base(c.target.ExePath))
 	}
-	return c
-}
-
-func (c instConfig) applyResourceAtrrEnv() instConfig {
-	attrs := strings.TrimSpace(os.Getenv(envResourceAttrKey))
-
-	if attrs == "" {
-		return c
-	}
-
-	pairs := strings.Split(attrs, ",")
-	for _, p := range pairs {
-		k, v, found := strings.Cut(p, "=")
-		if !found {
-			continue
-		}
-		key := strings.TrimSpace(k)
-		if key == string(semconv.ServiceNameKey) {
-			c.serviceName = strings.TrimSpace(v)
-		}
-	}
-
-	return c
+	return name
 }
 
 func (c instConfig) validate() error {
-	if c.target == nil {
+	var zero process.TargetArgs
+	if c.target == zero {
 		return errUndefinedTarget
 	}
 	return c.target.Validate()
@@ -233,11 +200,12 @@ func (o fnOpt) apply(c instConfig) instConfig { return o(c) }
 // If multiple of these options are provided to an [Instrumentation], the last
 // one will be used.
 //
-// If OTEL_GO_AUTO_TARGET_EXE is defined it will take precedence over any value
-// passed here.
+// If OTEL_GO_AUTO_TARGET_EXE is defined, this option will conflict with
+// [WithEnv]. If both are used, the last one provided to an [Instrumentation]
+// will be used.
 func WithTarget(path string) InstrumentationOption {
 	return fnOpt(func(c instConfig) instConfig {
-		c.target.ExePath = path
+		c.target = process.TargetArgs{ExePath: path}
 		return c
 	})
 }
@@ -247,8 +215,9 @@ func WithTarget(path string) InstrumentationOption {
 // If multiple of these options are provided to an [Instrumentation], the last
 // one will be used.
 //
-// If OTEL_SERVICE_NAME is defined it will take precedence over any value
-// passed here.
+// If OTEL_SERVICE_NAME is defined or the service name is defined in
+// OTEL_RESOURCE_ATTRIBUTES, this option will conflict with [WithEnv]. If both
+// are used, the last one provided to an [Instrumentation] will be used.
 func WithServiceName(serviceName string) InstrumentationOption {
 	return fnOpt(func(c instConfig) instConfig {
 		c.serviceName = serviceName
@@ -265,11 +234,62 @@ func WithServiceName(serviceName string) InstrumentationOption {
 // If multiple of these options are provided to an [Instrumentation], the last
 // one will be used.
 //
-// If OTEL_GO_AUTO_TARGET_EXE is defined it will take precedence over any value
-// passed here.
+// If OTEL_GO_AUTO_TARGET_EXE is defined, this option will conflict with
+// [WithEnv]. If both are used, the last one provided to an [Instrumentation]
+// will be used.
 func WithPID(pid int) InstrumentationOption {
 	return fnOpt(func(c instConfig) instConfig {
-		c.target.Pid = pid
+		c.target = process.TargetArgs{Pid: pid}
 		return c
 	})
+}
+
+var lookupEnv = os.LookupEnv
+
+// WithEnv returns an [InstrumentationOption] that will configure
+// [Instrumentation] using the values defined by the following environment
+// variables:
+//
+//   - OTEL_GO_AUTO_TARGET_EXE: sets the target binary
+//   - OTEL_SERVICE_NAME (or OTEL_RESOURCE_ATTRIBUTES): sets the service name
+//
+// This option may conflict with [WithTarget], [WithPID], and [WithServiceName]
+// if their respective environment variable is defined. If more than one of
+// these options are used, the last one provided to an [Instrumentation] will
+// be used.
+func WithEnv() InstrumentationOption {
+	return fnOpt(func(c instConfig) instConfig {
+		if v, ok := lookupEnv(envTargetExeKey); ok {
+			c.target = process.TargetArgs{ExePath: v}
+		}
+		if v, ok := lookupServiceName(); ok {
+			c.serviceName = v
+		}
+		return c
+	})
+}
+
+func lookupServiceName() (string, bool) {
+	// Prioritize OTEL_SERVICE_NAME over OTEL_RESOURCE_ATTRIBUTES value.
+	if v, ok := lookupEnv(envServiceNameKey); ok {
+		return v, ok
+	}
+
+	v, ok := lookupEnv(envResourceAttrKey)
+	if !ok {
+		return "", false
+	}
+
+	for _, keyval := range strings.Split(strings.TrimSpace(v), ",") {
+		key, val, found := strings.Cut(keyval, "=")
+		if !found {
+			continue
+		}
+		key = strings.TrimSpace(key)
+		if key == string(semconv.ServiceNameKey) {
+			return strings.TrimSpace(val), true
+		}
+	}
+
+	return "", false
 }
