@@ -41,6 +41,7 @@ import (
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/events"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/utils"
 	"go.opentelemetry.io/auto/internal/pkg/process"
+	"go.opentelemetry.io/auto/internal/pkg/structfield"
 )
 
 //go:generate go run github.com/cilium/ebpf/cmd/bpf2go -target amd64,arm64 -cc clang -cflags $CFLAGS bpf ./bpf/probe.bpf.c
@@ -100,10 +101,26 @@ func (g *Probe) Load(exec *link.Executable, target *process.TargetDetails) error
 		spec,
 		inject.WithRegistersABI(target.IsRegistersABI()),
 		inject.WithAllocationDetails(*target.AllocationDetails),
-		inject.WithOffset("clientconn_target_ptr_pos", "google.golang.org/grpc.ClientConn", "target", ver),
-		inject.WithOffset("httpclient_nextid_pos", "google.golang.org/grpc/internal/transport.http2Client", "nextID", ver),
-		inject.WithOffset("headerFrame_hf_pos", "google.golang.org/grpc/internal/transport.headerFrame", "hf", ver),
-		inject.WithOffset("headerFrame_streamid_pos", "google.golang.org/grpc/internal/transport.headerFrame", "streamID", ver),
+		inject.WithOffset(
+			"clientconn_target_ptr_pos",
+			structfield.NewID("google.golang.org/grpc", "ClientConn", "target"),
+			ver,
+		),
+		inject.WithOffset(
+			"httpclient_nextid_pos",
+			structfield.NewID("google.golang.org/grpc/internal/transport", "http2Client", "nextID"),
+			ver,
+		),
+		inject.WithOffset(
+			"headerFrame_hf_pos",
+			structfield.NewID("google.golang.org/grpc/internal/transport", "headerFrame", "hf"),
+			ver,
+		),
+		inject.WithOffset(
+			"headerFrame_streamid_pos",
+			structfield.NewID("google.golang.org/grpc/internal/transport", "headerFrame", "streamID"),
+			ver,
+		),
 	)
 	if err != nil {
 		return err

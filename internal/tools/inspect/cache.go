@@ -21,13 +21,13 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/hashicorp/go-version"
 
-	"go.opentelemetry.io/auto/internal/pkg/inject"
+	"go.opentelemetry.io/auto/internal/pkg/structfield"
 )
 
 // Cache is a cache of struct field offsets.
 type Cache struct {
 	log  logr.Logger
-	data *inject.TrackedOffsets
+	data *structfield.Index
 }
 
 // NewCache loads struct field offsets from offsetFile and returns them as a
@@ -41,8 +41,8 @@ func NewCache(l logr.Logger, offsetFile string) (*Cache, error) {
 	}
 	defer f.Close()
 
-	c.data = new(inject.TrackedOffsets)
-	err = json.NewDecoder(f).Decode(c.data)
+	c.data = structfield.NewIndex()
+	err = json.NewDecoder(f).Decode(&c.data)
 	return c, err
 }
 
@@ -58,7 +58,7 @@ func (c *Cache) GetOffset(ver *version.Version, sf StructField) (uint64, bool) {
 		return 0, false
 	}
 
-	off, ok := c.data.GetOffset(sf.structName(), sf.Field, ver)
+	off, ok := c.data.GetOffset(sf.id(), ver)
 	msg := "cache "
 	if ok {
 		msg += "hit"

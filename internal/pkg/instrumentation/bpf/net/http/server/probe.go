@@ -20,23 +20,22 @@ import (
 	"errors"
 	"os"
 
-	"go.opentelemetry.io/auto/internal/pkg/instrumentation/bpffs"
-
 	"github.com/cilium/ebpf"
 	"github.com/cilium/ebpf/link"
 	"github.com/cilium/ebpf/perf"
 	"github.com/go-logr/logr"
-	"golang.org/x/sys/unix"
-
 	"go.opentelemetry.io/otel/attribute"
 	semconv "go.opentelemetry.io/otel/semconv/v1.18.0"
 	"go.opentelemetry.io/otel/trace"
+	"golang.org/x/sys/unix"
 
 	"go.opentelemetry.io/auto/internal/pkg/inject"
+	"go.opentelemetry.io/auto/internal/pkg/instrumentation/bpffs"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/context"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/events"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/utils"
 	"go.opentelemetry.io/auto/internal/pkg/process"
+	"go.opentelemetry.io/auto/internal/pkg/structfield"
 )
 
 //go:generate go run github.com/cilium/ebpf/cmd/bpf2go -target amd64,arm64 -cc clang -cflags $CFLAGS bpf ./bpf/probe.bpf.c
@@ -86,13 +85,13 @@ func (h *Probe) Load(exec *link.Executable, target *process.TargetDetails) error
 	err = inject.Constants(
 		spec,
 		inject.WithRegistersABI(target.IsRegistersABI()),
-		inject.WithOffset("method_ptr_pos", "net/http.Request", "Method", ver),
-		inject.WithOffset("url_ptr_pos", "net/http.Request", "URL", ver),
-		inject.WithOffset("ctx_ptr_pos", "net/http.Request", "ctx", ver),
-		inject.WithOffset("path_ptr_pos", "net/url.URL", "Path", ver),
-		inject.WithOffset("ctx_ptr_pos", "net/http.Request", "ctx", ver),
-		inject.WithOffset("headers_ptr_pos", "net/http.Request", "Header", ver),
-		inject.WithOffset("buckets_ptr_pos", "runtime.hmap", "buckets", ver),
+		inject.WithOffset("method_ptr_pos", structfield.NewID("net/http", "Request", "Method"), ver),
+		inject.WithOffset("url_ptr_pos", structfield.NewID("net/http", "Request", "URL"), ver),
+		inject.WithOffset("ctx_ptr_pos", structfield.NewID("net/http", "Request", "ctx"), ver),
+		inject.WithOffset("path_ptr_pos", structfield.NewID("net/url", "URL", "Path"), ver),
+		inject.WithOffset("ctx_ptr_pos", structfield.NewID("net/http", "Request", "ctx"), ver),
+		inject.WithOffset("headers_ptr_pos", structfield.NewID("net/http", "Request", "Header"), ver),
+		inject.WithOffset("buckets_ptr_pos", structfield.NewID("runtime", "hmap", "buckets"), ver),
 	)
 	if err != nil {
 		return err

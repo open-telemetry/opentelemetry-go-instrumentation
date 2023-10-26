@@ -25,13 +25,14 @@ import (
 	"github.com/hashicorp/go-version"
 
 	"go.opentelemetry.io/auto/internal/pkg/process"
+	"go.opentelemetry.io/auto/internal/pkg/structfield"
 )
 
 var (
 	//go:embed offset_results.json
 	offsetsData string
 
-	offsets     TrackedOffsets
+	offsets     = structfield.NewIndex()
 	errNotFound = errors.New("offset not found")
 
 	nCPU = uint32(runtime.NumCPU())
@@ -125,15 +126,15 @@ func WithKeyValue(key string, value interface{}) Option {
 }
 
 // WithOffset returns an option that sets key to the offset value of the struct
-// field defined by strct and field at the specified version ver.
+// field defined by id at the specified version ver.
 //
-// If the offset value is not known, an error is logged and a no-op Option is
-// returned.
-func WithOffset(key, strct, field string, ver *version.Version) Option {
-	off, ok := offsets.GetOffset(strct, field, ver)
+// If the offset value is not known, an error is returned when the returned
+// Option is used.
+func WithOffset(key string, id structfield.ID, ver *version.Version) Option {
+	off, ok := offsets.GetOffset(id, ver)
 	if !ok {
 		return errOpt{
-			err: fmt.Errorf("%w: %s.%s (%s)", errNotFound, strct, field, ver),
+			err: fmt.Errorf("%w: %s (%s)", errNotFound, id, ver),
 		}
 	}
 	return WithKeyValue(key, off)
