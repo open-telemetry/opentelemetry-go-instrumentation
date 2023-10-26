@@ -49,7 +49,7 @@ func main() {
 	logger := newLogger().WithName("go.opentelemetry.io/auto")
 
 	logger.Info("building OpenTelemetry Go instrumentation ...")
-	inst, err := auto.NewInstrumentation()
+	inst, err := auto.NewInstrumentation(auto.WithEnv())
 	if err != nil {
 		logger.Error(err, "failed to create instrumentation")
 		return
