@@ -126,8 +126,9 @@ To instrument an application running in Kubernetes, follow these steps:
        runAsUser: 0
        privileged: true
    ```
+2. Check if the configuration [shareProcessNamespace](https://kubernetes.io/docs/tasks/configure-pod-container/share-process-namespace/) is present in the pod spec, if not, please add it.
 
-2. Deploy the application and the instrumentation using the manifest.
+3. Deploy the application and the instrumentation using the manifest.
 
 ## Contributing
 
