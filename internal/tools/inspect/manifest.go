@@ -21,6 +21,7 @@ import (
 	"io"
 
 	"github.com/hashicorp/go-version"
+
 	"go.opentelemetry.io/auto/internal/pkg/structfield"
 )
 

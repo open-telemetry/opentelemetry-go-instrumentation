@@ -6,7 +6,6 @@ TOOLS_MOD_DIR := ./internal/tools
 TOOLS = $(CURDIR)/.tools
 
 ALL_GO_MOD_DIRS := $(shell find . -type f -name 'go.mod' ! -path './LICENSES/*' -exec dirname {} \; | sort)
-OTEL_GO_MOD_DIRS := $(filter-out $(TOOLS_MOD_DIR), $(ALL_GO_MOD_DIRS))
 
 # Build the list of include directories to compile the bpf program
 BPF_INCLUDE += -I${REPODIR}/internal/include/libbpf
@@ -81,7 +80,7 @@ go-mod-tidy/%:
 .PHONY: golangci-lint golangci-lint-fix
 golangci-lint-fix: ARGS=--fix
 golangci-lint-fix: golangci-lint
-golangci-lint: generate $(OTEL_GO_MOD_DIRS:%=golangci-lint/%)
+golangci-lint: generate $(ALL_GO_MOD_DIRS:%=golangci-lint/%)
 golangci-lint/%: DIR=$*
 golangci-lint/%: | $(GOLANGCI_LINT)
 	@echo 'golangci-lint $(if $(ARGS),$(ARGS) ,)$(DIR)' \
