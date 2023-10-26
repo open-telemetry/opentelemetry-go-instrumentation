@@ -25,6 +25,10 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 
 - Parse Go versions that contain `GOEXPERIMENT` suffixes. ([#389](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/389))
 
+### Removed
+
+- The deprecated `go.opentelemetry.io/auto/examples/rolldice` module is removed. ([#423](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/423))
+
 ## [v0.7.0-alpha] - 2023-10-15
 
 ### Added
