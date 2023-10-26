@@ -18,13 +18,11 @@ import (
 	"bytes"
 	"encoding/binary"
 	"errors"
-	"fmt"
 	"os"
 	"strings"
 
 	"github.com/cilium/ebpf"
 	"github.com/go-logr/logr"
-	"github.com/hashicorp/go-version"
 
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/bpffs"
 
@@ -83,12 +81,7 @@ func (g *Probe) FuncNames() []string {
 
 // Load loads all instrumentation offsets.
 func (g *Probe) Load(exec *link.Executable, target *process.TargetDetails) error {
-	v := target.Libraries[g.LibraryName()]
-	ver, err := version.NewVersion(v)
-	if err != nil {
-		return fmt.Errorf("invalid package version: %w", err)
-	}
-
+	ver := target.Libraries[g.LibraryName()]
 	spec, err := loadBpf()
 	if err != nil {
 		return err

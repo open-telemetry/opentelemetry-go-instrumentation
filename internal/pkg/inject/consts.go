@@ -131,6 +131,12 @@ func WithKeyValue(key string, value interface{}) Option {
 // If the offset value is not known, an error is returned when the returned
 // Option is used.
 func WithOffset(key string, id structfield.ID, ver *version.Version) Option {
+	if ver == nil {
+		return errOpt{
+			err: fmt.Errorf("missing version: %s", id),
+		}
+	}
+
 	off, ok := offsets.GetOffset(id, ver)
 	if !ok {
 		return errOpt{
