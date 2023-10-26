@@ -22,6 +22,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/auto/internal/pkg/process"
+	"go.opentelemetry.io/auto/internal/pkg/structfield"
 )
 
 func TestWithRegistersABI(t *testing.T) {
@@ -68,32 +69,17 @@ func TestWithOffset(t *testing.T) {
 	v18, err := version.NewVersion("1.8")
 	require.NoError(t, err)
 
-	const (
-		strct, field        = "net/http.Request", "Method"
-		off          uint64 = 1
-	)
+	const off uint64 = 1
+	id := structfield.NewID("net/http", "Request", "Method")
 
 	origOff := offsets
 	t.Cleanup(func() { offsets = origOff })
-	offsets = TrackedOffsets{
-		Data: map[string]TrackedStruct{
-			strct: {
-				field: []TrackedField{{
-					Versions: VersionInfo{
-						Oldest: v10,
-						Newest: v18,
-					},
-					Offsets: []VersionedOffset{{
-						Offset: off,
-						Since:  v10,
-					}},
-				}},
-			},
-		},
-	}
+	offsets = structfield.NewIndex()
+	offsets.PutOffset(id, v10, off)
+	offsets.PutOffset(id, v18, off)
 
 	const name = "test_name"
-	opts := []Option{WithOffset(name, strct, field, v10)}
+	opts := []Option{WithOffset(name, id, v10)}
 	got, err := newConsts(opts)
 	require.NoError(t, err)
 	require.Contains(t, got, name)
@@ -103,7 +89,8 @@ func TestWithOffset(t *testing.T) {
 	assert.Equal(t, off, v.(uint64))
 
 	// Failed look-ups need to be returned as an error.
-	opts = []Option{WithOffset(name, strct+"Alt", field, v10)}
+	id.Struct = id.Struct + "Alt"
+	opts = []Option{WithOffset(name, id, v10)}
 	_, err = newConsts(opts)
 	assert.ErrorIs(t, err, errNotFound)
 }
