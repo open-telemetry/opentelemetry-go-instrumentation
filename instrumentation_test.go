@@ -16,11 +16,9 @@ package auto
 
 import (
 	"fmt"
-	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-
 	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
 )
 
@@ -33,38 +31,94 @@ func TestWithServiceName(t *testing.T) {
 
 	// No service name provided - check for default value
 	c = newInstConfig([]InstrumentationOption{})
-	assert.Equal(t, serviceNameDefault, c.serviceName)
-
-	// OTEL_RESOURCE_ATTRIBUTES
-	resServiceName := "resValue"
-	err := os.Setenv(envResourceAttrKey, fmt.Sprintf("key1=val1,%s=%s", string(semconv.ServiceNameKey), resServiceName))
-	if err != nil {
-		t.Error(err)
-	}
-	c = newInstConfig([]InstrumentationOption{WithServiceName((testServiceName))})
-	assert.Equal(t, resServiceName, c.serviceName)
-
-	// Add env var to take precedence
-	envServiceName := "env_serviceName"
-	err = os.Setenv(envServiceNameKey, envServiceName)
-	if err != nil {
-		t.Error(err)
-	}
-	c = newInstConfig([]InstrumentationOption{WithServiceName((testServiceName))})
-	assert.Equal(t, envServiceName, c.serviceName)
+	assert.Equal(t, c.defualtServiceName(), c.serviceName)
 }
 
 func TestWithPID(t *testing.T) {
-	// Current PID
-	currPID := os.Getpid()
-	c := newInstConfig([]InstrumentationOption{WithPID(currPID)})
-	currExe, err := os.Executable()
-	if err != nil {
-		t.Error(err)
-	}
-	assert.Equal(t, currPID, c.target.Pid)
+	c := newInstConfig([]InstrumentationOption{WithPID(1)})
+	assert.Equal(t, 1, c.target.Pid)
 
+	const exe = "./test/path/program/run.go"
 	// PID should override valid target exe
-	c = newInstConfig([]InstrumentationOption{WithPID(currPID), WithTarget(currExe)})
-	assert.Equal(t, currPID, c.target.Pid)
+	c = newInstConfig([]InstrumentationOption{WithTarget(exe), WithPID(1)})
+	assert.Equal(t, 1, c.target.Pid)
+	assert.Equal(t, "", c.target.ExePath)
+}
+
+func TestWithEnv(t *testing.T) {
+	t.Run("OTEL_GO_AUTO_TARGET_EXE", func(t *testing.T) {
+		const path = "./test/path/program/run.go"
+		mockEnv(t, map[string]string{"OTEL_GO_AUTO_TARGET_EXE": path})
+		c := newInstConfig([]InstrumentationOption{WithEnv()})
+		assert.Equal(t, path, c.target.ExePath)
+		assert.Equal(t, 0, c.target.Pid)
+	})
+
+	t.Run("OTEL_SERVICE_NAME", func(t *testing.T) {
+		const name = "test_service"
+		mockEnv(t, map[string]string{"OTEL_SERVICE_NAME": name})
+		c := newInstConfig([]InstrumentationOption{WithEnv()})
+		assert.Equal(t, name, c.serviceName)
+	})
+
+	t.Run("OTEL_RESOURCE_ATTRIBUTES", func(t *testing.T) {
+		const name = "test_service"
+		val := fmt.Sprintf("a=b,fubar,%s=%s,foo=bar", semconv.ServiceNameKey, name)
+		mockEnv(t, map[string]string{"OTEL_RESOURCE_ATTRIBUTES": val})
+		c := newInstConfig([]InstrumentationOption{WithEnv()})
+		assert.Equal(t, name, c.serviceName)
+	})
+}
+
+func TestOptionPrecedence(t *testing.T) {
+	const (
+		path = "./test/path/program/run.go"
+		name = "test_service"
+	)
+
+	t.Run("Env", func(t *testing.T) {
+		mockEnv(t, map[string]string{
+			"OTEL_GO_AUTO_TARGET_EXE": path,
+			"OTEL_SERVICE_NAME":       name,
+		})
+
+		// WithEnv passed last, it should have precedence.
+		opts := []InstrumentationOption{
+			WithPID(1),
+			WithServiceName("wrong"),
+			WithEnv(),
+		}
+		c := newInstConfig(opts)
+		assert.Equal(t, path, c.target.ExePath)
+		assert.Equal(t, 0, c.target.Pid)
+		assert.Equal(t, name, c.serviceName)
+	})
+
+	t.Run("Options", func(t *testing.T) {
+		mockEnv(t, map[string]string{
+			"OTEL_GO_AUTO_TARGET_EXE": path,
+			"OTEL_SERVICE_NAME":       "wrong",
+		})
+
+		// WithEnv passed first, it should be overridden.
+		opts := []InstrumentationOption{
+			WithEnv(),
+			WithPID(1),
+			WithServiceName(name),
+		}
+		c := newInstConfig(opts)
+		assert.Equal(t, "", c.target.ExePath)
+		assert.Equal(t, 1, c.target.Pid)
+		assert.Equal(t, name, c.serviceName)
+	})
+}
+
+func mockEnv(t *testing.T, env map[string]string) {
+	orig := lookupEnv
+	t.Cleanup(func() { lookupEnv = orig })
+
+	lookupEnv = func(key string) (string, bool) {
+		v, ok := env[key]
+		return v, ok
+	}
 }
