@@ -3,7 +3,7 @@ module go.opentelemetry.io/auto/internal/tools
 go 1.18
 
 require (
-	github.com/docker/docker v24.0.6+incompatible
+	github.com/docker/docker v24.0.7+incompatible
 	github.com/go-logr/logr v1.2.4
 	github.com/go-logr/stdr v1.2.2
 	github.com/golangci/golangci-lint v1.54.2
