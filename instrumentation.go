@@ -278,11 +278,12 @@ var lookupEnv = os.LookupEnv
 //
 //   - OTEL_GO_AUTO_TARGET_EXE: sets the target binary
 //   - OTEL_SERVICE_NAME (or OTEL_RESOURCE_ATTRIBUTES): sets the service name
+//   - OTEL_TRACES_EXPORTER: sets the trace exporter
 //
-// This option may conflict with [WithTarget], [WithPID], and [WithServiceName]
-// if their respective environment variable is defined. If more than one of
-// these options are used, the last one provided to an [Instrumentation] will
-// be used.
+// This option may conflict with [WithTarget], [WithPID], [WithTraceExporter],
+// and [WithServiceName] if their respective environment variable is defined.
+// If more than one of these options are used, the last one provided to an
+// [Instrumentation] will be used.
 func WithEnv() InstrumentationOption {
 	return fnOpt(func(ctx context.Context, c instConfig) (instConfig, error) {
 		var err error
@@ -336,8 +337,9 @@ func lookupServiceName() (string, bool) {
 	return "", false
 }
 
-// WithTraceExporter return an [InstrumentationOption] that will configure an
-// [Instrumentation] to use the provided exp as the OpenTelemetry SpanExporter.
+// WithTraceExporter returns an [InstrumentationOption] that will configure an
+// [Instrumentation] to use the provided exp to export OpenTelemetry tracing
+// telemetry.
 //
 // If OTEL_TRACES_EXPORTER is defined, this option will conflict with
 // [WithEnv]. If both are used, the last one provided to an [Instrumentation]
