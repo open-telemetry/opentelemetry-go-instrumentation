@@ -23,6 +23,7 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
   Use the new `WithEnv` option to enable environment parsing. ([#417](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/417))
 - `NewInstrumentation` now requires a `context.Context` as its first argument.
   This context is used in the instantiation of exporters. ([#426](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/426))
+- `Instrumentation` now uses an OTLP over HTTP/protobuf exporter (changed from gRPC/protobuf). ([#426](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/426))
 
 ### Fixed
 
