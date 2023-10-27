@@ -84,4 +84,19 @@ int uprobe_queryDC(struct pt_regs *ctx) {
 
 // This instrumentation attaches uprobe to the following function:
 // func (db *DB) queryDC(ctx, txctx context.Context, dc *driverConn, releaseConn func(error), query string, args []any)
-UPROBE_RETURN(queryDC, struct sql_request_t, sql_events, events, 3, 0, true)
+SEC("uprobe/queryDC")
+int uprobe_queryDC_Returns(struct pt_regs *ctx) {
+    void *ctx_address = get_Go_context(ctx, 3, 0, true);
+    void *key = get_consistent_key(ctx, ctx_address);
+    void *req_ptr_map = bpf_map_lookup_elem(&sql_events, &key);
+    if (req_ptr_map == NULL) {
+        return 0;
+    }
+    struct sql_request_t tmpReq = {0};
+    bpf_probe_read(&tmpReq, sizeof(tmpReq), req_ptr_map);
+    tmpReq.end_time = bpf_ktime_get_ns();
+    bpf_perf_event_output(ctx, &events, BPF_F_CURRENT_CPU, &tmpReq, sizeof(tmpReq));
+    bpf_map_delete_elem(&sql_events, &key);
+    stop_tracking_span(&tmpReq.sc, &tmpReq.psc);
+    return 0;
+}
