@@ -21,15 +21,20 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 
 	"github.com/go-logr/logr"
 	"github.com/go-logr/stdr"
 	"github.com/go-logr/zapr"
 	"go.opentelemetry.io/contrib/exporters/autoexport"
+	"go.opentelemetry.io/otel/exporters/otlp/otlptrace"
+	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
+	"go.opentelemetry.io/otel/sdk/resource"
 	"go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
 	"go.uber.org/zap"
+	"google.golang.org/grpc"
 
 	"go.opentelemetry.io/auto/internal/pkg/instrumentors"
 	"go.opentelemetry.io/auto/internal/pkg/opentelemetry"
@@ -104,7 +109,7 @@ func NewInstrumentation(ctx context.Context, opts ...InstrumentationOption) (*In
 		return nil, err
 	}
 
-	ctrl, err := opentelemetry.NewController(logger, Version(), c.serviceName, c.traceExp)
+	ctrl, err := opentelemetry.NewController(logger, c.tracerProvider())
 	if err != nil {
 		return nil, err
 	}
@@ -184,7 +189,7 @@ func newInstConfig(ctx context.Context, opts []InstrumentationOption) (instConfi
 	}
 	if c.traceExp == nil {
 		var e error
-		c.traceExp, e = opentelemetry.DefaultTraceExporter(ctx, Version())
+		c.traceExp, e = defaultTraceExporter(ctx)
 		err = errors.Join(err, e)
 	}
 
@@ -211,6 +216,22 @@ func (c instConfig) validate() error {
 		return errors.New("undefined trace exporter")
 	}
 	return c.target.Validate()
+}
+
+func (c instConfig) tracerProvider() *trace.TracerProvider {
+	res := resource.NewWithAttributes(
+		semconv.SchemaURL,
+		semconv.ServiceNameKey.String(c.serviceName),
+		semconv.TelemetrySDKLanguageGo,
+		semconv.TelemetryAutoVersionKey.String(Version()),
+	)
+
+	return trace.NewTracerProvider(
+		trace.WithSampler(trace.AlwaysSample()),
+		trace.WithResource(res),
+		trace.WithBatcher(c.traceExp),
+		trace.WithIDGenerator(opentelemetry.NewEBPFSourceIDGenerator()),
+	)
 }
 
 type fnOpt func(context.Context, instConfig) (instConfig, error)
@@ -295,7 +316,7 @@ func WithEnv() InstrumentationOption {
 			// a way to just pass the envoriment value currently. Just use
 			// NewSpanExporter which will re-read this value.
 
-			fback, e := opentelemetry.DefaultTraceExporter(ctx, Version())
+			fback, e := defaultTraceExporter(ctx)
 			err = errors.Join(err, e)
 			if e == nil {
 				c.traceExp, e = autoexport.NewSpanExporter(
@@ -349,4 +370,24 @@ func WithTraceExporter(exp trace.SpanExporter) InstrumentationOption {
 		c.traceExp = exp
 		return c, nil
 	})
+}
+
+func defaultTraceExporter(ctx context.Context) (trace.SpanExporter, error) {
+	// Controller-local reference to the auto-instrumentation release
+	// version. Start of this auto-instrumentation's exporter User-Agent
+	// header, e.g. ""OTel-Go-Auto-Instrumentation/1.2.3".
+	baseUserAgent := fmt.Sprintf("OTel-Go-Auto-Instrumentation/%s", Version())
+
+	// runtimeInfo is info about the runtime environment for inclusion in
+	// User-Agent, e.g. "go/1.18.2 (linux/amd64)".
+	v := strings.Replace(runtime.Version(), "go", "go/", 1)
+	runtimeInfo := fmt.Sprintf("%s (%s/%s)", v, runtime.GOOS, runtime.GOARCH)
+
+	autoinstUserAgent := fmt.Sprintf("%s %s", baseUserAgent, runtimeInfo)
+
+	otlpTraceClient := otlptracegrpc.NewClient(
+		otlptracegrpc.WithDialOption(grpc.WithUserAgent(autoinstUserAgent)),
+	)
+
+	return otlptrace.New(ctx, otlpTraceClient)
 }

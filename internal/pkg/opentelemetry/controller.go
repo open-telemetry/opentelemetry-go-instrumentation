@@ -16,24 +16,15 @@ package opentelemetry
 
 import (
 	"context"
-	"fmt"
 	"runtime"
-	"strings"
 	"time"
 
 	"github.com/go-logr/logr"
-	"golang.org/x/sys/unix"
-
-	"go.opentelemetry.io/otel/sdk/resource"
-	sdktrace "go.opentelemetry.io/otel/sdk/trace"
-	semconv "go.opentelemetry.io/otel/semconv/v1.18.0"
 	"go.opentelemetry.io/otel/trace"
+	"golang.org/x/sys/unix"
 
 	"go.opentelemetry.io/auto/internal/pkg/instrumentors/events"
 )
-
-// Information about the runtime environment for inclusion in User-Agent, e.g. "go/1.18.2 (linux/amd64)".
-var runtimeInfo = fmt.Sprintf("%s (%s/%s)", strings.Replace(runtime.Version(), "go", "go/", 1), runtime.GOOS, runtime.GOARCH)
 
 // Controller handles OpenTelemetry telemetry generation for events.
 type Controller struct {
@@ -83,28 +74,8 @@ func (c *Controller) convertTime(t int64) time.Time {
 }
 
 // NewController returns a new initialized [Controller].
-func NewController(logger logr.Logger, version string, serviceName string, traceExp sdktrace.SpanExporter) (*Controller, error) {
+func NewController(logger logr.Logger, tracerProvider trace.TracerProvider) (*Controller, error) {
 	logger = logger.WithName("Controller")
-
-	ctx := context.Background()
-	res, err := resource.New(ctx,
-		resource.WithAttributes(
-			semconv.ServiceNameKey.String(serviceName),
-			semconv.TelemetrySDKLanguageGo,
-			semconv.TelemetryAutoVersionKey.String(version),
-		),
-	)
-	if err != nil {
-		return nil, err
-	}
-
-	bsp := sdktrace.NewBatchSpanProcessor(traceExp)
-	tracerProvider := sdktrace.NewTracerProvider(
-		sdktrace.WithSampler(sdktrace.AlwaysSample()),
-		sdktrace.WithResource(res),
-		sdktrace.WithSpanProcessor(bsp),
-		sdktrace.WithIDGenerator(newEBPFSourceIDGenerator()),
-	)
 
 	bt, err := estimateBootTimeOffset()
 	if err != nil {
