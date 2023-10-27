@@ -217,13 +217,13 @@ func (c instConfig) validate() error {
 func (c instConfig) tracerProvider() *trace.TracerProvider {
 	return trace.NewTracerProvider(
 		trace.WithSampler(trace.AlwaysSample()),
-		trace.WithResource(c.resource()),
+		trace.WithResource(c.res()),
 		trace.WithBatcher(c.traceExp),
 		trace.WithIDGenerator(opentelemetry.NewEBPFSourceIDGenerator()),
 	)
 }
 
-func (c instConfig) resource() *resource.Resource {
+func (c instConfig) res() *resource.Resource {
 	runVer := runtime.Version()
 	runName := runtime.Compiler
 	if runName == "gc" {
