@@ -14,12 +14,15 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
   The `Instrumentation` will no longer by default parse the environment.
   This option needs to be used to enable environment parsing, and the order it is passed influences the environment precedence.
   All options passed before this one will be overridden if there are conflicts, and those passed after will override the environment. ([#417](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/417))
+- Add the `WithTraceExporter` `InstrumentationOption` to configure the trace `SpanExporter` used by an `Instrumentation`. ([#426](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/426))
 
 ### Changed
 
 - Documentation no longer says that `SYS_PTRACE` capabilty is needed. ([#388](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/388))
 - The `NewInstrumentation` no longer parses environment variables by default.
   Use the new `WithEnv` option to enable environment parsing. ([#417](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/417))
+- `NewInstrumentation` now requires a `context.Context` as its first argument.
+  This context is used in the instantiation of exporters. ([#426](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/426))
 
 ### Fixed
 
