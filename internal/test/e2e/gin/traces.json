@@ -4,6 +4,24 @@
       "resource": {
         "attributes": [
           {
+            "key": "process.runtime.description",
+            "value": {
+              "stringValue": "go version go1.21.3 linux/amd64"
+            }
+          },
+          {
+            "key": "process.runtime.name",
+            "value": {
+              "stringValue": "go"
+            }
+          },
+          {
+            "key": "process.runtime.version",
+            "value": {
+              "stringValue": "go1.21.3"
+            }
+          },
+          {
             "key": "service.name",
             "value": {
               "stringValue": "sample-app"
