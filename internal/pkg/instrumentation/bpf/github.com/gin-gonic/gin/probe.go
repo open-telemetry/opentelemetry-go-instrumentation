@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package server
+package gin
 
 import (
 	"bytes"
@@ -20,8 +20,7 @@ import (
 	"errors"
 	"os"
 
-	"go.opentelemetry.io/auto/internal/pkg/instrumentors/bpffs"
-	"go.opentelemetry.io/auto/internal/pkg/structfield"
+	"go.opentelemetry.io/auto/internal/pkg/instrumentation/bpffs"
 
 	"github.com/cilium/ebpf"
 	"github.com/cilium/ebpf/link"
@@ -34,17 +33,18 @@ import (
 	"go.opentelemetry.io/otel/trace"
 
 	"go.opentelemetry.io/auto/internal/pkg/inject"
-	"go.opentelemetry.io/auto/internal/pkg/instrumentors/context"
-	"go.opentelemetry.io/auto/internal/pkg/instrumentors/events"
-	"go.opentelemetry.io/auto/internal/pkg/instrumentors/utils"
+	"go.opentelemetry.io/auto/internal/pkg/instrumentation/context"
+	"go.opentelemetry.io/auto/internal/pkg/instrumentation/events"
+	"go.opentelemetry.io/auto/internal/pkg/instrumentation/utils"
 	"go.opentelemetry.io/auto/internal/pkg/process"
+	"go.opentelemetry.io/auto/internal/pkg/structfield"
 )
 
 //go:generate go run github.com/cilium/ebpf/cmd/bpf2go -target amd64,arm64 -cc clang -cflags $CFLAGS bpf ./bpf/probe.bpf.c
 
-const instrumentedPkg = "net/http"
+const instrumentedPkg = "github.com/gin-gonic/gin"
 
-// Event represents an event in an HTTP server during an HTTP
+// Event represents an event in the gin-gonic/gin server during an HTTP
 // request-response.
 type Event struct {
 	context.BaseSpanProperties
@@ -52,8 +52,8 @@ type Event struct {
 	Path   [100]byte
 }
 
-// Instrumentor is the net/http instrumentor.
-type Instrumentor struct {
+// Probe is the gin-gonic/gin instrumentation probe.
+type Probe struct {
 	logger       logr.Logger
 	bpfObjects   *bpfObjects
 	uprobes      []link.Link
@@ -61,23 +61,24 @@ type Instrumentor struct {
 	eventsReader *perf.Reader
 }
 
-// New returns a new [Instrumentor].
-func New(logger logr.Logger) *Instrumentor {
-	return &Instrumentor{logger: logger.WithName("Instrumentor/HTTP/Server")}
+// New returns a new [Probe].
+func New(logger logr.Logger) *Probe {
+	return &Probe{logger: logger.WithName("Probe/gin")}
 }
 
-// LibraryName returns the net/http package name.
-func (h *Instrumentor) LibraryName() string {
+// LibraryName returns the gin-gonic/gin package import path.
+func (h *Probe) LibraryName() string {
 	return instrumentedPkg
 }
 
-// FuncNames returns the function names from "net/http" that are instrumented.
-func (h *Instrumentor) FuncNames() []string {
-	return []string{"net/http.HandlerFunc.ServeHTTP"}
+// FuncNames returns the function names from "github.com/gin-gonic/gin" that are
+// instrumented.
+func (h *Probe) FuncNames() []string {
+	return []string{"github.com/gin-gonic/gin.(*Engine).ServeHTTP"}
 }
 
 // Load loads all instrumentation offsets.
-func (h *Instrumentor) Load(exec *link.Executable, target *process.TargetDetails) error {
+func (h *Probe) Load(exec *link.Executable, target *process.TargetDetails) error {
 	ver := target.GoVersion
 
 	spec, err := loadBpf()
@@ -91,9 +92,6 @@ func (h *Instrumentor) Load(exec *link.Executable, target *process.TargetDetails
 		inject.WithOffset("url_ptr_pos", structfield.NewID("net/http", "Request", "URL"), ver),
 		inject.WithOffset("ctx_ptr_pos", structfield.NewID("net/http", "Request", "ctx"), ver),
 		inject.WithOffset("path_ptr_pos", structfield.NewID("net/url", "URL", "Path"), ver),
-		inject.WithOffset("ctx_ptr_pos", structfield.NewID("net/http", "Request", "ctx"), ver),
-		inject.WithOffset("headers_ptr_pos", structfield.NewID("net/http", "Request", "Header"), ver),
-		inject.WithOffset("buckets_ptr_pos", structfield.NewID("runtime", "hmap", "buckets"), ver),
 	)
 	if err != nil {
 		return err
@@ -122,7 +120,7 @@ func (h *Instrumentor) Load(exec *link.Executable, target *process.TargetDetails
 	return nil
 }
 
-func (h *Instrumentor) registerProbes(exec *link.Executable, target *process.TargetDetails, funcName string) {
+func (h *Probe) registerProbes(exec *link.Executable, target *process.TargetDetails, funcName string) {
 	logger := h.logger.WithValues("function", funcName)
 	offset, err := target.GetFunctionOffset(funcName)
 	if err != nil {
@@ -135,7 +133,7 @@ func (h *Instrumentor) registerProbes(exec *link.Executable, target *process.Tar
 		return
 	}
 
-	up, err := exec.Uprobe("", h.bpfObjects.UprobeHandlerFuncServeHTTP, &link.UprobeOptions{
+	up, err := exec.Uprobe("", h.bpfObjects.UprobeGinEngineServeHTTP, &link.UprobeOptions{
 		Address: offset,
 	})
 	if err != nil {
@@ -147,7 +145,7 @@ func (h *Instrumentor) registerProbes(exec *link.Executable, target *process.Tar
 	h.uprobes = append(h.uprobes, up)
 
 	for _, ret := range retOffsets {
-		retProbe, err := exec.Uprobe("", h.bpfObjects.UprobeHandlerFuncServeHTTP_Returns, &link.UprobeOptions{
+		retProbe, err := exec.Uprobe("", h.bpfObjects.UprobeGinEngineServeHTTP_Returns, &link.UprobeOptions{
 			Address: ret,
 		})
 		if err != nil {
@@ -159,7 +157,7 @@ func (h *Instrumentor) registerProbes(exec *link.Executable, target *process.Tar
 }
 
 // Run runs the events processing loop.
-func (h *Instrumentor) Run(eventsChan chan<- *events.Event) {
+func (h *Probe) Run(eventsChan chan<- *events.Event) {
 	var event Event
 	for {
 		record, err := h.eventsReader.Read()
@@ -185,7 +183,7 @@ func (h *Instrumentor) Run(eventsChan chan<- *events.Event) {
 	}
 }
 
-func (h *Instrumentor) convertEvent(e *Event) *events.Event {
+func (h *Probe) convertEvent(e *Event) *events.Event {
 	method := unix.ByteSliceToString(e.Method[:])
 	path := unix.ByteSliceToString(e.Path[:])
 
@@ -195,29 +193,16 @@ func (h *Instrumentor) convertEvent(e *Event) *events.Event {
 		TraceFlags: trace.FlagsSampled,
 	})
 
-	var pscPtr *trace.SpanContext
-	if e.ParentSpanContext.TraceID.IsValid() {
-		psc := trace.NewSpanContext(trace.SpanContextConfig{
-			TraceID:    e.ParentSpanContext.TraceID,
-			SpanID:     e.ParentSpanContext.SpanID,
-			TraceFlags: trace.FlagsSampled,
-			Remote:     true,
-		})
-		pscPtr = &psc
-	} else {
-		pscPtr = nil
-	}
-
 	return &events.Event{
 		Library: h.LibraryName(),
 		// Do not include the high-cardinality path here (there is no
-		// templatized path manifest to reference).
-		Name:              method,
-		Kind:              trace.SpanKindServer,
-		StartTime:         int64(e.StartTime),
-		EndTime:           int64(e.EndTime),
-		SpanContext:       &sc,
-		ParentSpanContext: pscPtr,
+		// templatized path manifest to reference, given we are instrumenting
+		// Engine.ServeHTTP which is not passed a Gin Context).
+		Name:        method,
+		Kind:        trace.SpanKindServer,
+		StartTime:   int64(e.StartTime),
+		EndTime:     int64(e.EndTime),
+		SpanContext: &sc,
 		Attributes: []attribute.KeyValue{
 			semconv.HTTPMethodKey.String(method),
 			semconv.HTTPTargetKey.String(path),
@@ -225,9 +210,9 @@ func (h *Instrumentor) convertEvent(e *Event) *events.Event {
 	}
 }
 
-// Close stops the Instrumentor.
-func (h *Instrumentor) Close() {
-	h.logger.Info("closing net/http instrumentor")
+// Close stops the Probe.
+func (h *Probe) Close() {
+	h.logger.Info("closing gin-gonic/gin probe")
 	if h.eventsReader != nil {
 		h.eventsReader.Close()
 	}

@@ -9,7 +9,7 @@ Users may want to enrich the traces produced by the automatic instrumentation wi
 Integration with manual instrumentation happens in two steps:
 
 1. **Modify spans created manually** - attach a uprobe to the function that creates the span, override the trace id and parent span id with the current active span (according to the eBPF map described in the context propagation document).
-2. **Update active span map** - After the span is created, update the eBPF map with the new span as the current span. This step is needed in order to create traces that combines spans created manually, automatically (via other instrumentors) and remotely (via context propagation).
+2. **Update active span map** - After the span is created, update the eBPF map with the new span as the current span. This step is needed in order to create traces that combines spans created manually, automatically (via other probes) and remotely (via context propagation).
 
 This implementation depends on changes described in the [Context Propagation design document](context-propagation.md) and can't be implemented before context propagation is implemented.
 

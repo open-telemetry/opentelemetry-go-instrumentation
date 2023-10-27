@@ -19,7 +19,7 @@ import (
 
 	"go.opentelemetry.io/otel/trace"
 
-	"go.opentelemetry.io/auto/internal/pkg/instrumentors/events"
+	"go.opentelemetry.io/auto/internal/pkg/instrumentation/events"
 )
 
 type EBPFSourceIDGenerator struct{}
