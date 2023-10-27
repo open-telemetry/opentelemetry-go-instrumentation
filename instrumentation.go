@@ -224,7 +224,7 @@ func (c instConfig) tracerProvider() *trace.TracerProvider {
 }
 
 func (c instConfig) res() *resource.Resource {
-	runVer := runtime.Version()
+	runVer := strings.TrimPrefix(runtime.Version(), "go")
 	runName := runtime.Compiler
 	if runName == "gc" {
 		runName = "go"
