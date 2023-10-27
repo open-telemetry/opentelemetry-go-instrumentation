@@ -27,7 +27,7 @@ services:
     privileged: true
     pid: "host"
     environment:
-      - OTEL_EXPORTER_OTLP_ENDPOINT=http://jaeger:4317
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://jaeger:4318
       - OTEL_GO_AUTO_TARGET_EXE=/app/main
       - OTEL_SERVICE_NAME=rolldice
       - OTEL_PROPAGATORS=tracecontext,baggage
@@ -38,6 +38,7 @@ services:
   jaeger:
     image: jaegertracing/all-in-one:latest
     ports:
+      - "4318:4318"
       - "16686:16686"
       - "14268:14268"
     environment:
