@@ -27,6 +27,7 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 ### Fixed
 
 - Parse Go versions that contain `GOEXPERIMENT` suffixes. ([#389](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/389))
+- Include the schema URL for the semantic convention used in the exported resource. ([#426](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/426))
 
 ### Removed
 

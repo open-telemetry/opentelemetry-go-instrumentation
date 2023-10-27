@@ -23,6 +23,7 @@
           }
         ]
       },
+      "schemaUrl": "https://opentelemetry.io/schemas/1.21.0",
       "scopeSpans": [
         {
           "scope": {
