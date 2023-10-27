@@ -25,7 +25,7 @@ import (
 	"github.com/hashicorp/go-version"
 	"github.com/pkg/errors"
 
-	"go.opentelemetry.io/auto/internal/pkg/instrumentors/utils"
+	"go.opentelemetry.io/auto/internal/pkg/instrumentation/utils"
 )
 
 const waitPidErrorMessage = "waitpid ret value: %d"

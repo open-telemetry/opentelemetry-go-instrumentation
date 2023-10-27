@@ -32,7 +32,7 @@ import (
 	semconv "go.opentelemetry.io/otel/semconv/v1.18.0"
 	"go.opentelemetry.io/otel/trace"
 
-	"go.opentelemetry.io/auto/internal/pkg/instrumentors/events"
+	"go.opentelemetry.io/auto/internal/pkg/instrumentation/events"
 )
 
 // Information about the runtime environment for inclusion in User-Agent, e.g. "go/1.18.2 (linux/amd64)".
