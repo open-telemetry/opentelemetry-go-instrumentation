@@ -43,6 +43,7 @@ func TestProbeConvertEvent(t *testing.T) {
 			EndTime:     uint64(end.UnixNano()),
 			SpanContext: context.EBPFSpanContext{TraceID: traceID, SpanID: spanID},
 		},
+		StatusCode: 200,
 		// "GET"
 		Method: [8]byte{0x47, 0x45, 0x54},
 		// "/foo/bar"
@@ -64,6 +65,7 @@ func TestProbeConvertEvent(t *testing.T) {
 		Attributes: []attribute.KeyValue{
 			semconv.HTTPMethodKey.String("GET"),
 			semconv.HTTPTargetKey.String("/foo/bar"),
+			semconv.HTTPStatusCodeKey.Int(200),
 		},
 	}
 	assert.Equal(t, want, got)
