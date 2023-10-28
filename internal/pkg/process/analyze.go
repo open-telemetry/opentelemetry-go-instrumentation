@@ -92,7 +92,7 @@ func (a *Analyzer) Analyze(pid int, relevantFuncs map[string]interface{}) (*Targ
 		return nil, err
 	}
 	for _, fn := range funcs {
-		a.logger.Info("found function", fn)
+		a.logger.Info("found function", "function_name", fn)
 	}
 
 	result.Functions = funcs

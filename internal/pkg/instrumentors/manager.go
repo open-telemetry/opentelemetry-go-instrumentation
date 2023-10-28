@@ -176,7 +176,7 @@ func (m *Manager) load(target *process.TargetDetails) error {
 
 func (m *Manager) mount(target *process.TargetDetails) error {
 	if target.AllocationDetails != nil {
-		m.logger.Info("Mounting bpffs", target.AllocationDetails)
+		m.logger.Info("Mounting bpffs", "allocations_details", target.AllocationDetails)
 	} else {
 		m.logger.Info("Mounting bpffs")
 	}

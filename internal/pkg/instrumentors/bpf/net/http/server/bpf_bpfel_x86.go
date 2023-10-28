@@ -12,14 +12,14 @@ import (
 	"github.com/cilium/ebpf"
 )
 
-type bpfHttpRequestT struct {
-	StartTime uint64
-	EndTime   uint64
-	Sc        bpfSpanContext
-	Psc       bpfSpanContext
-	Method    [7]int8
-	Path      [100]int8
-	_         [5]byte
+type bpfHttpServerSpanT struct {
+	StartTime  uint64
+	EndTime    uint64
+	Sc         bpfSpanContext
+	Psc        bpfSpanContext
+	StatusCode uint64
+	Method     [8]int8
+	Path       [128]int8
 }
 
 type bpfSpanContext struct {
@@ -70,6 +70,7 @@ type bpfSpecs struct {
 type bpfProgramSpecs struct {
 	UprobeHandlerFuncServeHTTP         *ebpf.ProgramSpec `ebpf:"uprobe_HandlerFunc_ServeHTTP"`
 	UprobeHandlerFuncServeHTTP_Returns *ebpf.ProgramSpec `ebpf:"uprobe_HandlerFunc_ServeHTTP_Returns"`
+	UprobeResoponseWriteHeader         *ebpf.ProgramSpec `ebpf:"uprobe_resoponse_WriteHeader"`
 }
 
 // bpfMapSpecs contains maps before they are loaded into the kernel.
@@ -79,7 +80,8 @@ type bpfMapSpecs struct {
 	AllocMap                    *ebpf.MapSpec `ebpf:"alloc_map"`
 	Events                      *ebpf.MapSpec `ebpf:"events"`
 	GolangMapbucketStorageMap   *ebpf.MapSpec `ebpf:"golang_mapbucket_storage_map"`
-	HttpEvents                  *ebpf.MapSpec `ebpf:"http_events"`
+	HttpServerSpanStorageMap    *ebpf.MapSpec `ebpf:"http_server_span_storage_map"`
+	HttpServerUprobes           *ebpf.MapSpec `ebpf:"http_server_uprobes"`
 	ParentSpanContextStorageMap *ebpf.MapSpec `ebpf:"parent_span_context_storage_map"`
 	TrackedSpans                *ebpf.MapSpec `ebpf:"tracked_spans"`
 	TrackedSpansBySc            *ebpf.MapSpec `ebpf:"tracked_spans_by_sc"`
@@ -107,7 +109,8 @@ type bpfMaps struct {
 	AllocMap                    *ebpf.Map `ebpf:"alloc_map"`
 	Events                      *ebpf.Map `ebpf:"events"`
 	GolangMapbucketStorageMap   *ebpf.Map `ebpf:"golang_mapbucket_storage_map"`
-	HttpEvents                  *ebpf.Map `ebpf:"http_events"`
+	HttpServerSpanStorageMap    *ebpf.Map `ebpf:"http_server_span_storage_map"`
+	HttpServerUprobes           *ebpf.Map `ebpf:"http_server_uprobes"`
 	ParentSpanContextStorageMap *ebpf.Map `ebpf:"parent_span_context_storage_map"`
 	TrackedSpans                *ebpf.Map `ebpf:"tracked_spans"`
 	TrackedSpansBySc            *ebpf.Map `ebpf:"tracked_spans_by_sc"`
@@ -118,7 +121,8 @@ func (m *bpfMaps) Close() error {
 		m.AllocMap,
 		m.Events,
 		m.GolangMapbucketStorageMap,
-		m.HttpEvents,
+		m.HttpServerSpanStorageMap,
+		m.HttpServerUprobes,
 		m.ParentSpanContextStorageMap,
 		m.TrackedSpans,
 		m.TrackedSpansBySc,
@@ -131,12 +135,14 @@ func (m *bpfMaps) Close() error {
 type bpfPrograms struct {
 	UprobeHandlerFuncServeHTTP         *ebpf.Program `ebpf:"uprobe_HandlerFunc_ServeHTTP"`
 	UprobeHandlerFuncServeHTTP_Returns *ebpf.Program `ebpf:"uprobe_HandlerFunc_ServeHTTP_Returns"`
+	UprobeResoponseWriteHeader         *ebpf.Program `ebpf:"uprobe_resoponse_WriteHeader"`
 }
 
 func (p *bpfPrograms) Close() error {
 	return _BpfClose(
 		p.UprobeHandlerFuncServeHTTP,
 		p.UprobeHandlerFuncServeHTTP_Returns,
+		p.UprobeResoponseWriteHeader,
 	)
 }
 

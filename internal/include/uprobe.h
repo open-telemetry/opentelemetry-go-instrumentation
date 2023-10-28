@@ -28,6 +28,8 @@
 
 typedef struct {
     u64 start_time;
+    struct span_context sc;
+    struct span_context psc;
     struct pt_regs regs_ctx;
 } uprobe_entry_state;
 
