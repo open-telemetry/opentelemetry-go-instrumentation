@@ -12,47 +12,47 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package sql
+package server
 
 import (
 	"bytes"
 	"encoding/binary"
 	"errors"
 	"os"
-	"strconv"
-
-	"go.opentelemetry.io/auto/internal/pkg/inject"
-	"go.opentelemetry.io/auto/internal/pkg/instrumentors/bpffs"
 
 	"github.com/cilium/ebpf"
 	"github.com/cilium/ebpf/link"
 	"github.com/cilium/ebpf/perf"
 	"github.com/go-logr/logr"
-	"golang.org/x/sys/unix"
-
 	"go.opentelemetry.io/otel/attribute"
 	semconv "go.opentelemetry.io/otel/semconv/v1.18.0"
 	"go.opentelemetry.io/otel/trace"
+	"golang.org/x/sys/unix"
 
-	"go.opentelemetry.io/auto/internal/pkg/instrumentors/context"
-	"go.opentelemetry.io/auto/internal/pkg/instrumentors/events"
-	"go.opentelemetry.io/auto/internal/pkg/instrumentors/utils"
+	"go.opentelemetry.io/auto/internal/pkg/inject"
+	"go.opentelemetry.io/auto/internal/pkg/instrumentation/bpffs"
+	"go.opentelemetry.io/auto/internal/pkg/instrumentation/context"
+	"go.opentelemetry.io/auto/internal/pkg/instrumentation/events"
+	"go.opentelemetry.io/auto/internal/pkg/instrumentation/utils"
 	"go.opentelemetry.io/auto/internal/pkg/process"
+	"go.opentelemetry.io/auto/internal/pkg/structfield"
 )
 
 //go:generate go run github.com/cilium/ebpf/cmd/bpf2go -target amd64,arm64 -cc clang -cflags $CFLAGS bpf ./bpf/probe.bpf.c
 
-const instrumentedPkg = "database/sql"
+const instrumentedPkg = "net/http"
 
-// Event represents an event in an SQL database
+// Event represents an event in an HTTP server during an HTTP
 // request-response.
 type Event struct {
 	context.BaseSpanProperties
-	Query [100]byte
+	StatusCode uint64
+	Method     [8]byte
+	Path       [128]byte
 }
 
-// Instrumentor is the database/sql instrumentor.
-type Instrumentor struct {
+// Probe is the net/http instrumentation probe.
+type Probe struct {
 	logger       logr.Logger
 	bpfObjects   *bpfObjects
 	uprobes      []link.Link
@@ -60,62 +60,66 @@ type Instrumentor struct {
 	eventsReader *perf.Reader
 }
 
-// IncludeDBStatementEnvVar is the environment variable to opt-in for sql query inclusion in the trace.
-const IncludeDBStatementEnvVar = "OTEL_GO_AUTO_INCLUDE_DB_STATEMENT"
-
-// New returns a new [Instrumentor].
-func New(logger logr.Logger) *Instrumentor {
-	return &Instrumentor{logger: logger.WithName("Instrumentor/db")}
+// New returns a new [Probe].
+func New(logger logr.Logger) *Probe {
+	return &Probe{logger: logger.WithName("Probe/HTTP/Server")}
 }
 
-// LibraryName returns the database/sql/ package name.
-func (h *Instrumentor) LibraryName() string {
+// LibraryName returns the net/http package name.
+func (h *Probe) LibraryName() string {
 	return instrumentedPkg
 }
 
-// FuncNames returns the function names from "database/sql" that are instrumented.
-func (h *Instrumentor) FuncNames() []string {
-	return []string{"database/sql.(*DB).queryDC"}
+// FuncNames returns the function names from "net/http" that are instrumented.
+func (h *Probe) FuncNames() []string {
+	return []string{
+		"net/http.HandlerFunc.ServeHTTP",
+		"net/http.(*response).WriteHeader",
+	}
 }
 
 // Load loads all instrumentation offsets.
-func (h *Instrumentor) Load(exec *link.Executable, target *process.TargetDetails) error {
+func (h *Probe) Load(exec *link.Executable, target *process.TargetDetails) error {
+	ver := target.GoVersion
+
 	spec, err := loadBpf()
 	if err != nil {
 		return err
 	}
-	if target.AllocationDetails == nil {
-		// This Instrumentor requires allocation.
-		return errors.New("no allocation details")
-	}
 	err = inject.Constants(
 		spec,
 		inject.WithRegistersABI(target.IsRegistersABI()),
-		inject.WithAllocationDetails(*target.AllocationDetails),
-		inject.WithKeyValue("should_include_db_statement", shouldIncludeDBStatement()),
+		inject.WithOffset("method_ptr_pos", structfield.NewID("net/http", "Request", "Method"), ver),
+		inject.WithOffset("url_ptr_pos", structfield.NewID("net/http", "Request", "URL"), ver),
+		inject.WithOffset("ctx_ptr_pos", structfield.NewID("net/http", "Request", "ctx"), ver),
+		inject.WithOffset("path_ptr_pos", structfield.NewID("net/url", "URL", "Path"), ver),
+		inject.WithOffset("ctx_ptr_pos", structfield.NewID("net/http", "Request", "ctx"), ver),
+		inject.WithOffset("headers_ptr_pos", structfield.NewID("net/http", "Request", "Header"), ver),
+		inject.WithOffset("req_ptr_pos", structfield.NewID("net/http", "response", "req"), ver),
+		inject.WithOffset("buckets_ptr_pos", structfield.NewID("runtime", "hmap", "buckets"), ver),
 	)
 	if err != nil {
 		return err
 	}
 
 	h.bpfObjects = &bpfObjects{}
-
 	err = utils.LoadEBPFObjects(spec, h.bpfObjects, &ebpf.CollectionOptions{
 		Maps: ebpf.MapOptions{
 			PinPath: bpffs.PathForTargetApplication(target),
 		},
 	})
-
 	if err != nil {
 		return err
 	}
 
+	// TODO : crteate a function to register probes and handle different configurations of entry and exit probes
+	// register entry and exit probes for net/http.HandlerFunc.ServeHTTP
 	offset, err := target.GetFunctionOffset(h.FuncNames()[0])
 	if err != nil {
 		return err
 	}
 
-	up, err := exec.Uprobe("", h.bpfObjects.UprobeQueryDC, &link.UprobeOptions{
+	up, err := exec.Uprobe("", h.bpfObjects.UprobeHandlerFuncServeHTTP, &link.UprobeOptions{
 		Address: offset,
 	})
 	if err != nil {
@@ -130,7 +134,7 @@ func (h *Instrumentor) Load(exec *link.Executable, target *process.TargetDetails
 	}
 
 	for _, ret := range retOffsets {
-		retProbe, err := exec.Uprobe("", h.bpfObjects.UprobeQueryDC_Returns, &link.UprobeOptions{
+		retProbe, err := exec.Uprobe("", h.bpfObjects.UprobeHandlerFuncServeHTTP_Returns, &link.UprobeOptions{
 			Address: ret,
 		})
 		if err != nil {
@@ -138,6 +142,20 @@ func (h *Instrumentor) Load(exec *link.Executable, target *process.TargetDetails
 		}
 		h.returnProbs = append(h.returnProbs, retProbe)
 	}
+
+	// register entry probe for net/http.(*response).WriteHeader()
+	offset, err = target.GetFunctionOffset(h.FuncNames()[1])
+	if err != nil {
+		return err
+	}
+
+	up, err = exec.Uprobe("", h.bpfObjects.UprobeResoponseWriteHeader, &link.UprobeOptions{
+		Address: offset,
+	})
+	if err != nil {
+		return err
+	}
+	h.uprobes = append(h.uprobes, up)
 
 	rd, err := perf.NewReader(h.bpfObjects.Events, os.Getpagesize())
 	if err != nil {
@@ -149,7 +167,7 @@ func (h *Instrumentor) Load(exec *link.Executable, target *process.TargetDetails
 }
 
 // Run runs the events processing loop.
-func (h *Instrumentor) Run(eventsChan chan<- *events.Event) {
+func (h *Probe) Run(eventsChan chan<- *events.Event) {
 	var event Event
 	for {
 		record, err := h.eventsReader.Read()
@@ -162,7 +180,7 @@ func (h *Instrumentor) Run(eventsChan chan<- *events.Event) {
 		}
 
 		if record.LostSamples != 0 {
-			h.logger.V(0).Info("perf event ring buffer full", "dropped", record.LostSamples)
+			h.logger.Info("perf event ring buffer full", "dropped", record.LostSamples)
 			continue
 		}
 
@@ -175,8 +193,9 @@ func (h *Instrumentor) Run(eventsChan chan<- *events.Event) {
 	}
 }
 
-func (h *Instrumentor) convertEvent(e *Event) *events.Event {
-	query := unix.ByteSliceToString(e.Query[:])
+func (h *Probe) convertEvent(e *Event) *events.Event {
+	method := unix.ByteSliceToString(e.Method[:])
+	path := unix.ByteSliceToString(e.Path[:])
 
 	sc := trace.NewSpanContext(trace.SpanContextConfig{
 		TraceID:    e.SpanContext.TraceID,
@@ -198,22 +217,26 @@ func (h *Instrumentor) convertEvent(e *Event) *events.Event {
 	}
 
 	return &events.Event{
-		Library:     h.LibraryName(),
-		Name:        "DB",
-		Kind:        trace.SpanKindClient,
-		StartTime:   int64(e.StartTime),
-		EndTime:     int64(e.EndTime),
-		SpanContext: &sc,
-		Attributes: []attribute.KeyValue{
-			semconv.DBStatementKey.String(query),
-		},
+		Library: h.LibraryName(),
+		// Do not include the high-cardinality path here (there is no
+		// templatized path manifest to reference).
+		Name:              method,
+		Kind:              trace.SpanKindServer,
+		StartTime:         int64(e.StartTime),
+		EndTime:           int64(e.EndTime),
+		SpanContext:       &sc,
 		ParentSpanContext: pscPtr,
+		Attributes: []attribute.KeyValue{
+			semconv.HTTPMethodKey.String(method),
+			semconv.HTTPTargetKey.String(path),
+			semconv.HTTPStatusCodeKey.Int(int(e.StatusCode)),
+		},
 	}
 }
 
-// Close stops the Instrumentor.
-func (h *Instrumentor) Close() {
-	h.logger.Info("closing database/sql/sql instrumentor")
+// Close stops the Probe.
+func (h *Probe) Close() {
+	h.logger.Info("closing net/http probe")
 	if h.eventsReader != nil {
 		h.eventsReader.Close()
 	}
@@ -229,17 +252,4 @@ func (h *Instrumentor) Close() {
 	if h.bpfObjects != nil {
 		h.bpfObjects.Close()
 	}
-}
-
-// shouldIncludeDBStatement returns if the user has configured SQL queries to be included.
-func shouldIncludeDBStatement() bool {
-	val := os.Getenv(IncludeDBStatementEnvVar)
-	if val != "" {
-		boolVal, err := strconv.ParseBool(val)
-		if err == nil {
-			return boolVal
-		}
-	}
-
-	return false
 }

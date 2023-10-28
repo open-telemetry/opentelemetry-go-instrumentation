@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package gin
+package server
 
 import (
 	"testing"
@@ -25,11 +25,11 @@ import (
 	semconv "go.opentelemetry.io/otel/semconv/v1.7.0"
 	"go.opentelemetry.io/otel/trace"
 
-	"go.opentelemetry.io/auto/internal/pkg/instrumentors/context"
-	"go.opentelemetry.io/auto/internal/pkg/instrumentors/events"
+	"go.opentelemetry.io/auto/internal/pkg/instrumentation/context"
+	"go.opentelemetry.io/auto/internal/pkg/instrumentation/events"
 )
 
-func TestInstrumentorConvertEvent(t *testing.T) {
+func TestProbeConvertEvent(t *testing.T) {
 	start := time.Now()
 	end := start.Add(1 * time.Second)
 
@@ -44,9 +44,9 @@ func TestInstrumentorConvertEvent(t *testing.T) {
 			SpanContext: context.EBPFSpanContext{TraceID: traceID, SpanID: spanID},
 		},
 		// "GET"
-		Method: [7]byte{0x47, 0x45, 0x54},
+		Method: [8]byte{0x47, 0x45, 0x54},
 		// "/foo/bar"
-		Path: [100]byte{0x2f, 0x66, 0x6f, 0x6f, 0x2f, 0x62, 0x61, 0x72},
+		Path: [128]byte{0x2f, 0x66, 0x6f, 0x6f, 0x2f, 0x62, 0x61, 0x72},
 	})
 
 	sc := trace.NewSpanContext(trace.SpanContextConfig{

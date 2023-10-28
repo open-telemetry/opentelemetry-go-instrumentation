@@ -20,7 +20,7 @@ import (
 	"errors"
 	"os"
 
-	"go.opentelemetry.io/auto/internal/pkg/instrumentors/bpffs"
+	"go.opentelemetry.io/auto/internal/pkg/instrumentation/bpffs"
 
 	"github.com/cilium/ebpf"
 	"github.com/cilium/ebpf/link"
@@ -33,9 +33,9 @@ import (
 	"go.opentelemetry.io/otel/trace"
 
 	"go.opentelemetry.io/auto/internal/pkg/inject"
-	"go.opentelemetry.io/auto/internal/pkg/instrumentors/context"
-	"go.opentelemetry.io/auto/internal/pkg/instrumentors/events"
-	"go.opentelemetry.io/auto/internal/pkg/instrumentors/utils"
+	"go.opentelemetry.io/auto/internal/pkg/instrumentation/context"
+	"go.opentelemetry.io/auto/internal/pkg/instrumentation/events"
+	"go.opentelemetry.io/auto/internal/pkg/instrumentation/utils"
 	"go.opentelemetry.io/auto/internal/pkg/process"
 	"go.opentelemetry.io/auto/internal/pkg/structfield"
 )
@@ -48,8 +48,8 @@ type Event struct {
 	Method [100]byte
 }
 
-// Instrumentor is the gRPC server instrumentor.
-type Instrumentor struct {
+// Probe is the gRPC server instrumentation probe.
+type Probe struct {
 	logger       logr.Logger
 	bpfObjects   *bpfObjects
 	uprobe       link.Link
@@ -58,19 +58,19 @@ type Instrumentor struct {
 	eventsReader *perf.Reader
 }
 
-// New returns a new [Instrumentor].
-func New(logger logr.Logger) *Instrumentor {
-	return &Instrumentor{logger: logger.WithName("Instrumentor/GRPC/Server")}
+// New returns a new [Probe].
+func New(logger logr.Logger) *Probe {
+	return &Probe{logger: logger.WithName("Probe/GRPC/Server")}
 }
 
 // LibraryName returns the gRPC server package import path.
-func (g *Instrumentor) LibraryName() string {
+func (g *Probe) LibraryName() string {
 	return "google.golang.org/grpc/server"
 }
 
 // FuncNames returns the function names from "google.golang.org/grpc" that are
 // instrumented.
-func (g *Instrumentor) FuncNames() []string {
+func (g *Probe) FuncNames() []string {
 	return []string{
 		"google.golang.org/grpc.(*Server).handleStream",
 		"google.golang.org/grpc/internal/transport.(*http2Server).operateHeaders",
@@ -78,7 +78,7 @@ func (g *Instrumentor) FuncNames() []string {
 }
 
 // Load loads all instrumentation offsets.
-func (g *Instrumentor) Load(exec *link.Executable, target *process.TargetDetails) error {
+func (g *Probe) Load(exec *link.Executable, target *process.TargetDetails) error {
 	targetLib := "google.golang.org/grpc"
 	ver := target.Libraries[targetLib]
 
@@ -87,7 +87,7 @@ func (g *Instrumentor) Load(exec *link.Executable, target *process.TargetDetails
 		return err
 	}
 	if target.AllocationDetails == nil {
-		// This Instrumentor requires allocation.
+		// This Probe requires allocation.
 		return errors.New("no allocation details")
 	}
 	err = inject.Constants(
@@ -184,7 +184,7 @@ func (g *Instrumentor) Load(exec *link.Executable, target *process.TargetDetails
 }
 
 // Run runs the events processing loop.
-func (g *Instrumentor) Run(eventsChan chan<- *events.Event) {
+func (g *Probe) Run(eventsChan chan<- *events.Event) {
 	var event Event
 	for {
 		record, err := g.eventsReader.Read()
@@ -210,7 +210,7 @@ func (g *Instrumentor) Run(eventsChan chan<- *events.Event) {
 	}
 }
 
-func (g *Instrumentor) convertEvent(e *Event) *events.Event {
+func (g *Probe) convertEvent(e *Event) *events.Event {
 	method := unix.ByteSliceToString(e.Method[:])
 
 	sc := trace.NewSpanContext(trace.SpanContextConfig{
@@ -247,9 +247,9 @@ func (g *Instrumentor) convertEvent(e *Event) *events.Event {
 	}
 }
 
-// Close stops the Instrumentor.
-func (g *Instrumentor) Close() {
-	g.logger.V(0).Info("closing gRPC server instrumentor")
+// Close stops the Probe.
+func (g *Probe) Close() {
+	g.logger.V(0).Info("closing gRPC server probe")
 	if g.eventsReader != nil {
 		g.eventsReader.Close()
 	}

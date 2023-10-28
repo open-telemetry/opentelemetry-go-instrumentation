@@ -25,11 +25,11 @@ import (
 	semconv "go.opentelemetry.io/otel/semconv/v1.7.0"
 	"go.opentelemetry.io/otel/trace"
 
-	"go.opentelemetry.io/auto/internal/pkg/instrumentors/context"
-	"go.opentelemetry.io/auto/internal/pkg/instrumentors/events"
+	"go.opentelemetry.io/auto/internal/pkg/instrumentation/context"
+	"go.opentelemetry.io/auto/internal/pkg/instrumentation/events"
 )
 
-func TestInstrumentorConvertEvent(t *testing.T) {
+func TestProbeConvertEvent(t *testing.T) {
 	start := time.Now()
 	end := start.Add(1 * time.Second)
 
