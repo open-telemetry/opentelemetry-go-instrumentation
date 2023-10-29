@@ -139,24 +139,7 @@ int uprobe_ClientConn_Invoke(struct pt_regs *ctx)
     return 0;
 }
 
-// This instrumentation attaches uprobe to the following function:
-// func (cc *ClientConn) Invoke(ctx context.Context, method string, args, reply interface{}, opts ...CallOption) error
-SEC("uprobe/ClientConn_Invoke")
-int uprobe_ClientConn_Invoke_Returns(struct pt_regs *ctx) {
-    void *ctx_address = get_Go_context(ctx, 3, 0, true);
-    void *key = get_consistent_key(ctx, ctx_address);
-    void *req_ptr_map = bpf_map_lookup_elem(&grpc_events, &key);
-    if (req_ptr_map == NULL) {
-        return 0;
-    }
-    struct grpc_request_t tmpReq = {0};
-    bpf_probe_read(&tmpReq, sizeof(tmpReq), req_ptr_map);
-    tmpReq.end_time = bpf_ktime_get_ns();
-    bpf_perf_event_output(ctx, &events, BPF_F_CURRENT_CPU, &tmpReq, sizeof(tmpReq));
-    bpf_map_delete_elem(&grpc_events, &key);
-    stop_tracking_span(&tmpReq.sc, &tmpReq.psc);
-    return 0;
-}
+UPROBE_RETURN(ClientConn_Invoke, struct grpc_request_t, grpc_events, events, 3, 0, true)
 
 // func (l *loopyWriter) headerHandler(h *headerFrame) error
 SEC("uprobe/loopyWriter_headerHandler")

@@ -120,24 +120,7 @@ int uprobe_server_handleStream(struct pt_regs *ctx)
     return 0;
 }
 
-// This instrumentation attaches uprobe to the following function:
-// func (s *Server) handleStream(t transport.ServerTransport, stream *transport.Stream, trInfo *traceInfo)
-SEC("uprobe/server_handleStream")
-int uprobe_server_handleStream_Returns(struct pt_regs *ctx) {
-    void *ctx_address = get_Go_context(ctx, 4, stream_ctx_pos, false);
-    void *key = get_consistent_key(ctx, ctx_address);
-    void *req_ptr_map = bpf_map_lookup_elem(&grpc_events, &key);
-    if (req_ptr_map == NULL) {
-        return 0;
-    }
-    struct grpc_request_t tmpReq = {0};
-    bpf_probe_read(&tmpReq, sizeof(tmpReq), req_ptr_map);
-    tmpReq.end_time = bpf_ktime_get_ns();
-    bpf_perf_event_output(ctx, &events, BPF_F_CURRENT_CPU, &tmpReq, sizeof(tmpReq));
-    bpf_map_delete_elem(&grpc_events, &key);
-    stop_tracking_span(&tmpReq.sc, &tmpReq.psc);
-    return 0;
-}
+UPROBE_RETURN(server_handleStream, struct grpc_request_t, grpc_events, events, 4, stream_ctx_pos, false)
 
 // func (d *decodeState) decodeHeader(frame *http2.MetaHeadersFrame) error
 SEC("uprobe/decodeState_decodeHeader")

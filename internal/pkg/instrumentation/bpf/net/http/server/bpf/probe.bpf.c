@@ -38,6 +38,9 @@ struct http_server_span_t
 struct uprobe_data_t
 {
     struct http_server_span_t span;
+    // bpf2go doesn't support pointers fields
+    // saving the response pointer in the entry probe
+    // and using it in the return probe
     u64 resp_ptr;
 };
 
@@ -237,41 +240,6 @@ int uprobe_HandlerFunc_ServeHTTP(struct pt_regs *ctx)
 
     bpf_map_update_elem(&http_server_uprobes, &key, uprobe_data, 0);
     start_tracking_span(req_ctx_ptr, &http_server_span->sc);
-    return 0;
-}
-
-// This instrumentation attaches uprobe to the following function:
-// func (w *response) WriteHeader(code int)
-SEC("uprobe/resoponse_WriteHeader")
-int uprobe_resoponse_WriteHeader(struct pt_regs *ctx)
-{
-    void *key = (void *)GOROUTINE(ctx);
-    struct http_server_span_t *http_server_span = bpf_map_lookup_elem(&http_server_uprobes, &key); 
-    if (http_server_span == NULL)
-    {
-        bpf_printk("uprobe/resoponse_WriteHeader: http_server_span is NULL");
-        return 0;
-    }
-
-    void *resp_ptr = get_argument(ctx, 1);
-    void *req_ptr = NULL;
-    bpf_probe_read(&req_ptr, sizeof(req_ptr), (void *)(resp_ptr + req_ptr_pos));
-     // Get method from request
-    if (!get_go_string_from_user_ptr((void *)(req_ptr + method_ptr_pos), http_server_span->method, sizeof(http_server_span->method))) {
-        bpf_printk("failed to get method from request");
-        return 0;
-    }
-    // get path from Request.URL
-    void *url_ptr = 0;
-    bpf_probe_read(&url_ptr, sizeof(url_ptr), (void *)(req_ptr + url_ptr_pos));
-    if (!get_go_string_from_user_ptr((void *)(url_ptr + path_ptr_pos), http_server_span->path, sizeof(http_server_span->path))) {
-        bpf_printk("failed to get path from Request.URL");
-        return 0;
-    }
-
-    void *status_code_ptr = get_argument(ctx, 2);
-    bpf_probe_read(&http_server_span->status_code, sizeof(http_server_span->status_code), &status_code_ptr);
-    bpf_map_update_elem(&http_server_uprobes, &key, http_server_span, 0);
     return 0;
 }
 

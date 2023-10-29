@@ -73,7 +73,6 @@ type bpfSpecs struct {
 type bpfProgramSpecs struct {
 	UprobeHandlerFuncServeHTTP         *ebpf.ProgramSpec `ebpf:"uprobe_HandlerFunc_ServeHTTP"`
 	UprobeHandlerFuncServeHTTP_Returns *ebpf.ProgramSpec `ebpf:"uprobe_HandlerFunc_ServeHTTP_Returns"`
-	UprobeResoponseWriteHeader         *ebpf.ProgramSpec `ebpf:"uprobe_resoponse_WriteHeader"`
 }
 
 // bpfMapSpecs contains maps before they are loaded into the kernel.
@@ -138,14 +137,12 @@ func (m *bpfMaps) Close() error {
 type bpfPrograms struct {
 	UprobeHandlerFuncServeHTTP         *ebpf.Program `ebpf:"uprobe_HandlerFunc_ServeHTTP"`
 	UprobeHandlerFuncServeHTTP_Returns *ebpf.Program `ebpf:"uprobe_HandlerFunc_ServeHTTP_Returns"`
-	UprobeResoponseWriteHeader         *ebpf.Program `ebpf:"uprobe_resoponse_WriteHeader"`
 }
 
 func (p *bpfPrograms) Close() error {
 	return _BpfClose(
 		p.UprobeHandlerFuncServeHTTP,
 		p.UprobeHandlerFuncServeHTTP_Returns,
-		p.UprobeResoponseWriteHeader,
 	)
 }
 

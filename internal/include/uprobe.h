@@ -26,13 +26,6 @@
     struct span_context sc;  \
     struct span_context psc;
 
-typedef struct {
-    u64 start_time;
-    struct span_context sc;
-    struct span_context psc;
-    struct pt_regs regs_ctx;
-} uprobe_entry_state;
-
 // Common flow for uprobe return:
 // 1. Find consistend key for the current uprobe context
 // 2. Use the key to lookup for the uprobe context in the uprobe_context_map

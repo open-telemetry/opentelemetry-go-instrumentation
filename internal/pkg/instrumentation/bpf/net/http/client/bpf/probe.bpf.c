@@ -207,19 +207,4 @@ int uprobe_HttpClient_Do(struct pt_regs *ctx) {
 
 // This instrumentation attaches uretprobe to the following function:
 // func net/http/client.Do(req *Request)
-SEC("uprobe/HttpClient_Do")
-int uprobe_HttpClient_Do_Returns(struct pt_regs *ctx) {
-    void *ctx_address = get_Go_context(ctx, 2, ctx_ptr_pos, false);
-    void *key = get_consistent_key(ctx, ctx_address);
-    void *req_ptr_map = bpf_map_lookup_elem(&http_events, &key);
-    if (req_ptr_map == NULL) {
-        return 0;
-    }
-    struct http_request_t tmpReq = {0};
-    bpf_probe_read(&tmpReq, sizeof(tmpReq), req_ptr_map);
-    tmpReq.end_time = bpf_ktime_get_ns();
-    bpf_perf_event_output(ctx, &events, BPF_F_CURRENT_CPU, &tmpReq, sizeof(tmpReq));
-    bpf_map_delete_elem(&http_events, &key);
-    stop_tracking_span(&tmpReq.sc, &tmpReq.psc);
-    return 0;
-}
+UPROBE_RETURN(HttpClient_Do, struct http_request_t, http_events, events, 2, ctx_ptr_pos, false)
