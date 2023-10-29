@@ -72,10 +72,7 @@ func (h *Probe) LibraryName() string {
 
 // FuncNames returns the function names from "net/http" that are instrumented.
 func (h *Probe) FuncNames() []string {
-	return []string{
-		"net/http.HandlerFunc.ServeHTTP",
-		"net/http.(*response).WriteHeader",
-	}
+	return []string{"net/http.HandlerFunc.ServeHTTP"}
 }
 
 // Load loads all instrumentation offsets.
@@ -96,6 +93,7 @@ func (h *Probe) Load(exec *link.Executable, target *process.TargetDetails) error
 		inject.WithOffset("ctx_ptr_pos", structfield.NewID("net/http", "Request", "ctx"), ver),
 		inject.WithOffset("headers_ptr_pos", structfield.NewID("net/http", "Request", "Header"), ver),
 		inject.WithOffset("req_ptr_pos", structfield.NewID("net/http", "response", "req"), ver),
+		inject.WithOffset("status_code_pos", structfield.NewID("net/http", "response", "status"), ver),
 		inject.WithOffset("buckets_ptr_pos", structfield.NewID("runtime", "hmap", "buckets"), ver),
 	)
 	if err != nil {
@@ -142,20 +140,6 @@ func (h *Probe) Load(exec *link.Executable, target *process.TargetDetails) error
 		}
 		h.returnProbs = append(h.returnProbs, retProbe)
 	}
-
-	// register entry probe for net/http.(*response).WriteHeader()
-	offset, err = target.GetFunctionOffset(h.FuncNames()[1])
-	if err != nil {
-		return err
-	}
-
-	up, err = exec.Uprobe("", h.bpfObjects.UprobeResoponseWriteHeader, &link.UprobeOptions{
-		Address: offset,
-	})
-	if err != nil {
-		return err
-	}
-	h.uprobes = append(h.uprobes, up)
 
 	rd, err := perf.NewReader(h.bpfObjects.Events, os.Getpagesize())
 	if err != nil {

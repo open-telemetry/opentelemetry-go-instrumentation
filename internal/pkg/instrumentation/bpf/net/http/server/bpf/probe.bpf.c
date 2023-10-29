@@ -35,11 +35,17 @@ struct http_server_span_t
     char path[PATH_MAX_LEN];
 };
 
+struct uprobe_data_t
+{
+    struct http_server_span_t span;
+    void *resp;
+};
+
 struct
 {
     __uint(type, BPF_MAP_TYPE_HASH);
     __type(key, void *);
-    __type(value, struct http_server_span_t);
+    __type(value, struct uprobe_data_t);
     __uint(max_entries, MAX_CONCURRENT);
 } http_server_uprobes SEC(".maps");
 
@@ -63,9 +69,9 @@ struct
 {
     __uint(type, BPF_MAP_TYPE_PERCPU_ARRAY);
     __uint(key_size, sizeof(u32));
-    __uint(value_size, sizeof(struct http_server_span_t));
+    __uint(value_size, sizeof(struct uprobe_data_t));
     __uint(max_entries, 1);
-} http_server_span_storage_map SEC(".maps");
+} http_server_uprobe_storage_map SEC(".maps");
 
 struct
 {
@@ -80,6 +86,7 @@ volatile const u64 ctx_ptr_pos;
 volatile const u64 headers_ptr_pos;
 volatile const u64 buckets_ptr_pos;
 volatile const u64 req_ptr_pos;
+volatile const u64 status_code_pos;
 
 static __always_inline struct span_context *extract_context_from_req_headers(void *headers_ptr_ptr)
 {
@@ -181,7 +188,8 @@ static __always_inline struct span_context *extract_context_from_req_headers(voi
 SEC("uprobe/HandlerFunc_ServeHTTP")
 int uprobe_HandlerFunc_ServeHTTP(struct pt_regs *ctx)
 {
-    void *key = (void *)GOROUTINE(ctx);
+    void *req_ctx_ptr = get_Go_context(ctx, 4, ctx_ptr_pos, false);
+    void *key = get_consistent_key(ctx, req_ctx_ptr);
     void *httpReq_ptr = bpf_map_lookup_elem(&http_server_uprobes, &key);
     if (httpReq_ptr != NULL)
     {
@@ -190,14 +198,20 @@ int uprobe_HandlerFunc_ServeHTTP(struct pt_regs *ctx)
     }
 
     u32 map_id = 0;
-    struct http_server_span_t *http_server_span = bpf_map_lookup_elem(&http_server_span_storage_map, &map_id);
-    if (http_server_span == NULL)
+    struct uprobe_data_t uprobe_data = bpf_map_lookup_elem(&http_server_uprobe_storage_map, &map_id);
+    if (uprobe_data == NULL)
     {
         bpf_printk("uprobe/HandlerFunc_ServeHTTP: http_server_span is NULL");
         return 0;
     }
 
-    __builtin_memset(http_server_span, 0, sizeof(struct http_server_span_t));
+    __builtin_memset(uprobe_data, 0, sizeof(struct uprobe_data_t));
+
+    // Save response writer
+    void *resp_impl = get_argument(ctx, 3);
+    uprobe_data->resp = resp_impl;
+
+    struct http_server_span_t *http_server_span = &uprobe_data->span;
     http_server_span->start_time = bpf_ktime_get_ns();
 
     // Propagate context
@@ -215,14 +229,13 @@ int uprobe_HandlerFunc_ServeHTTP(struct pt_regs *ctx)
         http_server_span->sc = generate_span_context();
     }
 
-    void *req_ctx_ptr = get_Go_context(ctx, 4, ctx_ptr_pos, false);
     if (req_ctx_ptr == NULL)
     {
         bpf_printk("uprobe/HandlerFunc_ServeHTTP: req_ctx_ptr is NULL");
         return 0;
     }
 
-    bpf_map_update_elem(&http_server_uprobes, &key, http_server_span, 0);
+    bpf_map_update_elem(&http_server_uprobes, &key, uprobe_data, 0);
     start_tracking_span(req_ctx_ptr, &http_server_span->sc);
     return 0;
 }
@@ -267,16 +280,38 @@ int uprobe_resoponse_WriteHeader(struct pt_regs *ctx)
 SEC("uprobe/HandlerFunc_ServeHTTP")
 int uprobe_HandlerFunc_ServeHTTP_Returns(struct pt_regs *ctx) {
     u64 end_time = bpf_ktime_get_ns();
-    void *key = (void *)GOROUTINE(ctx);
+    void *req_ctx_ptr = get_Go_context(ctx, 4, ctx_ptr_pos, false);
+    void *key = get_consistent_key(ctx, req_ctx_ptr);
 
-    struct http_server_span_t *http_server_span = bpf_map_lookup_elem(&http_server_uprobes, &key);
-    if (http_server_span == NULL) {
+    struct uprobe_data_t *uprobe_data = bpf_map_lookup_elem(&http_server_uprobes, &key);
+    if (uprobe_data == NULL) {
         bpf_printk("uprobe/HandlerFunc_ServeHTTP_Returns: entry_state is NULL");
         return 0;
     }
     bpf_map_delete_elem(&http_server_uprobes, &key);
 
+    struct http_server_span_t *http_server_span = &uprobe_data->span;
+    void *resp_ptr = uprobe_data->resp;
+    void *req_ptr = NULL;
+    bpf_probe_read(&req_ptr, sizeof(req_ptr), (void *)(resp_ptr + req_ptr_pos));
+
     http_server_span->end_time = end_time;
+         
+    // Collect fields from response
+    // Get method from request
+    if (!get_go_string_from_user_ptr((void *)(req_ptr + method_ptr_pos), http_server_span->method, sizeof(http_server_span->method))) {
+        bpf_printk("failed to get method from request");
+        return 0;
+    }
+    // get path from Request.URL
+    void *url_ptr = 0;
+    bpf_probe_read(&url_ptr, sizeof(url_ptr), (void *)(req_ptr + url_ptr_pos));
+    if (!get_go_string_from_user_ptr((void *)(url_ptr + path_ptr_pos), http_server_span->path, sizeof(http_server_span->path))) {
+        bpf_printk("failed to get path from Request.URL");
+        return 0;
+    }
+    // status code
+    bpf_probe_read(&http_server_span->status_code, sizeof(http_server_span->status_code), (void *)(resp_ptr + status_code_pos));
 
     bpf_perf_event_output(ctx, &events, BPF_F_CURRENT_CPU, http_server_span, sizeof(*http_server_span));
     stop_tracking_span(&http_server_span->sc, &http_server_span->psc);
