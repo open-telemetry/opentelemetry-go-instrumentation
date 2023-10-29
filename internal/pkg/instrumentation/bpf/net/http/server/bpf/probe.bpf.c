@@ -38,7 +38,7 @@ struct http_server_span_t
 struct uprobe_data_t
 {
     struct http_server_span_t span;
-    void *resp;
+    u64 resp_ptr;
 };
 
 struct
@@ -198,7 +198,7 @@ int uprobe_HandlerFunc_ServeHTTP(struct pt_regs *ctx)
     }
 
     u32 map_id = 0;
-    struct uprobe_data_t uprobe_data = bpf_map_lookup_elem(&http_server_uprobe_storage_map, &map_id);
+    struct uprobe_data_t *uprobe_data = bpf_map_lookup_elem(&http_server_uprobe_storage_map, &map_id);
     if (uprobe_data == NULL)
     {
         bpf_printk("uprobe/HandlerFunc_ServeHTTP: http_server_span is NULL");
@@ -209,7 +209,7 @@ int uprobe_HandlerFunc_ServeHTTP(struct pt_regs *ctx)
 
     // Save response writer
     void *resp_impl = get_argument(ctx, 3);
-    uprobe_data->resp = resp_impl;
+    uprobe_data->resp_ptr = (u64)resp_impl;
 
     struct http_server_span_t *http_server_span = &uprobe_data->span;
     http_server_span->start_time = bpf_ktime_get_ns();
@@ -291,7 +291,7 @@ int uprobe_HandlerFunc_ServeHTTP_Returns(struct pt_regs *ctx) {
     bpf_map_delete_elem(&http_server_uprobes, &key);
 
     struct http_server_span_t *http_server_span = &uprobe_data->span;
-    void *resp_ptr = uprobe_data->resp;
+    void *resp_ptr = (void *)uprobe_data->resp_ptr;
     void *req_ptr = NULL;
     bpf_probe_read(&req_ptr, sizeof(req_ptr), (void *)(resp_ptr + req_ptr_pos));
 
