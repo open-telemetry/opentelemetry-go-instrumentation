@@ -26,9 +26,9 @@ metadata:
   name: jaeger
 spec:
   ports:
-  - name: grpc
-    port: 4317
-    targetPort: 4317
+  - name: http
+    port: 4318
+    targetPort: 4318
   - name: ui
     port: 16686
     targetPort: 16686

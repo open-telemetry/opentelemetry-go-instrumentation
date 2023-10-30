@@ -48,13 +48,6 @@ func newLogger() logr.Logger {
 func main() {
 	logger := newLogger().WithName("go.opentelemetry.io/auto")
 
-	logger.Info("building OpenTelemetry Go instrumentation ...")
-	inst, err := auto.NewInstrumentation(auto.WithEnv())
-	if err != nil {
-		logger.Error(err, "failed to create instrumentation")
-		return
-	}
-
 	// Trap Ctrl+C and SIGTERM and call cancel on the context.
 	ctx, cancel := context.WithCancel(context.Background())
 	ch := make(chan os.Signal, 1)
@@ -70,6 +63,13 @@ func main() {
 		case <-ctx.Done():
 		}
 	}()
+
+	logger.Info("building OpenTelemetry Go instrumentation ...")
+	inst, err := auto.NewInstrumentation(ctx, auto.WithEnv())
+	if err != nil {
+		logger.Error(err, "failed to create instrumentation")
+		return
+	}
 
 	logger.Info("starting instrumentation...")
 	if err = inst.Run(ctx); err != nil && !errors.Is(err, process.ErrInterrupted) {

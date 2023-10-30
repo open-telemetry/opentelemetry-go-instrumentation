@@ -22,12 +22,12 @@ import (
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/events"
 )
 
-type eBPFSourceIDGenerator struct{}
+type EBPFSourceIDGenerator struct{}
 
 type eBPFEventKey struct{}
 
-func newEBPFSourceIDGenerator() *eBPFSourceIDGenerator {
-	return &eBPFSourceIDGenerator{}
+func NewEBPFSourceIDGenerator() *EBPFSourceIDGenerator {
+	return &EBPFSourceIDGenerator{}
 }
 
 // ContextWithEBPFEvent returns a copy of parent in which event is stored.
@@ -50,7 +50,7 @@ func EventFromContext(ctx context.Context) *events.Event {
 	return &event
 }
 
-func (e *eBPFSourceIDGenerator) NewIDs(ctx context.Context) (trace.TraceID, trace.SpanID) {
+func (e *EBPFSourceIDGenerator) NewIDs(ctx context.Context) (trace.TraceID, trace.SpanID) {
 	event := EventFromContext(ctx)
 	if event == nil || event.SpanContext == nil {
 		return trace.TraceID{}, trace.SpanID{}
@@ -59,7 +59,7 @@ func (e *eBPFSourceIDGenerator) NewIDs(ctx context.Context) (trace.TraceID, trac
 	return event.SpanContext.TraceID(), event.SpanContext.SpanID()
 }
 
-func (e *eBPFSourceIDGenerator) NewSpanID(ctx context.Context, traceID trace.TraceID) trace.SpanID {
+func (e *EBPFSourceIDGenerator) NewSpanID(ctx context.Context, traceID trace.TraceID) trace.SpanID {
 	event := EventFromContext(ctx)
 	if event == nil {
 		return trace.SpanID{}
