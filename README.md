@@ -136,8 +136,8 @@ To instrument an application running in Kubernetes, follow these steps:
 
 See the documentation for
 [`InstrumentationOption`](https://pkg.go.dev/go.opentelemetry.io/auto#InstrumentationOption)
-creation functions for information about how to configure the OpenTelemetry Go
-Automatic Instrumentation:
+factory functions for information about how to configure the OpenTelemetry Go
+Automatic Instrumentation.
 
 ## Contributing
 
