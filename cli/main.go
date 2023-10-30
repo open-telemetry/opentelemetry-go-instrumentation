@@ -42,7 +42,7 @@ Environment variable configuration:
 	- OTEL_SERVICE_NAME (or OTEL_RESOURCE_ATTRIBUTES): sets the service name
 	- OTEL_TRACES_EXPORTER: sets the trace exporter
 
-The OTEL_TRACES_EXPORTER environment variable value is resolve using the
+The OTEL_TRACES_EXPORTER environment variable value is resolved using the
 autoexport (go.opentelemetry.io/contrib/exporters/autoexport) package. See that
 package's documentation for information on supported values and registration of
 custom exporters.
