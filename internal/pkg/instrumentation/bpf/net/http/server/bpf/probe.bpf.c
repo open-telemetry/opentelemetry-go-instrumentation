@@ -20,27 +20,37 @@
 
 char __license[] SEC("license") = "Dual MIT/GPL";
 
-#define PATH_MAX_LEN 100
+#define PATH_MAX_LEN 128
 #define MAX_BUCKETS 8
-#define METHOD_MAX_LEN 7
+#define METHOD_MAX_LEN 8
 #define MAX_CONCURRENT 50
 #define W3C_KEY_LENGTH 11
 #define W3C_VAL_LENGTH 55
 
-struct http_request_t
+struct http_server_span_t
 {
     BASE_SPAN_PROPERTIES
+    u64 status_code;
     char method[METHOD_MAX_LEN];
     char path[PATH_MAX_LEN];
+};
+
+struct uprobe_data_t
+{
+    struct http_server_span_t span;
+    // bpf2go doesn't support pointers fields
+    // saving the response pointer in the entry probe
+    // and using it in the return probe
+    u64 resp_ptr;
 };
 
 struct
 {
     __uint(type, BPF_MAP_TYPE_HASH);
     __type(key, void *);
-    __type(value, struct http_request_t);
+    __type(value, struct uprobe_data_t);
     __uint(max_entries, MAX_CONCURRENT);
-} http_events SEC(".maps");
+} http_server_uprobes SEC(".maps");
 
 struct
 {
@@ -60,6 +70,14 @@ struct
 
 struct
 {
+    __uint(type, BPF_MAP_TYPE_PERCPU_ARRAY);
+    __uint(key_size, sizeof(u32));
+    __uint(value_size, sizeof(struct uprobe_data_t));
+    __uint(max_entries, 1);
+} http_server_uprobe_storage_map SEC(".maps");
+
+struct
+{
     __uint(type, BPF_MAP_TYPE_PERF_EVENT_ARRAY);
 } events SEC(".maps");
 
@@ -70,6 +88,8 @@ volatile const u64 path_ptr_pos;
 volatile const u64 ctx_ptr_pos;
 volatile const u64 headers_ptr_pos;
 volatile const u64 buckets_ptr_pos;
+volatile const u64 req_ptr_pos;
+volatile const u64 status_code_pos;
 
 static __always_inline struct span_context *extract_context_from_req_headers(void *headers_ptr_ptr)
 {
@@ -171,56 +191,97 @@ static __always_inline struct span_context *extract_context_from_req_headers(voi
 SEC("uprobe/HandlerFunc_ServeHTTP")
 int uprobe_HandlerFunc_ServeHTTP(struct pt_regs *ctx)
 {
-    // Get key
-    u64 request_pos = 4;
-    void *req_ptr = get_argument(ctx, request_pos);
     void *req_ctx_ptr = get_Go_context(ctx, 4, ctx_ptr_pos, false);
-    if (req_ctx_ptr == NULL)
-    {
-        return 0;
-    }
     void *key = get_consistent_key(ctx, req_ctx_ptr);
-    void *httpReq_ptr = bpf_map_lookup_elem(&http_events, &key);
+    void *httpReq_ptr = bpf_map_lookup_elem(&http_server_uprobes, &key);
     if (httpReq_ptr != NULL)
     {
-        bpf_printk("uprobe/HandlerFunc_ServeHTTP already tracked with the current context");
+        bpf_printk("uprobe/HandlerFunc_ServeHTTP already tracked with the current request");
         return 0;
     }
 
-    struct http_request_t httpReq = {};
-    httpReq.start_time = bpf_ktime_get_ns();
+    u32 map_id = 0;
+    struct uprobe_data_t *uprobe_data = bpf_map_lookup_elem(&http_server_uprobe_storage_map, &map_id);
+    if (uprobe_data == NULL)
+    {
+        bpf_printk("uprobe/HandlerFunc_ServeHTTP: http_server_span is NULL");
+        return 0;
+    }
 
+    __builtin_memset(uprobe_data, 0, sizeof(struct uprobe_data_t));
+
+    // Save response writer
+    void *resp_impl = get_argument(ctx, 3);
+    uprobe_data->resp_ptr = (u64)resp_impl;
+
+    struct http_server_span_t *http_server_span = &uprobe_data->span;
+    http_server_span->start_time = bpf_ktime_get_ns();
+
+    // Propagate context
+    void *req_ptr = get_argument(ctx, 4);
+    struct span_context *parent_ctx = extract_context_from_req_headers((void*)(req_ptr + headers_ptr_pos));
+    if (parent_ctx != NULL)
+    {
+        // found parent context in http headers
+        http_server_span->psc = *parent_ctx;
+        copy_byte_arrays(http_server_span->psc.TraceID, http_server_span->sc.TraceID, TRACE_ID_SIZE);
+        generate_random_bytes(http_server_span->sc.SpanID, SPAN_ID_SIZE);
+    }
+    else
+    {
+        http_server_span->sc = generate_span_context();
+    }
+
+    if (req_ctx_ptr == NULL)
+    {
+        bpf_printk("uprobe/HandlerFunc_ServeHTTP: req_ctx_ptr is NULL");
+        return 0;
+    }
+
+    bpf_map_update_elem(&http_server_uprobes, &key, uprobe_data, 0);
+    start_tracking_span(req_ctx_ptr, &http_server_span->sc);
+    return 0;
+}
+
+// This instrumentation attaches uprobe to the following function:
+// func (f HandlerFunc) ServeHTTP(w ResponseWriter, r *Request)
+SEC("uprobe/HandlerFunc_ServeHTTP")
+int uprobe_HandlerFunc_ServeHTTP_Returns(struct pt_regs *ctx) {
+    u64 end_time = bpf_ktime_get_ns();
+    void *req_ctx_ptr = get_Go_context(ctx, 4, ctx_ptr_pos, false);
+    void *key = get_consistent_key(ctx, req_ctx_ptr);
+
+    struct uprobe_data_t *uprobe_data = bpf_map_lookup_elem(&http_server_uprobes, &key);
+    if (uprobe_data == NULL) {
+        bpf_printk("uprobe/HandlerFunc_ServeHTTP_Returns: entry_state is NULL");
+        return 0;
+    }
+    bpf_map_delete_elem(&http_server_uprobes, &key);
+
+    struct http_server_span_t *http_server_span = &uprobe_data->span;
+    void *resp_ptr = (void *)uprobe_data->resp_ptr;
+    void *req_ptr = NULL;
+    bpf_probe_read(&req_ptr, sizeof(req_ptr), (void *)(resp_ptr + req_ptr_pos));
+
+    http_server_span->end_time = end_time;
+         
+    // Collect fields from response
     // Get method from request
-    if (!get_go_string_from_user_ptr((void *)(req_ptr + method_ptr_pos), httpReq.method, sizeof(httpReq.method))) {
+    if (!get_go_string_from_user_ptr((void *)(req_ptr + method_ptr_pos), http_server_span->method, sizeof(http_server_span->method))) {
         bpf_printk("failed to get method from request");
         return 0;
     }
     // get path from Request.URL
     void *url_ptr = 0;
     bpf_probe_read(&url_ptr, sizeof(url_ptr), (void *)(req_ptr + url_ptr_pos));
-    if (!get_go_string_from_user_ptr((void *)(url_ptr + path_ptr_pos), httpReq.path, sizeof(httpReq.path))) {
+    if (!get_go_string_from_user_ptr((void *)(url_ptr + path_ptr_pos), http_server_span->path, sizeof(http_server_span->path))) {
         bpf_printk("failed to get path from Request.URL");
         return 0;
     }
+    // status code
+    bpf_probe_read(&http_server_span->status_code, sizeof(http_server_span->status_code), (void *)(resp_ptr + status_code_pos));
 
-    // Propagate context
-    struct span_context *parent_ctx = extract_context_from_req_headers((void*)(req_ptr + headers_ptr_pos));
-    if (parent_ctx != NULL)
-    {
-        // found parent context in http headers
-        httpReq.psc = *parent_ctx;
-        copy_byte_arrays(httpReq.psc.TraceID, httpReq.sc.TraceID, TRACE_ID_SIZE);
-        generate_random_bytes(httpReq.sc.SpanID, SPAN_ID_SIZE);
-    }
-    else
-    {
-        httpReq.sc = generate_span_context();
-    }
-
-    // Write event
-    bpf_map_update_elem(&http_events, &key, &httpReq, 0);
-    start_tracking_span(req_ctx_ptr, &httpReq.sc);
+    bpf_perf_event_output(ctx, &events, BPF_F_CURRENT_CPU, http_server_span, sizeof(*http_server_span));
+    stop_tracking_span(&http_server_span->sc, &http_server_span->psc);
     return 0;
 }
-
-UPROBE_RETURN(HandlerFunc_ServeHTTP, struct http_request_t, http_events, events, 4, ctx_ptr_pos, false)

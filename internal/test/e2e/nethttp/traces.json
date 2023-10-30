@@ -61,6 +61,12 @@
                   "value": {
                     "stringValue": "/hello"
                   }
+                },
+                {
+                  "key": "http.status_code",
+                  "value": {
+                    "intValue": "200"
+                  }
                 }
               ],
               "kind": 2,
