@@ -120,6 +120,14 @@ func manifests() ([]inspect.Manifest, error) {
 				Struct:  "Request",
 				Field:   "ctx",
 			}, {
+				PkgPath: "net/http",
+				Struct:  "response",
+				Field:   "req",
+			}, {
+				PkgPath: "net/http",
+				Struct:  "response",
+				Field:   "status",
+			}, {
 				PkgPath: "net/url",
 				Struct:  "URL",
 				Field:   "Path",

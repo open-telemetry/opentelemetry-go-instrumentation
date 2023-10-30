@@ -69,7 +69,7 @@ volatile const u64 stream_id_pos;
 volatile const u64 stream_ctx_pos;
 
 // This instrumentation attaches uprobe to the following function:
-// func (s *Server) handleStream(t transport.ServerTransport, stream *transport.Stream, trInfo *traceInfo) {
+// func (s *Server) handleStream(t transport.ServerTransport, stream *transport.Stream, trInfo *traceInfo)
 SEC("uprobe/server_handleStream")
 int uprobe_server_handleStream(struct pt_regs *ctx)
 {

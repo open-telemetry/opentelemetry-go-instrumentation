@@ -46,8 +46,9 @@ const instrumentedPkg = "net/http"
 // request-response.
 type Event struct {
 	context.BaseSpanProperties
-	Method [7]byte
-	Path   [100]byte
+	StatusCode uint64
+	Method     [8]byte
+	Path       [128]byte
 }
 
 // Probe is the net/http instrumentation probe.
@@ -91,6 +92,8 @@ func (h *Probe) Load(exec *link.Executable, target *process.TargetDetails) error
 		inject.WithOffset("path_ptr_pos", structfield.NewID("net/url", "URL", "Path"), ver),
 		inject.WithOffset("ctx_ptr_pos", structfield.NewID("net/http", "Request", "ctx"), ver),
 		inject.WithOffset("headers_ptr_pos", structfield.NewID("net/http", "Request", "Header"), ver),
+		inject.WithOffset("req_ptr_pos", structfield.NewID("net/http", "response", "req"), ver),
+		inject.WithOffset("status_code_pos", structfield.NewID("net/http", "response", "status"), ver),
 		inject.WithOffset("buckets_ptr_pos", structfield.NewID("runtime", "hmap", "buckets"), ver),
 	)
 	if err != nil {
@@ -107,8 +110,35 @@ func (h *Probe) Load(exec *link.Executable, target *process.TargetDetails) error
 		return err
 	}
 
-	for _, funcName := range h.FuncNames() {
-		h.registerProbes(exec, target, funcName)
+	// TODO : crteate a function to register probes and handle different configurations of entry and exit probes
+	// register entry and exit probes for net/http.HandlerFunc.ServeHTTP
+	offset, err := target.GetFunctionOffset(h.FuncNames()[0])
+	if err != nil {
+		return err
+	}
+
+	up, err := exec.Uprobe("", h.bpfObjects.UprobeHandlerFuncServeHTTP, &link.UprobeOptions{
+		Address: offset,
+	})
+	if err != nil {
+		return err
+	}
+
+	h.uprobes = append(h.uprobes, up)
+
+	retOffsets, err := target.GetFunctionReturns(h.FuncNames()[0])
+	if err != nil {
+		return err
+	}
+
+	for _, ret := range retOffsets {
+		retProbe, err := exec.Uprobe("", h.bpfObjects.UprobeHandlerFuncServeHTTP_Returns, &link.UprobeOptions{
+			Address: ret,
+		})
+		if err != nil {
+			return err
+		}
+		h.returnProbs = append(h.returnProbs, retProbe)
 	}
 
 	rd, err := perf.NewReader(h.bpfObjects.Events, os.Getpagesize())
@@ -118,42 +148,6 @@ func (h *Probe) Load(exec *link.Executable, target *process.TargetDetails) error
 	h.eventsReader = rd
 
 	return nil
-}
-
-func (h *Probe) registerProbes(exec *link.Executable, target *process.TargetDetails, funcName string) {
-	logger := h.logger.WithValues("function", funcName)
-	offset, err := target.GetFunctionOffset(funcName)
-	if err != nil {
-		logger.Error(err, "could not find function start offset. Skipping")
-		return
-	}
-	retOffsets, err := target.GetFunctionReturns(funcName)
-	if err != nil {
-		logger.Error(err, "could not find function end offsets. Skipping")
-		return
-	}
-
-	up, err := exec.Uprobe("", h.bpfObjects.UprobeHandlerFuncServeHTTP, &link.UprobeOptions{
-		Address: offset,
-	})
-	if err != nil {
-		logger.V(1).Info("could not insert start uprobe. Skipping",
-			"error", err.Error())
-		return
-	}
-
-	h.uprobes = append(h.uprobes, up)
-
-	for _, ret := range retOffsets {
-		retProbe, err := exec.Uprobe("", h.bpfObjects.UprobeHandlerFuncServeHTTP_Returns, &link.UprobeOptions{
-			Address: ret,
-		})
-		if err != nil {
-			logger.Error(err, "could not insert return uprobe. Skipping")
-			return
-		}
-		h.returnProbs = append(h.returnProbs, retProbe)
-	}
 }
 
 // Run runs the events processing loop.
@@ -219,6 +213,7 @@ func (h *Probe) convertEvent(e *Event) *events.Event {
 		Attributes: []attribute.KeyValue{
 			semconv.HTTPMethodKey.String(method),
 			semconv.HTTPTargetKey.String(path),
+			semconv.HTTPStatusCodeKey.Int(int(e.StatusCode)),
 		},
 	}
 }

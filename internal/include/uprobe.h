@@ -24,7 +24,7 @@
     u64 start_time;          \
     u64 end_time;            \
     struct span_context sc;  \
-    struct span_context psc; 
+    struct span_context psc;
 
 // Common flow for uprobe return:
 // 1. Find consistend key for the current uprobe context

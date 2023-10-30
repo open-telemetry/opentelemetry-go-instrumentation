@@ -12,19 +12,22 @@ import (
 	"github.com/cilium/ebpf"
 )
 
-type bpfHttpRequestT struct {
-	StartTime uint64
-	EndTime   uint64
-	Sc        bpfSpanContext
-	Psc       bpfSpanContext
-	Method    [7]int8
-	Path      [100]int8
-	_         [5]byte
-}
-
 type bpfSpanContext struct {
 	TraceID [16]uint8
 	SpanID  [8]uint8
+}
+
+type bpfUprobeDataT struct {
+	Span struct {
+		StartTime  uint64
+		EndTime    uint64
+		Sc         bpfSpanContext
+		Psc        bpfSpanContext
+		StatusCode uint64
+		Method     [8]int8
+		Path       [128]int8
+	}
+	RespPtr uint64
 }
 
 // loadBpf returns the embedded CollectionSpec for bpf.
@@ -79,7 +82,8 @@ type bpfMapSpecs struct {
 	AllocMap                    *ebpf.MapSpec `ebpf:"alloc_map"`
 	Events                      *ebpf.MapSpec `ebpf:"events"`
 	GolangMapbucketStorageMap   *ebpf.MapSpec `ebpf:"golang_mapbucket_storage_map"`
-	HttpEvents                  *ebpf.MapSpec `ebpf:"http_events"`
+	HttpServerUprobeStorageMap  *ebpf.MapSpec `ebpf:"http_server_uprobe_storage_map"`
+	HttpServerUprobes           *ebpf.MapSpec `ebpf:"http_server_uprobes"`
 	ParentSpanContextStorageMap *ebpf.MapSpec `ebpf:"parent_span_context_storage_map"`
 	TrackedSpans                *ebpf.MapSpec `ebpf:"tracked_spans"`
 	TrackedSpansBySc            *ebpf.MapSpec `ebpf:"tracked_spans_by_sc"`
@@ -107,7 +111,8 @@ type bpfMaps struct {
 	AllocMap                    *ebpf.Map `ebpf:"alloc_map"`
 	Events                      *ebpf.Map `ebpf:"events"`
 	GolangMapbucketStorageMap   *ebpf.Map `ebpf:"golang_mapbucket_storage_map"`
-	HttpEvents                  *ebpf.Map `ebpf:"http_events"`
+	HttpServerUprobeStorageMap  *ebpf.Map `ebpf:"http_server_uprobe_storage_map"`
+	HttpServerUprobes           *ebpf.Map `ebpf:"http_server_uprobes"`
 	ParentSpanContextStorageMap *ebpf.Map `ebpf:"parent_span_context_storage_map"`
 	TrackedSpans                *ebpf.Map `ebpf:"tracked_spans"`
 	TrackedSpansBySc            *ebpf.Map `ebpf:"tracked_spans_by_sc"`
@@ -118,7 +123,8 @@ func (m *bpfMaps) Close() error {
 		m.AllocMap,
 		m.Events,
 		m.GolangMapbucketStorageMap,
-		m.HttpEvents,
+		m.HttpServerUprobeStorageMap,
+		m.HttpServerUprobes,
 		m.ParentSpanContextStorageMap,
 		m.TrackedSpans,
 		m.TrackedSpansBySc,
