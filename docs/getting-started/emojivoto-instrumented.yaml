@@ -45,7 +45,7 @@ spec:
             - name: OTEL_GO_AUTO_TARGET_EXE
               value: /usr/local/bin/emojivoto-emoji-svc
             - name: OTEL_EXPORTER_OTLP_ENDPOINT
-              value: "http://jaeger:4317"
+              value: "http://jaeger:4318"
             - name: OTEL_SERVICE_NAME
               value: "emojivoto-emoji"
           securityContext:
@@ -99,7 +99,7 @@ spec:
             - name: OTEL_GO_AUTO_TARGET_EXE
               value: /usr/local/bin/emojivoto-voting-svc
             - name: OTEL_EXPORTER_OTLP_ENDPOINT
-              value: "http://jaeger:4317"
+              value: "http://jaeger:4318"
             - name: OTEL_SERVICE_NAME
               value: "emojivoto-voting"
           securityContext:
@@ -155,7 +155,7 @@ spec:
             - name: OTEL_GO_AUTO_TARGET_EXE
               value: /usr/local/bin/emojivoto-web
             - name: OTEL_EXPORTER_OTLP_ENDPOINT
-              value: "http://jaeger:4317"
+              value: "http://jaeger:4318"
             - name: OTEL_SERVICE_NAME
               value: "emojivoto-web"
           securityContext:

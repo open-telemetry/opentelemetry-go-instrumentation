@@ -65,12 +65,12 @@ To instrument an application on the same host, follow these steps:
   instrument. For example, `/home/bin/service_executable`
   - `OTEL_SERVICE_NAME`: Name of your service or application
   - `OTEL_EXPORTER_OTLP_ENDPOINT`: Your observability backend. For example,
-  `http://localhost:4317`.
+  `http://localhost:4318`.
 
   For example:
 
   ```sh
-  sudo OTEL_GO_AUTO_TARGET_EXE=/home/bin/service_executable OTEL_SERVICE_NAME=my_service OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4317./otel-go-instrumentation`
+  sudo OTEL_GO_AUTO_TARGET_EXE=/home/bin/service_executable OTEL_SERVICE_NAME=my_service OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318./otel-go-instrumentation`
   ```
 
 3. Run the OpenTelemetry Go Automatic Instrumentation with root privileges.
@@ -94,7 +94,7 @@ network, a shared volume, and a service for the application.
       privileged: true
       pid: "host"
       environment:
-        - OTEL_EXPORTER_OTLP_ENDPOINT=http://<address_in_docker_network>:4317
+        - OTEL_EXPORTER_OTLP_ENDPOINT=http://<address_in_docker_network>:4318
         - OTEL_GO_AUTO_TARGET_EXE=<location_of_target_application_binary>
         - OTEL_SERVICE_NAME=<name_of_your_application>
         - OTEL_PROPAGATORS=tracecontext,baggage
@@ -119,7 +119,7 @@ To instrument an application running in Kubernetes, follow these steps:
        - name: OTEL_GO_AUTO_TARGET_EXE
          value: <location_of_target_application_binary>
        - name: OTEL_EXPORTER_OTLP_ENDPOINT
-         value: "http://<address_in_network>:4317"
+         value: "http://<address_in_network>:4318"
        - name: OTEL_SERVICE_NAME
          value: "<name_of_service>"
      securityContext:
