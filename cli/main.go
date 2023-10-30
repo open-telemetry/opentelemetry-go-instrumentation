@@ -17,6 +17,8 @@ package main
 import (
 	"context"
 	"errors"
+	"flag"
+	"fmt"
 	"log"
 	"os"
 	"os/signal"
@@ -30,6 +32,25 @@ import (
 	"go.opentelemetry.io/auto"
 	"go.opentelemetry.io/auto/internal/pkg/process"
 )
+
+const help = `
+OpenTelemetry auto-instrumentation for Go applications using eBPF
+
+Environment variable configuration:
+
+	- OTEL_GO_AUTO_TARGET_EXE: sets the target binary
+	- OTEL_SERVICE_NAME (or OTEL_RESOURCE_ATTRIBUTES): sets the service name
+	- OTEL_TRACES_EXPORTER: sets the trace exporter
+
+The OTEL_TRACES_EXPORTER environment variable value is resolve using the
+autoexport (go.opentelemetry.io/contrib/exporters/autoexport) package. See that
+package's documentation for information on supported values and registration of
+custom exporters.
+`
+
+func usage() {
+	fmt.Fprintf(os.Stderr, "%s", help)
+}
 
 func newLogger() logr.Logger {
 	zapLog, err := zap.NewProduction()
@@ -46,6 +67,9 @@ func newLogger() logr.Logger {
 }
 
 func main() {
+	flag.Usage = usage
+	flag.Parse()
+
 	logger := newLogger().WithName("go.opentelemetry.io/auto")
 
 	// Trap Ctrl+C and SIGTERM and call cancel on the context.
