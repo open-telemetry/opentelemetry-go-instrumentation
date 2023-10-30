@@ -317,7 +317,7 @@ var lookupEnv = os.LookupEnv
 // If more than one of these options are used, the last one provided to an
 // [Instrumentation] will be used.
 //
-// The OTEL_TRACES_EXPORTER environment variable value is resolve using the
+// The OTEL_TRACES_EXPORTER environment variable value is resolved using the
 // [autoexport] package. See that package's documentation for information on
 // supported values and registration of custom exporters.
 func WithEnv() InstrumentationOption {
