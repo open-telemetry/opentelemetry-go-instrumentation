@@ -1,6 +1,12 @@
 mode: "statefulset"
 
 config:
+  receivers:
+    otlp:
+      protocols:
+        http:
+          endpoint: ${env:MY_POD_IP}:4318
+
   exporters:
     logging: {}
     file/trace:

@@ -3,10 +3,7 @@ package main
 import "net/http"
 
 func main() {
-	var handler http.HandlerFunc
-	client := &http.Client{}
-	for {
-		client.Do(nil)
-		handler.ServeHTTP(nil, nil)
-	}
+	http.ListenAndServe(":1234", http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+		writer.WriteHeader(request.ProtoMajor)
+	}))
 }

@@ -143,6 +143,7 @@ Any [Maintainer] can merge the PR once the above criteria have been met.
 - [Dinesh Gurumurthy](https://github.com/dineshg13), DataDog
 - [Mike Dame](https://github.com/damemi), Google
 - [Robert Pająk](https://github.com/pellared), Splunk
+- [Ron Federman](https://github.com/RonFed), KeyVal
 
 ### Maintainers
 
