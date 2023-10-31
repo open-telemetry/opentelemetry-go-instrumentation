@@ -8,7 +8,7 @@ config:
           endpoint: ${env:MY_POD_IP}:4318
 
   exporters:
-    logging: {}
+    debug: {}
     file/trace:
       path: /tmp/trace.json
       rotation:
@@ -23,7 +23,7 @@ config:
           - otlp
         exporters:
           - file/trace
-          - logging
+          - debug
       
           
 image:
