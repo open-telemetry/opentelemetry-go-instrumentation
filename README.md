@@ -1,5 +1,7 @@
 # OpenTelemetry Go Automatic Instrumentation
 
+[![PkgGoDev](https://pkg.go.dev/badge/go.opentelemetry.io/auto)](https://pkg.go.dev/go.opentelemetry.io/auto)
+
 This repository provides [OpenTelemetry] instrumentation for [Go] libraries using [eBPF].
 
 :construction: This project is currently work in progress.
@@ -129,6 +131,13 @@ To instrument an application running in Kubernetes, follow these steps:
 2. Check if the configuration [shareProcessNamespace](https://kubernetes.io/docs/tasks/configure-pod-container/share-process-namespace/) is present in the pod spec, if not, please add it.
 
 3. Deploy the application and the instrumentation using the manifest.
+
+### Configuration
+
+See the documentation for
+[`InstrumentationOption`](https://pkg.go.dev/go.opentelemetry.io/auto#InstrumentationOption)
+factory functions for information about how to configure the OpenTelemetry Go
+Automatic Instrumentation.
 
 ## Contributing
 
