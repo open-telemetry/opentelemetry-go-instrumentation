@@ -26,7 +26,7 @@ import (
 	"go.opentelemetry.io/otel/trace"
 
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/context"
-	"go.opentelemetry.io/auto/internal/pkg/instrumentation/events"
+	"go.opentelemetry.io/auto/internal/pkg/instrumentation/probe"
 )
 
 func TestProbeConvertEvent(t *testing.T) {
@@ -52,7 +52,7 @@ func TestProbeConvertEvent(t *testing.T) {
 		SpanID:     spanID,
 		TraceFlags: trace.FlagsSampled,
 	})
-	want := &events.Event{
+	want := &probe.Event{
 		Library:     instrumentedPkg,
 		Name:        "DB",
 		Kind:        trace.SpanKindClient,

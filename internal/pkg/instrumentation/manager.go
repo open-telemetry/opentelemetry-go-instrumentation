@@ -29,7 +29,6 @@ import (
 	httpClient "go.opentelemetry.io/auto/internal/pkg/instrumentation/bpf/net/http/client"
 	httpServer "go.opentelemetry.io/auto/internal/pkg/instrumentation/bpf/net/http/server"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/bpffs"
-	"go.opentelemetry.io/auto/internal/pkg/instrumentation/events"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/probe"
 	"go.opentelemetry.io/auto/internal/pkg/opentelemetry"
 	"go.opentelemetry.io/auto/internal/pkg/process"
@@ -43,7 +42,7 @@ type Manager struct {
 	logger         logr.Logger
 	probes         map[string]probe.Probe
 	done           chan bool
-	incomingEvents chan *events.Event
+	incomingEvents chan *probe.Event
 	otelController *opentelemetry.Controller
 }
 
@@ -54,7 +53,7 @@ func NewManager(logger logr.Logger, otelController *opentelemetry.Controller) (*
 		logger:         logger,
 		probes:         make(map[string]probe.Probe),
 		done:           make(chan bool, 1),
-		incomingEvents: make(chan *events.Event),
+		incomingEvents: make(chan *probe.Event),
 		otelController: otelController,
 	}
 
