@@ -45,7 +45,8 @@
       "scopeSpans": [
         {
           "scope": {
-            "name": "net/http"
+            "name": "net/http",
+            "version": "v0.7.0-alpha"
           },
           "spans": [
             {
@@ -80,7 +81,8 @@
         },
         {
           "scope": {
-            "name": "net/http/client"
+            "name": "net/http/client",
+            "version": "v0.7.0-alpha"
           },
           "spans": [
             {

@@ -107,7 +107,7 @@ func NewInstrumentation(ctx context.Context, opts ...InstrumentationOption) (*In
 		return nil, err
 	}
 
-	ctrl, err := opentelemetry.NewController(logger, c.tracerProvider())
+	ctrl, err := opentelemetry.NewController(logger, c.tracerProvider(), Version())
 	if err != nil {
 		return nil, err
 	}
