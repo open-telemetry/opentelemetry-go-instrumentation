@@ -68,6 +68,7 @@ func (c *Cache) GetOffset(ver *version.Version, sf StructField) (uint64, bool) {
 	c.log.V(1).Info(
 		msg,
 		"version", ver,
+		"module", sf.ModPath,
 		"package", sf.PkgPath,
 		"struct", sf.Struct,
 		"field", sf.Field,

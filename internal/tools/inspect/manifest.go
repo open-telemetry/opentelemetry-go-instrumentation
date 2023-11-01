@@ -61,6 +61,10 @@ type Application struct {
 
 // StructField defines a field of a struct from a package.
 type StructField struct {
+	// ModPath is the module path containing the struct field package.
+	//
+	// If set to "std", the struct field belongs to the standard Go library.
+	ModPath string
 	// PkgPath is the unique package import path containing the struct.
 	PkgPath string
 	// Struct is the name of the struct containing the field.
@@ -77,6 +81,7 @@ func (s StructField) structName() string {
 // id returns StructField as an offsets.ID.
 func (s StructField) id() structfield.ID {
 	return structfield.ID{
+		ModPath: s.ModPath,
 		PkgPath: s.PkgPath,
 		Struct:  s.Struct,
 		Field:   s.Field,

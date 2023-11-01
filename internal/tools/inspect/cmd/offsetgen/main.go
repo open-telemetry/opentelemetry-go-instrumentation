@@ -74,6 +74,11 @@ func manifests() ([]inspect.Manifest, error) {
 		return nil, fmt.Errorf("failed to get \"google.golang.org/grpc\" versions: %w", err)
 	}
 
+	xNetVers, err := PkgVersions("golang.org/x/net")
+	if err != nil {
+		return nil, fmt.Errorf("failed to get \"golang.org/x/net\" versions: %w", err)
+	}
+
 	ren := func(src string) inspect.Renderer {
 		return inspect.NewRenderer(logger, src, inspect.DefaultFS)
 	}
@@ -85,10 +90,12 @@ func manifests() ([]inspect.Manifest, error) {
 				GoVerions: goVers,
 			},
 			StructFields: []inspect.StructField{{
+				ModPath: "std",
 				PkgPath: "runtime",
 				Struct:  "g",
 				Field:   "goid",
 			}, {
+				ModPath: "std",
 				PkgPath: "runtime",
 				Struct:  "hmap",
 				Field:   "buckets",
@@ -100,34 +107,42 @@ func manifests() ([]inspect.Manifest, error) {
 				GoVerions: goVers,
 			},
 			StructFields: []inspect.StructField{{
+				ModPath: "std",
 				PkgPath: "net/http",
 				Struct:  "Request",
 				Field:   "Method",
 			}, {
+				ModPath: "std",
 				PkgPath: "net/http",
 				Struct:  "Request",
 				Field:   "URL",
 			}, {
+				ModPath: "std",
 				PkgPath: "net/http",
 				Struct:  "Request",
 				Field:   "RemoteAddr",
 			}, {
+				ModPath: "std",
 				PkgPath: "net/http",
 				Struct:  "Request",
 				Field:   "Header",
 			}, {
+				ModPath: "std",
 				PkgPath: "net/http",
 				Struct:  "Request",
 				Field:   "ctx",
 			}, {
+				ModPath: "std",
 				PkgPath: "net/http",
 				Struct:  "response",
 				Field:   "req",
 			}, {
+				ModPath: "std",
 				PkgPath: "net/http",
 				Struct:  "response",
 				Field:   "status",
 			}, {
+				ModPath: "std",
 				PkgPath: "net/url",
 				Struct:  "URL",
 				Field:   "Path",
@@ -139,41 +154,57 @@ func manifests() ([]inspect.Manifest, error) {
 				Versions: grpcVers,
 			},
 			StructFields: []inspect.StructField{{
+				ModPath: "google.golang.org/grpc",
 				PkgPath: "google.golang.org/grpc/internal/transport",
 				Struct:  "Stream",
 				Field:   "method",
 			}, {
+				ModPath: "google.golang.org/grpc",
 				PkgPath: "google.golang.org/grpc/internal/transport",
 				Struct:  "Stream",
 				Field:   "id",
 			}, {
+				ModPath: "google.golang.org/grpc",
 				PkgPath: "google.golang.org/grpc/internal/transport",
 				Struct:  "Stream",
 				Field:   "ctx",
 			}, {
+				ModPath: "google.golang.org/grpc",
 				PkgPath: "google.golang.org/grpc",
 				Struct:  "ClientConn",
 				Field:   "target",
 			}, {
-				PkgPath: "golang.org/x/net/http2",
-				Struct:  "MetaHeadersFrame",
-				Field:   "Fields",
-			}, {
-				PkgPath: "golang.org/x/net/http2",
-				Struct:  "FrameHeader",
-				Field:   "StreamID",
-			}, {
+				ModPath: "google.golang.org/grpc",
 				PkgPath: "google.golang.org/grpc/internal/transport",
 				Struct:  "http2Client",
 				Field:   "nextID",
 			}, {
+				ModPath: "google.golang.org/grpc",
 				PkgPath: "google.golang.org/grpc/internal/transport",
 				Struct:  "headerFrame",
 				Field:   "streamID",
 			}, {
+				ModPath: "google.golang.org/grpc",
 				PkgPath: "google.golang.org/grpc/internal/transport",
 				Struct:  "headerFrame",
 				Field:   "hf",
+			}},
+		},
+		{
+			Application: inspect.Application{
+				Renderer: ren("templates/golang.org/x/net/*.tmpl"),
+				Versions: xNetVers,
+			},
+			StructFields: []inspect.StructField{{
+				ModPath: "golang.org/x/net",
+				PkgPath: "golang.org/x/net/http2",
+				Struct:  "MetaHeadersFrame",
+				Field:   "Fields",
+			}, {
+				ModPath: "golang.org/x/net",
+				PkgPath: "golang.org/x/net/http2",
+				Struct:  "FrameHeader",
+				Field:   "StreamID",
 			}},
 		},
 	}, nil

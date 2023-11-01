@@ -70,7 +70,7 @@ func TestWithOffset(t *testing.T) {
 	require.NoError(t, err)
 
 	const off uint64 = 1
-	id := structfield.NewID("net/http", "Request", "Method")
+	id := structfield.NewID("std", "net/http", "Request", "Method")
 
 	origOff := offsets
 	t.Cleanup(func() { offsets = origOff })

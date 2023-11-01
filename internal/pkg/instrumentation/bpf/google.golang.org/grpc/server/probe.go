@@ -79,8 +79,11 @@ func (g *Probe) FuncNames() []string {
 
 // Load loads all instrumentation offsets.
 func (g *Probe) Load(exec *link.Executable, target *process.TargetDetails) error {
-	targetLib := "google.golang.org/grpc"
-	ver := target.Libraries[targetLib]
+	const grpcMod = "google.golang.org/grpc"
+	grpcVer := target.Libraries[grpcMod]
+
+	const xNetMod = "golang.org/x/net"
+	xNetVer := target.Libraries[grpcMod]
 
 	spec, err := loadBpf()
 	if err != nil {
@@ -96,28 +99,28 @@ func (g *Probe) Load(exec *link.Executable, target *process.TargetDetails) error
 		inject.WithAllocationDetails(*target.AllocationDetails),
 		inject.WithOffset(
 			"stream_method_ptr_pos",
-			structfield.NewID("google.golang.org/grpc/internal/transport", "Stream", "method"),
-			ver,
+			structfield.NewID(grpcMod, "google.golang.org/grpc/internal/transport", "Stream", "method"),
+			grpcVer,
 		),
 		inject.WithOffset(
 			"stream_id_pos",
-			structfield.NewID("google.golang.org/grpc/internal/transport", "Stream", "id"),
-			ver,
+			structfield.NewID(grpcMod, "google.golang.org/grpc/internal/transport", "Stream", "id"),
+			grpcVer,
 		),
 		inject.WithOffset(
 			"stream_ctx_pos",
-			structfield.NewID("google.golang.org/grpc/internal/transport", "Stream", "ctx"),
-			ver,
+			structfield.NewID(grpcMod, "google.golang.org/grpc/internal/transport", "Stream", "ctx"),
+			grpcVer,
 		),
 		inject.WithOffset(
 			"frame_fields_pos",
-			structfield.NewID("golang.org/x/net/http2", "MetaHeadersFrame", "Fields"),
-			ver,
+			structfield.NewID(xNetMod, "golang.org/x/net/http2", "MetaHeadersFrame", "Fields"),
+			xNetVer,
 		),
 		inject.WithOffset(
 			"frame_stream_id_pod",
-			structfield.NewID("golang.org/x/net/http2", "FrameHeader", "StreamID"),
-			ver,
+			structfield.NewID(xNetMod, "golang.org/x/net/http2", "FrameHeader", "StreamID"),
+			xNetVer,
 		),
 	)
 	if err != nil {
