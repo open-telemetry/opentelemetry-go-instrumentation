@@ -90,7 +90,6 @@ func (h *Probe) Load(exec *link.Executable, target *process.TargetDetails) error
 		inject.WithOffset("url_ptr_pos", structfield.NewID("net/http", "Request", "URL"), ver),
 		inject.WithOffset("ctx_ptr_pos", structfield.NewID("net/http", "Request", "ctx"), ver),
 		inject.WithOffset("path_ptr_pos", structfield.NewID("net/url", "URL", "Path"), ver),
-		inject.WithOffset("ctx_ptr_pos", structfield.NewID("net/http", "Request", "ctx"), ver),
 		inject.WithOffset("headers_ptr_pos", structfield.NewID("net/http", "Request", "Header"), ver),
 		inject.WithOffset("req_ptr_pos", structfield.NewID("net/http", "response", "req"), ver),
 		inject.WithOffset("status_code_pos", structfield.NewID("net/http", "response", "status"), ver),
