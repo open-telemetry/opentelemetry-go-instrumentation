@@ -23,6 +23,7 @@ import (
 
 	"go.opentelemetry.io/auto/internal/pkg/inject"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/bpffs"
+	"go.opentelemetry.io/auto/internal/pkg/instrumentation/probe"
 
 	"github.com/cilium/ebpf"
 	"github.com/cilium/ebpf/link"
@@ -35,7 +36,6 @@ import (
 	"go.opentelemetry.io/otel/trace"
 
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/context"
-	"go.opentelemetry.io/auto/internal/pkg/instrumentation/events"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/utils"
 	"go.opentelemetry.io/auto/internal/pkg/process"
 )
@@ -149,7 +149,7 @@ func (h *Probe) Load(exec *link.Executable, target *process.TargetDetails) error
 }
 
 // Run runs the events processing loop.
-func (h *Probe) Run(eventsChan chan<- *events.Event) {
+func (h *Probe) Run(eventsChan chan<- *probe.Event) {
 	var event Event
 	for {
 		record, err := h.eventsReader.Read()
@@ -175,7 +175,7 @@ func (h *Probe) Run(eventsChan chan<- *events.Event) {
 	}
 }
 
-func (h *Probe) convertEvent(e *Event) *events.Event {
+func (h *Probe) convertEvent(e *Event) *probe.Event {
 	query := unix.ByteSliceToString(e.Query[:])
 
 	sc := trace.NewSpanContext(trace.SpanContextConfig{
@@ -197,7 +197,7 @@ func (h *Probe) convertEvent(e *Event) *events.Event {
 		pscPtr = nil
 	}
 
-	return &events.Event{
+	return &probe.Event{
 		Library:     h.LibraryName(),
 		Name:        "DB",
 		Kind:        trace.SpanKindClient,
