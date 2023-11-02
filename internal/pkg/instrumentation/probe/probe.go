@@ -18,7 +18,6 @@ package probe
 import (
 	"github.com/cilium/ebpf/link"
 
-	"go.opentelemetry.io/auto/internal/pkg/instrumentation/events"
 	"go.opentelemetry.io/auto/internal/pkg/process"
 )
 
@@ -36,7 +35,7 @@ type Probe interface {
 	Load(*link.Executable, *process.TargetDetails) error
 
 	// Run runs the events processing loop.
-	Run(eventsChan chan<- *events.Event)
+	Run(eventsChan chan<- *Event)
 
 	// Close stops the Probe.
 	Close()

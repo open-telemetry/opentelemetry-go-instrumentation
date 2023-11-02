@@ -107,7 +107,7 @@ func NewInstrumentation(ctx context.Context, opts ...InstrumentationOption) (*In
 		return nil, err
 	}
 
-	ctrl, err := opentelemetry.NewController(logger, c.tracerProvider())
+	ctrl, err := opentelemetry.NewController(logger, c.tracerProvider(), Version())
 	if err != nil {
 		return nil, err
 	}
@@ -316,6 +316,10 @@ var lookupEnv = os.LookupEnv
 // and [WithServiceName] if their respective environment variable is defined.
 // If more than one of these options are used, the last one provided to an
 // [Instrumentation] will be used.
+//
+// The OTEL_TRACES_EXPORTER environment variable value is resolved using the
+// [autoexport] package. See that package's documentation for information on
+// supported values and registration of custom exporters.
 func WithEnv() InstrumentationOption {
 	return fnOpt(func(ctx context.Context, c instConfig) (instConfig, error) {
 		var err error
@@ -324,7 +328,7 @@ func WithEnv() InstrumentationOption {
 		}
 		if _, ok := lookupEnv(envTracesExportersKey); ok {
 			// Don't track the lookup value because autoexport does not provide
-			// a way to just pass the envoriment value currently. Just use
+			// a way to just pass the environment value currently. Just use
 			// NewSpanExporter which will re-read this value.
 
 			var e error

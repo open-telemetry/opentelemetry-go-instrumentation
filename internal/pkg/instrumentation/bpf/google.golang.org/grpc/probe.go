@@ -25,18 +25,18 @@ import (
 	"github.com/go-logr/logr"
 
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/bpffs"
+	"go.opentelemetry.io/auto/internal/pkg/instrumentation/probe"
 
 	"github.com/cilium/ebpf/link"
 	"github.com/cilium/ebpf/perf"
 	"golang.org/x/sys/unix"
 
 	"go.opentelemetry.io/otel/attribute"
-	semconv "go.opentelemetry.io/otel/semconv/v1.18.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
 	"go.opentelemetry.io/otel/trace"
 
 	"go.opentelemetry.io/auto/internal/pkg/inject"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/context"
-	"go.opentelemetry.io/auto/internal/pkg/instrumentation/events"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/utils"
 	"go.opentelemetry.io/auto/internal/pkg/process"
 	"go.opentelemetry.io/auto/internal/pkg/structfield"
@@ -196,7 +196,7 @@ func (g *Probe) Load(exec *link.Executable, target *process.TargetDetails) error
 }
 
 // Run runs the events processing loop.
-func (g *Probe) Run(eventsChan chan<- *events.Event) {
+func (g *Probe) Run(eventsChan chan<- *probe.Event) {
 	var event Event
 	for {
 		record, err := g.eventsReader.Read()
@@ -223,7 +223,7 @@ func (g *Probe) Run(eventsChan chan<- *events.Event) {
 }
 
 // According to https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/trace/semantic_conventions/rpc.md
-func (g *Probe) convertEvent(e *Event) *events.Event {
+func (g *Probe) convertEvent(e *Event) *probe.Event {
 	method := unix.ByteSliceToString(e.Method[:])
 	target := unix.ByteSliceToString(e.Target[:])
 	var attrs []attribute.KeyValue
@@ -258,7 +258,7 @@ func (g *Probe) convertEvent(e *Event) *events.Event {
 	}
 
 	g.logger.Info("got spancontext", "trace_id", e.SpanContext.TraceID.String(), "span_id", e.SpanContext.SpanID.String())
-	return &events.Event{
+	return &probe.Event{
 		Library:           g.LibraryName(),
 		Name:              method,
 		Kind:              trace.SpanKindClient,

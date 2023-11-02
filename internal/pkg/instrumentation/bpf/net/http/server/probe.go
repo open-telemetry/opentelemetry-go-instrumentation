@@ -25,14 +25,14 @@ import (
 	"github.com/cilium/ebpf/perf"
 	"github.com/go-logr/logr"
 	"go.opentelemetry.io/otel/attribute"
-	semconv "go.opentelemetry.io/otel/semconv/v1.18.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
 	"go.opentelemetry.io/otel/trace"
 	"golang.org/x/sys/unix"
 
 	"go.opentelemetry.io/auto/internal/pkg/inject"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/bpffs"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/context"
-	"go.opentelemetry.io/auto/internal/pkg/instrumentation/events"
+	"go.opentelemetry.io/auto/internal/pkg/instrumentation/probe"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/utils"
 	"go.opentelemetry.io/auto/internal/pkg/process"
 	"go.opentelemetry.io/auto/internal/pkg/structfield"
@@ -90,7 +90,6 @@ func (h *Probe) Load(exec *link.Executable, target *process.TargetDetails) error
 		inject.WithOffset("url_ptr_pos", structfield.NewID("net/http", "Request", "URL"), ver),
 		inject.WithOffset("ctx_ptr_pos", structfield.NewID("net/http", "Request", "ctx"), ver),
 		inject.WithOffset("path_ptr_pos", structfield.NewID("net/url", "URL", "Path"), ver),
-		inject.WithOffset("ctx_ptr_pos", structfield.NewID("net/http", "Request", "ctx"), ver),
 		inject.WithOffset("headers_ptr_pos", structfield.NewID("net/http", "Request", "Header"), ver),
 		inject.WithOffset("req_ptr_pos", structfield.NewID("net/http", "response", "req"), ver),
 		inject.WithOffset("status_code_pos", structfield.NewID("net/http", "response", "status"), ver),
@@ -151,7 +150,7 @@ func (h *Probe) Load(exec *link.Executable, target *process.TargetDetails) error
 }
 
 // Run runs the events processing loop.
-func (h *Probe) Run(eventsChan chan<- *events.Event) {
+func (h *Probe) Run(eventsChan chan<- *probe.Event) {
 	var event Event
 	for {
 		record, err := h.eventsReader.Read()
@@ -177,7 +176,7 @@ func (h *Probe) Run(eventsChan chan<- *events.Event) {
 	}
 }
 
-func (h *Probe) convertEvent(e *Event) *events.Event {
+func (h *Probe) convertEvent(e *Event) *probe.Event {
 	method := unix.ByteSliceToString(e.Method[:])
 	path := unix.ByteSliceToString(e.Path[:])
 
@@ -200,7 +199,7 @@ func (h *Probe) convertEvent(e *Event) *events.Event {
 		pscPtr = nil
 	}
 
-	return &events.Event{
+	return &probe.Event{
 		Library: h.LibraryName(),
 		// Do not include the high-cardinality path here (there is no
 		// templatized path manifest to reference).
