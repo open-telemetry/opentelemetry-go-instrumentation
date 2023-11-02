@@ -81,7 +81,8 @@ func (g *Probe) FuncNames() []string {
 
 // Load loads all instrumentation offsets.
 func (g *Probe) Load(exec *link.Executable, target *process.TargetDetails) error {
-	ver := target.Libraries[g.LibraryName()]
+	const grpcMod = "google.golang.org/grpc"
+	ver := target.Libraries[grpcMod]
 	spec, err := loadBpf()
 	if err != nil {
 		return err
@@ -96,22 +97,22 @@ func (g *Probe) Load(exec *link.Executable, target *process.TargetDetails) error
 		inject.WithAllocationDetails(*target.AllocationDetails),
 		inject.WithOffset(
 			"clientconn_target_ptr_pos",
-			structfield.NewID("google.golang.org/grpc", "ClientConn", "target"),
+			structfield.NewID(grpcMod, "google.golang.org/grpc", "ClientConn", "target"),
 			ver,
 		),
 		inject.WithOffset(
 			"httpclient_nextid_pos",
-			structfield.NewID("google.golang.org/grpc/internal/transport", "http2Client", "nextID"),
+			structfield.NewID(grpcMod, "google.golang.org/grpc/internal/transport", "http2Client", "nextID"),
 			ver,
 		),
 		inject.WithOffset(
 			"headerFrame_hf_pos",
-			structfield.NewID("google.golang.org/grpc/internal/transport", "headerFrame", "hf"),
+			structfield.NewID(grpcMod, "google.golang.org/grpc/internal/transport", "headerFrame", "hf"),
 			ver,
 		),
 		inject.WithOffset(
 			"headerFrame_streamid_pos",
-			structfield.NewID("google.golang.org/grpc/internal/transport", "headerFrame", "streamID"),
+			structfield.NewID(grpcMod, "google.golang.org/grpc/internal/transport", "headerFrame", "streamID"),
 			ver,
 		),
 	)

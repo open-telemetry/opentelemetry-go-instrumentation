@@ -105,31 +105,34 @@ func (i *Index) putOffset(id ID, ver *version.Version, offset uint64) {
 
 // UnmarshalJSON unmarshals the offset JSON data into i.
 func (i *Index) UnmarshalJSON(data []byte) error {
-	var pkgs []*jsonPackage
-	err := json.Unmarshal(data, &pkgs)
+	var mods []*jsonModule
+	err := json.Unmarshal(data, &mods)
 	if err != nil {
 		return err
 	}
 
 	m := make(map[ID]*Offsets)
 
-	for _, p := range pkgs {
-		for _, s := range p.Structs {
-			for _, f := range s.Fields {
-				for _, o := range f.Offsets {
-					for _, v := range o.Versions {
-						key := ID{
-							PkgPath: p.Package,
-							Struct:  s.Struct,
-							Field:   f.Field,
-						}
+	for _, mod := range mods {
+		for _, p := range mod.Packages {
+			for _, s := range p.Structs {
+				for _, f := range s.Fields {
+					for _, o := range f.Offsets {
+						for _, v := range o.Versions {
+							key := ID{
+								ModPath: mod.Module,
+								PkgPath: p.Package,
+								Struct:  s.Struct,
+								Field:   f.Field,
+							}
 
-						off, ok := m[key]
-						if !ok {
-							off = new(Offsets)
-							m[key] = off
+							off, ok := m[key]
+							if !ok {
+								off = new(Offsets)
+								m[key] = off
+							}
+							off.Put(v, o.Offset)
 						}
-						off.Put(v, o.Offset)
 					}
 				}
 			}
@@ -148,33 +151,38 @@ func (i *Index) MarshalJSON() ([]byte, error) {
 	i.dataMu.RLock()
 	defer i.dataMu.RUnlock()
 
-	var out []*jsonPackage
+	var out []*jsonModule
 	for id, off := range i.data {
-		jp := find(&out, func(p *jsonPackage) bool {
-			return id.PkgPath == p.Package
+		jm := find(&out, func(p *jsonModule) bool {
+			return id.ModPath == p.Module
 		})
-		jp.Package = id.PkgPath
-		jp.addOffsets(id.Struct, id.Field, off)
+		jm.Module = id.ModPath
+		jm.addOffsets(id.PkgPath, id.Struct, id.Field, off)
 	}
 
 	// Ensure repeatability by sorting.
-	for _, p := range out {
-		for _, s := range p.Structs {
-			for _, f := range s.Fields {
-				sort.Slice(f.Offsets, func(i, j int) bool {
-					return f.Offsets[i].Offset < f.Offsets[j].Offset
+	for _, m := range out {
+		for _, p := range m.Packages {
+			for _, s := range p.Structs {
+				for _, f := range s.Fields {
+					sort.Slice(f.Offsets, func(i, j int) bool {
+						return f.Offsets[i].Offset < f.Offsets[j].Offset
+					})
+				}
+				sort.Slice(s.Fields, func(i, j int) bool {
+					return s.Fields[i].Field < s.Fields[j].Field
 				})
 			}
-			sort.Slice(s.Fields, func(i, j int) bool {
-				return s.Fields[i].Field < s.Fields[j].Field
+			sort.Slice(p.Structs, func(i, j int) bool {
+				return p.Structs[i].Struct < p.Structs[j].Struct
 			})
 		}
-		sort.Slice(p.Structs, func(i, j int) bool {
-			return p.Structs[i].Struct < p.Structs[j].Struct
+		sort.Slice(m.Packages, func(i, j int) bool {
+			return m.Packages[i].Package < m.Packages[j].Package
 		})
 	}
 	sort.Slice(out, func(i, j int) bool {
-		return out[i].Package < out[j].Package
+		return out[i].Module < out[j].Module
 	})
 
 	return json.Marshal(out)
@@ -182,6 +190,10 @@ func (i *Index) MarshalJSON() ([]byte, error) {
 
 // ID is a struct field identifier for an offset.
 type ID struct {
+	// ModPath is the module path containing the struct field package.
+	//
+	// If set to "std", the struct field belongs to the standard Go library.
+	ModPath string
 	// PkgPath package import path containing the struct field.
 	PkgPath string
 	// Struct is the name of the struct containing the field.
@@ -192,8 +204,8 @@ type ID struct {
 
 // NewID returns a new ID using pkg for the PkgPath, strct for the Struct, and
 // field for the Field.
-func NewID(pkg, strct, field string) ID {
-	return ID{PkgPath: pkg, Struct: strct, Field: field}
+func NewID(mod, pkg, strct, field string) ID {
+	return ID{ModPath: mod, PkgPath: pkg, Struct: strct, Field: field}
 }
 
 func (i ID) String() string {

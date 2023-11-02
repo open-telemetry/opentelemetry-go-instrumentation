@@ -68,26 +68,26 @@ func TestOffsets(t *testing.T) {
 
 var index = &Index{
 	data: map[ID]*Offsets{
-		NewID("net/http", "Request", "Method"): {
+		NewID("std", "net/http", "Request", "Method"): {
 			values: map[verKey]offsetVersion{
 				newVerKey(v120): {offset: 1, version: v120},
 				newVerKey(v121): {offset: 1, version: v121},
 				newVerKey(v130): {offset: 1, version: v130},
 			},
 		},
-		NewID("net/http", "Request", "URL"): {
+		NewID("std", "net/http", "Request", "URL"): {
 			values: map[verKey]offsetVersion{
 				newVerKey(v120): {offset: 0, version: v120},
 				newVerKey(v121): {offset: 1, version: v121},
 				newVerKey(v130): {offset: 2, version: v130},
 			},
 		},
-		NewID("net/http", "Response", "Status"): {
+		NewID("std", "net/http", "Response", "Status"): {
 			values: map[verKey]offsetVersion{
 				newVerKey(v120): {offset: 0, version: v120},
 			},
 		},
-		NewID("google.golang.org/grpc", "ClientConn", "target"): {
+		NewID("google.golang.org/grpc", "google.golang.org/grpc", "ClientConn", "target"): {
 			values: map[verKey]offsetVersion{
 				newVerKey(v120): {offset: 0, version: v120},
 			},

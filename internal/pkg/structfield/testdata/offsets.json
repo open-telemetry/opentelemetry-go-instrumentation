@@ -1,17 +1,22 @@
 [
 	{
-		"package": "google.golang.org/grpc",
-		"structs": [
+		"module": "google.golang.org/grpc",
+		"packages": [
 			{
-				"struct": "ClientConn",
-				"fields": [
+				"package": "google.golang.org/grpc",
+				"structs": [
 					{
-						"field": "target",
-						"offsets": [
+						"struct": "ClientConn",
+						"fields": [
 							{
-								"offset": 0,
-								"versions": [
-									"1.2.0"
+								"field": "target",
+								"offsets": [
+									{
+										"offset": 0,
+										"versions": [
+											"1.2.0"
+										]
+									}
 								]
 							}
 						]
@@ -21,59 +26,64 @@
 		]
 	},
 	{
-		"package": "net/http",
-		"structs": [
+		"module": "std",
+		"packages": [
 			{
-				"struct": "Request",
-				"fields": [
+				"package": "net/http",
+				"structs": [
 					{
-						"field": "Method",
-						"offsets": [
+						"struct": "Request",
+						"fields": [
 							{
-								"offset": 1,
-								"versions": [
-									"1.2.0",
-									"1.2.1",
-									"1.3.0"
+								"field": "Method",
+								"offsets": [
+									{
+										"offset": 1,
+										"versions": [
+											"1.2.0",
+											"1.2.1",
+											"1.3.0"
+										]
+									}
+								]
+							},
+							{
+								"field": "URL",
+								"offsets": [
+									{
+										"offset": 0,
+										"versions": [
+											"1.2.0"
+										]
+									},
+									{
+										"offset": 1,
+										"versions": [
+											"1.2.1"
+										]
+									},
+									{
+										"offset": 2,
+										"versions": [
+											"1.3.0"
+										]
+									}
 								]
 							}
 						]
 					},
 					{
-						"field": "URL",
-						"offsets": [
+						"struct": "Response",
+						"fields": [
 							{
-								"offset": 0,
-								"versions": [
-									"1.2.0"
-								]
-							},
-							{
-								"offset": 1,
-								"versions": [
-									"1.2.1"
-								]
-							},
-							{
-								"offset": 2,
-								"versions": [
-									"1.3.0"
-								]
-							}
-						]
-					}
-				]
-			},
-			{
-				"struct": "Response",
-				"fields": [
-					{
-						"field": "Status",
-						"offsets": [
-							{
-								"offset": 0,
-								"versions": [
-									"1.2.0"
+								"field": "Status",
+								"offsets": [
+									{
+										"offset": 0,
+										"versions": [
+											"1.2.0"
+										]
+									}
 								]
 							}
 						]

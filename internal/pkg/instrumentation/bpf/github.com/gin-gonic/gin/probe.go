@@ -88,10 +88,10 @@ func (h *Probe) Load(exec *link.Executable, target *process.TargetDetails) error
 	err = inject.Constants(
 		spec,
 		inject.WithRegistersABI(target.IsRegistersABI()),
-		inject.WithOffset("method_ptr_pos", structfield.NewID("net/http", "Request", "Method"), ver),
-		inject.WithOffset("url_ptr_pos", structfield.NewID("net/http", "Request", "URL"), ver),
-		inject.WithOffset("ctx_ptr_pos", structfield.NewID("net/http", "Request", "ctx"), ver),
-		inject.WithOffset("path_ptr_pos", structfield.NewID("net/url", "URL", "Path"), ver),
+		inject.WithOffset("method_ptr_pos", structfield.NewID("std", "net/http", "Request", "Method"), ver),
+		inject.WithOffset("url_ptr_pos", structfield.NewID("std", "net/http", "Request", "URL"), ver),
+		inject.WithOffset("ctx_ptr_pos", structfield.NewID("std", "net/http", "Request", "ctx"), ver),
+		inject.WithOffset("path_ptr_pos", structfield.NewID("std", "net/url", "URL", "Path"), ver),
 	)
 	if err != nil {
 		return err

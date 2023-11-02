@@ -1,0 +1,8 @@
+package main
+
+import "golang.org/x/net/http2"
+
+func main() {
+	var mhf http2.MetaHeadersFrame
+	_ = mhf.HeadersEnded()
+}
