@@ -23,7 +23,7 @@ import (
 	"go.opentelemetry.io/otel/trace"
 	"golang.org/x/sys/unix"
 
-	"go.opentelemetry.io/auto/internal/pkg/instrumentation/events"
+	"go.opentelemetry.io/auto/internal/pkg/instrumentation/probe"
 )
 
 // Controller handles OpenTelemetry telemetry generation for events.
@@ -46,7 +46,7 @@ func (c *Controller) getTracer(libName string) trace.Tracer {
 }
 
 // Trace creates a trace span for event.
-func (c *Controller) Trace(event *events.Event) {
+func (c *Controller) Trace(event *probe.Event) {
 	c.logger.Info("got event", "attrs", event.Attributes)
 	ctx := context.Background()
 

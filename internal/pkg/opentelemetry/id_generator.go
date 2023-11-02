@@ -19,7 +19,7 @@ import (
 
 	"go.opentelemetry.io/otel/trace"
 
-	"go.opentelemetry.io/auto/internal/pkg/instrumentation/events"
+	"go.opentelemetry.io/auto/internal/pkg/instrumentation/probe"
 )
 
 type EBPFSourceIDGenerator struct{}
@@ -31,18 +31,18 @@ func NewEBPFSourceIDGenerator() *EBPFSourceIDGenerator {
 }
 
 // ContextWithEBPFEvent returns a copy of parent in which event is stored.
-func ContextWithEBPFEvent(parent context.Context, event events.Event) context.Context {
+func ContextWithEBPFEvent(parent context.Context, event probe.Event) context.Context {
 	return context.WithValue(parent, eBPFEventKey{}, event)
 }
 
 // EventFromContext returns the event within ctx if one exists.
-func EventFromContext(ctx context.Context) *events.Event {
+func EventFromContext(ctx context.Context) *probe.Event {
 	val := ctx.Value(eBPFEventKey{})
 	if val == nil {
 		return nil
 	}
 
-	event, ok := val.(events.Event)
+	event, ok := val.(probe.Event)
 	if !ok {
 		return nil
 	}
