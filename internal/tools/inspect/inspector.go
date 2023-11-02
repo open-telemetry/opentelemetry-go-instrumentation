@@ -134,7 +134,7 @@ type job struct {
 	Renderer Renderer
 	Builder  *builder
 	AppVer   *version.Version
-	Fields   []StructField
+	Fields   []structfield.ID
 }
 
 // Do performs the inspections and returns all found offsets.
@@ -185,7 +185,7 @@ func (i *Inspector) Do(ctx context.Context) (*structfield.Index, error) {
 				continue
 			}
 
-			index.PutOffset(r.StructField.id(), r.Version, r.Offset)
+			index.PutOffset(r.StructField, r.Version, r.Offset)
 		}
 	}
 
@@ -203,7 +203,7 @@ func max(a, b int) int {
 }
 
 type result struct {
-	StructField StructField
+	StructField structfield.ID
 	Version     *version.Version
 	Offset      uint64
 	Found       bool
@@ -255,12 +255,7 @@ func (i *Inspector) do(ctx context.Context, j job) (out []result, err error) {
 
 func (i *Inspector) logResult(r result) {
 	msg := "offset "
-	kv := []interface{}{
-		"version", r.Version,
-		"package", r.StructField.PkgPath,
-		"struct", r.StructField.Struct,
-		"field", r.StructField.Field,
-	}
+	kv := []interface{}{"version", r.Version, "id", r.StructField}
 	if !r.Found {
 		msg += "not found"
 	} else {

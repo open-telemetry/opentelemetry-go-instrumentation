@@ -29,6 +29,7 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/go-logr/stdr"
 
+	"go.opentelemetry.io/auto/internal/pkg/structfield"
 	"go.opentelemetry.io/auto/internal/tools/inspect"
 )
 
@@ -84,97 +85,43 @@ func manifests() ([]inspect.Manifest, error) {
 				Renderer:  ren("templates/runtime/*.tmpl"),
 				GoVerions: goVers,
 			},
-			StructFields: []inspect.StructField{{
-				PkgPath: "runtime",
-				Struct:  "g",
-				Field:   "goid",
-			}, {
-				PkgPath: "runtime",
-				Struct:  "hmap",
-				Field:   "buckets",
-			}},
+			StructFields: []structfield.ID{
+				structfield.NewID("runtime", "g", "goid"),
+				structfield.NewID("runtime", "hmap", "buckets"),
+			},
 		},
 		{
 			Application: inspect.Application{
 				Renderer:  ren("templates/net/http/*.tmpl"),
 				GoVerions: goVers,
 			},
-			StructFields: []inspect.StructField{{
-				PkgPath: "net/http",
-				Struct:  "Request",
-				Field:   "Method",
-			}, {
-				PkgPath: "net/http",
-				Struct:  "Request",
-				Field:   "URL",
-			}, {
-				PkgPath: "net/http",
-				Struct:  "Request",
-				Field:   "RemoteAddr",
-			}, {
-				PkgPath: "net/http",
-				Struct:  "Request",
-				Field:   "Header",
-			}, {
-				PkgPath: "net/http",
-				Struct:  "Request",
-				Field:   "ctx",
-			}, {
-				PkgPath: "net/http",
-				Struct:  "response",
-				Field:   "req",
-			}, {
-				PkgPath: "net/http",
-				Struct:  "response",
-				Field:   "status",
-			}, {
-				PkgPath: "net/url",
-				Struct:  "URL",
-				Field:   "Path",
-			}},
+			StructFields: []structfield.ID{
+				structfield.NewID("net/http", "Request", "Method"),
+				structfield.NewID("net/http", "Request", "URL"),
+				structfield.NewID("net/http", "Request", "RemoteAddr"),
+				structfield.NewID("net/http", "Request", "Header"),
+				structfield.NewID("net/http", "Request", "ctx"),
+				structfield.NewID("net/http", "response", "req"),
+				structfield.NewID("net/http", "response", "status"),
+				structfield.NewID("net/url", "URL", "Path"),
+			},
 		},
 		{
 			Application: inspect.Application{
 				Renderer: ren("templates/google.golang.org/grpc/*.tmpl"),
 				Versions: grpcVers,
 			},
-			StructFields: []inspect.StructField{{
-				PkgPath: "google.golang.org/grpc/internal/transport",
-				Struct:  "Stream",
-				Field:   "method",
-			}, {
-				PkgPath: "google.golang.org/grpc/internal/transport",
-				Struct:  "Stream",
-				Field:   "id",
-			}, {
-				PkgPath: "google.golang.org/grpc/internal/transport",
-				Struct:  "Stream",
-				Field:   "ctx",
-			}, {
-				PkgPath: "google.golang.org/grpc",
-				Struct:  "ClientConn",
-				Field:   "target",
-			}, {
-				PkgPath: "golang.org/x/net/http2",
-				Struct:  "MetaHeadersFrame",
-				Field:   "Fields",
-			}, {
-				PkgPath: "golang.org/x/net/http2",
-				Struct:  "FrameHeader",
-				Field:   "StreamID",
-			}, {
-				PkgPath: "google.golang.org/grpc/internal/transport",
-				Struct:  "http2Client",
-				Field:   "nextID",
-			}, {
-				PkgPath: "google.golang.org/grpc/internal/transport",
-				Struct:  "headerFrame",
-				Field:   "streamID",
-			}, {
-				PkgPath: "google.golang.org/grpc/internal/transport",
-				Struct:  "headerFrame",
-				Field:   "hf",
-			}},
+			StructFields: []structfield.ID{
+				structfield.NewID("google.golang.org/grpc/internal/transport", "Stream", "method"),
+				structfield.NewID("google.golang.org/grpc/internal/transport", "Stream", "id"),
+				structfield.NewID("google.golang.org/grpc/internal/transport", "Stream", "ctx"),
+				structfield.NewID("google.golang.org/grpc", "ClientConn", "target"),
+				structfield.NewID("golang.org/x/net/http2", "MetaHeadersFrame", "Fields"),
+				structfield.NewID("golang.org/x/net/http2", "FrameHeader", "StreamID"),
+				structfield.NewID("google.golang.org/grpc/internal/transport", "http2Client", "nextID"),
+				structfield.NewID("google.golang.org/grpc/internal/transport", "headerFrame", "streamID"),
+				structfield.NewID("google.golang.org/grpc/internal/transport", "headerFrame", "hf"),
+			},
 		},
 	}, nil
 }
