@@ -15,205 +15,123 @@
 package server
 
 import (
-	"bytes"
-	"encoding/binary"
-	"errors"
 	"os"
 
-	"go.opentelemetry.io/auto/internal/pkg/instrumentation/bpffs"
-	"go.opentelemetry.io/auto/internal/pkg/instrumentation/probe"
-
-	"github.com/cilium/ebpf"
 	"github.com/cilium/ebpf/link"
 	"github.com/cilium/ebpf/perf"
 	"github.com/go-logr/logr"
-	"golang.org/x/sys/unix"
-
 	"go.opentelemetry.io/otel/attribute"
 	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
 	"go.opentelemetry.io/otel/trace"
+	"golang.org/x/sys/unix"
 
-	"go.opentelemetry.io/auto/internal/pkg/inject"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/context"
-	"go.opentelemetry.io/auto/internal/pkg/instrumentation/utils"
+	"go.opentelemetry.io/auto/internal/pkg/instrumentation/probe"
 	"go.opentelemetry.io/auto/internal/pkg/process"
 	"go.opentelemetry.io/auto/internal/pkg/structfield"
 )
 
 //go:generate go run github.com/cilium/ebpf/cmd/bpf2go -target amd64,arm64 -cc clang -cflags $CFLAGS bpf ./bpf/probe.bpf.c
 
-// Event represents an event in the gRPC server during a gRPC request.
-type Event struct {
+// name is the instrumentation name.
+const name = "google.golang.org/grpc/server"
+
+// New returns a new [probe.Probe].
+func New(logger logr.Logger) probe.Probe {
+	return &probe.Base[bpfObjects, event]{
+		Name:   name,
+		Logger: logger.WithName(name),
+		// TODO (#444): Use the actual package being instrumented here. E.g.
+		// InstrumentedPkg: "google.golang.org/grpc",
+		InstrumentedPkg: "google.golang.org/grpc/server",
+		Consts: []probe.Const{
+			probe.RegistersABIConst{},
+			probe.AllocationConst{},
+			probe.StructFieldConst{
+				Key: "stream_method_ptr_pos",
+				Val: structfield.NewID("google.golang.org/grpc", "google.golang.org/grpc/internal/transport", "Stream", "method"),
+			},
+			probe.StructFieldConst{
+				Key: "stream_id_pos",
+				Val: structfield.NewID("google.golang.org/grpc", "google.golang.org/grpc/internal/transport", "Stream", "id"),
+			},
+			probe.StructFieldConst{
+				Key: "stream_ctx_pos",
+				Val: structfield.NewID("google.golang.org/grpc", "google.golang.org/grpc/internal/transport", "Stream", "ctx"),
+			},
+			probe.StructFieldConst{
+				Key: "frame_fields_pos",
+				Val: structfield.NewID("golang.org/x/net", "golang.org/x/net/http2", "MetaHeadersFrame", "Fields"),
+			},
+			probe.StructFieldConst{
+				Key: "frame_stream_id_pod",
+				Val: structfield.NewID("golang.org/x/net", "golang.org/x/net/http2", "FrameHeader", "StreamID"),
+			},
+		},
+		Uprobes: map[string]probe.UprobeFunc[bpfObjects]{
+			"google.golang.org/grpc.(*Server).handleStream":                           uprobeHandleStream,
+			"google.golang.org/grpc/internal/transport.(*http2Server).operateHeaders": uprobeOperateHeaders,
+		},
+
+		ReaderFn: func(obj bpfObjects) (*perf.Reader, error) {
+			return perf.NewReader(obj.Events, os.Getpagesize())
+		},
+		SpecFn:    loadBpf,
+		ProcessFn: convertEvent,
+	}
+}
+
+func uprobeHandleStream(name string, exec *link.Executable, target *process.TargetDetails, obj *bpfObjects) ([]link.Link, error) {
+	offset, err := target.GetFunctionOffset(name)
+	if err != nil {
+		return nil, err
+	}
+
+	opts := &link.UprobeOptions{Address: offset}
+	l, err := exec.Uprobe("", obj.UprobeServerHandleStream, opts)
+	if err != nil {
+		return nil, err
+	}
+	links := []link.Link{l}
+
+	retOffsets, err := target.GetFunctionReturns(name)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, ret := range retOffsets {
+		opts := &link.UprobeOptions{Address: ret}
+		l, err := exec.Uprobe("", obj.UprobeServerHandleStreamReturns, opts)
+		if err != nil {
+			return nil, err
+		}
+		links = append(links, l)
+	}
+
+	return links, nil
+}
+
+func uprobeOperateHeaders(name string, exec *link.Executable, target *process.TargetDetails, obj *bpfObjects) ([]link.Link, error) {
+	offset, err := target.GetFunctionOffset(name)
+	if err != nil {
+		return nil, err
+	}
+
+	opts := &link.UprobeOptions{Address: offset}
+	l, err := exec.Uprobe("", obj.UprobeDecodeStateDecodeHeader, opts)
+	if err != nil {
+		return nil, err
+	}
+	return []link.Link{l}, nil
+}
+
+// event represents an event in the gRPC server during a gRPC request.
+type event struct {
 	context.BaseSpanProperties
 	Method [100]byte
 }
 
-// Probe is the gRPC server instrumentation probe.
-type Probe struct {
-	logger       logr.Logger
-	bpfObjects   *bpfObjects
-	uprobe       link.Link
-	returnProbs  []link.Link
-	headersProbe link.Link
-	eventsReader *perf.Reader
-}
-
-// New returns a new [Probe].
-func New(logger logr.Logger) *Probe {
-	return &Probe{logger: logger.WithName("Probe/GRPC/Server")}
-}
-
-// LibraryName returns the gRPC server package import path.
-func (g *Probe) LibraryName() string {
-	return "google.golang.org/grpc/server"
-}
-
-// FuncNames returns the function names from "google.golang.org/grpc" that are
-// instrumented.
-func (g *Probe) FuncNames() []string {
-	return []string{
-		"google.golang.org/grpc.(*Server).handleStream",
-		"google.golang.org/grpc/internal/transport.(*http2Server).operateHeaders",
-	}
-}
-
-// Load loads all instrumentation offsets.
-func (g *Probe) Load(exec *link.Executable, target *process.TargetDetails) error {
-	const grpcMod = "google.golang.org/grpc"
-	grpcVer := target.Libraries[grpcMod]
-
-	const xNetMod = "golang.org/x/net"
-	xNetVer := target.Libraries[grpcMod]
-
-	spec, err := loadBpf()
-	if err != nil {
-		return err
-	}
-	if target.AllocationDetails == nil {
-		// This Probe requires allocation.
-		return errors.New("no allocation details")
-	}
-	err = inject.Constants(
-		spec,
-		inject.WithRegistersABI(target.IsRegistersABI()),
-		inject.WithAllocationDetails(*target.AllocationDetails),
-		inject.WithOffset(
-			"stream_method_ptr_pos",
-			structfield.NewID(grpcMod, "google.golang.org/grpc/internal/transport", "Stream", "method"),
-			grpcVer,
-		),
-		inject.WithOffset(
-			"stream_id_pos",
-			structfield.NewID(grpcMod, "google.golang.org/grpc/internal/transport", "Stream", "id"),
-			grpcVer,
-		),
-		inject.WithOffset(
-			"stream_ctx_pos",
-			structfield.NewID(grpcMod, "google.golang.org/grpc/internal/transport", "Stream", "ctx"),
-			grpcVer,
-		),
-		inject.WithOffset(
-			"frame_fields_pos",
-			structfield.NewID(xNetMod, "golang.org/x/net/http2", "MetaHeadersFrame", "Fields"),
-			xNetVer,
-		),
-		inject.WithOffset(
-			"frame_stream_id_pod",
-			structfield.NewID(xNetMod, "golang.org/x/net/http2", "FrameHeader", "StreamID"),
-			xNetVer,
-		),
-	)
-	if err != nil {
-		return err
-	}
-
-	g.bpfObjects = &bpfObjects{}
-	err = utils.LoadEBPFObjects(spec, g.bpfObjects, &ebpf.CollectionOptions{
-		Maps: ebpf.MapOptions{
-			PinPath: bpffs.PathForTargetApplication(target),
-		},
-	})
-	if err != nil {
-		return err
-	}
-
-	offset, err := target.GetFunctionOffset(g.FuncNames()[0])
-	if err != nil {
-		return err
-	}
-
-	up, err := exec.Uprobe("", g.bpfObjects.UprobeServerHandleStream, &link.UprobeOptions{
-		Address: offset,
-	})
-	if err != nil {
-		return err
-	}
-
-	g.uprobe = up
-	retOffsets, err := target.GetFunctionReturns(g.FuncNames()[0])
-	if err != nil {
-		return err
-	}
-
-	for _, ret := range retOffsets {
-		retProbe, err := exec.Uprobe("", g.bpfObjects.UprobeServerHandleStreamReturns, &link.UprobeOptions{
-			Address: ret,
-		})
-		if err != nil {
-			return err
-		}
-		g.returnProbs = append(g.returnProbs, retProbe)
-	}
-
-	headerOffset, err := target.GetFunctionOffset(g.FuncNames()[1])
-	if err != nil {
-		return err
-	}
-	hProbe, err := exec.Uprobe("", g.bpfObjects.UprobeDecodeStateDecodeHeader, &link.UprobeOptions{
-		Address: headerOffset,
-	})
-	if err != nil {
-		return err
-	}
-	g.headersProbe = hProbe
-
-	rd, err := perf.NewReader(g.bpfObjects.Events, os.Getpagesize())
-	if err != nil {
-		return err
-	}
-	g.eventsReader = rd
-
-	return nil
-}
-
-// Run runs the events processing loop.
-func (g *Probe) Run(eventsChan chan<- *probe.Event) {
-	var event Event
-	for {
-		record, err := g.eventsReader.Read()
-		if err != nil {
-			if errors.Is(err, perf.ErrClosed) {
-				return
-			}
-			g.logger.Error(err, "error reading from perf reader")
-			continue
-		}
-
-		if record.LostSamples != 0 {
-			g.logger.V(0).Info("perf event ring buffer full", "dropped", record.LostSamples)
-			continue
-		}
-
-		if err := binary.Read(bytes.NewBuffer(record.RawSample), binary.LittleEndian, &event); err != nil {
-			g.logger.Error(err, "error parsing perf event")
-			continue
-		}
-
-		eventsChan <- g.convertEvent(&event)
-	}
-}
-
-func (g *Probe) convertEvent(e *Event) *probe.Event {
+func convertEvent(e *event) *probe.Event {
 	method := unix.ByteSliceToString(e.Method[:])
 
 	sc := trace.NewSpanContext(trace.SpanContextConfig{
@@ -236,7 +154,7 @@ func (g *Probe) convertEvent(e *Event) *probe.Event {
 	}
 
 	return &probe.Event{
-		Library:   g.LibraryName(),
+		Library:   name,
 		Name:      method,
 		Kind:      trace.SpanKindServer,
 		StartTime: int64(e.StartTime),
@@ -247,29 +165,5 @@ func (g *Probe) convertEvent(e *Event) *probe.Event {
 		},
 		ParentSpanContext: pscPtr,
 		SpanContext:       &sc,
-	}
-}
-
-// Close stops the Probe.
-func (g *Probe) Close() {
-	g.logger.V(0).Info("closing gRPC server probe")
-	if g.eventsReader != nil {
-		g.eventsReader.Close()
-	}
-
-	if g.uprobe != nil {
-		g.uprobe.Close()
-	}
-
-	for _, r := range g.returnProbs {
-		r.Close()
-	}
-
-	if g.headersProbe != nil {
-		g.headersProbe.Close()
-	}
-
-	if g.bpfObjects != nil {
-		g.bpfObjects.Close()
 	}
 }
