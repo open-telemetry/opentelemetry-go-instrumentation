@@ -85,6 +85,9 @@ func (a *Analyzer) Analyze(pid int, relevantFuncs map[string]interface{}) (*Targ
 		return nil, err
 	}
 	result.GoVersion = goVersion
+
+	// Include the Go standard library module.
+	modules["std"] = goVersion
 	result.Libraries = modules
 
 	funcs, err := a.findFunctions(elfF, relevantFuncs)
