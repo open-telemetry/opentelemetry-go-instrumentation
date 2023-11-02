@@ -29,6 +29,7 @@ import (
 // Controller handles OpenTelemetry telemetry generation for events.
 type Controller struct {
 	logger         logr.Logger
+	version        string
 	tracerProvider trace.TracerProvider
 	tracersMap     map[string]trace.Tracer
 	bootTime       int64
@@ -40,7 +41,10 @@ func (c *Controller) getTracer(libName string) trace.Tracer {
 		return t
 	}
 
-	newTracer := c.tracerProvider.Tracer(libName)
+	newTracer := c.tracerProvider.Tracer(
+		libName,
+		trace.WithInstrumentationVersion(c.version),
+	)
 	c.tracersMap[libName] = newTracer
 	return newTracer
 }
@@ -74,7 +78,7 @@ func (c *Controller) convertTime(t int64) time.Time {
 }
 
 // NewController returns a new initialized [Controller].
-func NewController(logger logr.Logger, tracerProvider trace.TracerProvider) (*Controller, error) {
+func NewController(logger logr.Logger, tracerProvider trace.TracerProvider, ver string) (*Controller, error) {
 	logger = logger.WithName("Controller")
 
 	bt, err := estimateBootTimeOffset()
@@ -84,6 +88,7 @@ func NewController(logger logr.Logger, tracerProvider trace.TracerProvider) (*Co
 
 	return &Controller{
 		logger:         logger,
+		version:        ver,
 		tracerProvider: tracerProvider,
 		tracersMap:     make(map[string]trace.Tracer),
 		bootTime:       bt,

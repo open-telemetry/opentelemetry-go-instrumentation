@@ -16,6 +16,7 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
   All options passed before this one will be overridden if there are conflicts, and those passed after will override the environment. ([#417](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/417))
 - Add the `WithTraceExporter` `InstrumentationOption` to configure the trace `SpanExporter` used by an `Instrumentation`. ([#426](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/426))
 - Add HTTP status code attribute to `net/http` server instrumentation. ([#428](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/428))
+- The instrumentation scope now includes the version of the auto-instrumentation project. ([#442](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/442))
 
 ### Changed
 

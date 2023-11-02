@@ -15,28 +15,41 @@
 package utils
 
 import (
-	"strings"
+	"fmt"
+	"strconv"
 	"syscall"
 
 	"github.com/hashicorp/go-version"
 )
 
-func GetLinuxKernelVersion() (*version.Version, error) {
-	var utsname syscall.Utsname
+var unameFn = syscall.Uname
 
-	if err := syscall.Uname(&utsname); err != nil {
+// parse logic adapted from https://github.com/golang/go/blob/go1.21.3/src/internal/syscall/unix/kernel_version_linux.go
+func GetLinuxKernelVersion() (*version.Version, error) {
+	var uname syscall.Utsname
+	if err := unameFn(&uname); err != nil {
 		return nil, err
 	}
 
-	var buf [65]byte
-	for i, v := range utsname.Release {
-		buf[i] = byte(v)
+	var (
+		values    [2]int
+		value, vi int
+	)
+	for _, c := range uname.Release {
+		if '0' <= c && c <= '9' {
+			value = (value * 10) + int(c-'0')
+		} else {
+			// Note that we're assuming N.N.N here.
+			// If we see anything else, we are likely to mis-parse it.
+			values[vi] = value
+			vi++
+			if vi >= len(values) {
+				break
+			}
+			value = 0
+		}
 	}
-
-	ver := string(buf[:])
-	if strings.Contains(ver, "-") {
-		ver = strings.Split(ver, "-")[0]
-	}
+	ver := fmt.Sprintf("%s.%s", strconv.Itoa(values[0]), strconv.Itoa(values[1]))
 
 	return version.NewVersion(ver)
 }
