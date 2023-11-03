@@ -54,6 +54,7 @@ func serve(addr string) error {
 }
 
 func main() {
+	// Server.
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
 	if err != nil {
 		log.Fatalf("failed to listen: %v", err)
@@ -70,6 +71,10 @@ func main() {
 		done <- struct{}{}
 	}()
 
+	// Give time for auto-instrumentation to initialize.
+	time.Sleep(5 * time.Second)
+
+	// Client.
 	addr := fmt.Sprintf("localhost:%d", port)
 	conn, err := grpc.Dial(addr, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
