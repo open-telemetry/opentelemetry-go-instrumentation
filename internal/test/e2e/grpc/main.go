@@ -94,4 +94,7 @@ func main() {
 
 	s.GracefulStop()
 	<-done
+
+	// Give time for auto-instrumentation to do the dew.
+	time.Sleep(5 * time.Second)
 }
