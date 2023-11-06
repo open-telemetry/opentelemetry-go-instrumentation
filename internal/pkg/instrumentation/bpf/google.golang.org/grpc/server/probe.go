@@ -83,7 +83,7 @@ func (g *Probe) Load(exec *link.Executable, target *process.TargetDetails) error
 	grpcVer := target.Libraries[grpcMod]
 
 	const xNetMod = "golang.org/x/net"
-	xNetVer := target.Libraries[grpcMod]
+	xNetVer := target.Libraries[xNetMod]
 
 	spec, err := loadBpf()
 	if err != nil {

@@ -14,6 +14,6 @@ docker compose up
 Now, you can hit the server using the below command
 ```
 curl localhost:8080/query_db
-Which will query the dummy sqlite database named test.db
 ```
+Which will query the dummy sqlite database named test.db
 Every hit to the server should generate a trace that we can observe in [Jaeger UI](http://localhost:16686/)
