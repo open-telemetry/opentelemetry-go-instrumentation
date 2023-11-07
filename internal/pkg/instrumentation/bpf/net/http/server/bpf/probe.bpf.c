@@ -252,13 +252,12 @@ int uprobe_HandlerFunc_ServeHTTP(struct pt_regs *ctx)
     return 0;
 }
 
-int readGoString(void *base, int offset, char *output, int maxLen, const char *errorMsg) {
+void read_go_string(void *base, int offset, char *output, int maxLen, const char *errorMsg) {
     void *ptr = (void *)(base + offset);
     if (!get_go_string_from_user_ptr(ptr, output, maxLen)) {
         bpf_printk("Failed to get %s", errorMsg);
-        return 0;
     }
-    return 1;
+    
 }
 
 // This instrumentation attaches uprobe to the following function:
@@ -284,17 +283,13 @@ int uprobe_HandlerFunc_ServeHTTP_Returns(struct pt_regs *ctx) {
     http_server_span->end_time = end_time;
 
     void *url_ptr = 0;
-    int success = 1;
     // Collect fields from response
-    success &= readGoString(req_ptr, method_ptr_pos, http_server_span->method, sizeof(http_server_span->method), "method from request");
-    success &= readGoString(url_ptr, path_ptr_pos, http_server_span->path, sizeof(http_server_span->path), "path from Request.URL");
-    success &= readGoString(req_ptr, remote_addr_pos, http_server_span->remote_addr, sizeof(http_server_span->remote_addr), "remote addr from Request.RemoteAddr");
-    success &= readGoString(req_ptr, host_pos, http_server_span->host, sizeof(http_server_span->host), "host from Request.Host");
-    success &= readGoString(req_ptr, proto_pos, http_server_span->proto, sizeof(http_server_span->proto), "proto from Request.Proto");
+    read_go_string(req_ptr, method_ptr_pos, http_server_span->method, sizeof(http_server_span->method), "method from request");
+    read_go_string(url_ptr, path_ptr_pos, http_server_span->path, sizeof(http_server_span->path), "path from Request.URL");
+    read_go_string(req_ptr, remote_addr_pos, http_server_span->remote_addr, sizeof(http_server_span->remote_addr), "remote addr from Request.RemoteAddr");
+    read_go_string(req_ptr, host_pos, http_server_span->host, sizeof(http_server_span->host), "host from Request.Host");
+    read_go_string(req_ptr, proto_pos, http_server_span->proto, sizeof(http_server_span->proto), "proto from Request.Proto");
 
-    if (!success) {
-        return 0;
-    }
     // status code
     bpf_probe_read(&http_server_span->status_code, sizeof(http_server_span->status_code), (void *)(resp_ptr + status_code_pos));
 
