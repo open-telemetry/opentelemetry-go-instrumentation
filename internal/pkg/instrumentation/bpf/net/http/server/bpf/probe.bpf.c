@@ -29,6 +29,7 @@ char __license[] SEC("license") = "Dual MIT/GPL";
 #define REMOTE_ADDR_MAX_LEN 32
 #define HOST_MAX_LEN 32
 #define PROTO_MAX_LEN 8
+
 struct http_server_span_t
 {
     BASE_SPAN_PROPERTIES
@@ -251,6 +252,15 @@ int uprobe_HandlerFunc_ServeHTTP(struct pt_regs *ctx)
     return 0;
 }
 
+int readGoString(void *base, int offset, char *output, int maxLen, const char *errorMsg) {
+    void *ptr = (void *)(base + offset);
+    if (!get_go_string_from_user_ptr(ptr, output, maxLen)) {
+        bpf_printk("Failed to get %s", errorMsg);
+        return 0;
+    }
+    return 1;
+}
+
 // This instrumentation attaches uprobe to the following function:
 // func (f HandlerFunc) ServeHTTP(w ResponseWriter, r *Request)
 SEC("uprobe/HandlerFunc_ServeHTTP")
@@ -272,33 +282,17 @@ int uprobe_HandlerFunc_ServeHTTP_Returns(struct pt_regs *ctx) {
     bpf_probe_read(&req_ptr, sizeof(req_ptr), (void *)(resp_ptr + req_ptr_pos));
 
     http_server_span->end_time = end_time;
-         
-    // Collect fields from response
-    // Get method from request
-    if (!get_go_string_from_user_ptr((void *)(req_ptr + method_ptr_pos), http_server_span->method, sizeof(http_server_span->method))) {
-        bpf_printk("failed to get method from request");
-        return 0;
-    }
-    // get path from Request.URL
+
     void *url_ptr = 0;
-    bpf_probe_read(&url_ptr, sizeof(url_ptr), (void *)(req_ptr + url_ptr_pos));
-    if (!get_go_string_from_user_ptr((void *)(url_ptr + path_ptr_pos), http_server_span->path, sizeof(http_server_span->path))) {
-        bpf_printk("failed to get path from Request.URL");
-        return 0;
-    }
-    // get remote addr from Request.RemoteAddr
-    if (!get_go_string_from_user_ptr((void *)(req_ptr + remote_addr_pos), http_server_span->remote_addr, sizeof(http_server_span->remote_addr))) {
-        bpf_printk("failed to get remote addr from Request.RemoteAddr");
-        return 0;
-    }
-    // get host from Request.Host
-    if (!get_go_string_from_user_ptr((void *)(req_ptr + host_pos), http_server_span->host, sizeof(http_server_span->host))) {
-        bpf_printk("failed to get host from Request.Host");
-        return 0;
-    }
-    // get protocol from Request.Proto
-     if (!get_go_string_from_user_ptr((void *)(req_ptr + proto_pos), http_server_span->proto, sizeof(http_server_span->proto))) {
-        bpf_printk("failed to get proto from Request.Proto");
+    int success = 1;
+    // Collect fields from response
+    success &= readGoString(req_ptr, method_ptr_pos, http_server_span->method, sizeof(http_server_span->method), "method from request");
+    success &= readGoString(url_ptr, path_ptr_pos, http_server_span->path, sizeof(http_server_span->path), "path from Request.URL");
+    success &= readGoString(req_ptr, remote_addr_pos, http_server_span->remote_addr, sizeof(http_server_span->remote_addr), "remote addr from Request.RemoteAddr");
+    success &= readGoString(req_ptr, host_pos, http_server_span->host, sizeof(http_server_span->host), "host from Request.Host");
+    success &= readGoString(req_ptr, proto_pos, http_server_span->proto, sizeof(http_server_span->proto), "proto from Request.Proto");
+
+    if (!success) {
         return 0;
     }
     // status code

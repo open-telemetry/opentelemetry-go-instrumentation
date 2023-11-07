@@ -54,7 +54,6 @@ type Event struct {
 	RemoteAddr [32]byte
 	Host [32]byte
 	Proto     [8]byte
-
 }
 
 // Probe is the net/http instrumentation probe.
@@ -191,6 +190,7 @@ func (h *Probe) convertEvent(e *Event) *probe.Event {
 	remoteAddr := unix.ByteSliceToString(e.RemoteAddr[:])
 	host := unix.ByteSliceToString(e.Host[:])
 	proto := unix.ByteSliceToString(e.Proto[:])
+	request_uri := unix.ByteSliceToString(e.RequestURI[:])
 	remoteAddrParts := strings.Split(remoteAddr, ":")
 	remotePeerAddr, remotePeerPort := remoteAddrParts[0], remoteAddrParts[1]
 
@@ -223,6 +223,8 @@ func (h *Probe) convertEvent(e *Event) *probe.Event {
 		semconv.NetPeerName(remotePeerAddr),
 		semconv.NetHostName(host),
 		semconv.NetProtocolName(proto),
+		
+		
 	}
 
 	if errAtoi == nil {
