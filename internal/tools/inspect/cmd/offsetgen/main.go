@@ -109,6 +109,7 @@ func manifests() ([]inspect.Manifest, error) {
 				structfield.NewID("std", "net/http", "response", "req"),
 				structfield.NewID("std", "net/http", "response", "status"),
 				structfield.NewID("std", "net/url", "URL", "Path"),
+				structfield.NewID("std", "net/url", "URL", "Proto"),
 			},
 		},
 		{
