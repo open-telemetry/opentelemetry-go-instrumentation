@@ -163,6 +163,7 @@ type InstrumentationOption interface {
 }
 
 type instConfig struct {
+	sampler     trace.Sampler
 	traceExp    trace.SpanExporter
 	target      process.TargetArgs
 	serviceName string
@@ -192,6 +193,10 @@ func newInstConfig(ctx context.Context, opts []InstrumentationOption) (instConfi
 		err = errors.Join(err, e)
 	}
 
+	if c.sampler == nil {
+		c.sampler = trace.AlwaysSample()
+	}
+
 	return c, err
 }
 
@@ -216,7 +221,7 @@ func (c instConfig) validate() error {
 
 func (c instConfig) tracerProvider() *trace.TracerProvider {
 	return trace.NewTracerProvider(
-		trace.WithSampler(trace.AlwaysSample()),
+		trace.WithSampler(c.sampler),
 		trace.WithResource(c.res()),
 		trace.WithBatcher(c.traceExp),
 		trace.WithIDGenerator(opentelemetry.NewEBPFSourceIDGenerator()),
@@ -379,6 +384,15 @@ func lookupServiceName() (string, bool) {
 func WithTraceExporter(exp trace.SpanExporter) InstrumentationOption {
 	return fnOpt(func(_ context.Context, c instConfig) (instConfig, error) {
 		c.traceExp = exp
+		return c, nil
+	})
+}
+
+// WithSampler returns an [InstrumentationOption] that will configure
+// an [Instrumentation] to use the provided sampler to sample OpenTelemetry traces.
+func WithSampler(sampler trace.Sampler) InstrumentationOption {
+	return fnOpt(func(_ context.Context, c instConfig) (instConfig, error) {
+		c.sampler = sampler
 		return c, nil
 	})
 }
