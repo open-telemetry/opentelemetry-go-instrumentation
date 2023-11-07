@@ -52,6 +52,7 @@ type Event struct {
 	Method     [8]byte
 	Path       [128]byte
 	RemoteAddr [32]byte
+	Host [32]byte
 }
 
 // Probe is the net/http instrumentation probe.
@@ -98,6 +99,7 @@ func (h *Probe) Load(exec *link.Executable, target *process.TargetDetails) error
 		inject.WithOffset("status_code_pos", structfield.NewID("std", "net/http", "response", "status"), ver),
 		inject.WithOffset("buckets_ptr_pos", structfield.NewID("std", "runtime", "hmap", "buckets"), ver),
 		inject.WithOffset("remote_addr_pos", structfield.NewID("std", "net/http", "Request", "RemoteAddr"), ver),
+		inject.WithOffset("host_pos", structfield.NewID("std", "net/http", "Request", "Host"), ver),
 	)
 	if err != nil {
 		return err
@@ -184,7 +186,7 @@ func (h *Probe) convertEvent(e *Event) *probe.Event {
 	method := unix.ByteSliceToString(e.Method[:])
 	path := unix.ByteSliceToString(e.Path[:])
 	remoteAddr := unix.ByteSliceToString(e.RemoteAddr[:])
-
+	host := unix.ByteSliceToString(e.Host[:])
 	remoteAddrParts := strings.Split(remoteAddr, ":")
 	remotePeerAddr, remotePeerPort := remoteAddrParts[0], remoteAddrParts[1]
 
@@ -215,6 +217,7 @@ func (h *Probe) convertEvent(e *Event) *probe.Event {
 		semconv.HTTPTargetKey.String(path),
 		semconv.HTTPStatusCodeKey.Int(int(e.StatusCode)),
 		semconv.NetPeerName(remotePeerAddr),
+		semconv.NetHostName(host),
 	}
 
 	if errAtoi == nil {

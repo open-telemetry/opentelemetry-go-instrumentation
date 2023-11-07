@@ -27,6 +27,7 @@ char __license[] SEC("license") = "Dual MIT/GPL";
 #define W3C_KEY_LENGTH 11
 #define W3C_VAL_LENGTH 55
 #define REMOTE_ADDR_MAX_LEN 32
+#define HOST_MAX_LEN 32
 
 struct http_server_span_t
 {
@@ -35,6 +36,7 @@ struct http_server_span_t
     char method[METHOD_MAX_LEN];
     char path[PATH_MAX_LEN];
     char remote_addr[REMOTE_ADDR_MAX_LEN];
+    char host[HOST_MAX_LEN];
 };
 
 struct uprobe_data_t
@@ -93,6 +95,7 @@ volatile const u64 buckets_ptr_pos;
 volatile const u64 req_ptr_pos;
 volatile const u64 status_code_pos;
 volatile const u64 remote_addr_pos;
+volatile const u64 host_pos;
 
 static __always_inline struct span_context *extract_context_from_req_headers(void *headers_ptr_ptr)
 {
@@ -286,7 +289,11 @@ int uprobe_HandlerFunc_ServeHTTP_Returns(struct pt_regs *ctx) {
         bpf_printk("failed to get remote addr from Request.RemoteAddr");
         return 0;
     }
-
+    // get host from Request.Host
+    if (!get_go_string_from_user_ptr((void *)(req_ptr + host_pos), http_server_span->host, sizeof(http_server_span->host))) {
+        bpf_printk("failed to get host from Request.Host");
+        return 0;
+    }
     // status code
     bpf_probe_read(&http_server_span->status_code, sizeof(http_server_span->status_code), (void *)(resp_ptr + status_code_pos));
 
