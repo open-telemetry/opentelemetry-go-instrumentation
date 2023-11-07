@@ -28,7 +28,7 @@ char __license[] SEC("license") = "Dual MIT/GPL";
 #define W3C_VAL_LENGTH 55
 #define REMOTE_ADDR_MAX_LEN 32
 #define HOST_MAX_LEN 32
-
+#define PROTO_MAX_LEN 8
 struct http_server_span_t
 {
     BASE_SPAN_PROPERTIES
@@ -37,6 +37,7 @@ struct http_server_span_t
     char path[PATH_MAX_LEN];
     char remote_addr[REMOTE_ADDR_MAX_LEN];
     char host[HOST_MAX_LEN];
+    char proto[PROTO_MAX_LEN];
 };
 
 struct uprobe_data_t
@@ -96,6 +97,7 @@ volatile const u64 req_ptr_pos;
 volatile const u64 status_code_pos;
 volatile const u64 remote_addr_pos;
 volatile const u64 host_pos;
+volatile const u64 proto_pos;
 
 static __always_inline struct span_context *extract_context_from_req_headers(void *headers_ptr_ptr)
 {
@@ -292,6 +294,11 @@ int uprobe_HandlerFunc_ServeHTTP_Returns(struct pt_regs *ctx) {
     // get host from Request.Host
     if (!get_go_string_from_user_ptr((void *)(req_ptr + host_pos), http_server_span->host, sizeof(http_server_span->host))) {
         bpf_printk("failed to get host from Request.Host");
+        return 0;
+    }
+    // get protocol from Request.Proto
+     if (!get_go_string_from_user_ptr((void *)(req_ptr + proto_pos), http_server_span->proto, sizeof(http_server_span->proto))) {
+        bpf_printk("failed to get proto from Request.Proto");
         return 0;
     }
     // status code
