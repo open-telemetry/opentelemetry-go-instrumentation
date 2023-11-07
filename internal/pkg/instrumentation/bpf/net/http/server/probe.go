@@ -19,6 +19,8 @@ import (
 	"encoding/binary"
 	"errors"
 	"os"
+	"strconv"
+	"strings"
 
 	"github.com/cilium/ebpf"
 	"github.com/cilium/ebpf/link"
@@ -49,6 +51,7 @@ type Event struct {
 	StatusCode uint64
 	Method     [8]byte
 	Path       [128]byte
+	RemoteAddr [32]byte
 }
 
 // Probe is the net/http instrumentation probe.
@@ -94,6 +97,7 @@ func (h *Probe) Load(exec *link.Executable, target *process.TargetDetails) error
 		inject.WithOffset("req_ptr_pos", structfield.NewID("std", "net/http", "response", "req"), ver),
 		inject.WithOffset("status_code_pos", structfield.NewID("std", "net/http", "response", "status"), ver),
 		inject.WithOffset("buckets_ptr_pos", structfield.NewID("std", "runtime", "hmap", "buckets"), ver),
+		inject.WithOffset("remote_addr_pos", structfield.NewID("std", "net/http", "Request", "RemoteAddr"), ver),
 	)
 	if err != nil {
 		return err
@@ -179,6 +183,13 @@ func (h *Probe) Run(eventsChan chan<- *probe.Event) {
 func (h *Probe) convertEvent(e *Event) *probe.Event {
 	method := unix.ByteSliceToString(e.Method[:])
 	path := unix.ByteSliceToString(e.Path[:])
+	remoteAddr := unix.ByteSliceToString(e.RemoteAddr[:])
+
+	remoteAddrParts := strings.Split(remoteAddr, ":")
+	remotePeerAddr, remotePeerPort := remoteAddrParts[0], remoteAddrParts[1]
+
+	remotePeerProtInt, errAtoi  := strconv.Atoi(remotePeerPort)
+	
 
 	sc := trace.NewSpanContext(trace.SpanContextConfig{
 		TraceID:    e.SpanContext.TraceID,
@@ -199,6 +210,17 @@ func (h *Probe) convertEvent(e *Event) *probe.Event {
 		pscPtr = nil
 	}
 
+	attributes := []attribute.KeyValue{
+		semconv.HTTPMethodKey.String(method),
+		semconv.HTTPTargetKey.String(path),
+		semconv.HTTPStatusCodeKey.Int(int(e.StatusCode)),
+		semconv.NetPeerName(remotePeerAddr),
+	}
+
+	if errAtoi == nil {
+		attributes = append(attributes, semconv.NetPeerPort(remotePeerProtInt))
+	}
+
 	return &probe.Event{
 		Library: h.LibraryName(),
 		// Do not include the high-cardinality path here (there is no
@@ -209,11 +231,7 @@ func (h *Probe) convertEvent(e *Event) *probe.Event {
 		EndTime:           int64(e.EndTime),
 		SpanContext:       &sc,
 		ParentSpanContext: pscPtr,
-		Attributes: []attribute.KeyValue{
-			semconv.HTTPMethodKey.String(method),
-			semconv.HTTPTargetKey.String(path),
-			semconv.HTTPStatusCodeKey.Int(int(e.StatusCode)),
-		},
+		Attributes: attributes,
 	}
 }
 
