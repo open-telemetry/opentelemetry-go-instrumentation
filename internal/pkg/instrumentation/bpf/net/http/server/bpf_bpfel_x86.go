@@ -12,6 +12,8 @@ import (
 	"github.com/cilium/ebpf"
 )
 
+type bpfSliceArrayBuff struct{ Buff [1024]uint8 }
+
 type bpfSpanContext struct {
 	TraceID [16]uint8
 	SpanID  [8]uint8
@@ -85,6 +87,7 @@ type bpfMapSpecs struct {
 	HttpServerUprobeStorageMap  *ebpf.MapSpec `ebpf:"http_server_uprobe_storage_map"`
 	HttpServerUprobes           *ebpf.MapSpec `ebpf:"http_server_uprobes"`
 	ParentSpanContextStorageMap *ebpf.MapSpec `ebpf:"parent_span_context_storage_map"`
+	SliceArrayBuffMap           *ebpf.MapSpec `ebpf:"slice_array_buff_map"`
 	TrackedSpans                *ebpf.MapSpec `ebpf:"tracked_spans"`
 	TrackedSpansBySc            *ebpf.MapSpec `ebpf:"tracked_spans_by_sc"`
 }
@@ -114,6 +117,7 @@ type bpfMaps struct {
 	HttpServerUprobeStorageMap  *ebpf.Map `ebpf:"http_server_uprobe_storage_map"`
 	HttpServerUprobes           *ebpf.Map `ebpf:"http_server_uprobes"`
 	ParentSpanContextStorageMap *ebpf.Map `ebpf:"parent_span_context_storage_map"`
+	SliceArrayBuffMap           *ebpf.Map `ebpf:"slice_array_buff_map"`
 	TrackedSpans                *ebpf.Map `ebpf:"tracked_spans"`
 	TrackedSpansBySc            *ebpf.Map `ebpf:"tracked_spans_by_sc"`
 }
@@ -126,6 +130,7 @@ func (m *bpfMaps) Close() error {
 		m.HttpServerUprobeStorageMap,
 		m.HttpServerUprobes,
 		m.ParentSpanContextStorageMap,
+		m.SliceArrayBuffMap,
 		m.TrackedSpans,
 		m.TrackedSpansBySc,
 	)
