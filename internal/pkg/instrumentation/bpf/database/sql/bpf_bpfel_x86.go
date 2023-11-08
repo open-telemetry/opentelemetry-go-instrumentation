@@ -24,8 +24,7 @@ type bpfSqlRequestT struct {
 	EndTime   uint64
 	Sc        bpfSpanContext
 	Psc       bpfSpanContext
-	Query     [100]int8
-	_         [4]byte
+	Query     [256]int8
 }
 
 // loadBpf returns the embedded CollectionSpec for bpf.
@@ -69,6 +68,8 @@ type bpfSpecs struct {
 //
 // It can be passed ebpf.CollectionSpec.Assign.
 type bpfProgramSpecs struct {
+	UprobeExecDC          *ebpf.ProgramSpec `ebpf:"uprobe_execDC"`
+	UprobeExecDC_Returns  *ebpf.ProgramSpec `ebpf:"uprobe_execDC_Returns"`
 	UprobeQueryDC         *ebpf.ProgramSpec `ebpf:"uprobe_queryDC"`
 	UprobeQueryDC_Returns *ebpf.ProgramSpec `ebpf:"uprobe_queryDC_Returns"`
 }
@@ -127,12 +128,16 @@ func (m *bpfMaps) Close() error {
 //
 // It can be passed to loadBpfObjects or ebpf.CollectionSpec.LoadAndAssign.
 type bpfPrograms struct {
+	UprobeExecDC          *ebpf.Program `ebpf:"uprobe_execDC"`
+	UprobeExecDC_Returns  *ebpf.Program `ebpf:"uprobe_execDC_Returns"`
 	UprobeQueryDC         *ebpf.Program `ebpf:"uprobe_queryDC"`
 	UprobeQueryDC_Returns *ebpf.Program `ebpf:"uprobe_queryDC_Returns"`
 }
 
 func (p *bpfPrograms) Close() error {
 	return _BpfClose(
+		p.UprobeExecDC,
+		p.UprobeExecDC_Returns,
 		p.UprobeQueryDC,
 		p.UprobeQueryDC_Returns,
 	)
