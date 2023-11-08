@@ -18,9 +18,9 @@ import (
 	"bytes"
 	"encoding/binary"
 	"errors"
+	"net"
 	"os"
 	"strconv"
-	"strings"
 
 	"github.com/cilium/ebpf"
 	"github.com/cilium/ebpf/link"
@@ -190,10 +190,13 @@ func (h *Probe) convertEvent(e *Event) *probe.Event {
 	remoteAddr := unix.ByteSliceToString(e.RemoteAddr[:])
 	host := unix.ByteSliceToString(e.Host[:])
 	proto := unix.ByteSliceToString(e.Proto[:])
-	remoteAddrParts := strings.Split(remoteAddr, ":")
-	remotePeerAddr, remotePeerPort := remoteAddrParts[0], remoteAddrParts[1]
+	ip, port, isRemoteAddrValid := net.SplitHostPort(remoteAddr)
 
-	remotePeerProtInt, errAtoi  := strconv.Atoi(remotePeerPort)
+
+	
+	
+
+	
 	
 
 	sc := trace.NewSpanContext(trace.SpanContextConfig{
@@ -219,15 +222,20 @@ func (h *Probe) convertEvent(e *Event) *probe.Event {
 		semconv.HTTPMethodKey.String(method),
 		semconv.HTTPTargetKey.String(path),
 		semconv.HTTPStatusCodeKey.Int(int(e.StatusCode)),
-		semconv.NetPeerName(remotePeerAddr),
 		semconv.NetHostName(host),
 		semconv.NetProtocolName(proto),
 		
 		
 	}
+	if isRemoteAddrValid == nil {
+		remotePeerAddr, remotePeerPort := ip, port
 
-	if errAtoi == nil {
-		attributes = append(attributes, semconv.NetPeerPort(remotePeerProtInt))
+		attributes = append(attributes, semconv.NetPeerName(remotePeerAddr))
+
+		if remotePeerPortInt, err := strconv.Atoi(remotePeerPort); err == nil {
+			attributes = append(attributes, semconv.NetPeerPort(remotePeerPortInt))
+		}
+
 	}
 
 	return &probe.Event{

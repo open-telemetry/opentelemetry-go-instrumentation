@@ -70,12 +70,6 @@
                   }
                 },
                 {
-                  "key": "net.peer.name",
-                  "value": {
-                    "stringValue": "["
-                  }
-                },
-                {
                   "key": "net.host.name",
                   "value": {
                     "stringValue": "localhost:8080"
@@ -85,6 +79,18 @@
                   "key": "net.protocol.name",
                   "value": {
                     "stringValue": "HTTP/1.1"
+                  }
+                },
+                {
+                  "key": "net.peer.name",
+                  "value": {
+                    "stringValue": "::1"
+                  }
+                },
+                {
+                  "key": "net.peer.port",
+                  "value": {
+                    "intValue": "43500"
                   }
                 }
               ],
