@@ -192,13 +192,6 @@ func (h *Probe) convertEvent(e *Event) *probe.Event {
 	proto := unix.ByteSliceToString(e.Proto[:])
 	ip, port, isRemoteAddrValid := net.SplitHostPort(remoteAddr)
 
-
-	
-	
-
-	
-	
-
 	sc := trace.NewSpanContext(trace.SpanContextConfig{
 		TraceID:    e.SpanContext.TraceID,
 		SpanID:     e.SpanContext.SpanID,
@@ -224,9 +217,8 @@ func (h *Probe) convertEvent(e *Event) *probe.Event {
 		semconv.HTTPStatusCodeKey.Int(int(e.StatusCode)),
 		semconv.NetHostName(host),
 		semconv.NetProtocolName(proto),
-		
-		
 	}
+	
 	if isRemoteAddrValid == nil {
 		remotePeerAddr, remotePeerPort := ip, port
 
