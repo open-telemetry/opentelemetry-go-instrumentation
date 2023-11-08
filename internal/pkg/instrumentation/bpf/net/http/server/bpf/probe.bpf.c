@@ -283,6 +283,7 @@ int uprobe_HandlerFunc_ServeHTTP_Returns(struct pt_regs *ctx) {
     http_server_span->end_time = end_time;
 
     void *url_ptr = 0;
+    bpf_probe_read(&url_ptr, sizeof(url_ptr), (void *)(req_ptr + url_ptr_pos));
     // Collect fields from response
     read_go_string(req_ptr, method_ptr_pos, http_server_span->method, sizeof(http_server_span->method), "method from request");
     read_go_string(url_ptr, path_ptr_pos, http_server_span->path, sizeof(http_server_span->path), "path from Request.URL");
