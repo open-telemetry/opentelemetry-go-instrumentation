@@ -28,6 +28,7 @@ import (
 	grpcServer "go.opentelemetry.io/auto/internal/pkg/instrumentation/bpf/google.golang.org/grpc/server"
 	httpClient "go.opentelemetry.io/auto/internal/pkg/instrumentation/bpf/net/http/client"
 	httpServer "go.opentelemetry.io/auto/internal/pkg/instrumentation/bpf/net/http/server"
+	otelSdkTrace "go.opentelemetry.io/auto/internal/pkg/instrumentation/bpf/go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/bpffs"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/probe"
 	"go.opentelemetry.io/auto/internal/pkg/opentelemetry"
@@ -208,6 +209,7 @@ func (m *Manager) registerProbes() error {
 		httpClient.New(m.logger),
 		gin.New(m.logger),
 		dbSql.New(m.logger),
+		otelSdkTrace.New(m.logger),
 	}
 
 	for _, i := range insts {
