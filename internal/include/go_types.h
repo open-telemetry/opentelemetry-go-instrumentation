@@ -177,11 +177,11 @@ static __always_inline void append_item_to_slice(struct go_slice *slice, void *n
     }
 }
 
-static __always_inline bool get_go_string_from_user_ptr(void *user_str_ptr, char *dst, u64 max_len)
+static __always_inline s64 get_go_string_from_user_ptr(void *user_str_ptr, char *dst, u64 max_len)
 {
     if (user_str_ptr == NULL)
     {
-        return false;
+        return -1;
     }
 
     struct go_string user_str = {0};
@@ -189,16 +189,16 @@ static __always_inline bool get_go_string_from_user_ptr(void *user_str_ptr, char
     success = bpf_probe_read(&user_str, sizeof(struct go_string), user_str_ptr);
     if (success != 0 || user_str.len < 1)
     {
-        return false;
+        return -1;
     }
 
-    u64 size_to_read = user_str.len > max_len ? max_len : user_str.len;
+    s64 size_to_read = user_str.len > max_len ? max_len : user_str.len;
     success = bpf_probe_read(dst, size_to_read, user_str.str);
     if (success != 0)
     {
-        return false;
+        return -1;
     }
 
-    return true;
+    return size_to_read;
 }
 #endif

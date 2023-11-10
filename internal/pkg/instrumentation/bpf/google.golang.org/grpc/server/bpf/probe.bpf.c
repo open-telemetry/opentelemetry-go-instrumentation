@@ -108,7 +108,7 @@ int uprobe_server_handleStream(struct pt_regs *ctx)
 
     grpcReq.start_time = bpf_ktime_get_ns();
     // Set attributes
-    if (!get_go_string_from_user_ptr((void *)(stream_ptr + stream_method_ptr_pos), grpcReq.method, sizeof(grpcReq.method)))
+    if (get_go_string_from_user_ptr((void *)(stream_ptr + stream_method_ptr_pos), grpcReq.method, sizeof(grpcReq.method)) < 0)
     {
         bpf_printk("method write failed, aborting ebpf probe");
         return 0;

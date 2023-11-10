@@ -13,10 +13,18 @@ import (
 )
 
 type bpfOtelSpanT struct {
-	StartTime uint64
-	EndTime   uint64
-	Sc        bpfSpanContext
-	Psc       bpfSpanContext
+	StartTime  uint64
+	EndTime    uint64
+	Sc         bpfSpanContext
+	Psc        bpfSpanContext
+	SpanName   [64]int8
+	Attributes [4]struct {
+		Key      [64]int8
+		IntValue int64
+		_        [1016]byte
+		Vtype    uint32
+		_        [4]byte
+	}
 }
 
 type bpfSliceArrayBuff struct{ Buff [1024]uint8 }
@@ -75,12 +83,13 @@ type bpfProgramSpecs struct {
 //
 // It can be passed ebpf.CollectionSpec.Assign.
 type bpfMapSpecs struct {
-	ActiveSpans       *ebpf.MapSpec `ebpf:"active_spans"`
-	AllocMap          *ebpf.MapSpec `ebpf:"alloc_map"`
-	Events            *ebpf.MapSpec `ebpf:"events"`
-	SliceArrayBuffMap *ebpf.MapSpec `ebpf:"slice_array_buff_map"`
-	TrackedSpans      *ebpf.MapSpec `ebpf:"tracked_spans"`
-	TrackedSpansBySc  *ebpf.MapSpec `ebpf:"tracked_spans_by_sc"`
+	ActiveSpans        *ebpf.MapSpec `ebpf:"active_spans"`
+	AllocMap           *ebpf.MapSpec `ebpf:"alloc_map"`
+	Events             *ebpf.MapSpec `ebpf:"events"`
+	OtelSpanStorageMap *ebpf.MapSpec `ebpf:"otel_span_storage_map"`
+	SliceArrayBuffMap  *ebpf.MapSpec `ebpf:"slice_array_buff_map"`
+	TrackedSpans       *ebpf.MapSpec `ebpf:"tracked_spans"`
+	TrackedSpansBySc   *ebpf.MapSpec `ebpf:"tracked_spans_by_sc"`
 }
 
 // bpfObjects contains all objects after they have been loaded into the kernel.
@@ -102,12 +111,13 @@ func (o *bpfObjects) Close() error {
 //
 // It can be passed to loadBpfObjects or ebpf.CollectionSpec.LoadAndAssign.
 type bpfMaps struct {
-	ActiveSpans       *ebpf.Map `ebpf:"active_spans"`
-	AllocMap          *ebpf.Map `ebpf:"alloc_map"`
-	Events            *ebpf.Map `ebpf:"events"`
-	SliceArrayBuffMap *ebpf.Map `ebpf:"slice_array_buff_map"`
-	TrackedSpans      *ebpf.Map `ebpf:"tracked_spans"`
-	TrackedSpansBySc  *ebpf.Map `ebpf:"tracked_spans_by_sc"`
+	ActiveSpans        *ebpf.Map `ebpf:"active_spans"`
+	AllocMap           *ebpf.Map `ebpf:"alloc_map"`
+	Events             *ebpf.Map `ebpf:"events"`
+	OtelSpanStorageMap *ebpf.Map `ebpf:"otel_span_storage_map"`
+	SliceArrayBuffMap  *ebpf.Map `ebpf:"slice_array_buff_map"`
+	TrackedSpans       *ebpf.Map `ebpf:"tracked_spans"`
+	TrackedSpansBySc   *ebpf.Map `ebpf:"tracked_spans_by_sc"`
 }
 
 func (m *bpfMaps) Close() error {
@@ -115,6 +125,7 @@ func (m *bpfMaps) Close() error {
 		m.ActiveSpans,
 		m.AllocMap,
 		m.Events,
+		m.OtelSpanStorageMap,
 		m.SliceArrayBuffMap,
 		m.TrackedSpans,
 		m.TrackedSpansBySc,

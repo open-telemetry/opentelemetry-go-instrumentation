@@ -267,14 +267,14 @@ int uprobe_HandlerFunc_ServeHTTP_Returns(struct pt_regs *ctx) {
          
     // Collect fields from response
     // Get method from request
-    if (!get_go_string_from_user_ptr((void *)(req_ptr + method_ptr_pos), http_server_span->method, sizeof(http_server_span->method))) {
+    if (get_go_string_from_user_ptr((void *)(req_ptr + method_ptr_pos), http_server_span->method, sizeof(http_server_span->method)) < 0) {
         bpf_printk("failed to get method from request");
         return 0;
     }
     // get path from Request.URL
     void *url_ptr = 0;
     bpf_probe_read(&url_ptr, sizeof(url_ptr), (void *)(req_ptr + url_ptr_pos));
-    if (!get_go_string_from_user_ptr((void *)(url_ptr + path_ptr_pos), http_server_span->path, sizeof(http_server_span->path))) {
+    if (get_go_string_from_user_ptr((void *)(url_ptr + path_ptr_pos), http_server_span->path, sizeof(http_server_span->path)) < 0) {
         bpf_printk("failed to get path from Request.URL");
         return 0;
     }
