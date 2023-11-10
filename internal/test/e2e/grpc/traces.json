@@ -108,7 +108,7 @@
               ],
               "kind": 2,
               "name": "/helloworld.Greeter/SayHello",
-              "parentSpanId": "",
+              "parentSpanId": "xxxxx",
               "spanId": "xxxxx",
               "status": {},
               "traceId": "xxxxx"
