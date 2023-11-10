@@ -19,17 +19,19 @@ import (
 	"encoding/binary"
 	"errors"
 	"os"
+
 	// "strconv"
 
 	"go.opentelemetry.io/auto/internal/pkg/inject"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/bpffs"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/probe"
+	"go.opentelemetry.io/auto/internal/pkg/structfield"
 
 	"github.com/cilium/ebpf"
 	"github.com/cilium/ebpf/link"
 	"github.com/cilium/ebpf/perf"
 	"github.com/go-logr/logr"
-	// "golang.org/x/sys/unix"
+	"golang.org/x/sys/unix"
 
 	// "go.opentelemetry.io/otel/attribute"
 	// semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
@@ -47,6 +49,7 @@ const instrumentedPkg = "go.opentelemetry.io/otel/sdk/trace"
 // Event represents a manual span created by the user
 type Event struct {
 	context.BaseSpanProperties
+	SpanName [64]byte
 }
 
 // Probe is the go.opentelemetry.io/otel/sdk/trace instrumentation probe.
@@ -78,6 +81,9 @@ func (h *Probe) FuncNames() []string {
 
 // Load loads all instrumentation offsets.
 func (h *Probe) Load(exec *link.Executable, target *process.TargetDetails) error {
+	const otelSdkMod = "go.opentelemetry.io/otel/sdk"
+	otelSdkVer := target.Libraries[otelSdkMod]
+
 	spec, err := loadBpf()
 	if err != nil {
 		return err
@@ -89,7 +95,11 @@ func (h *Probe) Load(exec *link.Executable, target *process.TargetDetails) error
 	err = inject.Constants(
 		spec,
 		inject.WithRegistersABI(target.IsRegistersABI()),
-		inject.WithAllocationDetails(*target.AllocationDetails),
+		inject.WithOffset(
+			"span_name_pos",
+			structfield.NewID(otelSdkMod, "go.opentelemetry.io/otel/sdk/trace", "recordingSpan", "name"),
+			otelSdkVer,
+		),
 	)
 	if err != nil {
 		return err
@@ -173,6 +183,8 @@ func (h *Probe) Run(eventsChan chan<- *probe.Event) {
 }
 
 func (h *Probe) convertEvent(e *Event) *probe.Event {
+	spanName := unix.ByteSliceToString(e.SpanName[:])
+
 	sc := trace.NewSpanContext(trace.SpanContextConfig{
 		TraceID:    e.SpanContext.TraceID,
 		SpanID:     e.SpanContext.SpanID,
@@ -194,7 +206,7 @@ func (h *Probe) convertEvent(e *Event) *probe.Event {
 
 	return &probe.Event{
 		Library:     h.LibraryName(),
-		Name:        "manual",
+		Name:        spanName,
 		Kind:        trace.SpanKindClient,
 		StartTime:   int64(e.StartTime),
 		EndTime:     int64(e.EndTime),
