@@ -22,6 +22,8 @@ type bpfHttpRequestT struct {
 	_         [2]byte
 }
 
+type bpfSliceArrayBuff struct{ Buff [1024]uint8 }
+
 type bpfSpanContext struct {
 	TraceID [16]uint8
 	SpanID  [8]uint8
@@ -80,6 +82,7 @@ type bpfMapSpecs struct {
 	Events                    *ebpf.MapSpec `ebpf:"events"`
 	GolangMapbucketStorageMap *ebpf.MapSpec `ebpf:"golang_mapbucket_storage_map"`
 	HttpEvents                *ebpf.MapSpec `ebpf:"http_events"`
+	SliceArrayBuffMap         *ebpf.MapSpec `ebpf:"slice_array_buff_map"`
 	TrackedSpans              *ebpf.MapSpec `ebpf:"tracked_spans"`
 	TrackedSpansBySc          *ebpf.MapSpec `ebpf:"tracked_spans_by_sc"`
 }
@@ -107,6 +110,7 @@ type bpfMaps struct {
 	Events                    *ebpf.Map `ebpf:"events"`
 	GolangMapbucketStorageMap *ebpf.Map `ebpf:"golang_mapbucket_storage_map"`
 	HttpEvents                *ebpf.Map `ebpf:"http_events"`
+	SliceArrayBuffMap         *ebpf.Map `ebpf:"slice_array_buff_map"`
 	TrackedSpans              *ebpf.Map `ebpf:"tracked_spans"`
 	TrackedSpansBySc          *ebpf.Map `ebpf:"tracked_spans_by_sc"`
 }
@@ -117,6 +121,7 @@ func (m *bpfMaps) Close() error {
 		m.Events,
 		m.GolangMapbucketStorageMap,
 		m.HttpEvents,
+		m.SliceArrayBuffMap,
 		m.TrackedSpans,
 		m.TrackedSpansBySc,
 	)

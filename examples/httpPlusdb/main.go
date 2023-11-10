@@ -29,15 +29,15 @@ const (
 	dbName   = "test.db"
 
 	tableDefinition = `CREATE TABLE contacts (
-							contact_id INTEGER PRIMARY KEY,
-							first_name TEXT NOT NULL,
-							last_name TEXT NOT NULL,
-							email TEXT NOT NULL UNIQUE,
-							phone TEXT NOT NULL UNIQUE);`
+	contact_id INTEGER PRIMARY KEY,
+	first_name TEXT NOT NULL,
+	last_name TEXT NOT NULL,
+	email TEXT NOT NULL,
+	phone TEXT NOT NULL);`
 
 	tableInsertion = `INSERT INTO 'contacts'
-						('first_name', 'last_name', 'email', 'phone') VALUES
-						('Moshe', 'Levi', 'moshe@gmail.com', '052-1234567');`
+	('first_name', 'last_name', 'email', 'phone') VALUES
+	('Moshe', 'Levi', 'moshe@gmail.com', '052-1234567');`
 )
 
 // Server is Http server that exposes multiple endpoints.
@@ -73,12 +73,6 @@ func NewServer() *Server {
 		panic(err)
 	}
 
-	_, err = database.Exec(tableInsertion)
-
-	if err != nil {
-		panic(err)
-	}
-
 	return &Server{
 		db: database,
 	}
@@ -88,6 +82,11 @@ func (s *Server) queryDb(w http.ResponseWriter, req *http.Request) {
 	ctx := req.Context()
 
 	conn, err := s.db.Conn(ctx)
+	if err != nil {
+		panic(err)
+	}
+
+	_, err = s.db.ExecContext(ctx, tableInsertion)
 	if err != nil {
 		panic(err)
 	}

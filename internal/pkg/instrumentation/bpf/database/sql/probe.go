@@ -48,7 +48,7 @@ const instrumentedPkg = "database/sql"
 // request-response.
 type Event struct {
 	context.BaseSpanProperties
-	Query [100]byte
+	Query [256]byte
 }
 
 // Probe is the database/sql instrumentation probe.
@@ -75,7 +75,10 @@ func (h *Probe) LibraryName() string {
 
 // FuncNames returns the function names from "database/sql" that are instrumented.
 func (h *Probe) FuncNames() []string {
-	return []string{"database/sql.(*DB).queryDC"}
+	return []string{
+		"database/sql.(*DB).queryDC",
+		"database/sql.(*DB).execDC",
+	}
 }
 
 // Load loads all instrumentation offsets.
@@ -131,6 +134,35 @@ func (h *Probe) Load(exec *link.Executable, target *process.TargetDetails) error
 
 	for _, ret := range retOffsets {
 		retProbe, err := exec.Uprobe("", h.bpfObjects.UprobeQueryDC_Returns, &link.UprobeOptions{
+			Address: ret,
+		})
+		if err != nil {
+			return err
+		}
+		h.returnProbs = append(h.returnProbs, retProbe)
+	}
+
+	offset, err = target.GetFunctionOffset(h.FuncNames()[1])
+	if err != nil {
+		return err
+	}
+
+	up, err = exec.Uprobe("", h.bpfObjects.UprobeExecDC, &link.UprobeOptions{
+		Address: offset,
+	})
+	if err != nil {
+		return err
+	}
+
+	h.uprobes = append(h.uprobes, up)
+
+	retOffsets, err = target.GetFunctionReturns(h.FuncNames()[1])
+	if err != nil {
+		return err
+	}
+
+	for _, ret := range retOffsets {
+		retProbe, err := exec.Uprobe("", h.bpfObjects.UprobeExecDC_Returns, &link.UprobeOptions{
 			Address: ret,
 		})
 		if err != nil {

@@ -15,11 +15,13 @@
 #ifndef _GO_TYPES_H
 #define _GO_TYPES_H
 
+#include "utils.h"
 #include "alloc.h"
 #include "bpf_helpers.h"
 
-#define MAX_REALLOCATION 400
-#define MAX_DATA_SIZE 400
+/* Max size of slice array in bytes 
+ Keep a power of 2 to help with masks */
+#define MAX_SLICE_ARRAY_SIZE 1024
 
 struct go_string
 {
@@ -54,6 +56,19 @@ struct map_bucket {
     void *overflow;
 };
 
+struct slice_array_buff
+{
+    unsigned char buff[MAX_SLICE_ARRAY_SIZE];
+};
+
+struct
+{
+    __uint(type, BPF_MAP_TYPE_PERCPU_ARRAY);
+    __type(key, u32);
+    __type(value, struct slice_array_buff);
+    __uint(max_entries, 1);
+} slice_array_buff_map SEC(".maps");
+
 // In Go, interfaces are represented as a pair of pointers: a pointer to the
 // interface data, and a pointer to the interface table.
 // See: runtime.iface in https://golang.org/src/runtime/runtime2.go
@@ -85,51 +100,55 @@ static __always_inline struct go_string write_user_go_string(char *str, u32 len)
     return new_string;
 }
 
-static __always_inline void append_item_to_slice(struct go_slice *slice, void *new_item, s32 item_size, struct go_slice_user_ptr *slice_user_ptr, void *buff)
+static __always_inline void append_item_to_slice(struct go_slice *slice, void *new_item, u32 item_size, struct go_slice_user_ptr *slice_user_ptr)
 {
-    if (slice->len < slice->cap)
+    u64 slice_len = slice->len;
+    u64 slice_cap = slice->cap;
+    if (slice_len < slice_cap)
     {
         // Room available on current array
-        bpf_probe_write_user(slice->array + (item_size * slice->len), new_item, item_size);
+        bpf_probe_write_user(slice->array + (item_size * slice_len), new_item, item_size);
     }
     else
-    {
-        //No room on current array - copy to new one of size item_size * (len + 1)
-        if (slice->len > MAX_DATA_SIZE || slice->len < 1)
+    { 
+        //No room on current array - try to copy new one of size item_size * (len + 1)
+        u32 alloc_size = item_size * slice_len;
+        if (alloc_size >= MAX_SLICE_ARRAY_SIZE)
         {
             return;
         }
-
-        s32 alloc_size = item_size * slice->len;
-        s32 bounded_alloc_size = alloc_size > MAX_REALLOCATION ? MAX_REALLOCATION : (alloc_size < 1 ? 1 : alloc_size);
-
+    
         // Get buffer
-        s32 index = 0;
-        void *map_buff = bpf_map_lookup_elem(buff, &index);
+        u32 index = 0;
+        struct slice_array_buff *map_buff = bpf_map_lookup_elem(&slice_array_buff_map, &index);
         if (!map_buff)
         {
             return;
         }
-
-        // Append to buffer
-        bpf_probe_read_user(map_buff, bounded_alloc_size, slice->array);
-        bpf_probe_read(map_buff + bounded_alloc_size, item_size, new_item);
-
-        // Copy buffer to userspace
-        u32 new_array_size = bounded_alloc_size + item_size;
-        if (new_array_size > MAX_DATA_SIZE || new_array_size < 1)
+    
+        unsigned char *new_slice_array = map_buff->buff;
+        // help the verifier
+        alloc_size &= (MAX_SLICE_ARRAY_SIZE - 1);
+        if (alloc_size + item_size > MAX_SLICE_ARRAY_SIZE)
         {
+            // No room for new item
             return;
         }
+        // Append to buffer
+        bpf_probe_read_user(new_slice_array, alloc_size, slice->array);
+        copy_byte_arrays(new_item, new_slice_array + alloc_size, item_size);
 
-        void *new_array = write_target_data(map_buff, new_array_size);
+        // Copy buffer to userspace
+        u32 new_array_size = alloc_size + item_size;
+
+        void *new_array = write_target_data(new_slice_array, new_array_size);
         if (new_array == NULL)
         {
             bpf_printk("append_item_to_slice: failed to copy new array to userspace");
             return;
         }
 
-        // Update array
+        // Update array pointer of slice
         slice->array = new_array;
         long success = bpf_probe_write_user(slice_user_ptr->array, &slice->array, sizeof(slice->array));
         if (success != 0)
@@ -139,8 +158,8 @@ static __always_inline void append_item_to_slice(struct go_slice *slice, void *n
         }
 
         // Update cap
-        slice->cap++;
-        success = bpf_probe_write_user(slice_user_ptr->cap, &slice->cap, sizeof(slice->cap));
+        slice_cap++;
+        success = bpf_probe_write_user(slice_user_ptr->cap, &slice_cap, sizeof(slice_cap));
         if (success != 0)
         {
             bpf_printk("append_item_to_slice: failed to update cap in userspace");
@@ -149,8 +168,8 @@ static __always_inline void append_item_to_slice(struct go_slice *slice, void *n
     }
 
     // Update len
-    slice->len++;
-    long success = bpf_probe_write_user(slice_user_ptr->len, &slice->len, sizeof(slice->len));
+    slice_len++;
+    long success = bpf_probe_write_user(slice_user_ptr->len, &slice_len, sizeof(slice_len));
     if (success != 0)
     {
         bpf_printk("append_item_to_slice: failed to update len in userspace");

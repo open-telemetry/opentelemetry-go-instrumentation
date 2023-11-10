@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/go-logr/logr"
 	"github.com/hashicorp/go-version"
 )
 
@@ -46,10 +47,7 @@ func (a *Analyzer) getModuleDetails(f *elf.File) (*version.Version, map[string]*
 	}
 
 	a.logger.V(1).Info("go version detected", "version", goVersion)
-	modsMap, err := parseModules(modules)
-	if err != nil {
-		return nil, nil, err
-	}
+	modsMap := parseModules(modules, a.logger)
 	return v, modsMap, nil
 }
 
@@ -178,7 +176,7 @@ func readString(f *elf.File, ptrSize int, readPtr func([]byte) uint64, addr uint
 	return string(data)
 }
 
-func parseModules(mod string) (map[string]*version.Version, error) {
+func parseModules(mod string, logger logr.Logger) map[string]*version.Version {
 	lines := strings.Split(mod, "\n")
 	result := make(map[string]*version.Version)
 	for _, line := range lines {
@@ -186,21 +184,23 @@ func parseModules(mod string) (map[string]*version.Version, error) {
 		if len(parts) > 1 {
 			modType := parts[0]
 			modPackage := parts[1]
+			result[modPackage] = nil
 			if modType == "dep" {
 				if len(parts) < 3 {
-					return nil, fmt.Errorf("missing version: %s", modPackage)
+					logger.Error(fmt.Errorf("missing version: %s", modPackage), "error parsing module info")
+					continue
 				}
 				v, err := version.NewVersion(parts[2])
 				if err != nil {
-					return nil, err
+					logger.Error(err, "error parsing module info")
+					continue
 				}
-
 				result[modPackage] = v
 			}
 		}
 	}
 
-	return result, nil
+	return result
 }
 
 func decodeString(data []byte) (s string, rest []byte) {

@@ -18,7 +18,8 @@
 #include "bpf_helpers.h"
 #include "go_types.h"
 
-#define MAX_DISTANCE 10
+// This limit is used to define the max length of the context.Context chain
+#define MAX_DISTANCE 100
 #define MAX_CONCURRENT_SPANS 1000
 
 struct

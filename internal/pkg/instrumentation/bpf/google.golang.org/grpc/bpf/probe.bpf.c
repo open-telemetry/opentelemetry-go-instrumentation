@@ -22,7 +22,6 @@ char __license[] SEC("license") = "Dual MIT/GPL";
 
 #define MAX_SIZE 50
 #define MAX_CONCURRENT 50
-#define MAX_HEADERS_BUFF_SIZE 500
 
 struct grpc_request_t
 {
@@ -53,19 +52,6 @@ struct
     __type(value, struct span_context);
     __uint(max_entries, MAX_CONCURRENT);
 } streamid_to_span_contexts SEC(".maps");
-
-struct headers_buff
-{
-    unsigned char buff[MAX_HEADERS_BUFF_SIZE];
-};
-
-struct
-{
-    __uint(type, BPF_MAP_TYPE_PERCPU_ARRAY);
-    __type(key, s32);
-    __type(value, struct headers_buff);
-    __uint(max_entries, 1);
-} headers_buff_map SEC(".maps");
 
 struct
 {
@@ -185,7 +171,7 @@ int uprobe_LoopyWriter_HeaderHandler(struct pt_regs *ctx)
     struct hpack_header_field hf = {};
     hf.name = key_str;
     hf.value = val_str;
-    append_item_to_slice(&slice, &hf, sizeof(hf), &slice_user_ptr, &headers_buff_map);
+    append_item_to_slice(&slice, &hf, sizeof(hf), &slice_user_ptr);
     return 0;
 }
 
