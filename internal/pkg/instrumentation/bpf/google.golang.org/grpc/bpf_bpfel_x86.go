@@ -22,7 +22,7 @@ type bpfGrpcRequestT struct {
 	_         [4]byte
 }
 
-type bpfHeadersBuff struct{ Buff [500]uint8 }
+type bpfSliceArrayBuff struct{ Buff [1024]uint8 }
 
 type bpfSpanContext struct {
 	TraceID [16]uint8
@@ -83,7 +83,7 @@ type bpfMapSpecs struct {
 	AllocMap               *ebpf.MapSpec `ebpf:"alloc_map"`
 	Events                 *ebpf.MapSpec `ebpf:"events"`
 	GrpcEvents             *ebpf.MapSpec `ebpf:"grpc_events"`
-	HeadersBuffMap         *ebpf.MapSpec `ebpf:"headers_buff_map"`
+	SliceArrayBuffMap      *ebpf.MapSpec `ebpf:"slice_array_buff_map"`
 	StreamidToSpanContexts *ebpf.MapSpec `ebpf:"streamid_to_span_contexts"`
 	TrackedSpans           *ebpf.MapSpec `ebpf:"tracked_spans"`
 	TrackedSpansBySc       *ebpf.MapSpec `ebpf:"tracked_spans_by_sc"`
@@ -111,7 +111,7 @@ type bpfMaps struct {
 	AllocMap               *ebpf.Map `ebpf:"alloc_map"`
 	Events                 *ebpf.Map `ebpf:"events"`
 	GrpcEvents             *ebpf.Map `ebpf:"grpc_events"`
-	HeadersBuffMap         *ebpf.Map `ebpf:"headers_buff_map"`
+	SliceArrayBuffMap      *ebpf.Map `ebpf:"slice_array_buff_map"`
 	StreamidToSpanContexts *ebpf.Map `ebpf:"streamid_to_span_contexts"`
 	TrackedSpans           *ebpf.Map `ebpf:"tracked_spans"`
 	TrackedSpansBySc       *ebpf.Map `ebpf:"tracked_spans_by_sc"`
@@ -122,7 +122,7 @@ func (m *bpfMaps) Close() error {
 		m.AllocMap,
 		m.Events,
 		m.GrpcEvents,
-		m.HeadersBuffMap,
+		m.SliceArrayBuffMap,
 		m.StreamidToSpanContexts,
 		m.TrackedSpans,
 		m.TrackedSpansBySc,
