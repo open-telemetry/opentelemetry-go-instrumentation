@@ -31,6 +31,7 @@ services:
       - OTEL_GO_AUTO_TARGET_EXE=/app/main
       - OTEL_SERVICE_NAME=rolldice
       - OTEL_PROPAGATORS=tracecontext,baggage
+      - OTEL_GO_AUTO_SHOW_VERIFIER_LOG=true
     volumes:
       - shared-data:/app
       - /proc:/host/proc

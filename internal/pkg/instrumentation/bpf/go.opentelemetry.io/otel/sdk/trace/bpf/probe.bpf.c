@@ -28,7 +28,8 @@ char __license[] SEC("license") = "Dual MIT/GPL";
 struct otel_span_t {
     BASE_SPAN_PROPERTIES
     char span_name[MAX_SPAN_NAME_LEN];
-    otel_attribute_t attributes[MAX_ATTRIBUTES];
+    // otel_attribute_t attributes[MAX_ATTRIBUTES];
+    otel_attributes_t attributes;
 };
 
 struct {
@@ -104,7 +105,8 @@ int uprobe_End(struct pt_regs *ctx) {
         return 0;
     }
 
-    convert_attributes_slice((void *)(recording_span_ptr + span_attributes_pos), span->attributes, MAX_ATTRIBUTES);
+    convert_go_otel_attributes((void *)(recording_span_ptr + span_attributes_pos), &span->attributes);
+    //convert_attributes_slice((void *)(recording_span_ptr + span_attributes_pos), span->attributes, MAX_ATTRIBUTES);
 
     bpf_perf_event_output(ctx, &events, BPF_F_CURRENT_CPU, span, sizeof(*span));
     return 0;

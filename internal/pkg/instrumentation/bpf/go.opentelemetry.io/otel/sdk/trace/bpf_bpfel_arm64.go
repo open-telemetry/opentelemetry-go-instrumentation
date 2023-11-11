@@ -18,12 +18,9 @@ type bpfOtelSpanT struct {
 	Sc         bpfSpanContext
 	Psc        bpfSpanContext
 	SpanName   [64]int8
-	Attributes [4]struct {
-		Key      [64]int8
-		IntValue int64
-		_        [1016]byte
-		Vtype    uint32
-		_        [4]byte
+	Attributes struct {
+		Keys   [256]uint8
+		Values [1024]uint8
 	}
 }
 

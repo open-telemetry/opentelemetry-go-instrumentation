@@ -177,8 +177,12 @@ static __always_inline void append_item_to_slice(struct go_slice *slice, void *n
     }
 }
 
-static __always_inline s64 get_go_string_from_user_ptr(void *user_str_ptr, char *dst, u64 max_len)
+static __always_inline s64 get_go_string_from_user_ptr(void *user_str_ptr, char *dst, s32 max_len)
 {
+    if (max_len < 1)
+    {
+        return -1;
+    }
     if (user_str_ptr == NULL)
     {
         return -1;
@@ -192,7 +196,7 @@ static __always_inline s64 get_go_string_from_user_ptr(void *user_str_ptr, char 
         return -1;
     }
 
-    s64 size_to_read = user_str.len > max_len ? max_len : user_str.len;
+    u32 size_to_read = user_str.len > max_len ? max_len : user_str.len;
     success = bpf_probe_read(dst, size_to_read, user_str.str);
     if (success != 0)
     {
