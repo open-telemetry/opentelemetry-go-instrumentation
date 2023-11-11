@@ -18,6 +18,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math"
 	"math/rand"
 	"net/http"
 	"os"
@@ -122,7 +123,9 @@ func (s *Server) rolldice(w http.ResponseWriter, r *http.Request) {
 	n := s.rand.Intn(6) + 1
 
 	rollValueAttr := attribute.Int("roll.value", n)
-	span.SetAttributes(rollValueAttr)
+	piAttr := attribute.Float64("pi", math.Pi)
+	strAttr := attribute.String("nice.key", "string value!")
+	span.SetAttributes(rollValueAttr, piAttr, strAttr)
 
 	logger.Info("rolldice called", zap.Int("dice", n))
 	fmt.Fprintf(w, "%v", n)

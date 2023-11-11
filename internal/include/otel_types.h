@@ -35,7 +35,7 @@ typedef struct go_otel_attr_value {
 	attr_val_type_t  vtype;
 	u64              numeric;
 	struct go_string string;
-	struct go_slice	 slice;
+	struct go_iface	 slice;
 } go_otel_attr_value_t;
 
 typedef struct go_otel_key_value {
@@ -71,8 +71,10 @@ static __always_inline long convert_go_otel_attribute(go_otel_key_value_t *go_at
 {
 	go_otel_attr_value_t go_attr_value = {0};
 	bpf_probe_read(&go_attr_value, sizeof(go_otel_attr_value_t), &go_attr->value);
-	bpf_probe_read(&ebpf_attr->vtype, sizeof(attr_val_type_t), &go_attr_value.vtype);
-	//ebpf_attr->vtype = go_attr_value.vtype;
+	if (go_attr_value.vtype == INVALID) {
+		return -1;
+	}
+	ebpf_attr->vtype = go_attr_value.vtype;
 	if (get_go_string_from_user_ptr(&go_attr->key, ebpf_attr->key, OTEL_ATTRIBUTE_KEY_MAX_LENGTH) < 0){
 		return -1;
 	}
@@ -118,8 +120,11 @@ static __always_inline void convert_attributes_slice(struct go_slice *attrs_slic
 	go_otel_key_value_t *go_attrs = NULL;
 	bpf_probe_read(&go_attrs, sizeof(go_otel_key_value_t*), &attrs_slice->array);
 	u8 attrs_count = ((slice_len > 4) ? 4 : slice_len);
-	for (u32 i = 0; i < 1; i++)
+	for (u32 i = 0; i < 4; i++)
 	{
+		if (i >= slice_len){
+			break;
+		}
 		if (convert_go_otel_attribute(&go_attrs[i], &attrs[i]) < 0){
 			break;
 		}

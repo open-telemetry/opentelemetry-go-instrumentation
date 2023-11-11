@@ -18,6 +18,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"errors"
+	"math"
 	"os"
 
 	// "strconv"
@@ -247,7 +248,7 @@ func convertAttribute(a ebpfAttribute) attribute.KeyValue {
 	case attribute.INT64:
 		return attribute.Int64(key, int64(binary.LittleEndian.Uint64(a.Value[:])))
 	case attribute.FLOAT64:
-		return attribute.Float64(key, float64(binary.LittleEndian.Uint64(a.Value[:])))
+		return attribute.Float64(key, math.Float64frombits(binary.LittleEndian.Uint64(a.Value[:])))
 	case attribute.STRING:
 		return attribute.String(key, unix.ByteSliceToString(a.Value[:]))
 	default:
