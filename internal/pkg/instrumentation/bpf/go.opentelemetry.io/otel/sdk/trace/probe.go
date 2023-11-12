@@ -18,10 +18,8 @@ import (
 	"bytes"
 	"encoding/binary"
 	"errors"
-	// "math"
+	"math"
 	"os"
-
-	// "strconv"
 
 	"go.opentelemetry.io/auto/internal/pkg/inject"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/bpffs"
@@ -34,8 +32,7 @@ import (
 	"github.com/go-logr/logr"
 	"golang.org/x/sys/unix"
 
-	// "go.opentelemetry.io/otel/attribute"
-	// semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
 
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/context"
@@ -47,18 +44,25 @@ import (
 
 const instrumentedPkg = "go.opentelemetry.io/otel/sdk/trace"
 
-type ebpfAttribute struct {
-	Vtype    [8]byte
-	Key      [64]byte
-	Value    [1024]byte
+
+type attributeHeader struct {
+	ValLength uint16
+	Vtype     uint8
+	Reserved  uint8
+}
+
+type attributesBuffer struct {
+	Headers       [128]attributeHeader
+	Keys          [256]byte
+	NumericValues [32]int64
+	StrValues     [1024]byte
 }
 
 // Event represents a manual span created by the user
 type Event struct {
 	context.BaseSpanProperties
 	SpanName [64]byte
-	Keys     [256]byte
-	Values   [1024]byte
+	Attributes attributesBuffer
 }
 
 // Probe is the go.opentelemetry.io/otel/sdk/trace instrumentation probe.
@@ -219,16 +223,6 @@ func (h *Probe) convertEvent(e *Event) *probe.Event {
 		pscPtr = nil
 	}
 
-	h.logger.Info("attribute keys", "keys", e.Keys)
-	h.logger.Info("attribute values", "values", e.Values)
-	// var attributes []attribute.KeyValue
-	// for _, a := range e.Attributes {
-	// 	h.logger.Info("attribute", "a", a)
-	// 	if a.Vtype == [8]byte{0, 0, 0, 0} {
-	// 		continue
-	// 	}
-	// 	attributes = append(attributes, convertAttribute(a))
-	// }
 
 	return &probe.Event{
 		Library:     h.LibraryName(),
@@ -236,28 +230,49 @@ func (h *Probe) convertEvent(e *Event) *probe.Event {
 		Kind:        trace.SpanKindClient,
 		StartTime:   int64(e.StartTime),
 		EndTime:     int64(e.EndTime),
-		// Attributes: attributes,
+		Attributes:  h.convertAttributes(&e.Attributes),
 		SpanContext: &sc,
 		ParentSpanContext: pscPtr,
 	}
 }
 
-// func convertAttribute(a ebpfAttribute) attribute.KeyValue {
-// 	key := unix.ByteSliceToString(a.Key[:])
-// 	vtype := attribute.Type(binary.LittleEndian.Uint32(a.Vtype[:]))
-// 	switch vtype {
-// 	case attribute.BOOL:
-// 		return attribute.Bool(key, binary.LittleEndian.Uint32(a.Value[:]) != 0)
-// 	case attribute.INT64:
-// 		return attribute.Int64(key, int64(binary.LittleEndian.Uint64(a.Value[:])))
-// 	case attribute.FLOAT64:
-// 		return attribute.Float64(key, math.Float64frombits(binary.LittleEndian.Uint64(a.Value[:])))
-// 	case attribute.STRING:
-// 		return attribute.String(key, unix.ByteSliceToString(a.Value[:]))
-// 	default:
-// 		return attribute.String(key, "unknown")
-// 	}
-// }
+func (h *Probe) convertAttributes(a *attributesBuffer) []attribute.KeyValue {
+	var attributes []attribute.KeyValue
+	var keyOffset int = 0
+	var numericValuesIndex int = 0
+	var strValuesOffset int = 0
+	for i := 0; i < 128; i++ {
+		if a.Headers[i].Vtype == uint8(attribute.INVALID) {
+			break;
+		}
+		key := unix.ByteSliceToString(a.Keys[keyOffset : ])
+		keyOffset += (len(key) + 1)
+		switch a.Headers[i].Vtype {
+		case uint8(attribute.BOOL):
+			attributes = append(attributes, attribute.Bool(key, a.NumericValues[numericValuesIndex] != 0))
+			numericValuesIndex++
+			break
+		case uint8(attribute.INT64):
+			attributes = append(attributes, attribute.Int64(key, a.NumericValues[numericValuesIndex]))
+			numericValuesIndex++
+			break
+		case uint8(attribute.FLOAT64):
+			attributes = append(attributes, attribute.Float64(key, math.Float64frombits(uint64(a.NumericValues[numericValuesIndex]))))
+			numericValuesIndex++
+			break
+		case uint8(attribute.STRING):
+			strVal := unix.ByteSliceToString(a.StrValues[strValuesOffset : ])
+			attributes = append(attributes, attribute.String(key, strVal))
+			strValuesOffset += (len(strVal) + 1)
+			break
+		// TODO: handle slices
+		default:
+			break
+		}
+	}
+	return attributes
+}
+
 
 // Close stops the Probe.
 func (h *Probe) Close() {

@@ -125,7 +125,8 @@ func (s *Server) rolldice(w http.ResponseWriter, r *http.Request) {
 	rollValueAttr := attribute.Int("roll.value", n)
 	piAttr := attribute.Float64("pi", math.Pi)
 	strAttr := attribute.String("nice.key", "string value!")
-	span.SetAttributes(rollValueAttr, piAttr, strAttr)
+	strAttr2 := attribute.String("nice.key2", "string value 2!")
+	span.SetAttributes(rollValueAttr, piAttr, strAttr, strAttr2)
 
 	logger.Info("rolldice called", zap.Int("dice", n))
 	fmt.Fprintf(w, "%v", n)
