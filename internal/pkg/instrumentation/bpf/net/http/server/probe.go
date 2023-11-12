@@ -227,7 +227,6 @@ func (h *Probe) convertEvent(e *Event) *probe.Event {
 		if remotePeerPortInt, err := strconv.Atoi(remotePeerPort); err == nil {
 			attributes = append(attributes, semconv.NetPeerPort(remotePeerPortInt))
 		}
-
 	}
 
 	return &probe.Event{
