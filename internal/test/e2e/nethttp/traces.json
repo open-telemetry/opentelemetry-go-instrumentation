@@ -86,12 +86,6 @@
                   "value": {
                     "stringValue": "::1"
                   }
-                },
-                {
-                  "key": "net.peer.port",
-                  "value": {
-                    "intValue": "43500"
-                  }
                 }
               ],
               "kind": 2,
