@@ -52,8 +52,8 @@ type Event struct {
 	Method     [8]byte
 	Path       [128]byte
 	RemoteAddr [32]byte
-	Host [32]byte
-	Proto     [8]byte
+	Host       [32]byte
+	Proto      [8]byte
 }
 
 // Probe is the net/http instrumentation probe.
@@ -218,7 +218,7 @@ func (h *Probe) convertEvent(e *Event) *probe.Event {
 		semconv.NetHostName(host),
 		semconv.NetProtocolName(proto),
 	}
-	
+
 	if isRemoteAddrValid == nil {
 		remotePeerAddr, remotePeerPort := ip, port
 
@@ -240,7 +240,7 @@ func (h *Probe) convertEvent(e *Event) *probe.Event {
 		EndTime:           int64(e.EndTime),
 		SpanContext:       &sc,
 		ParentSpanContext: pscPtr,
-		Attributes: attributes,
+		Attributes:        attributes,
 	}
 }
 
