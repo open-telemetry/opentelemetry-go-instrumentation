@@ -12,6 +12,8 @@ import (
 	"github.com/cilium/ebpf"
 )
 
+type bpfSliceArrayBuff struct{ Buff [1024]uint8 }
+
 type bpfSpanContext struct {
 	TraceID [16]uint8
 	SpanID  [8]uint8
@@ -22,8 +24,7 @@ type bpfSqlRequestT struct {
 	EndTime   uint64
 	Sc        bpfSpanContext
 	Psc       bpfSpanContext
-	Query     [100]int8
-	_         [4]byte
+	Query     [256]int8
 }
 
 // loadBpf returns the embedded CollectionSpec for bpf.
@@ -67,6 +68,8 @@ type bpfSpecs struct {
 //
 // It can be passed ebpf.CollectionSpec.Assign.
 type bpfProgramSpecs struct {
+	UprobeExecDC          *ebpf.ProgramSpec `ebpf:"uprobe_execDC"`
+	UprobeExecDC_Returns  *ebpf.ProgramSpec `ebpf:"uprobe_execDC_Returns"`
 	UprobeQueryDC         *ebpf.ProgramSpec `ebpf:"uprobe_queryDC"`
 	UprobeQueryDC_Returns *ebpf.ProgramSpec `ebpf:"uprobe_queryDC_Returns"`
 }
@@ -75,11 +78,12 @@ type bpfProgramSpecs struct {
 //
 // It can be passed ebpf.CollectionSpec.Assign.
 type bpfMapSpecs struct {
-	AllocMap         *ebpf.MapSpec `ebpf:"alloc_map"`
-	Events           *ebpf.MapSpec `ebpf:"events"`
-	SqlEvents        *ebpf.MapSpec `ebpf:"sql_events"`
-	TrackedSpans     *ebpf.MapSpec `ebpf:"tracked_spans"`
-	TrackedSpansBySc *ebpf.MapSpec `ebpf:"tracked_spans_by_sc"`
+	AllocMap          *ebpf.MapSpec `ebpf:"alloc_map"`
+	Events            *ebpf.MapSpec `ebpf:"events"`
+	SliceArrayBuffMap *ebpf.MapSpec `ebpf:"slice_array_buff_map"`
+	SqlEvents         *ebpf.MapSpec `ebpf:"sql_events"`
+	TrackedSpans      *ebpf.MapSpec `ebpf:"tracked_spans"`
+	TrackedSpansBySc  *ebpf.MapSpec `ebpf:"tracked_spans_by_sc"`
 }
 
 // bpfObjects contains all objects after they have been loaded into the kernel.
@@ -101,17 +105,19 @@ func (o *bpfObjects) Close() error {
 //
 // It can be passed to loadBpfObjects or ebpf.CollectionSpec.LoadAndAssign.
 type bpfMaps struct {
-	AllocMap         *ebpf.Map `ebpf:"alloc_map"`
-	Events           *ebpf.Map `ebpf:"events"`
-	SqlEvents        *ebpf.Map `ebpf:"sql_events"`
-	TrackedSpans     *ebpf.Map `ebpf:"tracked_spans"`
-	TrackedSpansBySc *ebpf.Map `ebpf:"tracked_spans_by_sc"`
+	AllocMap          *ebpf.Map `ebpf:"alloc_map"`
+	Events            *ebpf.Map `ebpf:"events"`
+	SliceArrayBuffMap *ebpf.Map `ebpf:"slice_array_buff_map"`
+	SqlEvents         *ebpf.Map `ebpf:"sql_events"`
+	TrackedSpans      *ebpf.Map `ebpf:"tracked_spans"`
+	TrackedSpansBySc  *ebpf.Map `ebpf:"tracked_spans_by_sc"`
 }
 
 func (m *bpfMaps) Close() error {
 	return _BpfClose(
 		m.AllocMap,
 		m.Events,
+		m.SliceArrayBuffMap,
 		m.SqlEvents,
 		m.TrackedSpans,
 		m.TrackedSpansBySc,
@@ -122,12 +128,16 @@ func (m *bpfMaps) Close() error {
 //
 // It can be passed to loadBpfObjects or ebpf.CollectionSpec.LoadAndAssign.
 type bpfPrograms struct {
+	UprobeExecDC          *ebpf.Program `ebpf:"uprobe_execDC"`
+	UprobeExecDC_Returns  *ebpf.Program `ebpf:"uprobe_execDC_Returns"`
 	UprobeQueryDC         *ebpf.Program `ebpf:"uprobe_queryDC"`
 	UprobeQueryDC_Returns *ebpf.Program `ebpf:"uprobe_queryDC_Returns"`
 }
 
 func (p *bpfPrograms) Close() error {
 	return _BpfClose(
+		p.UprobeExecDC,
+		p.UprobeExecDC_Returns,
 		p.UprobeQueryDC,
 		p.UprobeQueryDC_Returns,
 	)

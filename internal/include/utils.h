@@ -12,6 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#ifndef _EBPF_UTILS_H
+#define _EBPF_UTILS_H
+
 #include "bpf_helpers.h"
 
 #define TRACE_ID_SIZE 16
@@ -96,3 +99,5 @@ static __always_inline bool bpf_is_zero(unsigned char *buff, u32 size)
 
     return true;
 }
+
+#endif

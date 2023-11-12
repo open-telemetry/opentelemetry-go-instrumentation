@@ -22,6 +22,8 @@ type bpfHttpRequestT struct {
 	_         [5]byte
 }
 
+type bpfSliceArrayBuff struct{ Buff [1024]uint8 }
+
 type bpfSpanContext struct {
 	TraceID [16]uint8
 	SpanID  [8]uint8
@@ -76,11 +78,12 @@ type bpfProgramSpecs struct {
 //
 // It can be passed ebpf.CollectionSpec.Assign.
 type bpfMapSpecs struct {
-	AllocMap         *ebpf.MapSpec `ebpf:"alloc_map"`
-	Events           *ebpf.MapSpec `ebpf:"events"`
-	HttpEvents       *ebpf.MapSpec `ebpf:"http_events"`
-	TrackedSpans     *ebpf.MapSpec `ebpf:"tracked_spans"`
-	TrackedSpansBySc *ebpf.MapSpec `ebpf:"tracked_spans_by_sc"`
+	AllocMap          *ebpf.MapSpec `ebpf:"alloc_map"`
+	Events            *ebpf.MapSpec `ebpf:"events"`
+	HttpEvents        *ebpf.MapSpec `ebpf:"http_events"`
+	SliceArrayBuffMap *ebpf.MapSpec `ebpf:"slice_array_buff_map"`
+	TrackedSpans      *ebpf.MapSpec `ebpf:"tracked_spans"`
+	TrackedSpansBySc  *ebpf.MapSpec `ebpf:"tracked_spans_by_sc"`
 }
 
 // bpfObjects contains all objects after they have been loaded into the kernel.
@@ -102,11 +105,12 @@ func (o *bpfObjects) Close() error {
 //
 // It can be passed to loadBpfObjects or ebpf.CollectionSpec.LoadAndAssign.
 type bpfMaps struct {
-	AllocMap         *ebpf.Map `ebpf:"alloc_map"`
-	Events           *ebpf.Map `ebpf:"events"`
-	HttpEvents       *ebpf.Map `ebpf:"http_events"`
-	TrackedSpans     *ebpf.Map `ebpf:"tracked_spans"`
-	TrackedSpansBySc *ebpf.Map `ebpf:"tracked_spans_by_sc"`
+	AllocMap          *ebpf.Map `ebpf:"alloc_map"`
+	Events            *ebpf.Map `ebpf:"events"`
+	HttpEvents        *ebpf.Map `ebpf:"http_events"`
+	SliceArrayBuffMap *ebpf.Map `ebpf:"slice_array_buff_map"`
+	TrackedSpans      *ebpf.Map `ebpf:"tracked_spans"`
+	TrackedSpansBySc  *ebpf.Map `ebpf:"tracked_spans_by_sc"`
 }
 
 func (m *bpfMaps) Close() error {
@@ -114,6 +118,7 @@ func (m *bpfMaps) Close() error {
 		m.AllocMap,
 		m.Events,
 		m.HttpEvents,
+		m.SliceArrayBuffMap,
 		m.TrackedSpans,
 		m.TrackedSpansBySc,
 	)
