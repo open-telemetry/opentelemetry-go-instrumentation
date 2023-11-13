@@ -45,22 +45,40 @@
       "scopeSpans": [
         {
           "scope": {
-            "name": "database/sql",
+            "name": "google.golang.org/grpc",
             "version": "v0.7.0-alpha"
           },
           "spans": [
             {
               "attributes": [
                 {
-                  "key": "db.statement",
+                  "key": "net.peer.port",
                   "value": {
-                    "stringValue": "SELECT * FROM contacts"
+                    "stringValue": "1701"
+                  }
+                },
+                {
+                  "key": "rpc.system",
+                  "value": {
+                    "stringValue": "grpc"
+                  }
+                },
+                {
+                  "key": "rpc.service",
+                  "value": {
+                    "stringValue": "/helloworld.Greeter/SayHello"
+                  }
+                },
+                {
+                  "key": "net.peer.name",
+                  "value": {
+                    "stringValue": "localhost"
                   }
                 }
               ],
               "kind": 3,
-              "name": "DB",
-              "parentSpanId": "xxxxx",
+              "name": "/helloworld.Greeter/SayHello",
+              "parentSpanId": "",
               "spanId": "xxxxx",
               "status": {},
               "traceId": "xxxxx"
@@ -69,64 +87,28 @@
         },
         {
           "scope": {
-            "name": "net/http",
+            "name": "google.golang.org/grpc/server",
             "version": "v0.7.0-alpha"
           },
           "spans": [
             {
               "attributes": [
                 {
-                  "key": "http.method",
+                  "key": "rpc.system",
                   "value": {
-                    "stringValue": "GET"
+                    "stringValue": "grpc"
                   }
                 },
                 {
-                  "key": "http.target",
+                  "key": "rpc.service",
                   "value": {
-                    "stringValue": "/query_db"
-                  }
-                },
-                {
-                  "key": "http.status_code",
-                  "value": {
-                    "intValue": "200"
+                    "stringValue": "/helloworld.Greeter/SayHello"
                   }
                 }
               ],
               "kind": 2,
-              "name": "GET",
+              "name": "/helloworld.Greeter/SayHello",
               "parentSpanId": "xxxxx",
-              "spanId": "xxxxx",
-              "status": {},
-              "traceId": "xxxxx"
-            }
-          ]
-        },
-        {
-          "scope": {
-            "name": "net/http/client",
-            "version": "v0.7.0-alpha"
-          },
-          "spans": [
-            {
-              "attributes": [
-                {
-                  "key": "http.method",
-                  "value": {
-                    "stringValue": "GET"
-                  }
-                },
-                {
-                  "key": "http.target",
-                  "value": {
-                    "stringValue": "/query_db"
-                  }
-                }
-              ],
-              "kind": 3,
-              "name": "/query_db",
-              "parentSpanId": "",
               "spanId": "xxxxx",
               "status": {},
               "traceId": "xxxxx"
