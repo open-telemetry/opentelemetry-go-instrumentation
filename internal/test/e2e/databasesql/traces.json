@@ -92,6 +92,24 @@
                   "value": {
                     "intValue": "200"
                   }
+                },
+                {
+                  "key": "net.host.name",
+                  "value": {
+                    "stringValue": "localhost:8080"
+                  }
+                },
+                {
+                  "key": "net.protocol.name",
+                  "value": {
+                    "stringValue": "HTTP/1.1"
+                  }
+                },
+                {
+                  "key": "net.peer.name",
+                  "value": {
+                    "stringValue": "::1"
+                  }
                 }
               ],
               "kind": 2,
