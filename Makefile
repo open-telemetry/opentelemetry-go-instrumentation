@@ -146,6 +146,7 @@ license-header-check:
 fixture-nethttp: fixtures/nethttp
 fixture-gin: fixtures/gin
 fixture-databasesql: fixtures/databasesql
+fixture-grpc: fixtures/grpc
 fixtures/%: LIBRARY=$*
 fixtures/%:
 	$(MAKE) docker-build
