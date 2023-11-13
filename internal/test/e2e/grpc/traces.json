@@ -52,12 +52,6 @@
             {
               "attributes": [
                 {
-                  "key": "net.peer.port",
-                  "value": {
-                    "stringValue": "1701"
-                  }
-                },
-                {
                   "key": "rpc.system",
                   "value": {
                     "stringValue": "grpc"
