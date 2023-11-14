@@ -16,7 +16,6 @@ services:
     ports:
       - "8080:8080"
     volumes:
-      - shared-data:/app
       - /proc:/host/proc
   go-auto:
     depends_on:
@@ -32,7 +31,6 @@ services:
       - OTEL_SERVICE_NAME=rolldice
       - OTEL_PROPAGATORS=tracecontext,baggage
     volumes:
-      - shared-data:/app
       - /proc:/host/proc
 
   jaeger:
@@ -48,7 +46,3 @@ services:
         limits:
           memory: 300M
     restart: unless-stopped
-
-
-volumes:
-  shared-data:
