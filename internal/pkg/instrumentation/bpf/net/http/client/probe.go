@@ -38,11 +38,9 @@ const name = "net/http/client"
 // New returns a new [probe.Probe].
 func New(logger logr.Logger) probe.Probe {
 	return &probe.Base[bpfObjects, event]{
-		Name:   name,
-		Logger: logger.WithName(name),
-		// TODO (#444): Use the actual package being instrumented here. E.g.
-		// InstrumentedPkg: "net/http",
-		InstrumentedPkg: "net/http/client",
+		Name:            name,
+		Logger:          logger.WithName(name),
+		InstrumentedPkg: "net/http",
 		Consts: []probe.Const{
 			probe.RegistersABIConst{},
 			probe.AllocationConst{},
