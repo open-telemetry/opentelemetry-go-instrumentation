@@ -8,6 +8,8 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 
 ## [Unreleased]
 
+## [v0.8.0-alpha] - 2023-11-14
+
 ### Added
 
 - Add the `WithEnv` `InstrumentationOption` to configure `Instrumentation` to parse the environment.
@@ -18,11 +20,11 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 - Add HTTP status code attribute to `net/http` server instrumentation. ([#428](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/428))
 - The instrumentation scope now includes the version of the auto-instrumentation project. ([#442](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/442))
 - Add a new `WithSampler` method allowing end-users to provide their own implementation of OpenTelemetry sampler directly through the package API. ([#468](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/468)).
-- Add uprobes to `execDC` in order to instrument SQL DML ([#475](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/475)).
+- Add uprobes to `execDC` in order to instrument SQL DML. ([#475](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/475))
 
 ### Changed
 
-- Documentation no longer says that `SYS_PTRACE` capabilty is needed. ([#388](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/388))
+- Documentation no longer says that `SYS_PTRACE` capability is needed. ([#388](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/388))
 - The `NewInstrumentation` no longer parses environment variables by default.
   Use the new `WithEnv` option to enable environment parsing. ([#417](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/417))
 - `NewInstrumentation` now requires a `context.Context` as its first argument.
@@ -213,7 +215,8 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 
 This is the first release of OpenTelemetry Go Automatic Instrumentation.
 
-[Unreleased]: https://github.com/open-telemetry/opentelemetry-go-instrumentation/compare/v0.7.0-alpha...HEAD
+[Unreleased]: https://github.com/open-telemetry/opentelemetry-go-instrumentation/compare/v0.8.0-alpha...HEAD
+[v0.8.0-alpha]: https://github.com/open-telemetry/opentelemetry-go-instrumentation/releases/tag/v0.8.0-alpha
 [v0.7.0-alpha]: https://github.com/open-telemetry/opentelemetry-go-instrumentation/releases/tag/v0.7.0-alpha
 [v0.3.0-alpha]: https://github.com/open-telemetry/opentelemetry-go-instrumentation/releases/tag/v0.3.0-alpha
 [v0.2.2-alpha]: https://github.com/open-telemetry/opentelemetry-go-instrumentation/releases/tag/v0.2.2-alpha
