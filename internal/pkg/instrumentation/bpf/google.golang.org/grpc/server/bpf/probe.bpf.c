@@ -122,9 +122,9 @@ int uprobe_server_handleStream(struct pt_regs *ctx)
 
 UPROBE_RETURN(server_handleStream, struct grpc_request_t, grpc_events, events, 4, stream_ctx_pos, false)
 
-// func (d *decodeState) decodeHeader(frame *http2.MetaHeadersFrame) error
-SEC("uprobe/decodeState_decodeHeader")
-int uprobe_decodeState_decodeHeader(struct pt_regs *ctx)
+// func (d *http2Server) operateHeader(frame *http2.MetaHeadersFrame) error
+SEC("uprobe/http2Server_operateHeader")
+int uprobe_http2Server_operateHeader(struct pt_regs *ctx)
 {
     u64 frame_pos = 2;
     void *frame_ptr = get_argument(ctx, frame_pos);
