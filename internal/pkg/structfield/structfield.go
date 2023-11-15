@@ -220,6 +220,11 @@ type Offsets struct {
 
 	// values is a map between version and offset value.
 	values map[verKey]offsetVersion
+
+	// singleVer is a pointer to the single version of the Offsets.
+	// If there is only one version, this will be set to that version.
+	// Otherwise, this will be nil.
+	singleVer *offsetVersion
 }
 
 // NewOffsets returns a new empty *Offsets.
@@ -238,13 +243,11 @@ func (o *Offsets) Get(ver *version.Version) (uint64, bool) {
 	v, ok := o.values[newVerKey(ver)]
 	o.mu.RUnlock()
 
-	if !ok && len(o.values) == 1 {
+	if !ok && o.singleVer != nil {
 		// If we don't have the exact version, but we only have one version, we
 		// fallback to use that version. This can happen when a non official version is being used
 		// which contains commit hash in the version string.
-		for _, v := range o.values {
-			return v.offset, true
-		}
+		return o.singleVer.offset, true
 	}
 	return v.offset, ok
 }
@@ -259,10 +262,15 @@ func (o *Offsets) Put(ver *version.Version, offset uint64) {
 
 	if o.values == nil {
 		o.values = map[verKey]offsetVersion{newVerKey(ver): ov}
+		o.singleVer = &ov
 		return
 	}
 
 	o.values[newVerKey(ver)] = ov
+
+	if o.singleVer != nil && o.singleVer.offset != ov.offset {
+		o.singleVer = nil
+	}
 }
 
 func (o *Offsets) index() map[uint64][]*version.Version {
