@@ -116,7 +116,7 @@ func uprobeOperateHeaders(name string, exec *link.Executable, target *process.Ta
 	}
 
 	opts := &link.UprobeOptions{Address: offset}
-	l, err := exec.Uprobe("", obj.UprobeDecodeStateDecodeHeader, opts)
+	l, err := exec.Uprobe("", obj.UprobeHttp2ServerOperateHeader, opts)
 	if err != nil {
 		return nil, err
 	}
