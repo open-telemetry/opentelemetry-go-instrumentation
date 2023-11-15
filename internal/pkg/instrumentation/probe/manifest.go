@@ -42,13 +42,16 @@ type Manifest struct {
 // and added directly to the returned Manifest.
 func NewManifest(name, pkg string, structfields []structfield.ID, symbols []string) Manifest {
 	sort.Slice(structfields, func(i, j int) bool {
-		if structfields[i].PkgPath == structfields[j].PkgPath {
-			if structfields[i].Struct == structfields[j].Struct {
-				return structfields[i].Field < structfields[j].Field
+		if structfields[i].ModPath == structfields[j].ModPath {
+			if structfields[i].PkgPath == structfields[j].PkgPath {
+				if structfields[i].Struct == structfields[j].Struct {
+					return structfields[i].Field < structfields[j].Field
+				}
+				return structfields[i].Struct < structfields[j].Struct
 			}
-			return structfields[i].Struct < structfields[j].Struct
+			return structfields[i].PkgPath < structfields[j].PkgPath
 		}
-		return structfields[i].PkgPath < structfields[j].PkgPath
+		return structfields[i].ModPath < structfields[j].ModPath
 	})
 
 	sort.Strings(symbols)
