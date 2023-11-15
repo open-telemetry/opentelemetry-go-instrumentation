@@ -74,7 +74,7 @@ var index = &Index{
 				newVerKey(v121): {offset: 1, version: v121},
 				newVerKey(v130): {offset: 1, version: v130},
 			},
-			singleOffset: 1,
+			uo: uniqueOffset{value: 1, valid: true},
 		},
 		NewID("std", "net/http", "Request", "URL"): {
 			values: map[verKey]offsetVersion{
@@ -82,19 +82,19 @@ var index = &Index{
 				newVerKey(v121): {offset: 1, version: v121},
 				newVerKey(v130): {offset: 2, version: v130},
 			},
-			singleOffset: invalidOffset,
+			uo: uniqueOffset{value: 0, valid: false},
 		},
 		NewID("std", "net/http", "Response", "Status"): {
 			values: map[verKey]offsetVersion{
 				newVerKey(v120): {offset: 0, version: v120},
 			},
-			singleOffset: 0,
+			uo: uniqueOffset{value: 0, valid: true},
 		},
 		NewID("google.golang.org/grpc", "google.golang.org/grpc", "ClientConn", "target"): {
 			values: map[verKey]offsetVersion{
 				newVerKey(v120): {offset: 0, version: v120},
 			},
-			singleOffset: 0,
+			uo: uniqueOffset{value: 0, valid: true},
 		},
 	},
 }
