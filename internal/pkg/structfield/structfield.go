@@ -237,6 +237,15 @@ func (o *Offsets) Get(ver *version.Version) (uint64, bool) {
 	o.mu.RLock()
 	v, ok := o.values[newVerKey(ver)]
 	o.mu.RUnlock()
+
+	if !ok && len(o.values) == 1 {
+		// If we don't have the exact version, but we only have one version, we
+		// fallback to use that version. This can happen when a non official version is being used
+		// which contains commit hash in the version string.
+		for _, v := range o.values {
+			return v.offset, true
+		}
+	}
 	return v.offset, ok
 }
 
