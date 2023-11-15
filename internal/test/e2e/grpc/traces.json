@@ -79,9 +79,9 @@
               "kind": 3,
               "name": "/helloworld.Greeter/SayHello",
               "parentSpanId": "",
-              "spanId": "xxxxx",
+              "spanId": "xxxxx<-INVALID",
               "status": {},
-              "traceId": "xxxxx"
+              "traceId": "xxxxx<-INVALID"
             },
             {
               "attributes": [
@@ -101,9 +101,9 @@
               "kind": 2,
               "name": "/helloworld.Greeter/SayHello",
               "parentSpanId": "xxxxx",
-              "spanId": "xxxxx",
+              "spanId": "xxxxx<-INVALID",
               "status": {},
-              "traceId": "xxxxx"
+              "traceId": "xxxxx<-INVALID"
             }
           ]
         }
