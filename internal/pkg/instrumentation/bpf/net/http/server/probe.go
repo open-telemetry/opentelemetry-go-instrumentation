@@ -68,16 +68,13 @@ func New(logger logr.Logger) probe.Probe {
 				Val: structfield.NewID("std", "net/http", "response", "req"),
 			},
 			probe.StructFieldConst{
-				Key: "status_code_pos",
-				Val: structfield.NewID("std", "net/http", "response", "status"),
-			},
-			probe.StructFieldConst{
 				Key: "buckets_ptr_pos",
 				Val: structfield.NewID("std", "runtime", "hmap", "buckets"),
 			},
 		},
 		Uprobes: map[string]probe.UprobeFunc[bpfObjects]{
-			"net/http.HandlerFunc.ServeHTTP": uprobeServeHTTP,
+			"net/http.HandlerFunc.ServeHTTP":   uprobeServeHTTP,
+			"net/http.(*response).WriteHeader": uprobeWriteHeader,
 		},
 
 		ReaderFn: func(obj bpfObjects) (*perf.Reader, error) {
@@ -99,23 +96,21 @@ func uprobeServeHTTP(name string, exec *link.Executable, target *process.TargetD
 	if err != nil {
 		return nil, err
 	}
-	links := []link.Link{l}
+	return []link.Link{l}, nil
+}
 
-	retOffsets, err := target.GetFunctionReturns(name)
+func uprobeWriteHeader(name string, exec *link.Executable, target *process.TargetDetails, obj *bpfObjects) ([]link.Link, error) {
+	offset, err := target.GetFunctionOffset(name)
 	if err != nil {
 		return nil, err
 	}
 
-	for _, ret := range retOffsets {
-		opts := &link.UprobeOptions{Address: ret}
-		l, err := exec.Uprobe("", obj.UprobeHandlerFuncServeHTTP_Returns, opts)
-		if err != nil {
-			return nil, err
-		}
-		links = append(links, l)
+	opts := &link.UprobeOptions{Address: offset}
+	l, err := exec.Uprobe("", obj.UprobeResponseWriteHeader, opts)
+	if err != nil {
+		return nil, err
 	}
-
-	return links, nil
+	return []link.Link{l}, nil
 }
 
 // event represents an event in an HTTP server during an HTTP

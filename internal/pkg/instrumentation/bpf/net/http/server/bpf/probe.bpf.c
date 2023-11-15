@@ -38,10 +38,6 @@ struct http_server_span_t
 struct uprobe_data_t
 {
     struct http_server_span_t span;
-    // bpf2go doesn't support pointers fields
-    // saving the response pointer in the entry probe
-    // and using it in the return probe
-    u64 resp_ptr;
 };
 
 struct
@@ -210,10 +206,6 @@ int uprobe_HandlerFunc_ServeHTTP(struct pt_regs *ctx)
 
     __builtin_memset(uprobe_data, 0, sizeof(struct uprobe_data_t));
 
-    // Save response writer
-    void *resp_impl = get_argument(ctx, 3);
-    uprobe_data->resp_ptr = (u64)resp_impl;
-
     struct http_server_span_t *http_server_span = &uprobe_data->span;
     http_server_span->start_time = bpf_ktime_get_ns();
 
@@ -244,22 +236,22 @@ int uprobe_HandlerFunc_ServeHTTP(struct pt_regs *ctx)
 }
 
 // This instrumentation attaches uprobe to the following function:
-// func (f HandlerFunc) ServeHTTP(w ResponseWriter, r *Request)
-SEC("uprobe/HandlerFunc_ServeHTTP")
-int uprobe_HandlerFunc_ServeHTTP_Returns(struct pt_regs *ctx) {
+// func (w *response) WriteHeader(code int)
+SEC("uprobe/response_WriteHeader")
+int uprobe_response_WriteHeader(struct pt_regs *ctx) {
     u64 end_time = bpf_ktime_get_ns();
     void *req_ctx_ptr = get_Go_context(ctx, 4, ctx_ptr_pos, false);
     void *key = get_consistent_key(ctx, req_ctx_ptr);
 
     struct uprobe_data_t *uprobe_data = bpf_map_lookup_elem(&http_server_uprobes, &key);
     if (uprobe_data == NULL) {
-        bpf_printk("uprobe/HandlerFunc_ServeHTTP_Returns: entry_state is NULL");
+        bpf_printk("uprobe/response_WriteHeader: entry_state is NULL");
         return 0;
     }
     bpf_map_delete_elem(&http_server_uprobes, &key);
 
     struct http_server_span_t *http_server_span = &uprobe_data->span;
-    void *resp_ptr = (void *)uprobe_data->resp_ptr;
+    void *resp_ptr = get_argument(ctx, 1);
     void *req_ptr = NULL;
     bpf_probe_read(&req_ptr, sizeof(req_ptr), (void *)(resp_ptr + req_ptr_pos));
 
@@ -279,7 +271,7 @@ int uprobe_HandlerFunc_ServeHTTP_Returns(struct pt_regs *ctx) {
         return 0;
     }
     // status code
-    bpf_probe_read(&http_server_span->status_code, sizeof(http_server_span->status_code), (void *)(resp_ptr + status_code_pos));
+	http_server_span->status_code = (u64)get_argument(ctx, 2);
 
     bpf_perf_event_output(ctx, &events, BPF_F_CURRENT_CPU, http_server_span, sizeof(*http_server_span));
     stop_tracking_span(&http_server_span->sc, &http_server_span->psc);

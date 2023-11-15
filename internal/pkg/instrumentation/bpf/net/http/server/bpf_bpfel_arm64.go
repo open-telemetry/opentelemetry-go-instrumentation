@@ -29,7 +29,6 @@ type bpfUprobeDataT struct {
 		Method     [8]int8
 		Path       [128]int8
 	}
-	RespPtr uint64
 }
 
 // loadBpf returns the embedded CollectionSpec for bpf.
@@ -73,8 +72,8 @@ type bpfSpecs struct {
 //
 // It can be passed ebpf.CollectionSpec.Assign.
 type bpfProgramSpecs struct {
-	UprobeHandlerFuncServeHTTP         *ebpf.ProgramSpec `ebpf:"uprobe_HandlerFunc_ServeHTTP"`
-	UprobeHandlerFuncServeHTTP_Returns *ebpf.ProgramSpec `ebpf:"uprobe_HandlerFunc_ServeHTTP_Returns"`
+	UprobeHandlerFuncServeHTTP *ebpf.ProgramSpec `ebpf:"uprobe_HandlerFunc_ServeHTTP"`
+	UprobeResponseWriteHeader  *ebpf.ProgramSpec `ebpf:"uprobe_response_WriteHeader"`
 }
 
 // bpfMapSpecs contains maps before they are loaded into the kernel.
@@ -140,14 +139,14 @@ func (m *bpfMaps) Close() error {
 //
 // It can be passed to loadBpfObjects or ebpf.CollectionSpec.LoadAndAssign.
 type bpfPrograms struct {
-	UprobeHandlerFuncServeHTTP         *ebpf.Program `ebpf:"uprobe_HandlerFunc_ServeHTTP"`
-	UprobeHandlerFuncServeHTTP_Returns *ebpf.Program `ebpf:"uprobe_HandlerFunc_ServeHTTP_Returns"`
+	UprobeHandlerFuncServeHTTP *ebpf.Program `ebpf:"uprobe_HandlerFunc_ServeHTTP"`
+	UprobeResponseWriteHeader  *ebpf.Program `ebpf:"uprobe_response_WriteHeader"`
 }
 
 func (p *bpfPrograms) Close() error {
 	return _BpfClose(
 		p.UprobeHandlerFuncServeHTTP,
-		p.UprobeHandlerFuncServeHTTP_Returns,
+		p.UprobeResponseWriteHeader,
 	)
 }
 
