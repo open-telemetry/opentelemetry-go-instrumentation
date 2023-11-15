@@ -22,14 +22,44 @@ import (
 	"time"
 )
 
+type statusRecorder struct {
+	rw     http.ResponseWriter
+	status int
+}
+
+func (r *statusRecorder) Header() http.Header {
+	return r.rw.Header()
+}
+
+func (r *statusRecorder) Write(data []byte) (int, error) {
+	if r.status == 0 {
+		r.WriteHeader(http.StatusOK)
+	}
+	return r.rw.Write(data)
+}
+
+func (r *statusRecorder) WriteHeader(code int) {
+	r.status = code
+	r.rw.WriteHeader(code)
+}
+
+func logStatus(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		rec := &statusRecorder{rw: w}
+
+		next.ServeHTTP(rec, r)
+
+		log.Printf("response status: %d\n", rec.status)
+	})
+}
+
 func hello(w http.ResponseWriter, _ *http.Request) {
 	fmt.Fprintf(w, "hello\n")
 }
 
 func main() {
-	http.HandleFunc("/hello", hello)
 	go func() {
-		_ = http.ListenAndServe(":8080", nil)
+		_ = http.ListenAndServe(":8080", logStatus(http.HandlerFunc(hello)))
 	}()
 
 	// give time for auto-instrumentation to start up
