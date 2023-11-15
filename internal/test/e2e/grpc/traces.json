@@ -45,7 +45,7 @@
       "scopeSpans": [
         {
           "scope": {
-            "name": "google.golang.org/grpc",
+            "name": "go.opentelemetry.io/auto/google.golang.org/grpc",
             "version": "v0.8.0-alpha"
           },
           "spans": [
@@ -82,15 +82,7 @@
               "spanId": "xxxxx",
               "status": {},
               "traceId": "xxxxx"
-            }
-          ]
-        },
-        {
-          "scope": {
-            "name": "google.golang.org/grpc/server",
-            "version": "v0.8.0-alpha"
-          },
-          "spans": [
+            },
             {
               "attributes": [
                 {

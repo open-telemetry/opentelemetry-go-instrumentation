@@ -33,15 +33,19 @@ import (
 
 //go:generate go run github.com/cilium/ebpf/cmd/bpf2go -target amd64,arm64 -cc clang -cflags $CFLAGS bpf ./bpf/probe.bpf.c
 
-// name is the instrumentation name.
-const name = "github.com/gin-gonic/gin"
+const (
+	// name is the instrumentation name.
+	name = "github.com/gin-gonic/gin"
+	// pkg is the package being instrumented.
+	pkg = "github.com/gin-gonic/gin"
+)
 
 // New returns a new [probe.Probe].
 func New(logger logr.Logger) probe.Probe {
 	return &probe.Base[bpfObjects, event]{
 		Name:            name,
 		Logger:          logger.WithName(name),
-		InstrumentedPkg: "github.com/gin-gonic/gin",
+		InstrumentedPkg: pkg,
 		Consts: []probe.Const{
 			probe.RegistersABIConst{},
 			probe.StructFieldConst{
@@ -122,7 +126,7 @@ func convertEvent(e *event) *probe.Event {
 	})
 
 	return &probe.Event{
-		Library: name,
+		Package: pkg,
 		// Do not include the high-cardinality path here (there is no
 		// templatized path manifest to reference, given we are instrumenting
 		// Engine.ServeHTTP which is not passed a Gin Context).
