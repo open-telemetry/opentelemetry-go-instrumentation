@@ -50,12 +50,11 @@ func TestNewManifest(t *testing.T) {
 		[]structfield.ID{sAABB, sABAA, sAAAA, sAAAC, sBAAA, sAAAB, sAABA, sAABC},
 		[]string{d, a, c, b},
 	)
-	assert.Equal(t, name, got.Name)
-	assert.Equal(t, pkg, got.InstrumentedPkg)
-	assert.Equal(t, []string{a, b, c, d}, got.Symbols)
-	assert.Equal(
-		t,
-		[]structfield.ID{sAAAA, sAAAB, sAAAC, sAABA, sAABB, sAABC, sABAA, sBAAA},
-		got.StructFields,
-	)
+	want := Manifest{
+		Name:            name,
+		InstrumentedPkg: pkg,
+		StructFields:    []structfield.ID{sAAAA, sAAAB, sAAAC, sAABA, sAABB, sAABC, sABAA, sBAAA},
+		Symbols:         []string{a, b, c, d},
+	}
+	assert.Equal(t, want, got)
 }
