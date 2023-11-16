@@ -45,10 +45,32 @@
       "scopeSpans": [
         {
           "scope": {
-            "name": "google.golang.org/grpc",
+            "name": "go.opentelemetry.io/auto/google.golang.org/grpc",
             "version": "v0.8.0-alpha"
           },
           "spans": [
+            {
+              "attributes": [
+                {
+                  "key": "rpc.system",
+                  "value": {
+                    "stringValue": "grpc"
+                  }
+                },
+                {
+                  "key": "rpc.service",
+                  "value": {
+                    "stringValue": "/helloworld.Greeter/SayHello"
+                  }
+                }
+              ],
+              "kind": 2,
+              "name": "/helloworld.Greeter/SayHello",
+              "parentSpanId": "xxxxx",
+              "spanId": "xxxxx",
+              "status": {},
+              "traceId": "xxxxx"
+            },
             {
               "attributes": [
                 {
@@ -79,36 +101,6 @@
               "kind": 3,
               "name": "/helloworld.Greeter/SayHello",
               "parentSpanId": "",
-              "spanId": "xxxxx",
-              "status": {},
-              "traceId": "xxxxx"
-            }
-          ]
-        },
-        {
-          "scope": {
-            "name": "google.golang.org/grpc/server",
-            "version": "v0.8.0-alpha"
-          },
-          "spans": [
-            {
-              "attributes": [
-                {
-                  "key": "rpc.system",
-                  "value": {
-                    "stringValue": "grpc"
-                  }
-                },
-                {
-                  "key": "rpc.service",
-                  "value": {
-                    "stringValue": "/helloworld.Greeter/SayHello"
-                  }
-                }
-              ],
-              "kind": 2,
-              "name": "/helloworld.Greeter/SayHello",
-              "parentSpanId": "xxxxx",
               "spanId": "xxxxx",
               "status": {},
               "traceId": "xxxxx"

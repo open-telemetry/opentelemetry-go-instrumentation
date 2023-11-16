@@ -33,18 +33,22 @@ import (
 
 //go:generate go run github.com/cilium/ebpf/cmd/bpf2go -target amd64,arm64 -cc clang -cflags $CFLAGS bpf ./bpf/probe.bpf.c
 
-// name is the instrumentation name.
-const name = "database/sql"
+const (
+	// name is the instrumentation name.
+	name = "database/sql"
+	// pkg is the package being instrumented.
+	pkg = "database/sql"
 
-// IncludeDBStatementEnvVar is the environment variable to opt-in for sql query inclusion in the trace.
-const IncludeDBStatementEnvVar = "OTEL_GO_AUTO_INCLUDE_DB_STATEMENT"
+	// IncludeDBStatementEnvVar is the environment variable to opt-in for sql query inclusion in the trace.
+	IncludeDBStatementEnvVar = "OTEL_GO_AUTO_INCLUDE_DB_STATEMENT"
+)
 
 // New returns a new [probe.Probe].
 func New(logger logr.Logger) probe.Probe {
 	return &probe.Base[bpfObjects, event]{
 		Name:            name,
 		Logger:          logger.WithName(name),
-		InstrumentedPkg: "database/sql",
+		InstrumentedPkg: pkg,
 		Consts: []probe.Const{
 			probe.RegistersABIConst{},
 			probe.AllocationConst{},
@@ -158,7 +162,7 @@ func convertEvent(e *event) *probe.Event {
 	}
 
 	return &probe.Event{
-		Library:     name,
+		Package:     pkg,
 		Name:        "DB",
 		Kind:        trace.SpanKindClient,
 		StartTime:   int64(e.StartTime),

@@ -6,11 +6,39 @@ span_names_for() {
 	spans_from_scope_named $1 | jq '.name'
 }
 
+# Returns a list of server span names emitted by a given library/scope
+	# $1 - library/scope name
+server_span_names_for() {
+	server_spans_from_scope_named $1 | jq '.name'
+}
+
+# Returns a list of client span names emitted by a given library/scope
+	# $1 - library/scope name
+client_span_names_for() {
+	client_spans_from_scope_named $1 | jq '.name'
+}
+
 # Returns a list of attributes emitted by a given library/scope
 span_attributes_for() {
 	# $1 - library/scope name
 
 	spans_from_scope_named $1 | \
+		jq ".attributes[]"
+}
+
+# Returns a list of attributes emitted by a given library/scope on server spans.
+server_span_attributes_for() {
+	# $1 - library/scope name
+
+	server_spans_from_scope_named $1 | \
+		jq ".attributes[]"
+}
+
+# Returns a list of attributes emitted by a given library/scope on clinet_spans.
+client_span_attributes_for() {
+	# $1 - library/scope name
+
+	client_spans_from_scope_named $1 | \
 		jq ".attributes[]"
 }
 
@@ -23,6 +51,18 @@ resource_attributes_received() {
 	# $1 - library/scope name
 spans_from_scope_named() {
 	spans_received | jq ".scopeSpans[] | select(.scope.name == \"$1\").spans[]"
+}
+
+# Returns an array of all server spans emitted by a given library/scope
+	# $1 - library/scope name
+server_spans_from_scope_named() {
+	spans_from_scope_named $1 | jq "select(.kind == 2)"
+}
+
+# Returns an array of all client spans emitted by a given library/scope
+	# $1 - library/scope name
+client_spans_from_scope_named() {
+	spans_from_scope_named $1 | jq "select(.kind == 3)"
 }
 
 # Returns an array of all spans received

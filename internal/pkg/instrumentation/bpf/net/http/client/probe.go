@@ -33,14 +33,19 @@ import (
 
 //go:generate go run github.com/cilium/ebpf/cmd/bpf2go -target amd64,arm64 -cc clang -cflags $CFLAGS bpf ./bpf/probe.bpf.c
 
-const name = "net/http/client"
+const (
+	// name is the instrumentation name.
+	name = "net/http/client"
+	// pkg is the package being instrumented.
+	pkg = "net/http"
+)
 
 // New returns a new [probe.Probe].
 func New(logger logr.Logger) probe.Probe {
 	return &probe.Base[bpfObjects, event]{
 		Name:            name,
 		Logger:          logger.WithName(name),
-		InstrumentedPkg: "net/http",
+		InstrumentedPkg: pkg,
 		Consts: []probe.Const{
 			probe.RegistersABIConst{},
 			probe.AllocationConst{},
@@ -143,7 +148,7 @@ func convertEvent(e *event) *probe.Event {
 	}
 
 	return &probe.Event{
-		Library:     name,
+		Package:     pkg,
 		Name:        path,
 		Kind:        trace.SpanKindClient,
 		StartTime:   int64(e.StartTime),
