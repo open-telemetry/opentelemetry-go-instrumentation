@@ -8,6 +8,15 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 
 ## [Unreleased]
 
+### Changed
+
+- The instrumentation scope name for the `database/sql` instrumentation is now `go.opentelemtry.io/auto/database/sql`. (#507)
+- The instrumentation scope name for the `gin` instrumentation is now `go.opentelemtry.io/auto/github.com/gin-gonic/gin`. (#507)
+- The instrumentation scope name for the `google.golang.org/grpc/client` instrumentation is now `go.opentelemtry.io/auto/google.golang.org/grpc`. (#507)
+- The instrumentation scope name for the `google.golang.org/grpc/server` instrumentation is now `go.opentelemtry.io/auto/google.golang.org/grpc`. (#507)
+- The instrumentation scope name for the `net/http/client` instrumentation is now `go.opentelemtry.io/auto/net/http`. (#507)
+- The instrumentation scope name for the `net/http/server` instrumentation is now `go.opentelemtry.io/auto/net/http`. (#507)
+
 ## [v0.8.0-alpha] - 2023-11-14
 
 ### Added
