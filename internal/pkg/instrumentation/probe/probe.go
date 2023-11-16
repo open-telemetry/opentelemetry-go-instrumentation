@@ -21,7 +21,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"sort"
 
 	"github.com/cilium/ebpf"
 	"github.com/cilium/ebpf/link"
@@ -38,12 +37,9 @@ import (
 // Probe is the instrument used by instrumentation for a Go package to measure
 // and report on the state of that packages operation.
 type Probe interface {
-	// LibraryName returns the package name being instrumented.
-	LibraryName() string
-
-	// FuncNames returns the fully-qualified function names that are
-	// instrumented.
-	FuncNames() []string
+	// Manifest returns the Probe's instrumentation Manifest. This includes all
+	// the information about the package the Probe instruments.
+	Manifest() Manifest
 
 	// Load loads all instrumentation offsets.
 	Load(*link.Executable, *process.TargetDetails) error
@@ -88,21 +84,16 @@ type Base[BPFObj any, BPFEvent any] struct {
 	closers []io.Closer
 }
 
-// LibraryName returns the package name being instrumented.
-func (i *Base[BPFObj, BPFEvent]) LibraryName() string {
-	return i.InstrumentedPkg
-}
+// Manifest returns the Probe's instrumentation Manifest.
+func (i *Base[BPFObj, BPFEvent]) Manifest() Manifest {
+	structfields := consts(i.Consts).structFields()
 
-// FuncNames returns the fully-qualified function names that are instrumented.
-func (i *Base[BPFObj, BPFEvent]) FuncNames() []string {
 	symbols := make([]string, 0, len(i.Uprobes))
 	for s := range i.Uprobes {
 		symbols = append(symbols, s)
 	}
 
-	sort.Strings(symbols)
-
-	return symbols
+	return NewManifest(i.Name, i.InstrumentedPkg, structfields, symbols)
 }
 
 // Load loads all instrumentation offsets.
@@ -235,6 +226,16 @@ type Const interface {
 }
 
 type consts []Const
+
+func (c consts) structFields() []structfield.ID {
+	var out []structfield.ID
+	for _, cnst := range c {
+		if sfc, ok := cnst.(StructFieldConst); ok {
+			out = append(out, sfc.Val)
+		}
+	}
+	return out
+}
 
 func (c consts) injectOpts(td *process.TargetDetails) ([]inject.Option, error) {
 	var (

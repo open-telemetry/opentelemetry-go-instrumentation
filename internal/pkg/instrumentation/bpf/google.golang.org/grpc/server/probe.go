@@ -39,11 +39,9 @@ const name = "google.golang.org/grpc/server"
 // New returns a new [probe.Probe].
 func New(logger logr.Logger) probe.Probe {
 	return &probe.Base[bpfObjects, event]{
-		Name:   name,
-		Logger: logger.WithName(name),
-		// TODO (#444): Use the actual package being instrumented here. E.g.
-		// InstrumentedPkg: "google.golang.org/grpc",
-		InstrumentedPkg: "google.golang.org/grpc/server",
+		Name:            name,
+		Logger:          logger.WithName(name),
+		InstrumentedPkg: "google.golang.org/grpc",
 		Consts: []probe.Const{
 			probe.RegistersABIConst{},
 			probe.AllocationConst{},
@@ -118,7 +116,7 @@ func uprobeOperateHeaders(name string, exec *link.Executable, target *process.Ta
 	}
 
 	opts := &link.UprobeOptions{Address: offset}
-	l, err := exec.Uprobe("", obj.UprobeDecodeStateDecodeHeader, opts)
+	l, err := exec.Uprobe("", obj.UprobeHttp2ServerOperateHeader, opts)
 	if err != nil {
 		return nil, err
 	}
