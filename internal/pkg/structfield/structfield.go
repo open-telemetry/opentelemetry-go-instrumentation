@@ -220,6 +220,16 @@ type Offsets struct {
 
 	// values is a map between version and offset value.
 	values map[verKey]offsetVersion
+
+	// uo is the single offset in the values map.
+	// If there is only one offset, this will be that offset and valid will be true.
+	// Otherwise, valid is false
+	uo uniqueOffset
+}
+
+type uniqueOffset struct {
+	value uint64
+	valid bool
 }
 
 // NewOffsets returns a new empty *Offsets.
@@ -237,6 +247,13 @@ func (o *Offsets) Get(ver *version.Version) (uint64, bool) {
 	o.mu.RLock()
 	v, ok := o.values[newVerKey(ver)]
 	o.mu.RUnlock()
+
+	if !ok && o.uo.valid {
+		// If we don't have the exact version, but we only have one offset, we
+		// fallback to use that offset. This can happen when a non official version is being used
+		// which contains commit hash in the version string.
+		return o.uo.value, true
+	}
 	return v.offset, ok
 }
 
@@ -250,10 +267,16 @@ func (o *Offsets) Put(ver *version.Version, offset uint64) {
 
 	if o.values == nil {
 		o.values = map[verKey]offsetVersion{newVerKey(ver): ov}
+		o.uo.valid = true
+		o.uo.value = ov.offset
 		return
 	}
 
 	o.values[newVerKey(ver)] = ov
+
+	if o.uo.valid && o.uo.value != ov.offset {
+		o.uo.valid = false
+	}
 }
 
 func (o *Offsets) index() map[uint64][]*version.Version {
