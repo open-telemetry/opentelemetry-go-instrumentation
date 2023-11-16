@@ -51,7 +51,7 @@ func TestProbeConvertEvent(t *testing.T) {
 		TraceFlags: trace.FlagsSampled,
 	})
 	want := &probe.Event{
-		Library:     name,
+		Package:     pkg,
 		Name:        "DB",
 		Kind:        trace.SpanKindClient,
 		StartTime:   int64(start.UnixNano()),

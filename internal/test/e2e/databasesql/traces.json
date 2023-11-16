@@ -45,7 +45,7 @@
       "scopeSpans": [
         {
           "scope": {
-            "name": "database/sql",
+            "name": "go.opentelemetry.io/auto/database/sql",
             "version": "v0.8.0-alpha"
           },
           "spans": [
@@ -69,7 +69,7 @@
         },
         {
           "scope": {
-            "name": "net/http",
+            "name": "go.opentelemetry.io/auto/net/http",
             "version": "v0.8.0-alpha"
           },
           "spans": [
@@ -100,15 +100,7 @@
               "spanId": "xxxxx",
               "status": {},
               "traceId": "xxxxx"
-            }
-          ]
-        },
-        {
-          "scope": {
-            "name": "net/http/client",
-            "version": "v0.8.0-alpha"
-          },
-          "spans": [
+            },
             {
               "attributes": [
                 {

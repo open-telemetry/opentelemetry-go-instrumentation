@@ -45,7 +45,7 @@
       "scopeSpans": [
         {
           "scope": {
-            "name": "github.com/gin-gonic/gin",
+            "name": "go.opentelemetry.io/auto/github.com/gin-gonic/gin",
             "version": "v0.8.0-alpha"
           },
           "spans": [
@@ -75,7 +75,7 @@
         },
         {
           "scope": {
-            "name": "net/http/client",
+            "name": "go.opentelemetry.io/auto/net/http",
             "version": "v0.8.0-alpha"
           },
           "spans": [

@@ -33,15 +33,19 @@ import (
 
 //go:generate go run github.com/cilium/ebpf/cmd/bpf2go -target amd64,arm64 -cc clang -cflags $CFLAGS bpf ./bpf/probe.bpf.c
 
-// name is the instrumentation name.
-const name = "google.golang.org/grpc/server"
+const (
+	// name is the instrumentation name.
+	name = "google.golang.org/grpc/server"
+	// pkg is the package being instrumented.
+	pkg = "google.golang.org/grpc"
+)
 
 // New returns a new [probe.Probe].
 func New(logger logr.Logger) probe.Probe {
 	return &probe.Base[bpfObjects, event]{
 		Name:            name,
 		Logger:          logger.WithName(name),
-		InstrumentedPkg: "google.golang.org/grpc",
+		InstrumentedPkg: pkg,
 		Consts: []probe.Const{
 			probe.RegistersABIConst{},
 			probe.AllocationConst{},
@@ -152,7 +156,7 @@ func convertEvent(e *event) *probe.Event {
 	}
 
 	return &probe.Event{
-		Library:   name,
+		Package:   pkg,
 		Name:      method,
 		Kind:      trace.SpanKindServer,
 		StartTime: int64(e.StartTime),
