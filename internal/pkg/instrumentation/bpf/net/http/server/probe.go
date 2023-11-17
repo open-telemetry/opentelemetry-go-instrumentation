@@ -77,7 +77,7 @@ func New(logger logr.Logger) probe.Probe {
 			},
 		},
 		Uprobes: map[string]probe.UprobeFunc[bpfObjects]{
-			"net/http.HandlerFunc.ServeHTTP": uprobeServeHTTP,
+			"net/http.serverHandler.ServeHTTP": uprobeServeHTTP,
 		},
 
 		ReaderFn: func(obj bpfObjects) (*perf.Reader, error) {
