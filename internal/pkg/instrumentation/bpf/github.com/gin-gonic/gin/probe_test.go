@@ -52,7 +52,7 @@ func TestProbeConvertEvent(t *testing.T) {
 		TraceFlags: trace.FlagsSampled,
 	})
 	want := &probe.Event{
-		Library:     name,
+		Package:     pkg,
 		Name:        "GET",
 		Kind:        trace.SpanKindServer,
 		StartTime:   int64(start.UnixNano()),

@@ -21,7 +21,7 @@ import (
 
 // Event is a telemetry event that happens within an instrumented package.
 type Event struct {
-	Library           string
+	Package           string
 	Name              string
 	Attributes        []attribute.KeyValue
 	Kind              trace.SpanKind
