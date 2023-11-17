@@ -125,6 +125,19 @@ func convertEvent(e *event) *probe.Event {
 		TraceFlags: trace.FlagsSampled,
 	})
 
+	var pscPtr *trace.SpanContext
+	if e.ParentSpanContext.TraceID.IsValid() {
+		psc := trace.NewSpanContext(trace.SpanContextConfig{
+			TraceID:    e.ParentSpanContext.TraceID,
+			SpanID:     e.ParentSpanContext.SpanID,
+			TraceFlags: trace.FlagsSampled,
+			Remote:     true,
+		})
+		pscPtr = &psc
+	} else {
+		pscPtr = nil
+	}
+
 	return &probe.Event{
 		Package: pkg,
 		// Do not include the high-cardinality path here (there is no
@@ -139,5 +152,6 @@ func convertEvent(e *event) *probe.Event {
 			semconv.HTTPMethodKey.String(method),
 			semconv.HTTPTargetKey.String(path),
 		},
+		ParentSpanContext: pscPtr,
 	}
 }
