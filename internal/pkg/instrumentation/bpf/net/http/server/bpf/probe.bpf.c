@@ -187,7 +187,7 @@ static __always_inline struct span_context *extract_context_from_req_headers(voi
 }
 
 // This instrumentation attaches uprobe to the following function:
-// func (f HandlerFunc) ServeHTTP(w ResponseWriter, r *Request)
+// func (sh serverHandler) ServeHTTP(rw ResponseWriter, req *Request)
 SEC("uprobe/HandlerFunc_ServeHTTP")
 int uprobe_HandlerFunc_ServeHTTP(struct pt_regs *ctx)
 {
@@ -244,7 +244,7 @@ int uprobe_HandlerFunc_ServeHTTP(struct pt_regs *ctx)
 }
 
 // This instrumentation attaches uprobe to the following function:
-// func (f HandlerFunc) ServeHTTP(w ResponseWriter, r *Request)
+// func (sh serverHandler) ServeHTTP(rw ResponseWriter, req *Request)
 SEC("uprobe/HandlerFunc_ServeHTTP")
 int uprobe_HandlerFunc_ServeHTTP_Returns(struct pt_regs *ctx) {
     u64 end_time = bpf_ktime_get_ns();

@@ -94,6 +94,7 @@ redact_json() {
 					. // "" | test("^[A-Fa-f0-9]{16}$") then "xxxxx" else (. + "")
 				end)
 			| .resourceSpans[].scopeSpans|=sort_by(.scope.name)
+			| .resourceSpans[].scopeSpans[].spans|=sort_by(.kind)
 			' > ${BATS_TEST_DIRNAME}/traces.json
 }
 
