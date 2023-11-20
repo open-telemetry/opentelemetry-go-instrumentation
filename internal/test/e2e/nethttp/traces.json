@@ -34,6 +34,18 @@
             }
           },
           {
+            "key": "telemetry.distro.name",
+            "value": {
+              "stringValue": "opentelemetry-go-instrumentation"
+            }
+          },
+          {
+            "key": "telemetry.distro.version",
+            "value": {
+              "stringValue": "v0.8.0-alpha"
+            }
+          },
+          {
             "key": "telemetry.sdk.language",
             "value": {
               "stringValue": "go"
