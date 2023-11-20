@@ -18,7 +18,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/go-logr/logr/testr"
 	"github.com/stretchr/testify/assert"
 
 	"go.opentelemetry.io/otel/attribute"
@@ -36,8 +35,7 @@ func TestProbeConvertEvent(t *testing.T) {
 	traceID := trace.TraceID{1}
 	spanID := trace.SpanID{1}
 
-	i := New(testr.New(t))
-	got := i.convertEvent(&Event{
+	got := convertEvent(&event{
 		BaseSpanProperties: context.BaseSpanProperties{
 			StartTime:   uint64(start.UnixNano()),
 			EndTime:     uint64(end.UnixNano()),
@@ -56,7 +54,7 @@ func TestProbeConvertEvent(t *testing.T) {
 		TraceFlags: trace.FlagsSampled,
 	})
 	want := &probe.Event{
-		Library:     instrumentedPkg,
+		Package:     pkg,
 		Name:        "GET",
 		Kind:        trace.SpanKindServer,
 		StartTime:   int64(start.UnixNano()),

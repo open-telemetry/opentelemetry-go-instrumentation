@@ -16,7 +16,6 @@ services:
     ports:
       - "8080:8080"
     volumes:
-      - shared-data:/app
       - /proc:/host/proc
   go-auto:
     depends_on:
@@ -34,7 +33,6 @@ services:
       - OTEL_PROPAGATORS=tracecontext,baggage
       - CGO_ENABLED=1
     volumes:
-      - shared-data:/app
       - /proc:/host/proc
 
   jaeger:
@@ -50,7 +48,3 @@ services:
         limits:
           memory: 300M
     restart: unless-stopped
-
-
-volumes:
-  shared-data:

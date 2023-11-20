@@ -45,33 +45,27 @@
       "scopeSpans": [
         {
           "scope": {
-            "name": "go.opentelemetry.io/auto/net/http",
+            "name": "go.opentelemetry.io/auto/google.golang.org/grpc",
             "version": "v0.8.0-alpha"
           },
           "spans": [
             {
               "attributes": [
                 {
-                  "key": "http.method",
+                  "key": "rpc.system",
                   "value": {
-                    "stringValue": "GET"
+                    "stringValue": "grpc"
                   }
                 },
                 {
-                  "key": "http.target",
+                  "key": "rpc.service",
                   "value": {
-                    "stringValue": "/hello"
-                  }
-                },
-                {
-                  "key": "http.status_code",
-                  "value": {
-                    "intValue": "200"
+                    "stringValue": "/helloworld.Greeter/SayHello"
                   }
                 }
               ],
               "kind": 2,
-              "name": "GET",
+              "name": "/helloworld.Greeter/SayHello",
               "parentSpanId": "xxxxx",
               "spanId": "xxxxx",
               "status": {},
@@ -80,20 +74,32 @@
             {
               "attributes": [
                 {
-                  "key": "http.method",
+                  "key": "net.peer.port",
                   "value": {
-                    "stringValue": "GET"
+                    "stringValue": "1701"
                   }
                 },
                 {
-                  "key": "http.target",
+                  "key": "rpc.system",
                   "value": {
-                    "stringValue": "/hello"
+                    "stringValue": "grpc"
+                  }
+                },
+                {
+                  "key": "rpc.service",
+                  "value": {
+                    "stringValue": "/helloworld.Greeter/SayHello"
+                  }
+                },
+                {
+                  "key": "net.peer.name",
+                  "value": {
+                    "stringValue": "localhost"
                   }
                 }
               ],
               "kind": 3,
-              "name": "/hello",
+              "name": "/helloworld.Greeter/SayHello",
               "parentSpanId": "",
               "spanId": "xxxxx",
               "status": {},
