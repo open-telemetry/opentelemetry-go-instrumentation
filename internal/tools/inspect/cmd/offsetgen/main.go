@@ -80,11 +80,6 @@ func manifests() ([]inspect.Manifest, error) {
 		return nil, fmt.Errorf("failed to get \"golang.org/x/net\" versions: %w", err)
 	}
 
-	otelSdkTraceVers, err := PkgVersions("go.opentelemetry.io/otel/sdk")
-	if err != nil {
-		return nil, fmt.Errorf("failed to get \"go.opentelemetry.io/otel/sdk\" versions: %w", err)
-	}
-
 	ren := func(src string) inspect.Renderer {
 		return inspect.NewRenderer(logger, src, inspect.DefaultFS)
 	}
@@ -139,16 +134,6 @@ func manifests() ([]inspect.Manifest, error) {
 			StructFields: []structfield.ID{
 				structfield.NewID("golang.org/x/net", "golang.org/x/net/http2", "MetaHeadersFrame", "Fields"),
 				structfield.NewID("golang.org/x/net", "golang.org/x/net/http2", "FrameHeader", "StreamID"),
-			},
-		},
-		{
-			Application: inspect.Application{
-				Renderer: ren("templates/go.opentelemetry.io/otel/sdk/*.tmpl"),
-				Versions: otelSdkTraceVers,
-			},
-			StructFields: []structfield.ID{
-				structfield.NewID("go.opentelemetry.io/otel/sdk", "go.opentelemetry.io/otel/sdk/trace", "recordingSpan", "name"),
-				structfield.NewID("go.opentelemetry.io/otel/sdk", "go.opentelemetry.io/otel/sdk/trace", "recordingSpan", "attributes"),
 			},
 		},
 	}, nil

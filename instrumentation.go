@@ -22,6 +22,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strconv"
 	"strings"
 
 	"github.com/go-logr/logr"
@@ -51,6 +52,9 @@ const (
 	// envTracesExportersKey is the key for the environment variable value
 	// containing what OpenTelemetry trace exporter to use.
 	envTracesExportersKey = "OTEL_TRACES_EXPORTER"
+	// envOtelAPIIntegrationKey is the key for the environment variable value
+	// containing whether to create spans from non recording spans declared manually.
+	envOtelAPIIntegrationKey = "OTEL_GO_AUTO_MANUAL_INTEGRATION"
 )
 
 // Instrumentation manages and controls all OpenTelemetry Go
@@ -112,7 +116,7 @@ func NewInstrumentation(ctx context.Context, opts ...InstrumentationOption) (*In
 		return nil, err
 	}
 
-	mngr, err := instrumentation.NewManager(logger, ctrl)
+	mngr, err := instrumentation.NewManager(logger, ctrl, c.withOtelAPI)
 	if err != nil {
 		return nil, err
 	}
@@ -167,6 +171,7 @@ type instConfig struct {
 	traceExp    trace.SpanExporter
 	target      process.TargetArgs
 	serviceName string
+	withOtelAPI bool
 }
 
 func newInstConfig(ctx context.Context, opts []InstrumentationOption) (instConfig, error) {
@@ -345,6 +350,11 @@ func WithEnv() InstrumentationOption {
 		if v, ok := lookupServiceName(); ok {
 			c.serviceName = v
 		}
+		if v, ok := lookupEnv(envOtelAPIIntegrationKey); ok {
+			if val, err := strconv.ParseBool(v); err == nil {
+				c.withOtelAPI = val
+			}
+		}
 		return c, err
 	})
 }
@@ -393,6 +403,17 @@ func WithTraceExporter(exp trace.SpanExporter) InstrumentationOption {
 func WithSampler(sampler trace.Sampler) InstrumentationOption {
 	return fnOpt(func(_ context.Context, c instConfig) (instConfig, error) {
 		c.sampler = sampler
+		return c, nil
+	})
+}
+
+// WithOtelAPIIntegration returns an [InstrumentationOption] that will configure
+// an [Instrumentation] to create spans from non recording spans declared manually
+// using the OpenTelemetry API. This is turned off by default and will allow to include
+// manually created spans in the trace produced by the auto instrumentation.
+func WithOtelAPIIntegration() InstrumentationOption {
+	return fnOpt(func(_ context.Context, c instConfig) (instConfig, error) {
+		c.withOtelAPI = true
 		return c, nil
 	})
 }

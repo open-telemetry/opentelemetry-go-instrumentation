@@ -12,21 +12,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package sdk
+package global
 
 import (
 	"testing"
-	// "time"
-
+	// "time".
 	// "github.com/go-logr/logr/testr"
-	// "github.com/stretchr/testify/assert"
-
+	// "github.com/stretchr/testify/assert".
 	// "go.opentelemetry.io/otel/attribute"
 	// semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
-	// "go.opentelemetry.io/otel/trace"
-
+	// "go.opentelemetry.io/otel/trace".
 	// "go.opentelemetry.io/auto/internal/pkg/instrumentation/context"
-	// "go.opentelemetry.io/auto/internal/pkg/instrumentation/probe"
+	// "go.opentelemetry.io/auto/internal/pkg/instrumentation/probe".
 )
 
 func TestProbeConvertEvent(t *testing.T) {

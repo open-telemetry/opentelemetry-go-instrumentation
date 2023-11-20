@@ -29,7 +29,6 @@ import (
 //go:embed templates/google.golang.org/grpc/*.tmpl
 //go:embed templates/net/http/*.tmpl
 //go:embed templates/runtime/*.tmpl
-//go:embed templates/go.opentelemetry.io/otel/sdk/*.tmpl
 var DefaultFS embed.FS
 
 // Renderer renders templates from an fs.FS.

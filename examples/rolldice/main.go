@@ -16,23 +16,17 @@ package main
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"math"
 	"math/rand"
 	"net/http"
-	"os"
-	"os/signal"
 	"time"
 
 	"go.uber.org/zap"
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/propagation"
-	"go.opentelemetry.io/otel/sdk/resource"
-	"go.opentelemetry.io/otel/sdk/trace"
-	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
+	"go.opentelemetry.io/otel/trace"
 )
 
 // Server is Http server that exposes multiple endpoints.
@@ -44,70 +38,6 @@ var (
 	tracer  = otel.Tracer("rolldice")
 )
 
-// setupOTelSDK bootstraps the OpenTelemetry pipeline.
-// If it does not return an error, make sure to call shutdown for proper cleanup.
-func setupOTelSDK(ctx context.Context, serviceName, serviceVersion string) (shutdown func(context.Context) error, err error) {
-	var shutdownFuncs []func(context.Context) error
-
-	// shutdown calls cleanup functions registered via shutdownFuncs.
-	// The errors from the calls are joined.
-	// Each registered cleanup will be invoked once.
-	shutdown = func(ctx context.Context) error {
-		var err error
-		for _, fn := range shutdownFuncs {
-			err = errors.Join(err, fn(ctx))
-		}
-		shutdownFuncs = nil
-		return err
-	}
-
-	// handleErr calls shutdown for cleanup and makes sure that all errors are returned.
-	handleErr := func(inErr error) {
-		err = errors.Join(inErr, shutdown(ctx))
-	}
-
-	// Set up resource.
-	res, err := newResource(serviceName, serviceVersion)
-	if err != nil {
-		handleErr(err)
-		return
-	}
-
-	// Set up propagator.
-	prop := newPropagator()
-	otel.SetTextMapPropagator(prop)
-
-	// Set up trace provider.
-	tracerProvider, err := newTraceProvider(res)
-	if err != nil {
-		handleErr(err)
-		return
-	}
-	shutdownFuncs = append(shutdownFuncs, tracerProvider.Shutdown)
-	otel.SetTracerProvider(tracerProvider)
-
-	return
-}
-
-func newResource(serviceName, serviceVersion string) (*resource.Resource, error) {
-	return resource.NewWithAttributes(semconv.SchemaURL,
-			semconv.ServiceName(serviceName),
-			semconv.ServiceVersion(serviceVersion)), nil
-}
-
-func newPropagator() propagation.TextMapPropagator {
-	return propagation.NewCompositeTextMapPropagator(
-		propagation.TraceContext{},
-		propagation.Baggage{},
-	)
-}
-
-func newTraceProvider(res *resource.Resource) (*trace.TracerProvider, error) {
-	traceProvider := trace.NewTracerProvider(
-		trace.WithResource(res),
-	)
-	return traceProvider, nil
-}
 
 // NewServer creates a server struct after initialing rand.
 func NewServer() *Server {
@@ -117,13 +47,23 @@ func NewServer() *Server {
 	}
 }
 
+func (s *Server) innerFunction(ctx context.Context) {
+	_, span := tracer.Start(ctx, "innerFunction")
+	defer span.End()
+
+	span.SetAttributes(attribute.String("inner.key", "inner.value"))
+}
+
 func (s *Server) rolldice(w http.ResponseWriter, r *http.Request) {
-	_, span := tracer.Start(r.Context(), "roll")
+	ctx, span := tracer.Start(r.Context(), "roll", trace.WithAttributes())
 	defer span.End()
 	n := s.rand.Intn(6) + 1
 
 	rollValueAttr := attribute.Int("roll.value", n)
 	piAttr := attribute.Float64("pi", math.Pi)
+
+	s.innerFunction(ctx)
+
 	strAttr := attribute.String("nice.key", "string value!")
 	strAttr2 := attribute.String("nice.key2", "string value 2!")
 	span.SetAttributes(rollValueAttr, piAttr, strAttr, strAttr2)
@@ -147,23 +87,6 @@ func main() {
 		fmt.Printf("error creating zap logger, error:%v", err)
 		return
 	}
-
-	// Handle SIGINT (CTRL+C) gracefully.
-	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
-	defer stop()
-
-	// Set up OpenTelemetry.
-	serviceName := "dice"
-	serviceVersion := "0.1.0"
-	otelShutdown, err := setupOTelSDK(ctx, serviceName, serviceVersion)
-	if err != nil {
-		fmt.Printf("error setting up otel sdk, error:%v", err)
-		return
-	}
-	// Handle shutdown properly so nothing leaks.
-	defer func() {
-		err = errors.Join(err, otelShutdown(context.Background()))
-	}()
 
 	port := fmt.Sprintf(":%d", 8080)
 	logger.Info("starting http server", zap.String("port", port))

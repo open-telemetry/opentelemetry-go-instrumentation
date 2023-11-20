@@ -63,21 +63,13 @@ typedef struct otel_attributes {
 } otel_attributes_t;
 
 
-static __always_inline long convert_go_otel_attributes(struct go_slice *attrs_slice, otel_attributes_t *enc_attrs)
+static __always_inline long convert_go_otel_attributes(void *attrs_buf, s64 slice_len, otel_attributes_t *enc_attrs)
 {
-	if (attrs_slice == NULL || enc_attrs == NULL){
+	if (attrs_buf == NULL || enc_attrs == NULL){
 		return -1;
 	}
 
-	bpf_memset((unsigned char*)enc_attrs->headers, 0, sizeof(enc_attrs->headers));
-	bpf_memset((unsigned char*)enc_attrs->keys, 0, sizeof(enc_attrs->keys));
-	bpf_memset((unsigned char*)enc_attrs->numeric_values, 0, sizeof(enc_attrs->numeric_values));
-	bpf_memset((unsigned char*)enc_attrs->str_values, 0, sizeof(enc_attrs->str_values));
-
-	s64 slice_len = 0;
-	bpf_probe_read(&slice_len, sizeof(s64), &attrs_slice->len);
-	go_otel_key_value_t *go_attr = NULL;
-	bpf_probe_read(&go_attr, sizeof(go_otel_key_value_t*), &attrs_slice->array);
+	go_otel_key_value_t *go_attr = (go_otel_key_value_t*)attrs_buf;
 
 	u16 keys_off = 0, str_values_off = 0, numeric_index = 0;
 	s64 key_len = 0;
@@ -97,11 +89,13 @@ static __always_inline long convert_go_otel_attributes(struct go_slice *attrs_sl
 		if (go_attr_value.vtype == INVALID) {
 			break;
 		}
+		// Read the key string
 		bpf_probe_read(&go_str, sizeof(struct go_string), &go_attr->key);
 		if (go_str.len <= 0){
 			break;
 		}
 		if (go_str.len >= OTEL_ATTRIBUTE_KEYS_BUFFER_MAX_LENGTH - keys_off - 1) {
+			// No room left in keys buffer
 			break;
 		}
 		keys_off &= (OTEL_ATTRIBUTE_KEYS_BUFFER_MAX_LENGTH - 1);
@@ -128,7 +122,8 @@ static __always_inline long convert_go_otel_attributes(struct go_slice *attrs_sl
 				return -1;
 			}
 			if (go_str.len >= OTEL_ATTRIBUTE_STRING_VALUES_BUFFER_SIZE - str_values_off - 1) {
-				return 0;
+				// No room left in string values buffer
+				return -1;
 			}
 			str_values_off &= (OTEL_ATTRIBUTE_STRING_VALUES_BUFFER_SIZE - 1);
 			bytes_copied = get_go_string_from_user_ptr(&go_str, &enc_attrs->str_values[str_values_off], OTEL_ATTRIBUTE_STRING_VALUES_BUFFER_SIZE);
@@ -136,7 +131,7 @@ static __always_inline long convert_go_otel_attributes(struct go_slice *attrs_sl
 				return -1;
 			}
 			str_values_off += bytes_copied;
-			// Keep the null terminator between strings
+			// Keep the null terminator between string values
 			str_values_off++;
 			break;
 		// TODO: handle slices
