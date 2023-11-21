@@ -19,8 +19,11 @@ import (
 	"fmt"
 	"testing"
 
+	"go.opentelemetry.io/otel/attribute"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
 	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
 )
 
@@ -125,6 +128,18 @@ func TestOptionPrecedence(t *testing.T) {
 		assert.Equal(t, 1, c.target.Pid)
 		assert.Equal(t, name, c.serviceName)
 	})
+}
+
+func TestWithAdditionalResourceAttributes(t *testing.T) {
+	testAttributes := []attribute.KeyValue{
+		semconv.K8SContainerName("test_container_name"),
+		semconv.K8SPodName("test_pod_name"),
+	}
+
+	// Use WithAdditionalResourceAttributes to config the additional resource attributes
+	c, err := newInstConfig(context.Background(), []InstrumentationOption{WithAdditionalResourceAttributes(testAttributes)})
+	require.NoError(t, err)
+	assert.Equal(t, testAttributes, c.additionalResAttrs)
 }
 
 func mockEnv(t *testing.T, env map[string]string) {

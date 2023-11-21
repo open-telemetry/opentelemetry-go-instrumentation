@@ -24,15 +24,18 @@ import (
 	"runtime"
 	"strings"
 
+	"go.opentelemetry.io/otel/attribute"
+
 	"github.com/go-logr/logr"
 	"github.com/go-logr/stdr"
 	"github.com/go-logr/zapr"
+	"go.uber.org/zap"
+
 	"go.opentelemetry.io/contrib/exporters/autoexport"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp"
 	"go.opentelemetry.io/otel/sdk/resource"
 	"go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
-	"go.uber.org/zap"
 
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation"
 	"go.opentelemetry.io/auto/internal/pkg/opentelemetry"
@@ -163,10 +166,11 @@ type InstrumentationOption interface {
 }
 
 type instConfig struct {
-	sampler     trace.Sampler
-	traceExp    trace.SpanExporter
-	target      process.TargetArgs
-	serviceName string
+	sampler            trace.Sampler
+	traceExp           trace.SpanExporter
+	target             process.TargetArgs
+	serviceName        string
+	additionalResAttrs []attribute.KeyValue
 }
 
 func newInstConfig(ctx context.Context, opts []InstrumentationOption) (instConfig, error) {
@@ -239,14 +243,22 @@ func (c instConfig) res() *resource.Resource {
 		runVer, runtime.GOOS, runtime.GOARCH,
 	)
 
-	return resource.NewWithAttributes(
-		semconv.SchemaURL,
+	attrs := []attribute.KeyValue{
 		semconv.ServiceNameKey.String(c.serviceName),
 		semconv.TelemetrySDKLanguageGo,
 		semconv.TelemetryAutoVersionKey.String(Version()),
 		semconv.ProcessRuntimeName(runName),
 		semconv.ProcessRuntimeVersion(runVer),
 		semconv.ProcessRuntimeDescription(runDesc),
+	}
+
+	if len(c.additionalResAttrs) > 0 {
+		attrs = append(attrs, c.additionalResAttrs...)
+	}
+
+	return resource.NewWithAttributes(
+		semconv.SchemaURL,
+		attrs...,
 	)
 }
 
@@ -393,6 +405,16 @@ func WithTraceExporter(exp trace.SpanExporter) InstrumentationOption {
 func WithSampler(sampler trace.Sampler) InstrumentationOption {
 	return fnOpt(func(_ context.Context, c instConfig) (instConfig, error) {
 		c.sampler = sampler
+		return c, nil
+	})
+}
+
+// WithAdditionalResourceAttributes returns an [InstrumentationOption] that will
+// configure an [Instrumentation] to use the provided attributes as additional
+// OpenTelemetry Resource attributes.
+func WithAdditionalResourceAttributes(attrs []attribute.KeyValue) InstrumentationOption {
+	return fnOpt(func(_ context.Context, c instConfig) (instConfig, error) {
+		c.additionalResAttrs = attrs
 		return c, nil
 	})
 }
