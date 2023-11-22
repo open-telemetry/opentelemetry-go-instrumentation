@@ -28,8 +28,8 @@ type bpfUprobeDataT struct {
 		StatusCode uint64
 		Method     [8]int8
 		Path       [128]int8
-		RemoteAddr [32]int8
-		Host       [32]int8
+		RemoteAddr [256]int8
+		Host       [256]int8
 		Proto      [8]int8
 	}
 	RespPtr uint64

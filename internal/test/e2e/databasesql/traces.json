@@ -110,6 +110,12 @@
                   "value": {
                     "stringValue": "::1"
                   }
+                },
+                {
+                  "key": "net.peer.port",
+                  "value": {
+                    "intValue": "xxxxx"
+                  }
                 }
               ],
               "kind": 2,
