@@ -36,6 +36,8 @@ jobs:
         uses: azure/setup-helm@v3.5
         with:
           version: v3.9.0
+      - name: Kernel version
+        run: uname -r
       - name: Create kind cluster
         uses: helm/kind-action@v1.8.0
         with:
