@@ -6,7 +6,7 @@
           {
             "key": "process.runtime.description",
             "value": {
-              "stringValue": "go version 1.21.3 linux/amd64"
+              "stringValue": "go version 1.21.4 linux/amd64"
             }
           },
           {
@@ -18,7 +18,7 @@
           {
             "key": "process.runtime.version",
             "value": {
-              "stringValue": "1.21.3"
+              "stringValue": "1.21.4"
             }
           },
           {
@@ -30,7 +30,7 @@
           {
             "key": "telemetry.auto.version",
             "value": {
-              "stringValue": "v0.7.0-alpha"
+              "stringValue": "v0.8.0-alpha"
             }
           },
           {
@@ -45,8 +45,8 @@
       "scopeSpans": [
         {
           "scope": {
-            "name": "net/http",
-            "version": "v0.7.0-alpha"
+            "name": "go.opentelemetry.io/auto/net/http",
+            "version": "v0.8.0-alpha"
           },
           "spans": [
             {
@@ -86,6 +86,12 @@
                   "value": {
                     "stringValue": "::1"
                   }
+                },
+                {
+                  "key": "net.peer.port",
+                  "value": {
+                    "intValue": "xxxxx"
+                  }
                 }
               ],
               "kind": 2,
@@ -94,15 +100,7 @@
               "spanId": "xxxxx",
               "status": {},
               "traceId": "xxxxx"
-            }
-          ]
-        },
-        {
-          "scope": {
-            "name": "net/http/client",
-            "version": "v0.7.0-alpha"
-          },
-          "spans": [
+            },
             {
               "attributes": [
                 {

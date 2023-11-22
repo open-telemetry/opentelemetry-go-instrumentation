@@ -8,6 +8,17 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 
 ## [Unreleased]
 
+### Changed
+
+- The instrumentation scope name for the `database/sql` instrumentation is now `go.opentelemtry.io/auto/database/sql`. (#507)
+- The instrumentation scope name for the `gin` instrumentation is now `go.opentelemtry.io/auto/github.com/gin-gonic/gin`. (#507)
+- The instrumentation scope name for the `google.golang.org/grpc/client` instrumentation is now `go.opentelemtry.io/auto/google.golang.org/grpc`. (#507)
+- The instrumentation scope name for the `google.golang.org/grpc/server` instrumentation is now `go.opentelemtry.io/auto/google.golang.org/grpc`. (#507)
+- The instrumentation scope name for the `net/http/client` instrumentation is now `go.opentelemtry.io/auto/net/http`. (#507)
+- The instrumentation scope name for the `net/http/server` instrumentation is now `go.opentelemtry.io/auto/net/http`. (#507)
+
+## [v0.8.0-alpha] - 2023-11-14
+
 ### Added
 
 - Add the `WithEnv` `InstrumentationOption` to configure `Instrumentation` to parse the environment.
@@ -19,11 +30,11 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 - The instrumentation scope now includes the version of the auto-instrumentation project. ([#442](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/442))
 - Add http relevant attributes. ([#470]https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/470)
 - Add a new `WithSampler` method allowing end-users to provide their own implementation of OpenTelemetry sampler directly through the package API. ([#468](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/468)).
-- Add uprobes to `execDC` in order to instrument SQL DML ([#475](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/475)).
+- Add uprobes to `execDC` in order to instrument SQL DML. ([#475](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/475))
 
 ### Changed
 
-- Documentation no longer says that `SYS_PTRACE` capabilty is needed. ([#388](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/388))
+- Documentation no longer says that `SYS_PTRACE` capability is needed. ([#388](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/388))
 - The `NewInstrumentation` no longer parses environment variables by default.
   Use the new `WithEnv` option to enable environment parsing. ([#417](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/417))
 - `NewInstrumentation` now requires a `context.Context` as its first argument.
@@ -214,7 +225,8 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 
 This is the first release of OpenTelemetry Go Automatic Instrumentation.
 
-[Unreleased]: https://github.com/open-telemetry/opentelemetry-go-instrumentation/compare/v0.7.0-alpha...HEAD
+[Unreleased]: https://github.com/open-telemetry/opentelemetry-go-instrumentation/compare/v0.8.0-alpha...HEAD
+[v0.8.0-alpha]: https://github.com/open-telemetry/opentelemetry-go-instrumentation/releases/tag/v0.8.0-alpha
 [v0.7.0-alpha]: https://github.com/open-telemetry/opentelemetry-go-instrumentation/releases/tag/v0.7.0-alpha
 [v0.3.0-alpha]: https://github.com/open-telemetry/opentelemetry-go-instrumentation/releases/tag/v0.3.0-alpha
 [v0.2.2-alpha]: https://github.com/open-telemetry/opentelemetry-go-instrumentation/releases/tag/v0.2.2-alpha

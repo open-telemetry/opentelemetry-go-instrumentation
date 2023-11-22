@@ -26,8 +26,8 @@ char __license[] SEC("license") = "Dual MIT/GPL";
 #define MAX_CONCURRENT 50
 #define W3C_KEY_LENGTH 11
 #define W3C_VAL_LENGTH 55
-#define REMOTE_ADDR_MAX_LEN 32
-#define HOST_MAX_LEN 32
+#define REMOTE_ADDR_MAX_LEN 256
+#define HOST_MAX_LEN 256
 #define PROTO_MAX_LEN 8
 
 struct http_server_span_t
@@ -196,7 +196,7 @@ static __always_inline struct span_context *extract_context_from_req_headers(voi
 }
 
 // This instrumentation attaches uprobe to the following function:
-// func (f HandlerFunc) ServeHTTP(w ResponseWriter, r *Request)
+// func (sh serverHandler) ServeHTTP(rw ResponseWriter, req *Request)
 SEC("uprobe/HandlerFunc_ServeHTTP")
 int uprobe_HandlerFunc_ServeHTTP(struct pt_regs *ctx)
 {
@@ -261,7 +261,7 @@ void read_go_string(void *base, int offset, char *output, int maxLen, const char
 }
 
 // This instrumentation attaches uprobe to the following function:
-// func (f HandlerFunc) ServeHTTP(w ResponseWriter, r *Request)
+// func (sh serverHandler) ServeHTTP(rw ResponseWriter, req *Request)
 SEC("uprobe/HandlerFunc_ServeHTTP")
 int uprobe_HandlerFunc_ServeHTTP_Returns(struct pt_regs *ctx) {
     u64 end_time = bpf_ktime_get_ns();

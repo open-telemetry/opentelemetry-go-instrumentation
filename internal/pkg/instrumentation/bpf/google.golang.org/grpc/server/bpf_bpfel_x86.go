@@ -69,7 +69,7 @@ type bpfSpecs struct {
 //
 // It can be passed ebpf.CollectionSpec.Assign.
 type bpfProgramSpecs struct {
-	UprobeDecodeStateDecodeHeader   *ebpf.ProgramSpec `ebpf:"uprobe_decodeState_decodeHeader"`
+	UprobeHttp2ServerOperateHeader  *ebpf.ProgramSpec `ebpf:"uprobe_http2Server_operateHeader"`
 	UprobeServerHandleStream        *ebpf.ProgramSpec `ebpf:"uprobe_server_handleStream"`
 	UprobeServerHandleStreamReturns *ebpf.ProgramSpec `ebpf:"uprobe_server_handleStream_Returns"`
 }
@@ -131,14 +131,14 @@ func (m *bpfMaps) Close() error {
 //
 // It can be passed to loadBpfObjects or ebpf.CollectionSpec.LoadAndAssign.
 type bpfPrograms struct {
-	UprobeDecodeStateDecodeHeader   *ebpf.Program `ebpf:"uprobe_decodeState_decodeHeader"`
+	UprobeHttp2ServerOperateHeader  *ebpf.Program `ebpf:"uprobe_http2Server_operateHeader"`
 	UprobeServerHandleStream        *ebpf.Program `ebpf:"uprobe_server_handleStream"`
 	UprobeServerHandleStreamReturns *ebpf.Program `ebpf:"uprobe_server_handleStream_Returns"`
 }
 
 func (p *bpfPrograms) Close() error {
 	return _BpfClose(
-		p.UprobeDecodeStateDecodeHeader,
+		p.UprobeHttp2ServerOperateHeader,
 		p.UprobeServerHandleStream,
 		p.UprobeServerHandleStreamReturns,
 	)

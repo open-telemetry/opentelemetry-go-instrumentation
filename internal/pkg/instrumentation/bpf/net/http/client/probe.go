@@ -15,12 +15,8 @@
 package client
 
 import (
-	"bytes"
-	"encoding/binary"
-	"errors"
 	"os"
 
-	"github.com/cilium/ebpf"
 	"github.com/cilium/ebpf/link"
 	"github.com/cilium/ebpf/perf"
 	"github.com/go-logr/logr"
@@ -29,8 +25,6 @@ import (
 	"go.opentelemetry.io/otel/trace"
 	"golang.org/x/sys/unix"
 
-	"go.opentelemetry.io/auto/internal/pkg/inject"
-	"go.opentelemetry.io/auto/internal/pkg/instrumentation/bpffs"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/context"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/probe"
 	"go.opentelemetry.io/auto/internal/pkg/process"
@@ -39,142 +33,98 @@ import (
 
 //go:generate go run github.com/cilium/ebpf/cmd/bpf2go -target amd64,arm64 -cc clang -cflags $CFLAGS bpf ./bpf/probe.bpf.c
 
-// Event represents an event in an HTTP server during an HTTP
+const (
+	// name is the instrumentation name.
+	name = "net/http/client"
+	// pkg is the package being instrumented.
+	pkg = "net/http"
+)
+
+// New returns a new [probe.Probe].
+func New(logger logr.Logger) probe.Probe {
+	return &probe.Base[bpfObjects, event]{
+		Name:            name,
+		Logger:          logger.WithName(name),
+		InstrumentedPkg: pkg,
+		Consts: []probe.Const{
+			probe.RegistersABIConst{},
+			probe.AllocationConst{},
+			probe.StructFieldConst{
+				Key: "method_ptr_pos",
+				Val: structfield.NewID("std", "net/http", "Request", "Method"),
+			},
+			probe.StructFieldConst{
+				Key: "url_ptr_pos",
+				Val: structfield.NewID("std", "net/http", "Request", "URL"),
+			},
+			probe.StructFieldConst{
+				Key: "path_ptr_pos",
+				Val: structfield.NewID("std", "net/url", "URL", "Path"),
+			},
+			probe.StructFieldConst{
+				Key: "headers_ptr_pos",
+				Val: structfield.NewID("std", "net/http", "Request", "Header"),
+			},
+			probe.StructFieldConst{
+				Key: "ctx_ptr_pos",
+				Val: structfield.NewID("std", "net/http", "Request", "ctx"),
+			},
+			probe.StructFieldConst{
+				Key: "buckets_ptr_pos",
+				Val: structfield.NewID("std", "runtime", "hmap", "buckets"),
+			},
+		},
+		Uprobes: map[string]probe.UprobeFunc[bpfObjects]{
+			"net/http.(*Client).do": uprobeDo,
+		},
+
+		ReaderFn: func(obj bpfObjects) (*perf.Reader, error) {
+			return perf.NewReader(obj.Events, os.Getpagesize())
+		},
+		SpecFn:    loadBpf,
+		ProcessFn: convertEvent,
+	}
+}
+
+func uprobeDo(name string, exec *link.Executable, target *process.TargetDetails, obj *bpfObjects) ([]link.Link, error) {
+	offset, err := target.GetFunctionOffset(name)
+	if err != nil {
+		return nil, err
+	}
+
+	opts := &link.UprobeOptions{Address: offset}
+	l, err := exec.Uprobe("", obj.UprobeHttpClientDo, opts)
+	if err != nil {
+		return nil, err
+	}
+	links := []link.Link{l}
+
+	retOffsets, err := target.GetFunctionReturns(name)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, ret := range retOffsets {
+		opts := &link.UprobeOptions{Address: ret}
+		l, err := exec.Uprobe("", obj.UprobeHttpClientDoReturns, opts)
+		if err != nil {
+			return nil, err
+		}
+		links = append(links, l)
+	}
+
+	return links, nil
+}
+
+// event represents an event in an HTTP server during an HTTP
 // request-response.
-type Event struct {
+type event struct {
 	context.BaseSpanProperties
 	Method [10]byte
 	Path   [100]byte
 }
 
-// Probe is the net/http instrumentation probe.
-type Probe struct {
-	logger       logr.Logger
-	bpfObjects   *bpfObjects
-	uprobes      []link.Link
-	returnProbs  []link.Link
-	eventsReader *perf.Reader
-}
-
-// New returns a new [Probe].
-func New(logger logr.Logger) *Probe {
-	return &Probe{logger: logger.WithName("Probe/HTTP/Client")}
-}
-
-// LibraryName returns the net/http package name.
-func (h *Probe) LibraryName() string {
-	return "net/http/client"
-}
-
-// FuncNames returns the function names from "net/http" that are instrumented.
-func (h *Probe) FuncNames() []string {
-	return []string{"net/http.(*Client).do"}
-}
-
-// Load loads all instrumentation offsets.
-func (h *Probe) Load(exec *link.Executable, target *process.TargetDetails) error {
-	ver := target.GoVersion
-
-	spec, err := loadBpf()
-	if err != nil {
-		return err
-	}
-	if target.AllocationDetails == nil {
-		// This Probe requires allocation.
-		return errors.New("no allocation details")
-	}
-	err = inject.Constants(
-		spec,
-		inject.WithRegistersABI(target.IsRegistersABI()),
-		inject.WithAllocationDetails(*target.AllocationDetails),
-		inject.WithOffset("method_ptr_pos", structfield.NewID("std", "net/http", "Request", "Method"), ver),
-		inject.WithOffset("url_ptr_pos", structfield.NewID("std", "net/http", "Request", "URL"), ver),
-		inject.WithOffset("path_ptr_pos", structfield.NewID("std", "net/url", "URL", "Path"), ver),
-		inject.WithOffset("headers_ptr_pos", structfield.NewID("std", "net/http", "Request", "Header"), ver),
-		inject.WithOffset("ctx_ptr_pos", structfield.NewID("std", "net/http", "Request", "ctx"), ver),
-		inject.WithOffset("buckets_ptr_pos", structfield.NewID("std", "runtime", "hmap", "buckets"), ver),
-	)
-	if err != nil {
-		return err
-	}
-
-	h.bpfObjects = &bpfObjects{}
-	err = spec.LoadAndAssign(h.bpfObjects, &ebpf.CollectionOptions{
-		Maps: ebpf.MapOptions{
-			PinPath: bpffs.PathForTargetApplication(target),
-		},
-	})
-
-	if err != nil {
-		return err
-	}
-
-	offset, err := target.GetFunctionOffset(h.FuncNames()[0])
-	if err != nil {
-		return err
-	}
-
-	up, err := exec.Uprobe("", h.bpfObjects.UprobeHttpClientDo, &link.UprobeOptions{
-		Address: offset,
-	})
-	if err != nil {
-		return err
-	}
-
-	h.uprobes = append(h.uprobes, up)
-
-	retOffsets, err := target.GetFunctionReturns(h.FuncNames()[0])
-	if err != nil {
-		return err
-	}
-
-	for _, ret := range retOffsets {
-		retProbe, err := exec.Uprobe("", h.bpfObjects.UprobeHttpClientDoReturns, &link.UprobeOptions{
-			Address: ret,
-		})
-		if err != nil {
-			return err
-		}
-		h.returnProbs = append(h.returnProbs, retProbe)
-	}
-
-	rd, err := perf.NewReader(h.bpfObjects.Events, os.Getpagesize())
-	if err != nil {
-		return err
-	}
-	h.eventsReader = rd
-
-	return nil
-}
-
-// Run runs the events processing loop.
-func (h *Probe) Run(eventsChan chan<- *probe.Event) {
-	var event Event
-	for {
-		record, err := h.eventsReader.Read()
-		if err != nil {
-			if errors.Is(err, perf.ErrClosed) {
-				return
-			}
-			h.logger.Error(err, "error reading from perf reader")
-			continue
-		}
-
-		if record.LostSamples != 0 {
-			h.logger.Info("perf event ring buffer full", "dropped", record.LostSamples)
-			continue
-		}
-
-		if err := binary.Read(bytes.NewBuffer(record.RawSample), binary.LittleEndian, &event); err != nil {
-			h.logger.Error(err, "error parsing perf event")
-			continue
-		}
-
-		eventsChan <- h.convertEvent(&event)
-	}
-}
-
-func (h *Probe) convertEvent(e *Event) *probe.Event {
+func convertEvent(e *event) *probe.Event {
 	method := unix.ByteSliceToString(e.Method[:])
 	path := unix.ByteSliceToString(e.Path[:])
 
@@ -198,7 +148,7 @@ func (h *Probe) convertEvent(e *Event) *probe.Event {
 	}
 
 	return &probe.Event{
-		Library:     h.LibraryName(),
+		Package:     pkg,
 		Name:        path,
 		Kind:        trace.SpanKindClient,
 		StartTime:   int64(e.StartTime),
@@ -209,25 +159,5 @@ func (h *Probe) convertEvent(e *Event) *probe.Event {
 			semconv.HTTPTargetKey.String(path),
 		},
 		ParentSpanContext: pscPtr,
-	}
-}
-
-// Close stops the Probe.
-func (h *Probe) Close() {
-	h.logger.Info("closing net/http/client probe")
-	if h.eventsReader != nil {
-		h.eventsReader.Close()
-	}
-
-	for _, r := range h.uprobes {
-		r.Close()
-	}
-
-	for _, r := range h.returnProbs {
-		r.Close()
-	}
-
-	if h.bpfObjects != nil {
-		h.bpfObjects.Close()
 	}
 }
