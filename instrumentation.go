@@ -409,12 +409,9 @@ func WithSampler(sampler trace.Sampler) InstrumentationOption {
 	})
 }
 
-// WithAdditionalResourceAttributes returns an [InstrumentationOption] that will
-// configure an [Instrumentation] to use the provided attributes as additional
-// OpenTelemetry Resource attributes.
-func WithAdditionalResourceAttributes(attrs []attribute.KeyValue) InstrumentationOption {
+func WithResourceAttributes(attrs ...attribute.KeyValue) InstrumentationOption {
 	return fnOpt(func(_ context.Context, c instConfig) (instConfig, error) {
-		c.additionalResAttrs = attrs
+		c.additionalResAttrs = append(c.additionalResAttrs, attrs...)
 		return c, nil
 	})
 }
