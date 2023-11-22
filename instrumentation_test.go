@@ -130,14 +130,14 @@ func TestOptionPrecedence(t *testing.T) {
 	})
 }
 
-func TestWithAdditionalResourceAttributes(t *testing.T) {
+func TestWithResourceAttributes(t *testing.T) {
 	testAttributes := []attribute.KeyValue{
 		semconv.K8SContainerName("test_container_name"),
 		semconv.K8SPodName("test_pod_name"),
 	}
 
-	// Use WithAdditionalResourceAttributes to config the additional resource attributes
-	c, err := newInstConfig(context.Background(), []InstrumentationOption{WithAdditionalResourceAttributes(testAttributes)})
+	// Use WithResourceAttributes to config the additional resource attributes
+	c, err := newInstConfig(context.Background(), []InstrumentationOption{WithResourceAttributes(testAttributes...)})
 	require.NoError(t, err)
 	assert.Equal(t, testAttributes, c.additionalResAttrs)
 }
