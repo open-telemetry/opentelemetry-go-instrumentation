@@ -8,6 +8,10 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 
 ## [Unreleased]
 
+### Added
+
+- Manual instrumentation support - Phase 1 ([#523]https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/523)
+
 ### Changed
 
 - The instrumentation scope name for the `database/sql` instrumentation is now `go.opentelemtry.io/auto/database/sql`. (#507)

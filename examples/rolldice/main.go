@@ -34,6 +34,7 @@ type Server struct {
 }
 
 var tracer = otel.Tracer("rolldice")
+
 // NewServer creates a server struct after initialing rand.
 func NewServer() *Server {
 	rd := rand.New(rand.NewSource(time.Now().Unix()))
