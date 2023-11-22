@@ -142,11 +142,12 @@ license-header-check:
 	           exit 1; \
 	   fi
 
-.PHONY: fixture-nethttp fixture-gin fixture-databasesql
+.PHONY: fixture-nethttp fixture-gin fixture-databasesql fixture-otelglobal
 fixture-nethttp: fixtures/nethttp
 fixture-gin: fixtures/gin
 fixture-databasesql: fixtures/databasesql
 fixture-grpc: fixtures/grpc
+fixture-otelglobal: fixtures/otelglobal
 fixtures/%: LIBRARY=$*
 fixtures/%:
 	$(MAKE) docker-build
@@ -157,7 +158,7 @@ fixtures/%:
 	if [ ! -d "opentelemetry-helm-charts" ]; then \
 		git clone https://github.com/open-telemetry/opentelemetry-helm-charts.git; \
 	fi
-	helm install test -f .github/workflows/e2e/k8s/collector-helm-values.yml opentelemetry-helm-charts/opentelemetry-collector
+	helm install test -f .github/workflows/e2e/k8s/collector-helm-values.yml opentelemetry-helm-charts/charts/opentelemetry-collector
 	kubectl wait --for=condition=Ready --timeout=60s pod/test-opentelemetry-collector-0
 	kubectl -n default create -f .github/workflows/e2e/k8s/sample-job.yml
 	kubectl wait --for=condition=Complete --timeout=60s job/sample-job

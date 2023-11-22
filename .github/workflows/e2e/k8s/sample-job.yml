@@ -37,6 +37,8 @@ spec:
           value: "tracecontext,baggage"
         - name: OTEL_GO_AUTO_INCLUDE_DB_STATEMENT
           value: "true"
+        - name: OTEL_GO_AUTO_MANUAL_INTEGRATION
+          value: "true"
         resources: {}
         securityContext:
           runAsUser: 0

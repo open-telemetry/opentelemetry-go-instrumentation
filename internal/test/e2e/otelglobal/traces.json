@@ -1,0 +1,107 @@
+{
+  "resourceSpans": [
+    {
+      "resource": {
+        "attributes": [
+          {
+            "key": "process.runtime.description",
+            "value": {
+              "stringValue": "go version 1.21.4 linux/arm64"
+            }
+          },
+          {
+            "key": "process.runtime.name",
+            "value": {
+              "stringValue": "go"
+            }
+          },
+          {
+            "key": "process.runtime.version",
+            "value": {
+              "stringValue": "1.21.4"
+            }
+          },
+          {
+            "key": "service.name",
+            "value": {
+              "stringValue": "sample-app"
+            }
+          },
+          {
+            "key": "telemetry.auto.version",
+            "value": {
+              "stringValue": "v0.8.0-alpha"
+            }
+          },
+          {
+            "key": "telemetry.sdk.language",
+            "value": {
+              "stringValue": "go"
+            }
+          }
+        ]
+      },
+      "schemaUrl": "https://opentelemetry.io/schemas/1.21.0",
+      "scopeSpans": [
+        {
+          "scope": {
+            "name": "go.opentelemetry.io/auto/go.opentelemetry.io/otel/internal/global",
+            "version": "v0.8.0-alpha"
+          },
+          "spans": [
+            {
+              "attributes": [
+                {
+                  "key": "inner.key",
+                  "value": {
+                    "stringValue": "inner.value"
+                  }
+                }
+              ],
+              "kind": 3,
+              "name": "child",
+              "parentSpanId": "xxxxx",
+              "spanId": "xxxxx",
+              "status": {},
+              "traceId": "xxxxx"
+            },
+            {
+              "attributes": [
+                {
+                  "key": "int_key",
+                  "value": {
+                    "intValue": "42"
+                  }
+                },
+                {
+                  "key": "string_key",
+                  "value": {
+                    "stringValue": "forty-two"
+                  }
+                },
+                {
+                  "key": "bool_key",
+                  "value": {
+                    "boolValue": true
+                  }
+                },
+                {
+                  "key": "float_key",
+                  "value": {
+                    "doubleValue": 42.3
+                  }
+                }
+              ],
+              "kind": 3,
+              "name": "parent",
+              "parentSpanId": "",
+              "spanId": "xxxxx",
+              "status": {},
+              "traceId": "xxxxx"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

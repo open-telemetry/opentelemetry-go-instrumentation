@@ -26,7 +26,6 @@ import (
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/trace"
 )
 
 // Server is Http server that exposes multiple endpoints.
@@ -34,11 +33,7 @@ type Server struct {
 	rand *rand.Rand
 }
 
-var (
-	tracer  = otel.Tracer("rolldice")
-)
-
-
+var tracer = otel.Tracer("rolldice")
 // NewServer creates a server struct after initialing rand.
 func NewServer() *Server {
 	rd := rand.New(rand.NewSource(time.Now().Unix()))
@@ -55,7 +50,7 @@ func (s *Server) innerFunction(ctx context.Context) {
 }
 
 func (s *Server) rolldice(w http.ResponseWriter, r *http.Request) {
-	ctx, span := tracer.Start(r.Context(), "roll", trace.WithAttributes())
+	ctx, span := tracer.Start(r.Context(), "roll")
 	defer span.End()
 	n := s.rand.Intn(6) + 1
 

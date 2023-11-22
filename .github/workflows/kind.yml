@@ -13,7 +13,7 @@ jobs:
     strategy:
       matrix:
         k8s-version: ["v1.26.0"]
-        library: ["nethttp", "gin", "databasesql", "grpc"]
+        library: ["nethttp", "gin", "databasesql", "grpc", "otelglobal"]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repo
