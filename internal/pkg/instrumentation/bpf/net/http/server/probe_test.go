@@ -72,7 +72,7 @@ func TestProbeConvertEvent(t *testing.T) {
 			semconv.HTTPStatusCodeKey.Int(200),
 			semconv.NetHostName("localhost:8080"),
 			semconv.NetProtocolName("HTTP/1.1"),
-			semconv.NetPeerName("localhost"),
+			semconv.NetPeerName("www.google.com"),
 			semconv.NetPeerPort(8080),
 		},
 	}
