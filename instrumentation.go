@@ -24,14 +24,13 @@ import (
 	"runtime"
 	"strings"
 
-	"go.opentelemetry.io/otel/attribute"
-
 	"github.com/go-logr/logr"
 	"github.com/go-logr/stdr"
 	"github.com/go-logr/zapr"
 	"go.uber.org/zap"
 
 	"go.opentelemetry.io/contrib/exporters/autoexport"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp"
 	"go.opentelemetry.io/otel/sdk/resource"
 	"go.opentelemetry.io/otel/sdk/trace"
@@ -419,8 +418,7 @@ func WithSampler(sampler trace.Sampler) InstrumentationOption {
 }
 
 // WithResourceAttributes returns an [InstrumentationOption] that will configure
-// an [Instrumentation] to use the provided attributes as OpenTelemetry resource
-// attributes.
+// an [Instrumentation] to add the provided attributes to the OpenTelemetry resource.
 func WithResourceAttributes(attrs ...attribute.KeyValue) InstrumentationOption {
 	return fnOpt(func(_ context.Context, c instConfig) (instConfig, error) {
 		c.additionalResAttrs = append(c.additionalResAttrs, attrs...)
