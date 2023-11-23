@@ -27,12 +27,14 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/go-logr/stdr"
 	"github.com/go-logr/zapr"
+	"go.uber.org/zap"
+
 	"go.opentelemetry.io/contrib/exporters/autoexport"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp"
 	"go.opentelemetry.io/otel/sdk/resource"
 	"go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
-	"go.uber.org/zap"
 
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation"
 	"go.opentelemetry.io/auto/internal/pkg/opentelemetry"
@@ -163,10 +165,11 @@ type InstrumentationOption interface {
 }
 
 type instConfig struct {
-	sampler     trace.Sampler
-	traceExp    trace.SpanExporter
-	target      process.TargetArgs
-	serviceName string
+	sampler            trace.Sampler
+	traceExp           trace.SpanExporter
+	target             process.TargetArgs
+	serviceName        string
+	additionalResAttrs []attribute.KeyValue
 }
 
 func newInstConfig(ctx context.Context, opts []InstrumentationOption) (instConfig, error) {
@@ -239,14 +242,22 @@ func (c instConfig) res() *resource.Resource {
 		runVer, runtime.GOOS, runtime.GOARCH,
 	)
 
-	return resource.NewWithAttributes(
-		semconv.SchemaURL,
+	attrs := []attribute.KeyValue{
 		semconv.ServiceNameKey.String(c.serviceName),
 		semconv.TelemetrySDKLanguageGo,
 		semconv.TelemetryAutoVersionKey.String(Version()),
 		semconv.ProcessRuntimeName(runName),
 		semconv.ProcessRuntimeVersion(runVer),
 		semconv.ProcessRuntimeDescription(runDesc),
+	}
+
+	if len(c.additionalResAttrs) > 0 {
+		attrs = append(attrs, c.additionalResAttrs...)
+	}
+
+	return resource.NewWithAttributes(
+		semconv.SchemaURL,
+		attrs...,
 	)
 }
 
@@ -342,24 +353,27 @@ func WithEnv() InstrumentationOption {
 			c.traceExp, e = autoexport.NewSpanExporter(ctx)
 			err = errors.Join(err, e)
 		}
-		if v, ok := lookupServiceName(); ok {
-			c.serviceName = v
+		if name, attrs, ok := lookupResourceData(); ok {
+			c.serviceName = name
+			c.additionalResAttrs = append(c.additionalResAttrs, attrs...)
 		}
 		return c, err
 	})
 }
 
-func lookupServiceName() (string, bool) {
+func lookupResourceData() (string, []attribute.KeyValue, bool) {
 	// Prioritize OTEL_SERVICE_NAME over OTEL_RESOURCE_ATTRIBUTES value.
+	svcName := ""
 	if v, ok := lookupEnv(envServiceNameKey); ok {
-		return v, ok
+		svcName = v
 	}
 
 	v, ok := lookupEnv(envResourceAttrKey)
 	if !ok {
-		return "", false
+		return svcName, nil, svcName != ""
 	}
 
+	var attrs []attribute.KeyValue
 	for _, keyval := range strings.Split(strings.TrimSpace(v), ",") {
 		key, val, found := strings.Cut(keyval, "=")
 		if !found {
@@ -367,11 +381,17 @@ func lookupServiceName() (string, bool) {
 		}
 		key = strings.TrimSpace(key)
 		if key == string(semconv.ServiceNameKey) {
-			return strings.TrimSpace(val), true
+			svcName = strings.TrimSpace(val)
+		} else {
+			attrs = append(attrs, attribute.String(key, strings.TrimSpace(val)))
 		}
 	}
 
-	return "", false
+	if svcName == "" {
+		return "", nil, false
+	}
+
+	return svcName, attrs, true
 }
 
 // WithTraceExporter returns an [InstrumentationOption] that will configure an
@@ -393,6 +413,15 @@ func WithTraceExporter(exp trace.SpanExporter) InstrumentationOption {
 func WithSampler(sampler trace.Sampler) InstrumentationOption {
 	return fnOpt(func(_ context.Context, c instConfig) (instConfig, error) {
 		c.sampler = sampler
+		return c, nil
+	})
+}
+
+// WithResourceAttributes returns an [InstrumentationOption] that will configure
+// an [Instrumentation] to add the provided attributes to the OpenTelemetry resource.
+func WithResourceAttributes(attrs ...attribute.KeyValue) InstrumentationOption {
+	return fnOpt(func(_ context.Context, c instConfig) (instConfig, error) {
+		c.additionalResAttrs = append(c.additionalResAttrs, attrs...)
 		return c, nil
 	})
 }
