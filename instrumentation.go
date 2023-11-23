@@ -354,24 +354,27 @@ func WithEnv() InstrumentationOption {
 			c.traceExp, e = autoexport.NewSpanExporter(ctx)
 			err = errors.Join(err, e)
 		}
-		if v, ok := lookupServiceName(); ok {
-			c.serviceName = v
+		if name, attrs, ok := lookupResourceData(); ok {
+			c.serviceName = name
+			c.additionalResAttrs = append(c.additionalResAttrs, attrs...)
 		}
 		return c, err
 	})
 }
 
-func lookupServiceName() (string, bool) {
+func lookupResourceData() (string, []attribute.KeyValue, bool) {
 	// Prioritize OTEL_SERVICE_NAME over OTEL_RESOURCE_ATTRIBUTES value.
+	svcName := ""
 	if v, ok := lookupEnv(envServiceNameKey); ok {
-		return v, ok
+		svcName = v
 	}
 
 	v, ok := lookupEnv(envResourceAttrKey)
 	if !ok {
-		return "", false
+		return svcName, nil, svcName != ""
 	}
 
+	var attrs []attribute.KeyValue
 	for _, keyval := range strings.Split(strings.TrimSpace(v), ",") {
 		key, val, found := strings.Cut(keyval, "=")
 		if !found {
@@ -379,11 +382,17 @@ func lookupServiceName() (string, bool) {
 		}
 		key = strings.TrimSpace(key)
 		if key == string(semconv.ServiceNameKey) {
-			return strings.TrimSpace(val), true
+			svcName = strings.TrimSpace(val)
+		} else {
+			attrs = append(attrs, attribute.String(key, strings.TrimSpace(val)))
 		}
 	}
 
-	return "", false
+	if svcName == "" {
+		return "", nil, false
+	}
+
+	return svcName, attrs, true
 }
 
 // WithTraceExporter returns an [InstrumentationOption] that will configure an
