@@ -178,7 +178,7 @@ int uprobe_HttpClient_Do(struct pt_regs *ctx) {
         httpReq.sc = generate_span_context();
     }
 
-    if (get_go_string_from_user_ptr((void *)(req_ptr+method_ptr_pos), httpReq.method, sizeof(httpReq.method)) < 0) {
+    if (!get_go_string_from_user_ptr((void *)(req_ptr+method_ptr_pos), httpReq.method, sizeof(httpReq.method))) {
         bpf_printk("uprobe_HttpClient_Do: Failed to get method from request");
         return 0;
     }
@@ -186,7 +186,7 @@ int uprobe_HttpClient_Do(struct pt_regs *ctx) {
     // get path from Request.URL
     void *url_ptr = 0;
     bpf_probe_read(&url_ptr, sizeof(url_ptr), (void *)(req_ptr+url_ptr_pos));
-    if (get_go_string_from_user_ptr((void *)(url_ptr+path_ptr_pos), httpReq.path, sizeof(httpReq.path)) < 0) {
+    if (!get_go_string_from_user_ptr((void *)(url_ptr+path_ptr_pos), httpReq.path, sizeof(httpReq.path))) {
         bpf_printk("uprobe_HttpClient_Do: Failed to get path from Request.URL");
         return 0;
     }

@@ -19,15 +19,16 @@ type bpfOtelSpanT struct {
 	Psc        bpfSpanContext
 	SpanName   bpfSpanNameT
 	Attributes struct {
-		Headers [128]struct {
+		Attrs [16]struct {
 			ValLength uint16
 			Vtype     uint8
 			Reserved  uint8
+			Key       [32]int8
+			Value     [128]int8
 		}
-		Keys          [256]int8
-		NumericValues [32]int64
-		StrValues     [1024]int8
+		ValidAttrs uint8
 	}
+	_ [7]byte
 }
 
 type bpfSliceArrayBuff struct{ Buff [1024]uint8 }

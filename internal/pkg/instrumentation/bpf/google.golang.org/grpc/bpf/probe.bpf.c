@@ -100,7 +100,7 @@ int uprobe_ClientConn_Invoke(struct pt_regs *ctx)
 
     // Read ClientConn.Target
     void *clientconn_ptr = get_argument(ctx, clientconn_pos);
-    if (get_go_string_from_user_ptr((void*)(clientconn_ptr + clientconn_target_ptr_pos), grpcReq.target, sizeof(grpcReq.target)) < 0)
+    if (!get_go_string_from_user_ptr((void*)(clientconn_ptr + clientconn_target_ptr_pos), grpcReq.target, sizeof(grpcReq.target)))
     {
         bpf_printk("target write failed, aborting ebpf probe");
         return 0;

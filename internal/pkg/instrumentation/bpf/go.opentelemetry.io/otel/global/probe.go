@@ -15,6 +15,7 @@
 package global
 
 import (
+	"encoding/binary"
 	"math"
 	"os"
 
@@ -39,8 +40,6 @@ const (
 	name = "go.opentelemetry.io/otel/internal/global"
 	// pkg is the package being instrumented.
 	pkg = "go.opentelemetry.io/otel/internal/global"
-	// maxAttributes is the maximum number of attributes that can be added to a span.
-	maxAttributes = 128
 )
 
 // New returns a new [probe.Probe].
@@ -132,17 +131,17 @@ func uprobeSpanEnd(name string, exec *link.Executable, target *process.TargetDet
 	return links, nil
 }
 
-type attributeHeader struct {
+type attributeKeyVal struct {
 	ValLength uint16
 	Vtype     uint8
 	Reserved  uint8
+	Key       [32]byte
+	Value     [128]byte
 }
 
 type attributesBuffer struct {
-	Headers       [128]attributeHeader
-	Keys          [256]byte
-	NumericValues [32]int64
-	StrValues     [1024]byte
+	AttrsKv    [16]attributeKeyVal
+	ValidAttrs uint8
 }
 
 // event represents a manual span created by the user.
@@ -180,40 +179,27 @@ func convertEvent(e *event) *probe.Event {
 		Kind:              trace.SpanKindClient,
 		StartTime:         int64(e.StartTime),
 		EndTime:           int64(e.EndTime),
-		Attributes:        convertAttributes(&e.Attributes),
+		Attributes:        convertAttributes(e.Attributes),
 		SpanContext:       &sc,
 		ParentSpanContext: pscPtr,
 	}
 }
 
-func convertAttributes(a *attributesBuffer) []attribute.KeyValue {
-	var attributes []attribute.KeyValue
-	var keyOffset int
-	var numericValuesIndex int
-	var strValuesOffset int
-	for i := 0; i < maxAttributes; i++ {
-		if a.Headers[i].Vtype == uint8(attribute.INVALID) {
-			break
-		}
-		key := unix.ByteSliceToString(a.Keys[keyOffset:])
-		keyOffset += (len(key) + 1)
-		switch a.Headers[i].Vtype {
+func convertAttributes(ab attributesBuffer) []attribute.KeyValue {
+	var res []attribute.KeyValue
+	for i := 0; i < int(ab.ValidAttrs); i++ {
+		akv := ab.AttrsKv[i]
+		key := unix.ByteSliceToString(akv.Key[:])
+		switch akv.Vtype {
 		case uint8(attribute.BOOL):
-			attributes = append(attributes, attribute.Bool(key, a.NumericValues[numericValuesIndex] != 0))
-			numericValuesIndex++
+			res = append(res, attribute.Bool(key, akv.Value[0] != 0))
 		case uint8(attribute.INT64):
-			attributes = append(attributes, attribute.Int64(key, a.NumericValues[numericValuesIndex]))
-			numericValuesIndex++
+			res = append(res, attribute.Int64(key, int64(binary.LittleEndian.Uint64(akv.Value[:8]))))
 		case uint8(attribute.FLOAT64):
-			attributes = append(attributes, attribute.Float64(key, math.Float64frombits(uint64(a.NumericValues[numericValuesIndex]))))
-			numericValuesIndex++
+			res = append(res, attribute.Float64(key, math.Float64frombits(binary.LittleEndian.Uint64(akv.Value[:8]))))
 		case uint8(attribute.STRING):
-			strVal := unix.ByteSliceToString(a.StrValues[strValuesOffset:])
-			attributes = append(attributes, attribute.String(key, strVal))
-			strValuesOffset += (len(strVal) + 1)
-		// TODO: handle slices
-		default:
+			res = append(res, attribute.String(key, unix.ByteSliceToString(akv.Value[:])))
 		}
 	}
-	return attributes
+	return res
 }

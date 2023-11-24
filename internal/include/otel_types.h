@@ -43,109 +43,103 @@ typedef struct go_otel_key_value {
 	go_otel_attr_value_t value;
 } go_otel_key_value_t;
 
-/* The following structs are the C-formated structs to be used by the eBPF code */
-#define OTEL_ATTRIBUTE_KEYS_BUFFER_MAX_LENGTH 			(256)
-#define OTEL_ATTRIBUTE_NUMERIC_VALUES_BUFFER_SIZE 		(32)
-#define OTEL_ATTRIBUTE_STRING_VALUES_BUFFER_SIZE		(1024)
-#define OTEL_ATTRUBUTE_MAX_COUNT 						OTEL_ATTRIBUTE_KEYS_BUFFER_MAX_LENGTH / 2
+#define OTEL_ATTRIBUTE_KEY_MAX_LEN 		(32)
+#define OTEL_ATTRIBUTE_VALUE_MAX_LEN 	(128)
+#define OTEL_ATTRUBUTE_MAX_COUNT		(16)
 
-typedef struct otel_attr_header {
+typedef struct otel_attirbute {
 	u16 val_length;
 	u8 vtype;
 	u8 reserved;
-} otel_attr_header_t;
+	char key[OTEL_ATTRIBUTE_KEY_MAX_LEN];
+	char value[OTEL_ATTRIBUTE_VALUE_MAX_LEN];
+} otel_attirbute_t;
 
 typedef struct otel_attributes {
-	otel_attr_header_t headers[OTEL_ATTRUBUTE_MAX_COUNT];
-	char keys[OTEL_ATTRIBUTE_KEYS_BUFFER_MAX_LENGTH];
-	s64 numeric_values[OTEL_ATTRIBUTE_NUMERIC_VALUES_BUFFER_SIZE];
-	char str_values[OTEL_ATTRIBUTE_STRING_VALUES_BUFFER_SIZE];
-} otel_attributes_t;
+	otel_attirbute_t attrs[OTEL_ATTRUBUTE_MAX_COUNT];
+	u8 valid_attrs;
+}__attribute__((packed)) otel_attributes_t;
 
+static __always_inline bool set_attr_value(otel_attirbute_t *attr, go_otel_attr_value_t *go_attr_value)
+{
+	switch (go_attr_value->vtype)
+	{
+	case BOOL:
+	case INT64:
+	case FLOAT64:
+		bpf_probe_read(&attr->value, sizeof(s64), &go_attr_value->numeric);
+		return true;
+	case STRING:
+		if (go_attr_value->string.len <= 0){
+			return false;
+		}
+		if (go_attr_value->string.len >= OTEL_ATTRIBUTE_VALUE_MAX_LEN) {
+			// String value is too large
+			return false;
+		}
+		if (!get_go_string_from_user_ptr(&go_attr_value->string, attr->value, OTEL_ATTRIBUTE_VALUE_MAX_LEN)) {
+			return false;
+		}
+		return true;
+	// TODO: handle slices
+	case BOOLSLICE:
+	case INT64SLICE:
+	case FLOAT64SLICE:
+	case STRINGSLICE:
+	case INVALID:
+	default:
+		return false;
+	}
+}
 
-static __always_inline long convert_go_otel_attributes(void *attrs_buf, s64 slice_len, otel_attributes_t *enc_attrs)
+static __always_inline void convert_go_otel_attributes(void *attrs_buf, s64 slice_len, otel_attributes_t *enc_attrs)
 {
 	if (attrs_buf == NULL || enc_attrs == NULL){
-		return -1;
+		return;
 	}
 
-	go_otel_key_value_t *go_attr = (go_otel_key_value_t*)attrs_buf;
+	if (slice_len < 1) {
+		return;
+	}
 
-	u16 keys_off = 0, str_values_off = 0, numeric_index = 0;
-	s64 key_len = 0;
+	s64 num_attrs = slice_len < OTEL_ATTRUBUTE_MAX_COUNT ? slice_len : OTEL_ATTRUBUTE_MAX_COUNT;
+	go_otel_key_value_t *go_attr = (go_otel_key_value_t*)attrs_buf;
 	go_otel_attr_value_t go_attr_value = {0};
 	struct go_string go_str = {0};
-	s64 bytes_copied = 0;
-	for (u32 i = 0;
-	 		i < OTEL_ATTRUBUTE_MAX_COUNT &&
-			i < slice_len && 
-			keys_off < OTEL_ATTRIBUTE_KEYS_BUFFER_MAX_LENGTH - 1 && 
-			str_values_off < OTEL_ATTRIBUTE_STRING_VALUES_BUFFER_SIZE - 1 &&
-			numeric_index < OTEL_ATTRIBUTE_NUMERIC_VALUES_BUFFER_SIZE;
-			i++)
-	{
-		__builtin_memset(&go_attr_value, 0, sizeof(go_otel_attr_value_t));
-		bpf_probe_read(&go_attr_value, sizeof(go_otel_attr_value_t), &go_attr->value);
-		if (go_attr_value.vtype == INVALID) {
-			break;
-		}
-		// Read the key string
-		bpf_probe_read(&go_str, sizeof(struct go_string), &go_attr->key);
-		if (go_str.len <= 0){
-			break;
-		}
-		if (go_str.len >= OTEL_ATTRIBUTE_KEYS_BUFFER_MAX_LENGTH - keys_off - 1) {
-			// No room left in keys buffer
-			break;
-		}
-		keys_off &= (OTEL_ATTRIBUTE_KEYS_BUFFER_MAX_LENGTH - 1);
-		key_len = get_go_string_from_user_ptr(&go_str, (char*)&enc_attrs->keys[keys_off], OTEL_ATTRIBUTE_KEYS_BUFFER_MAX_LENGTH);
-		if (key_len < 0){
-			break;
-		}
-		keys_off += key_len;
-		// Keep the null terminator between keys
-		keys_off++;
+	u8 valid_attrs = 0;
 
-		enc_attrs->headers[i].vtype = go_attr_value.vtype;
-		switch (go_attr_value.vtype)
-		{
-		case BOOL:
-		case INT64:
-		case FLOAT64:
-			bpf_probe_read(&enc_attrs->numeric_values[numeric_index], sizeof(s64), &go_attr_value.numeric);
-			numeric_index++;
-			break;
-		case STRING:
-			go_str = go_attr_value.string;
-			if (go_str.len <= 0){
-				return -1;
-			}
-			if (go_str.len >= OTEL_ATTRIBUTE_STRING_VALUES_BUFFER_SIZE - str_values_off - 1) {
-				// No room left in string values buffer
-				return -1;
-			}
-			str_values_off &= (OTEL_ATTRIBUTE_STRING_VALUES_BUFFER_SIZE - 1);
-			bytes_copied = get_go_string_from_user_ptr(&go_str, &enc_attrs->str_values[str_values_off], OTEL_ATTRIBUTE_STRING_VALUES_BUFFER_SIZE);
-			if (bytes_copied < 0){
-				return -1;
-			}
-			str_values_off += bytes_copied;
-			// Keep the null terminator between string values
-			str_values_off++;
-			break;
-		// TODO: handle slices
-		case BOOLSLICE:
-		case INT64SLICE:
-		case FLOAT64SLICE:
-		case STRINGSLICE:
-		case INVALID:
-		default:
-			break;;
+	for (u32 go_attr_index = 0; go_attr_index < num_attrs; go_attr_index++) {
+		__builtin_memset(&go_attr_value, 0, sizeof(go_otel_attr_value_t));
+		// Read the value struct
+		bpf_probe_read(&go_attr_value, sizeof(go_otel_attr_value_t), &go_attr[go_attr_index].value);
+
+		if (go_attr_value.vtype == INVALID) {
+			continue;
 		}
-		go_attr++;
+
+		// Read the key string
+		bpf_probe_read(&go_str, sizeof(struct go_string), &go_attr[go_attr_index].key);
+		if (go_str.len <= 0){
+			continue;
+		}
+		if (go_str.len >= OTEL_ATTRIBUTE_KEY_MAX_LEN) {
+			// key string is too large
+			continue;
+		}
+
+		if (!get_go_string_from_user_ptr(&go_str, enc_attrs->attrs[valid_attrs].key, OTEL_ATTRIBUTE_KEY_MAX_LEN)) {
+			continue;
+		}
+
+		if (!set_attr_value(&enc_attrs->attrs[valid_attrs], &go_attr_value)) {
+			continue;
+		}
+
+		enc_attrs->attrs[valid_attrs].vtype = go_attr_value.vtype;
+		valid_attrs++;
 	}
-	return 0;
+
+	enc_attrs->valid_attrs = valid_attrs;
 }
 
 #endif
