@@ -43,9 +43,9 @@ typedef struct go_otel_key_value {
 	go_otel_attr_value_t value;
 } go_otel_key_value_t;
 
-#define OTEL_ATTRIBUTE_KEY_MAX_LEN 		(32)
-#define OTEL_ATTRIBUTE_VALUE_MAX_LEN 	(128)
-#define OTEL_ATTRUBUTE_MAX_COUNT		(16)
+#define OTEL_ATTRIBUTE_KEY_MAX_LEN      (32)
+#define OTEL_ATTRIBUTE_VALUE_MAX_LEN    (128)
+#define OTEL_ATTRUBUTE_MAX_COUNT        (16)
 
 typedef struct otel_attirbute {
 	u16 val_length;
