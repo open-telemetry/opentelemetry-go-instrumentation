@@ -77,17 +77,16 @@ static __always_inline bool set_attr_value(otel_attirbute_t *attr, go_otel_attr_
 			bpf_printk("Aattribute string value is too long\n");
 			return false;
 		}
-		return get_go_string_from_user_ptr(&go_attr_value->string, attr->value, OTEL_ATTRIBUTE_VALUE_MAX_LEN)
-			return false;
-		}
-		return true;
+		return get_go_string_from_user_ptr(&go_attr_value->string, attr->value, OTEL_ATTRIBUTE_VALUE_MAX_LEN);
 	// TODO: handle slices
 	case BOOLSLICE:
 	case INT64SLICE:
 	case FLOAT64SLICE:
 	case STRINGSLICE:
+		return false;
 	case INVALID:
 	default:
+		bpf_printk("Invalid attribute value type\n");
 		return false;
 	}
 }
