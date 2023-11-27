@@ -77,7 +77,7 @@ static __always_inline bool set_attr_value(otel_attirbute_t *attr, go_otel_attr_
 			bpf_printk("Aattribute string value is too long\n");
 			return false;
 		}
-		if (!get_go_string_from_user_ptr(&go_attr_value->string, attr->value, OTEL_ATTRIBUTE_VALUE_MAX_LEN)) {
+		return get_go_string_from_user_ptr(&go_attr_value->string, attr->value, OTEL_ATTRIBUTE_VALUE_MAX_LEN)
 			return false;
 		}
 		return true;
