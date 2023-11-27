@@ -74,7 +74,7 @@ static __always_inline bool set_attr_value(otel_attirbute_t *attr, go_otel_attr_
 			return false;
 		}
 		if (go_attr_value->string.len >= OTEL_ATTRIBUTE_VALUE_MAX_LEN) {
-			// String value is too large
+			bpf_printk("Aattribute string value is too long\n");
 			return false;
 		}
 		if (!get_go_string_from_user_ptr(&go_attr_value->string, attr->value, OTEL_ATTRIBUTE_VALUE_MAX_LEN)) {
@@ -124,6 +124,7 @@ static __always_inline void convert_go_otel_attributes(void *attrs_buf, s64 slic
 		}
 		if (go_str.len >= OTEL_ATTRIBUTE_KEY_MAX_LEN) {
 			// key string is too large
+			bpf_printk("Attribute key string is too long\n");
 			continue;
 		}
 
