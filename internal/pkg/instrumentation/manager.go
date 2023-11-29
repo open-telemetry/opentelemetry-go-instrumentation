@@ -24,7 +24,7 @@ import (
 
 	dbSql "go.opentelemetry.io/auto/internal/pkg/instrumentation/bpf/database/sql"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/bpf/github.com/gin-gonic/gin"
-	otelAPITrace "go.opentelemetry.io/auto/internal/pkg/instrumentation/bpf/go.opentelemetry.io/otel/global"
+	otelTraceGlobal "go.opentelemetry.io/auto/internal/pkg/instrumentation/bpf/go.opentelemetry.io/otel/traceglobal"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/bpf/google.golang.org/grpc"
 	grpcServer "go.opentelemetry.io/auto/internal/pkg/instrumentation/bpf/google.golang.org/grpc/server"
 	httpClient "go.opentelemetry.io/auto/internal/pkg/instrumentation/bpf/net/http/client"
@@ -215,7 +215,7 @@ func (m *Manager) registerProbes() error {
 	}
 
 	if m.globalImpl {
-		insts = append(insts, otelAPITrace.New(m.logger))
+		insts = append(insts, otelTraceGlobal.New(m.logger))
 	}
 
 	for _, i := range insts {
