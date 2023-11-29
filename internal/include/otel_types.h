@@ -69,21 +69,23 @@ static __always_inline bool set_attr_value(otel_attirbute_t *attr, go_otel_attr_
 		return false;
 	}
 
-	if (go_attr_value->vtype == attr_type_invalid) {
+	attr_val_type_t vtype = go_attr_value->vtype;
+
+	if (vtype == attr_type_invalid) {
 		bpf_printk("Invalid attribute value type\n");
 		return false;
 	}
 
 	// Constant size values
-	if (go_attr_value->vtype == attr_type_bool ||
-		go_attr_value->vtype == attr_type_int64 ||
-		go_attr_value->vtype == attr_type_float64) {
-		bpf_probe_read(&attr->value, sizeof(s64), &go_attr_value->numeric);
+	if (vtype == attr_type_bool ||
+		vtype == attr_type_int64 ||
+		vtype == attr_type_float64) {
+		bpf_probe_read(attr->value, sizeof(s64), &go_attr_value->numeric);
 		return true;
 	}
 
 	// String values
-	if (go_attr_value->vtype == attr_type_string) {
+	if (vtype == attr_type_string) {
 		if (go_attr_value->string.len <= 0){
 			return false;
 		}
