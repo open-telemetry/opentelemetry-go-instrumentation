@@ -21,15 +21,18 @@
 /* Defintions should mimic structs defined in go.opentelemetry.io/otel/attribute */
 typedef u64 attr_val_type_t;
 
-#define INVALID 0
-#define BOOL 1
-#define INT64 2
-#define FLOAT64 3
-#define STRING 4
-#define BOOLSLICE 5
-#define INT64SLICE 6
-#define FLOAT64SLICE 7
-#define STRINGSLICE 8
+// Injected in init
+volatile const attr_val_type_t attr_type_invalid;
+
+volatile const attr_val_type_t attr_type_bool;
+volatile const attr_val_type_t attr_type_int64;
+volatile const attr_val_type_t attr_type_float64;
+volatile const attr_val_type_t attr_type_string;
+
+volatile const attr_val_type_t attr_type_boolslice;
+volatile const attr_val_type_t attr_type_int64slice;
+volatile const attr_val_type_t attr_type_float64slice;
+volatile const attr_val_type_t attr_type_stringslice;
 
 typedef struct go_otel_attr_value {
 	attr_val_type_t  vtype;
@@ -62,14 +65,25 @@ typedef struct otel_attributes {
 
 static __always_inline bool set_attr_value(otel_attirbute_t *attr, go_otel_attr_value_t *go_attr_value)
 {
-	switch (go_attr_value->vtype)
-	{
-	case BOOL:
-	case INT64:
-	case FLOAT64:
+	if (attr == NULL || go_attr_value == NULL){
+		return false;
+	}
+
+	if (go_attr_value->vtype == attr_type_invalid) {
+		bpf_printk("Invalid attribute value type\n");
+		return false;
+	}
+
+	// Constant size values
+	if (go_attr_value->vtype == attr_type_bool ||
+		go_attr_value->vtype == attr_type_int64 ||
+		go_attr_value->vtype == attr_type_float64) {
 		bpf_probe_read(&attr->value, sizeof(s64), &go_attr_value->numeric);
 		return true;
-	case STRING:
+	}
+
+	// String values
+	if (go_attr_value->vtype == attr_type_string) {
 		if (go_attr_value->string.len <= 0){
 			return false;
 		}
@@ -78,17 +92,10 @@ static __always_inline bool set_attr_value(otel_attirbute_t *attr, go_otel_attr_
 			return false;
 		}
 		return get_go_string_from_user_ptr(&go_attr_value->string, attr->value, OTEL_ATTRIBUTE_VALUE_MAX_LEN);
-	// TODO: handle slices
-	case BOOLSLICE:
-	case INT64SLICE:
-	case FLOAT64SLICE:
-	case STRINGSLICE:
-		return false;
-	case INVALID:
-	default:
-		bpf_printk("Invalid attribute value type\n");
-		return false;
 	}
+
+	// TODO: handle slices
+	return false;
 }
 
 static __always_inline void convert_go_otel_attributes(void *attrs_buf, s64 slice_len, otel_attributes_t *enc_attrs)
@@ -112,7 +119,7 @@ static __always_inline void convert_go_otel_attributes(void *attrs_buf, s64 slic
 		// Read the value struct
 		bpf_probe_read(&go_attr_value, sizeof(go_otel_attr_value_t), &go_attr[go_attr_index].value);
 
-		if (go_attr_value.vtype == INVALID) {
+		if (go_attr_value.vtype == attr_type_invalid) {
 			continue;
 		}
 

@@ -51,6 +51,42 @@ func New(logger logr.Logger) probe.Probe {
 		Consts: []probe.Const{
 			probe.RegistersABIConst{},
 			probe.AllocationConst{},
+			probe.KeyValConst{
+				Key: "attr_type_invalid",
+				Val: uint64(attribute.INVALID),
+			},
+			probe.KeyValConst{
+				Key: "attr_type_bool",
+				Val: uint64(attribute.BOOL),
+			},
+			probe.KeyValConst{
+				Key: "attr_type_int64",
+				Val: uint64(attribute.INT64),
+			},
+			probe.KeyValConst{
+				Key: "attr_type_float64",
+				Val: uint64(attribute.FLOAT64),
+			},
+			probe.KeyValConst{
+				Key: "attr_type_string",
+				Val: uint64(attribute.STRING),
+			},
+			probe.KeyValConst{
+				Key: "attr_type_boolslice",
+				Val: uint64(attribute.BOOLSLICE),
+			},
+			probe.KeyValConst{
+				Key: "attr_type_int64slice",
+				Val: uint64(attribute.INT64SLICE),
+			},
+			probe.KeyValConst{
+				Key: "attr_type_float64slice",
+				Val: uint64(attribute.FLOAT64SLICE),
+			},
+			probe.KeyValConst{
+				Key: "attr_type_stringslice",
+				Val: uint64(attribute.STRINGSLICE),
+			},
 		},
 		Uprobes: map[string]probe.UprobeFunc[bpfObjects]{
 			"go.opentelemetry.io/otel/internal/global.(*tracer).Start":                   uprobeTracerStart,
