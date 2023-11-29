@@ -22,7 +22,6 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
-	"strconv"
 	"strings"
 
 	"github.com/go-logr/logr"
@@ -54,9 +53,6 @@ const (
 	// envTracesExportersKey is the key for the environment variable value
 	// containing what OpenTelemetry trace exporter to use.
 	envTracesExportersKey = "OTEL_TRACES_EXPORTER"
-	// envOtelAPIIntegrationKey is the key for the environment variable value
-	// containing whether to create spans from non recording spans declared manually.
-	envOtelAPIIntegrationKey = "OTEL_GO_AUTO_MANUAL_INTEGRATION"
 )
 
 // Instrumentation manages and controls all OpenTelemetry Go
@@ -174,7 +170,7 @@ type instConfig struct {
 	target             process.TargetArgs
 	serviceName        string
 	additionalResAttrs []attribute.KeyValue
-	globalImpl        bool
+	globalImpl         bool
 }
 
 func newInstConfig(ctx context.Context, opts []InstrumentationOption) (instConfig, error) {
@@ -361,11 +357,6 @@ func WithEnv() InstrumentationOption {
 		if name, attrs, ok := lookupResourceData(); ok {
 			c.serviceName = name
 			c.additionalResAttrs = append(c.additionalResAttrs, attrs...)
-		}
-		if v, ok := lookupEnv(envOtelAPIIntegrationKey); ok {
-			if val, err := strconv.ParseBool(v); err == nil {
-				c.globalImpl = val
-			}
 		}
 		return c, err
 	})

@@ -30,9 +30,9 @@ services:
       - OTEL_GO_AUTO_TARGET_EXE=/app/main
       - OTEL_SERVICE_NAME=rolldice
       - OTEL_PROPAGATORS=tracecontext,baggage
-      - OTEL_GO_AUTO_MANUAL_INTEGRATION=true
     volumes:
       - /proc:/host/proc
+    command: ["/otel-go-instrumentation", "-global-impl"]
 
   jaeger:
     image: jaegertracing/all-in-one:latest
