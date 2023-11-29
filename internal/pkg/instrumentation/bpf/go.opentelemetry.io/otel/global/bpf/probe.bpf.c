@@ -67,6 +67,7 @@ volatile const u64 span_attributes_pos;
 
 // This instrumentation attaches uprobe to the following function:
 // func (t *tracer) Start(ctx context.Context, name string, opts ...trace.SpanStartOption) (context.Context, trace.Span)
+// https://github.com/open-telemetry/opentelemetry-go/blob/98b32a6c3a87fbee5d34c063b9096f416b250897/internal/global/trace.go#L149
 SEC("uprobe/Start")
 int uprobe_Start(struct pt_regs *ctx) {
     struct span_name_t span_name = {0};
@@ -86,6 +87,7 @@ int uprobe_Start(struct pt_regs *ctx) {
 
 // This instrumentation attaches uprobe to the following function:
 // func (t *tracer) Start(ctx context.Context, name string, opts ...trace.SpanStartOption) (context.Context, trace.Span)
+// https://github.com/open-telemetry/opentelemetry-go/blob/98b32a6c3a87fbee5d34c063b9096f416b250897/internal/global/trace.go#L149
 SEC("uprobe/Start")
 int uprobe_Start_Returns(struct pt_regs *ctx) {
     // Get the span name passed to the Start function
@@ -144,7 +146,7 @@ int uprobe_SetAttributes(struct pt_regs *ctx) {
         return 0;
     }
 
-    // In Go, "..." is equilaent to passing a slice: https://go.dev/ref/spec#Passing_arguments_to_..._parameters
+    // In Go, "..." is equivalent to passing a slice: https://go.dev/ref/spec#Passing_arguments_to_..._parameters
     void *attributes_usr_buf = get_argument(ctx, 2);
     u64 attributes_len = (u64)get_argument(ctx, 3);
     convert_go_otel_attributes(attributes_usr_buf, attributes_len, &span->attributes);

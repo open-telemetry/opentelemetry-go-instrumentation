@@ -427,11 +427,24 @@ func WithSampler(sampler trace.Sampler) InstrumentationOption {
 	})
 }
 
-// WithOtelAPIIntegration returns an [InstrumentationOption] that will configure
-// an [Instrumentation] to create spans from non recording spans declared manually
-// using the OpenTelemetry API. This is turned off by default and will allow to include
-// manually created spans in the trace produced by the auto instrumentation.
-func WithOtelAPIIntegration() InstrumentationOption {
+// WithGlobal returns an [InstrumentationOption] that will configure an
+// [Instrumentation] to record telemetry from the [OpenTelemetry default global
+// implementation]. By default, the OpenTelemetry global implementation is a
+// no-op implementation of the OpenTelemetry API. However, by using this
+// option, all telemetry that would have been dropped by the global
+// implementation will be recorded using telemetry pipelines from the
+// configured [Instrumentation].
+//
+// If the target process overrides the default global implementation (e.g.
+// [otel.SetTracerProvider]), the telemetry from that process will go to the
+// set implementation. It will not be recorded using the telemetry pipelines
+// from the configured [Instrumentation] even if this option is used.
+//
+// The OpenTelemetry default global implementation is left unchanged (i.e. it
+// remains a no-op implementation) if this options is not used.
+//
+// [default global OpenTelemetry implementation]: https://pkg.go.dev/go.opentelemetry.io/otel
+func WithGlobal() InstrumentationOption {
 	return fnOpt(func(_ context.Context, c instConfig) (instConfig, error) {
 		c.withOtelAPI = true
 		return c, nil

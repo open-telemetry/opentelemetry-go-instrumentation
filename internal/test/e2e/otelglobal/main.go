@@ -34,10 +34,10 @@ func innerFunction(ctx context.Context) {
 func createMainSpan(ctx context.Context) {
 	ctx, span := tracer.Start(ctx, "parent")
 	defer span.End()
-	intAttr := attribute.Int("int_key", 42)
 
 	innerFunction(ctx)
 
+	intAttr := attribute.Int("int_key", 42)
 	strAttr := attribute.String("string_key", "forty-two")
 	boolAttr := attribute.Bool("bool_key", true)
 	floatAttr := attribute.Float64("float_key", 42.3)
