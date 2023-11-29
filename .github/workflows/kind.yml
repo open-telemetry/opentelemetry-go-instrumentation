@@ -68,7 +68,7 @@ jobs:
           kubectl -n default create -f .github/workflows/e2e/k8s/sample-job.yml
       - name: check job status
         run: |
-          kubectl wait --for=condition=Complete --timeout=60s job/sample-job && kubectl logs -l app=sample -c auto-instrumentation
+          kubectl wait --for=condition=Complete --timeout=60s job/sample-job || kubectl logs -l app=sample -c auto-instrumentation
       - name: copy telemetry trace output
         run: |
           kubectl cp -c filecp default/test-opentelemetry-collector-0:tmp/trace.json ./internal/test/e2e/${{ matrix.library }}/traces-orig.json
