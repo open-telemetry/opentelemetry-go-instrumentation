@@ -161,7 +161,7 @@ fixtures/%:
 	helm install test -f .github/workflows/e2e/k8s/collector-helm-values.yml opentelemetry-helm-charts/charts/opentelemetry-collector
 	kubectl wait --for=condition=Ready --timeout=60s pod/test-opentelemetry-collector-0
 	kubectl -n default create -f .github/workflows/e2e/k8s/sample-job.yml
-	kubectl wait --for=condition=Complete --timeout=60s job/sample-job
+	kubectl wait --for=condition=Complete --timeout=60s job/sample-job && kubectl logs -l app=sample -c auto-instrumentation
 	kubectl cp -c filecp default/test-opentelemetry-collector-0:tmp/trace.json ./internal/test/e2e/$(LIBRARY)/traces-orig.json
 	rm -f ./internal/test/e2e/$(LIBRARY)/traces.json
 	bats ./internal/test/e2e/$(LIBRARY)/verify.bats
