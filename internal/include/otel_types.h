@@ -64,10 +64,6 @@ typedef struct otel_attributes {
 
 static __always_inline bool set_attr_value(otel_attirbute_t *attr, go_otel_attr_value_t *go_attr_value)
 {
-	if (attr == NULL || go_attr_value == NULL){
-		return false;
-	}
-
 	u64 vtype = go_attr_value->vtype;
 
 	if (vtype == attr_type_invalid) {
@@ -85,9 +81,6 @@ static __always_inline bool set_attr_value(otel_attirbute_t *attr, go_otel_attr_
 
 	// String values
 	if (vtype == attr_type_string) {
-		if (go_attr_value->string.len <= 0){
-			return false;
-		}
 		if (go_attr_value->string.len >= OTEL_ATTRIBUTE_VALUE_MAX_LEN) {
 			bpf_printk("Aattribute string value is too long\n");
 			return false;
@@ -126,9 +119,6 @@ static __always_inline void convert_go_otel_attributes(void *attrs_buf, s64 slic
 
 		// Read the key string
 		bpf_probe_read(&go_str, sizeof(struct go_string), &go_attr[go_attr_index].key);
-		if (go_str.len <= 0){
-			continue;
-		}
 		if (go_str.len >= OTEL_ATTRIBUTE_KEY_MAX_LEN) {
 			// key string is too large
 			bpf_printk("Attribute key string is too long\n");
