@@ -45,11 +45,11 @@ type Manager struct {
 	done           chan bool
 	incomingEvents chan *probe.Event
 	otelController *opentelemetry.Controller
-	withOtelAPI    bool
+	globalImpl    bool
 }
 
 // NewManager returns a new [Manager].
-func NewManager(logger logr.Logger, otelController *opentelemetry.Controller, withOtelAPI bool) (*Manager, error) {
+func NewManager(logger logr.Logger, otelController *opentelemetry.Controller, globalImpl bool) (*Manager, error) {
 	logger = logger.WithName("Manager")
 	m := &Manager{
 		logger:         logger,
@@ -57,7 +57,7 @@ func NewManager(logger logr.Logger, otelController *opentelemetry.Controller, wi
 		done:           make(chan bool, 1),
 		incomingEvents: make(chan *probe.Event),
 		otelController: otelController,
-		withOtelAPI:    withOtelAPI,
+		globalImpl:    globalImpl,
 	}
 
 	err := m.registerProbes()
@@ -214,7 +214,7 @@ func (m *Manager) registerProbes() error {
 		dbSql.New(m.logger),
 	}
 
-	if m.withOtelAPI {
+	if m.globalImpl {
 		insts = append(insts, otelAPITrace.New(m.logger))
 	}
 

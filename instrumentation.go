@@ -118,7 +118,7 @@ func NewInstrumentation(ctx context.Context, opts ...InstrumentationOption) (*In
 		return nil, err
 	}
 
-	mngr, err := instrumentation.NewManager(logger, ctrl, c.withOtelAPI)
+	mngr, err := instrumentation.NewManager(logger, ctrl, c.globalImpl)
 	if err != nil {
 		return nil, err
 	}
@@ -174,7 +174,7 @@ type instConfig struct {
 	target             process.TargetArgs
 	serviceName        string
 	additionalResAttrs []attribute.KeyValue
-	withOtelAPI        bool
+	globalImpl        bool
 }
 
 func newInstConfig(ctx context.Context, opts []InstrumentationOption) (instConfig, error) {
@@ -364,7 +364,7 @@ func WithEnv() InstrumentationOption {
 		}
 		if v, ok := lookupEnv(envOtelAPIIntegrationKey); ok {
 			if val, err := strconv.ParseBool(v); err == nil {
-				c.withOtelAPI = val
+				c.globalImpl = val
 			}
 		}
 		return c, err
@@ -446,7 +446,7 @@ func WithSampler(sampler trace.Sampler) InstrumentationOption {
 // [default global OpenTelemetry implementation]: https://pkg.go.dev/go.opentelemetry.io/otel
 func WithGlobal() InstrumentationOption {
 	return fnOpt(func(_ context.Context, c instConfig) (instConfig, error) {
-		c.withOtelAPI = true
+		c.globalImpl = true
 		return c, nil
 	})
 }
