@@ -18,24 +18,23 @@
 #include "go_types.h"
 #include "common.h"
 
-/* Defintions should mimic structs defined in go.opentelemetry.io/otel/attribute */
-typedef u64 attr_val_type_t;
-
 // Injected in init
-volatile const attr_val_type_t attr_type_invalid;
+volatile const u64 attr_type_invalid;
 
-volatile const attr_val_type_t attr_type_bool;
-volatile const attr_val_type_t attr_type_int64;
-volatile const attr_val_type_t attr_type_float64;
-volatile const attr_val_type_t attr_type_string;
+volatile const u64 attr_type_bool;
+volatile const u64 attr_type_int64;
+volatile const u64 attr_type_float64;
+volatile const u64 attr_type_string;
 
-volatile const attr_val_type_t attr_type_boolslice;
-volatile const attr_val_type_t attr_type_int64slice;
-volatile const attr_val_type_t attr_type_float64slice;
-volatile const attr_val_type_t attr_type_stringslice;
+volatile const u64 attr_type_boolslice;
+volatile const u64 attr_type_int64slice;
+volatile const u64 attr_type_float64slice;
+volatile const u64 attr_type_stringslice;
+
+/* Defintions should mimic structs defined in go.opentelemetry.io/otel/attribute */
 
 typedef struct go_otel_attr_value {
-	attr_val_type_t  vtype;
+	u64              vtype;
 	u64              numeric;
 	struct go_string string;
 	struct go_iface	 slice;
@@ -69,7 +68,7 @@ static __always_inline bool set_attr_value(otel_attirbute_t *attr, go_otel_attr_
 		return false;
 	}
 
-	attr_val_type_t vtype = go_attr_value->vtype;
+	u64 vtype = go_attr_value->vtype;
 
 	if (vtype == attr_type_invalid) {
 		bpf_printk("Invalid attribute value type\n");
