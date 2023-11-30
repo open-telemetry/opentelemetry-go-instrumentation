@@ -70,6 +70,10 @@ func New(logger logr.Logger) probe.Probe {
 				Val: structfield.NewID("std", "net/http", "Request", "ctx"),
 			},
 			probe.StructFieldConst{
+				Key: "status_code_pos",
+				Val: structfield.NewID("std", "net/http", "Response", "StatusCode"),
+			},
+			probe.StructFieldConst{
 				Key: "buckets_ptr_pos",
 				Val: structfield.NewID("std", "runtime", "hmap", "buckets"),
 			},
@@ -120,8 +124,9 @@ func uprobeDo(name string, exec *link.Executable, target *process.TargetDetails,
 // request-response.
 type event struct {
 	context.BaseSpanProperties
-	Method [10]byte
-	Path   [100]byte
+	StatusCode uint64
+	Method     [10]byte
+	Path       [100]byte
 }
 
 func convertEvent(e *event) *probe.Event {
@@ -157,6 +162,7 @@ func convertEvent(e *event) *probe.Event {
 		Attributes: []attribute.KeyValue{
 			semconv.HTTPMethodKey.String(method),
 			semconv.HTTPTargetKey.String(path),
+			semconv.HTTPResponseStatusCodeKey.Int(int(e.StatusCode)),
 		},
 		ParentSpanContext: pscPtr,
 	}
