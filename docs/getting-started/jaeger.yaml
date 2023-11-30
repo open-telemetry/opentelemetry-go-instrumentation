@@ -15,8 +15,8 @@ spec:
         app: jaeger
     spec:
       containers:
-      - image: jaegertracing/opentelemetry-all-in-one:latest
-        name: opentelemetry-all-in-one
+      - image: jaegertracing/all-in-one:latest
+        name: all-in-one
 ---
 apiVersion: v1
 kind: Service
