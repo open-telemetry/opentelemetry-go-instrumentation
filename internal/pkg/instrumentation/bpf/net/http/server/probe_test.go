@@ -63,7 +63,7 @@ func TestProbeConvertEvent(t *testing.T) {
 		Attributes: []attribute.KeyValue{
 			semconv.HTTPMethodKey.String("GET"),
 			semconv.HTTPTargetKey.String("/foo/bar"),
-			semconv.HTTPStatusCodeKey.Int(200),
+			semconv.HTTPResponseStatusCodeKey.Int(200),
 		},
 	}
 	assert.Equal(t, want, got)

@@ -24,12 +24,12 @@ SCOPE="go.opentelemetry.io/auto/net/http"
   assert_equal "$result" '"/hello"'
 }
 
-@test "server :: includes http.status_code attribute" {
+@test "server :: includes hhttp.response.status_code attribute" {
   result=$(server_span_attributes_for ${SCOPE} | jq "select(.key == \"http.response.status_code\").value.intValue")
   assert_equal "$result" '"200"'
 }
 
-@test "client :: includes http.status_code attribute" {
+@test "client :: includes http.response.status_code attribute" {
   result=$(client_span_attributes_for ${SCOPE} | jq "select(.key == \"http.response.status_code\").value.intValue")
   assert_equal "$result" '"200"'
 }
