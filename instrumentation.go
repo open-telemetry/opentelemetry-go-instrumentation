@@ -434,7 +434,7 @@ func WithSampler(sampler trace.Sampler) InstrumentationOption {
 // The OpenTelemetry default global implementation is left unchanged (i.e. it
 // remains a no-op implementation) if this options is not used.
 //
-// [default global OpenTelemetry implementation]: https://pkg.go.dev/go.opentelemetry.io/otel
+// [OpenTelemetry default global implementation]: https://pkg.go.dev/go.opentelemetry.io/otel
 func WithGlobal() InstrumentationOption {
 	return fnOpt(func(_ context.Context, c instConfig) (instConfig, error) {
 		c.globalImpl = true
