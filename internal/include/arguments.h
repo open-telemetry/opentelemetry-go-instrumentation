@@ -83,4 +83,9 @@ static __always_inline void *get_consistent_key(struct pt_regs *ctx, void *conte
     return contextContext;
 }
 
+static __always_inline bool is_register_abi()
+{
+    return is_registers_abi;
+}
+
 #endif
