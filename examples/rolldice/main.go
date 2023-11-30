@@ -15,25 +15,18 @@
 package main
 
 import (
-	"context"
 	"fmt"
-	"math"
 	"math/rand"
 	"net/http"
 	"time"
 
 	"go.uber.org/zap"
-
-	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/attribute"
 )
 
 // Server is Http server that exposes multiple endpoints.
 type Server struct {
 	rand *rand.Rand
 }
-
-var tracer = otel.Tracer("rolldice")
 
 // NewServer creates a server struct after initialing rand.
 func NewServer() *Server {
@@ -43,27 +36,8 @@ func NewServer() *Server {
 	}
 }
 
-func (s *Server) innerFunction(ctx context.Context) {
-	_, span := tracer.Start(ctx, "innerFunction")
-	defer span.End()
-
-	span.SetAttributes(attribute.String("inner.key", "inner.value"))
-}
-
-func (s *Server) rolldice(w http.ResponseWriter, r *http.Request) {
-	ctx, span := tracer.Start(r.Context(), "roll")
-	defer span.End()
+func (s *Server) rolldice(w http.ResponseWriter, _ *http.Request) {
 	n := s.rand.Intn(6) + 1
-
-	rollValueAttr := attribute.Int("roll.value", n)
-	piAttr := attribute.Float64("pi", math.Pi)
-
-	s.innerFunction(ctx)
-
-	strAttr := attribute.String("nice.key", "string value!")
-	strAttr2 := attribute.String("nice.key2", "string value 2!")
-	span.SetAttributes(rollValueAttr, piAttr, strAttr, strAttr2)
-
 	logger.Info("rolldice called", zap.Int("dice", n))
 	fmt.Fprintf(w, "%v", n)
 }
@@ -83,7 +57,6 @@ func main() {
 		fmt.Printf("error creating zap logger, error:%v", err)
 		return
 	}
-
 	port := fmt.Sprintf(":%d", 8080)
 	logger.Info("starting http server", zap.String("port", port))
 

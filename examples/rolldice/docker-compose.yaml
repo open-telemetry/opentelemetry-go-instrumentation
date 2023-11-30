@@ -32,7 +32,6 @@ services:
       - OTEL_PROPAGATORS=tracecontext,baggage
     volumes:
       - /proc:/host/proc
-    command: ["/otel-go-instrumentation", "-global-impl"]
 
   jaeger:
     image: jaegertracing/all-in-one:latest

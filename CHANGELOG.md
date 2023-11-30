@@ -10,7 +10,7 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 
 ### Added
 
-- Manual instrumentation support - Phase 1 ([#523]https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/523)
+- Manual instrumentation support - Phase 1. Adding cli flag named `global-impl` that allows to record telemetry from the OpenTelemetry default global implementation. ([#523]https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/523)
 - Add `WithResourceAttributes` `InstrumentationOption` to configure `Instrumentation` to add additional resource attributes. ([#522](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/522))
 
 ### Changed
