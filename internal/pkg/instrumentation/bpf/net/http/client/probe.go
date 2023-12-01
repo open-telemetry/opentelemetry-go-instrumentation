@@ -79,7 +79,7 @@ func New(logger logr.Logger) probe.Probe {
 			},
 		},
 		Uprobes: map[string]probe.UprobeFunc[bpfObjects]{
-			"net/http.(*Client).do": uprobeDo,
+			"net/http.(*Transport).roundTrip": uprobeDo,
 		},
 
 		ReaderFn: func(obj bpfObjects) (*perf.Reader, error) {
