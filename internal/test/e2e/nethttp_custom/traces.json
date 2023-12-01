@@ -1,0 +1,113 @@
+{
+  "resourceSpans": [
+    {
+      "resource": {
+        "attributes": [
+          {
+            "key": "process.runtime.description",
+            "value": {
+              "stringValue": "go version 1.21.4 linux/amd64"
+            }
+          },
+          {
+            "key": "process.runtime.name",
+            "value": {
+              "stringValue": "go"
+            }
+          },
+          {
+            "key": "process.runtime.version",
+            "value": {
+              "stringValue": "1.21.4"
+            }
+          },
+          {
+            "key": "service.name",
+            "value": {
+              "stringValue": "sample-app"
+            }
+          },
+          {
+            "key": "telemetry.auto.version",
+            "value": {
+              "stringValue": "v0.8.0-alpha"
+            }
+          },
+          {
+            "key": "telemetry.sdk.language",
+            "value": {
+              "stringValue": "go"
+            }
+          }
+        ]
+      },
+      "schemaUrl": "https://opentelemetry.io/schemas/1.21.0",
+      "scopeSpans": [
+        {
+          "scope": {
+            "name": "go.opentelemetry.io/auto/net/http",
+            "version": "v0.8.0-alpha"
+          },
+          "spans": [
+            {
+              "attributes": [
+                {
+                  "key": "http.method",
+                  "value": {
+                    "stringValue": "GET"
+                  }
+                },
+                {
+                  "key": "http.target",
+                  "value": {
+                    "stringValue": "/hello"
+                  }
+                },
+                {
+                  "key": "http.response.status_code",
+                  "value": {
+                    "intValue": "200"
+                  }
+                }
+              ],
+              "kind": 2,
+              "name": "GET",
+              "parentSpanId": "xxxxx",
+              "spanId": "xxxxx",
+              "status": {},
+              "traceId": "xxxxx"
+            },
+            {
+              "attributes": [
+                {
+                  "key": "http.method",
+                  "value": {
+                    "stringValue": "GET"
+                  }
+                },
+                {
+                  "key": "http.target",
+                  "value": {
+                    "stringValue": "/hello"
+                  }
+                },
+                {
+                  "key": "http.response.status_code",
+                  "value": {
+                    "intValue": "200"
+                  }
+                }
+              ],
+              "kind": 3,
+              "name": "/hello",
+              "parentSpanId": "",
+              "spanId": "xxxxx",
+              "status": {},
+              "traceId": "xxxxx"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

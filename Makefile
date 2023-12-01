@@ -142,7 +142,8 @@ license-header-check:
 	           exit 1; \
 	   fi
 
-.PHONY: fixture-nethttp fixture-gin fixture-databasesql
+.PHONY: fixture-nethttp fixture-gin fixture-databasesql fixture-nethttp-custom
+fixture-nethttp-custom: fixtures/nethttp_custom
 fixture-nethttp: fixtures/nethttp
 fixture-gin: fixtures/gin
 fixture-databasesql: fixtures/databasesql
