@@ -49,7 +49,11 @@ func logStatus(next http.Handler) http.Handler {
 		next.ServeHTTP(rec, r)
 
 		rec.rw.WriteHeader(rec.status)
-		rec.rw.Write(rec.data)
+		_, err := rec.rw.Write(rec.data)
+		if err != nil {
+			log.Printf("write failed %s\n", err.Error())
+			return
+		}
 
 		log.Printf("response status: %d\n", rec.status)
 	})

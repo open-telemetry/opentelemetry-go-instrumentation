@@ -11,6 +11,7 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 ### Added
 
 - Add `WithResourceAttributes` `InstrumentationOption` to configure `Instrumentation` to add additional resource attributes. ([#522](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/522))
+- Add HTTP client instrumentation for `Transport.RoundTrip`. ([#529](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/529))
 
 ### Changed
 
