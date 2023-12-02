@@ -79,7 +79,7 @@ func New(logger logr.Logger) probe.Probe {
 			},
 		},
 		Uprobes: map[string]probe.UprobeFunc[bpfObjects]{
-			"net/http.(*Transport).roundTrip": uprobeDo,
+			"net/http.(*Transport).roundTrip": uprobeRoundTrip,
 		},
 
 		ReaderFn: func(obj bpfObjects) (*perf.Reader, error) {
@@ -90,14 +90,14 @@ func New(logger logr.Logger) probe.Probe {
 	}
 }
 
-func uprobeDo(name string, exec *link.Executable, target *process.TargetDetails, obj *bpfObjects) ([]link.Link, error) {
+func uprobeRoundTrip(name string, exec *link.Executable, target *process.TargetDetails, obj *bpfObjects) ([]link.Link, error) {
 	offset, err := target.GetFunctionOffset(name)
 	if err != nil {
 		return nil, err
 	}
 
 	opts := &link.UprobeOptions{Address: offset}
-	l, err := exec.Uprobe("", obj.UprobeHttpClientDo, opts)
+	l, err := exec.Uprobe("", obj.UprobeTransportRoundTrip, opts)
 	if err != nil {
 		return nil, err
 	}
@@ -110,7 +110,7 @@ func uprobeDo(name string, exec *link.Executable, target *process.TargetDetails,
 
 	for _, ret := range retOffsets {
 		opts := &link.UprobeOptions{Address: ret}
-		l, err := exec.Uprobe("", obj.UprobeHttpClientDoReturns, opts)
+		l, err := exec.Uprobe("", obj.UprobeTransportRoundTripReturns, opts)
 		if err != nil {
 			return nil, err
 		}
