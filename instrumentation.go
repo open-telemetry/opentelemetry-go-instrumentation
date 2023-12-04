@@ -245,7 +245,11 @@ func (c instConfig) res() *resource.Resource {
 	attrs := []attribute.KeyValue{
 		semconv.ServiceNameKey.String(c.serviceName),
 		semconv.TelemetrySDKLanguageGo,
+		// will be removed from semconv in the future
 		semconv.TelemetryAutoVersionKey.String(Version()),
+		// will be added to semconv in the future
+		attribute.String("telemetry.distro.name", "opentelemetry-go-instrumentation"),
+		attribute.String("telemetry.distro.version", Version()),
 		semconv.ProcessRuntimeName(runName),
 		semconv.ProcessRuntimeVersion(runVer),
 		semconv.ProcessRuntimeDescription(runDesc),
