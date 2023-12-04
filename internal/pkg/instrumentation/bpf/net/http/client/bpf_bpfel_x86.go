@@ -71,8 +71,8 @@ type bpfSpecs struct {
 //
 // It can be passed ebpf.CollectionSpec.Assign.
 type bpfProgramSpecs struct {
-	UprobeHttpClientDo        *ebpf.ProgramSpec `ebpf:"uprobe_HttpClient_Do"`
-	UprobeHttpClientDoReturns *ebpf.ProgramSpec `ebpf:"uprobe_HttpClient_Do_Returns"`
+	UprobeTransportRoundTrip        *ebpf.ProgramSpec `ebpf:"uprobe_Transport_roundTrip"`
+	UprobeTransportRoundTripReturns *ebpf.ProgramSpec `ebpf:"uprobe_Transport_roundTrip_Returns"`
 }
 
 // bpfMapSpecs contains maps before they are loaded into the kernel.
@@ -135,14 +135,14 @@ func (m *bpfMaps) Close() error {
 //
 // It can be passed to loadBpfObjects or ebpf.CollectionSpec.LoadAndAssign.
 type bpfPrograms struct {
-	UprobeHttpClientDo        *ebpf.Program `ebpf:"uprobe_HttpClient_Do"`
-	UprobeHttpClientDoReturns *ebpf.Program `ebpf:"uprobe_HttpClient_Do_Returns"`
+	UprobeTransportRoundTrip        *ebpf.Program `ebpf:"uprobe_Transport_roundTrip"`
+	UprobeTransportRoundTripReturns *ebpf.Program `ebpf:"uprobe_Transport_roundTrip_Returns"`
 }
 
 func (p *bpfPrograms) Close() error {
 	return _BpfClose(
-		p.UprobeHttpClientDo,
-		p.UprobeHttpClientDoReturns,
+		p.UprobeTransportRoundTrip,
+		p.UprobeTransportRoundTripReturns,
 	)
 }
 

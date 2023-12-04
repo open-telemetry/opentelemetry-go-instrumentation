@@ -156,9 +156,9 @@ static __always_inline long inject_header(void* headers_ptr, struct span_context
 }
 
 // This instrumentation attaches uprobe to the following function:
-// func net/http/client.Do(req *Request) (*Response, error)
-SEC("uprobe/HttpClient_Do")
-int uprobe_HttpClient_Do(struct pt_regs *ctx) {
+// func net/http/transport.roundTrip(req *Request) (*Response, error)
+SEC("uprobe/Transport_roundTrip")
+int uprobe_Transport_roundTrip(struct pt_regs *ctx) {
     u64 request_pos = 2;
     void *req_ptr = get_argument(ctx, request_pos);
 
@@ -172,7 +172,7 @@ int uprobe_HttpClient_Do(struct pt_regs *ctx) {
     void *httpReq_ptr = bpf_map_lookup_elem(&http_events, &key);
     if (httpReq_ptr != NULL)
     {
-        bpf_printk("uprobe/HttpClient_Do already tracked with the current context");
+        bpf_printk("uprobe/Transport_RoundTrip already tracked with the current context");
         return 0;
     }
 
@@ -180,7 +180,7 @@ int uprobe_HttpClient_Do(struct pt_regs *ctx) {
     struct http_request_t *httpReq = bpf_map_lookup_elem(&http_client_uprobe_storage_map, &map_id);
     if (httpReq == NULL)
     {
-        bpf_printk("uprobe/HttpClient_Do: httpReq is NULL");
+        bpf_printk("uprobe/Transport_roundTrip: httpReq is NULL");
         return 0;
     }
 
@@ -197,7 +197,7 @@ int uprobe_HttpClient_Do(struct pt_regs *ctx) {
     }
 
     if (!get_go_string_from_user_ptr((void *)(req_ptr+method_ptr_pos), httpReq->method, sizeof(httpReq->method))) {
-        bpf_printk("uprobe_HttpClient_Do: Failed to get method from request");
+        bpf_printk("uprobe_Transport_roundTrip: Failed to get method from request");
         return 0;
     }
 
@@ -205,7 +205,7 @@ int uprobe_HttpClient_Do(struct pt_regs *ctx) {
     void *url_ptr = 0;
     bpf_probe_read(&url_ptr, sizeof(url_ptr), (void *)(req_ptr+url_ptr_pos));
     if (!get_go_string_from_user_ptr((void *)(url_ptr+path_ptr_pos), httpReq->path, sizeof(httpReq->path))) {
-        bpf_printk("uprobe_HttpClient_Do: Failed to get path from Request.URL");
+        bpf_printk("uprobe_Transport_roundTrip: Failed to get path from Request.URL");
         return 0;
     }
 
@@ -214,7 +214,7 @@ int uprobe_HttpClient_Do(struct pt_regs *ctx) {
     bpf_probe_read(&headers_ptr, sizeof(headers_ptr), (void *)(req_ptr+headers_ptr_pos));
     long res = inject_header(headers_ptr, &httpReq->sc);
     if (res < 0) {
-        bpf_printk("uprobe_HttpClient_Do: Failed to inject header");
+        bpf_printk("uprobe_Transport_roundTrip: Failed to inject header");
     }
 
     // Write event
@@ -224,16 +224,16 @@ int uprobe_HttpClient_Do(struct pt_regs *ctx) {
 }
 
 // This instrumentation attaches uretprobe to the following function:
-// func net/http/client.Do(req *Request) (*Response, error)
-SEC("uprobe/HttpClient_Do")
-int uprobe_HttpClient_Do_Returns(struct pt_regs *ctx) {
+// func net/http/transport.roundTrip(req *Request) (*Response, error)
+SEC("uprobe/Transport_roundTrip")
+int uprobe_Transport_roundTrip_Returns(struct pt_regs *ctx) {
     u64 end_time = bpf_ktime_get_ns();
     void *req_ctx_ptr = get_Go_context(ctx, 2, ctx_ptr_pos, false);
     void *key = get_consistent_key(ctx, req_ctx_ptr);
 
     struct http_request_t *http_req_span = bpf_map_lookup_elem(&http_events, &key);
     if (http_req_span == NULL) {
-        bpf_printk("probe_HttpClient_Do_Returns: entry_state is NULL");
+        bpf_printk("probe_Transport_roundTrip_Returns: entry_state is NULL");
         return 0;
     }
     bpf_map_delete_elem(&http_events, &key);
