@@ -148,9 +148,12 @@ Any [Maintainer] can merge the PR once the above criteria have been met.
 ### Maintainers
 
 - [Eden Federman](https://github.com/edeNFed), KeyVal
-- [Mike Goldsmith](https://github.com/MikeGoldsmith), Honeycomb
 - [Przemyslaw Delewski](https://github.com/pdelewski), SumoLogic
 - [Tyler Yahn](https://github.com/MrAlias), Splunk
+
+### Emeritus
+
+- [Mike Goldsmith](https://github.com/MikeGoldsmith), Honeycomb
 
 ### Become an Approver or a Maintainer
 
