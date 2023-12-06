@@ -45,30 +45,6 @@
       "scopeSpans": [
         {
           "scope": {
-            "name": "go.opentelemetry.io/auto/database/sql",
-            "version": "v0.8.0-alpha"
-          },
-          "spans": [
-            {
-              "attributes": [
-                {
-                  "key": "db.statement",
-                  "value": {
-                    "stringValue": "SELECT * FROM contacts"
-                  }
-                }
-              ],
-              "kind": 3,
-              "name": "DB",
-              "parentSpanId": "xxxxx",
-              "spanId": "xxxxx",
-              "status": {},
-              "traceId": "xxxxx"
-            }
-          ]
-        },
-        {
-          "scope": {
             "name": "go.opentelemetry.io/auto/net/http",
             "version": "v0.8.0-alpha"
           },
@@ -84,37 +60,13 @@
                 {
                   "key": "http.target",
                   "value": {
-                    "stringValue": "/query_db"
+                    "stringValue": "/hello"
                   }
                 },
                 {
                   "key": "http.response.status_code",
                   "value": {
                     "intValue": "200"
-                  }
-                },
-                {
-                  "key": "net.host.name",
-                  "value": {
-                    "stringValue": "localhost:8080"
-                  }
-                },
-                {
-                  "key": "net.protocol.name",
-                  "value": {
-                    "stringValue": "HTTP/1.1"
-                  }
-                },
-                {
-                  "key": "net.peer.name",
-                  "value": {
-                    "stringValue": "::1"
-                  }
-                },
-                {
-                  "key": "net.peer.port",
-                  "value": {
-                    "intValue": "xxxxx"
                   }
                 }
               ],
@@ -136,7 +88,7 @@
                 {
                   "key": "http.target",
                   "value": {
-                    "stringValue": "/query_db"
+                    "stringValue": "/hello"
                   }
                 },
                 {
@@ -147,7 +99,7 @@
                 }
               ],
               "kind": 3,
-              "name": "/query_db",
+              "name": "/hello",
               "parentSpanId": "",
               "spanId": "xxxxx",
               "status": {},

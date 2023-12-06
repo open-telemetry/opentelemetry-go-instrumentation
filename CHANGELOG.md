@@ -8,6 +8,10 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 
 ## [Unreleased]
 
+### Added
+
+- Add `WithResourceAttributes` `InstrumentationOption` to configure `Instrumentation` to add additional resource attributes. ([#522](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/522))
+
 ### Changed
 
 - The instrumentation scope name for the `database/sql` instrumentation is now `go.opentelemtry.io/auto/database/sql`. (#507)
@@ -16,6 +20,7 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 - The instrumentation scope name for the `google.golang.org/grpc/server` instrumentation is now `go.opentelemtry.io/auto/google.golang.org/grpc`. (#507)
 - The instrumentation scope name for the `net/http/client` instrumentation is now `go.opentelemtry.io/auto/net/http`. (#507)
 - The instrumentation scope name for the `net/http/server` instrumentation is now `go.opentelemtry.io/auto/net/http`. (#507)
+- The instrumentation for `client.Do` was changed to instrumentation for `Transport.roundTrip`. ([#529](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/529))
 
 ## [v0.8.0-alpha] - 2023-11-14
 

@@ -69,7 +69,7 @@ func TestProbeConvertEvent(t *testing.T) {
 		Attributes: []attribute.KeyValue{
 			semconv.HTTPMethodKey.String("GET"),
 			semconv.HTTPTargetKey.String("/foo/bar"),
-			semconv.HTTPStatusCodeKey.Int(200),
+			semconv.HTTPResponseStatusCodeKey.Int(200),
 			semconv.NetHostName("localhost:8080"),
 			semconv.NetProtocolName("HTTP/1.1"),
 			semconv.NetPeerName("www.google.com"),

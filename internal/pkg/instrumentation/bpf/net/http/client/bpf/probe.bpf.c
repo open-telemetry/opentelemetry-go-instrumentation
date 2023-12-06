@@ -14,6 +14,7 @@ char __license[] SEC("license") = "Dual MIT/GPL";
 
 struct http_request_t {
     BASE_SPAN_PROPERTIES
+    u64 status_code;
     char method[MAX_METHOD_SIZE];
     char path[MAX_PATH_SIZE];
 };
@@ -32,6 +33,14 @@ struct {
 	__uint(max_entries, 1);
 } golang_mapbucket_storage_map SEC(".maps");
 
+struct
+{
+    __uint(type, BPF_MAP_TYPE_PERCPU_ARRAY);
+    __uint(key_size, sizeof(u32));
+    __uint(value_size, sizeof(struct http_request_t));
+    __uint(max_entries, 1);
+} http_client_uprobe_storage_map SEC(".maps");
+
 struct {
 	__uint(type, BPF_MAP_TYPE_PERF_EVENT_ARRAY);
 } events SEC(".maps");
@@ -43,6 +52,7 @@ volatile const u64 path_ptr_pos;
 volatile const u64 headers_ptr_pos;
 volatile const u64 ctx_ptr_pos;
 volatile const u64 buckets_ptr_pos;
+volatile const u64 status_code_pos;
 
 static __always_inline long inject_header(void* headers_ptr, struct span_context* propagated_ctx) {
     // Read the key-value count - this field must be the first one in the hmap struct as documented in src/runtime/map.go
@@ -146,12 +156,9 @@ static __always_inline long inject_header(void* headers_ptr, struct span_context
 }
 
 // This instrumentation attaches uprobe to the following function:
-// func net/http/client.Do(req *Request)
-SEC("uprobe/HttpClient_Do")
-int uprobe_HttpClient_Do(struct pt_regs *ctx) {
-    struct http_request_t httpReq = {};
-    httpReq.start_time = bpf_ktime_get_ns();
-
+// func net/http/transport.roundTrip(req *Request) (*Response, error)
+SEC("uprobe/Transport_roundTrip")
+int uprobe_Transport_roundTrip(struct pt_regs *ctx) {
     u64 request_pos = 2;
     void *req_ptr = get_argument(ctx, request_pos);
 
@@ -165,46 +172,82 @@ int uprobe_HttpClient_Do(struct pt_regs *ctx) {
     void *httpReq_ptr = bpf_map_lookup_elem(&http_events, &key);
     if (httpReq_ptr != NULL)
     {
-        bpf_printk("uprobe/HttpClient_Do already tracked with the current context");
+        bpf_printk("uprobe/Transport_RoundTrip already tracked with the current context");
         return 0;
     }
 
-    struct span_context *parent_span_ctx = get_parent_span_context(context_ptr_val);
-    if (parent_span_ctx != NULL) {
-        bpf_probe_read(&httpReq.psc, sizeof(httpReq.psc), parent_span_ctx);
-        copy_byte_arrays(httpReq.psc.TraceID, httpReq.sc.TraceID, TRACE_ID_SIZE);
-        generate_random_bytes(httpReq.sc.SpanID, SPAN_ID_SIZE);
-    } else {
-        httpReq.sc = generate_span_context();
+    u32 map_id = 0;
+    struct http_request_t *httpReq = bpf_map_lookup_elem(&http_client_uprobe_storage_map, &map_id);
+    if (httpReq == NULL)
+    {
+        bpf_printk("uprobe/Transport_roundTrip: httpReq is NULL");
+        return 0;
     }
 
-    if (!get_go_string_from_user_ptr((void *)(req_ptr+method_ptr_pos), httpReq.method, sizeof(httpReq.method))) {
-        bpf_printk("uprobe_HttpClient_Do: Failed to get method from request");
+    __builtin_memset(httpReq, 0, sizeof(struct http_request_t));
+    httpReq->start_time = bpf_ktime_get_ns();
+
+    struct span_context *parent_span_ctx = get_parent_span_context(context_ptr_val);
+    if (parent_span_ctx != NULL) {
+        bpf_probe_read(&httpReq->psc, sizeof(httpReq->psc), parent_span_ctx);
+        copy_byte_arrays(httpReq->psc.TraceID, httpReq->sc.TraceID, TRACE_ID_SIZE);
+        generate_random_bytes(httpReq->sc.SpanID, SPAN_ID_SIZE);
+    } else {
+        httpReq->sc = generate_span_context();
+    }
+
+    if (!get_go_string_from_user_ptr((void *)(req_ptr+method_ptr_pos), httpReq->method, sizeof(httpReq->method))) {
+        bpf_printk("uprobe_Transport_roundTrip: Failed to get method from request");
         return 0;
     }
 
     // get path from Request.URL
     void *url_ptr = 0;
     bpf_probe_read(&url_ptr, sizeof(url_ptr), (void *)(req_ptr+url_ptr_pos));
-    if (!get_go_string_from_user_ptr((void *)(url_ptr+path_ptr_pos), httpReq.path, sizeof(httpReq.path))) {
-        bpf_printk("uprobe_HttpClient_Do: Failed to get path from Request.URL");
+    if (!get_go_string_from_user_ptr((void *)(url_ptr+path_ptr_pos), httpReq->path, sizeof(httpReq->path))) {
+        bpf_printk("uprobe_Transport_roundTrip: Failed to get path from Request.URL");
         return 0;
     }
 
     // get headers from Request
     void *headers_ptr = 0;
     bpf_probe_read(&headers_ptr, sizeof(headers_ptr), (void *)(req_ptr+headers_ptr_pos));
-    long res = inject_header(headers_ptr, &httpReq.sc);
+    long res = inject_header(headers_ptr, &httpReq->sc);
     if (res < 0) {
-        bpf_printk("uprobe_HttpClient_Do: Failed to inject header");
+        bpf_printk("uprobe_Transport_roundTrip: Failed to inject header");
     }
 
     // Write event
-    bpf_map_update_elem(&http_events, &key, &httpReq, 0);
-    start_tracking_span(context_ptr_val, &httpReq.sc);
+    bpf_map_update_elem(&http_events, &key, httpReq, 0);
+    start_tracking_span(context_ptr_val, &httpReq->sc);
     return 0;
 }
 
 // This instrumentation attaches uretprobe to the following function:
-// func net/http/client.Do(req *Request)
-UPROBE_RETURN(HttpClient_Do, struct http_request_t, http_events, events, 2, ctx_ptr_pos, false)
+// func net/http/transport.roundTrip(req *Request) (*Response, error)
+SEC("uprobe/Transport_roundTrip")
+int uprobe_Transport_roundTrip_Returns(struct pt_regs *ctx) {
+    u64 end_time = bpf_ktime_get_ns();
+    void *req_ctx_ptr = get_Go_context(ctx, 2, ctx_ptr_pos, false);
+    void *key = get_consistent_key(ctx, req_ctx_ptr);
+
+    struct http_request_t *http_req_span = bpf_map_lookup_elem(&http_events, &key);
+    if (http_req_span == NULL) {
+        bpf_printk("probe_Transport_roundTrip_Returns: entry_state is NULL");
+        return 0;
+    }
+    bpf_map_delete_elem(&http_events, &key);
+
+    if (is_register_abi()) {
+        // Getting the returned response
+        void *resp_ptr = get_argument(ctx, 1);
+        // Get status code from response
+        bpf_probe_read(&http_req_span->status_code, sizeof(http_req_span->status_code), (void *)(resp_ptr + status_code_pos));
+    }
+
+    http_req_span->end_time = end_time;
+
+    bpf_perf_event_output(ctx, &events, BPF_F_CURRENT_CPU, http_req_span, sizeof(*http_req_span));
+    stop_tracking_span(&http_req_span->sc, &http_req_span->psc);
+    return 0;
+}

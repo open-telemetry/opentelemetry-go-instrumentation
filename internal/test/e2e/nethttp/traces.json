@@ -64,7 +64,7 @@
                   }
                 },
                 {
-                  "key": "http.status_code",
+                  "key": "http.response.status_code",
                   "value": {
                     "intValue": "200"
                   }
@@ -113,6 +113,12 @@
                   "key": "http.target",
                   "value": {
                     "stringValue": "/hello"
+                  }
+                },
+                {
+                  "key": "http.response.status_code",
+                  "value": {
+                    "intValue": "200"
                   }
                 }
               ],
