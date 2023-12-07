@@ -88,7 +88,7 @@ static __always_inline bool set_attr_value(otel_attirbute_t *attr, go_otel_attr_
 		return get_go_string_from_user_ptr(&go_attr_value->string, attr->value, OTEL_ATTRIBUTE_VALUE_MAX_LEN);
 	}
 
-	// TODO: handle slices
+	// TODO (#525): handle slices
 	return false;
 }
 
