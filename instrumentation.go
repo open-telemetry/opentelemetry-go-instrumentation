@@ -114,7 +114,7 @@ func NewInstrumentation(ctx context.Context, opts ...InstrumentationOption) (*In
 		return nil, err
 	}
 
-	mngr, err := instrumentation.NewManager(logger, ctrl)
+	mngr, err := instrumentation.NewManager(logger, ctrl, c.globalImpl)
 	if err != nil {
 		return nil, err
 	}
@@ -170,6 +170,7 @@ type instConfig struct {
 	target             process.TargetArgs
 	serviceName        string
 	additionalResAttrs []attribute.KeyValue
+	globalImpl         bool
 }
 
 func newInstConfig(ctx context.Context, opts []InstrumentationOption) (instConfig, error) {
@@ -413,6 +414,30 @@ func WithTraceExporter(exp trace.SpanExporter) InstrumentationOption {
 func WithSampler(sampler trace.Sampler) InstrumentationOption {
 	return fnOpt(func(_ context.Context, c instConfig) (instConfig, error) {
 		c.sampler = sampler
+		return c, nil
+	})
+}
+
+// WithGlobal returns an [InstrumentationOption] that will configure an
+// [Instrumentation] to record telemetry from the [OpenTelemetry default global
+// implementation]. By default, the OpenTelemetry global implementation is a
+// no-op implementation of the OpenTelemetry API. However, by using this
+// option, all telemetry that would have been dropped by the global
+// implementation will be recorded using telemetry pipelines from the
+// configured [Instrumentation].
+//
+// If the target process overrides the default global implementation (e.g.
+// [otel.SetTracerProvider]), the telemetry from that process will go to the
+// set implementation. It will not be recorded using the telemetry pipelines
+// from the configured [Instrumentation] even if this option is used.
+//
+// The OpenTelemetry default global implementation is left unchanged (i.e. it
+// remains a no-op implementation) if this options is not used.
+//
+// [OpenTelemetry default global implementation]: https://pkg.go.dev/go.opentelemetry.io/otel
+func WithGlobal() InstrumentationOption {
+	return fnOpt(func(_ context.Context, c instConfig) (instConfig, error) {
+		c.globalImpl = true
 		return c, nil
 	})
 }

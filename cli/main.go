@@ -67,6 +67,9 @@ func newLogger() logr.Logger {
 }
 
 func main() {
+	var globalImpl bool
+
+	flag.BoolVar(&globalImpl, "global-impl", false, "Record telemetry from the OpenTelemetry default global implementation")
 	flag.Usage = usage
 	flag.Parse()
 
@@ -88,8 +91,14 @@ func main() {
 		}
 	}()
 
-	logger.Info("building OpenTelemetry Go instrumentation ...")
-	inst, err := auto.NewInstrumentation(ctx, auto.WithEnv())
+	logger.Info("building OpenTelemetry Go instrumentation ...", "globalImpl", globalImpl)
+
+	instOptions := []auto.InstrumentationOption{auto.WithEnv()}
+	if globalImpl {
+		instOptions = append(instOptions, auto.WithGlobal())
+	}
+
+	inst, err := auto.NewInstrumentation(ctx, instOptions...)
 	if err != nil {
 		logger.Error(err, "failed to create instrumentation")
 		return

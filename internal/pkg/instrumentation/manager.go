@@ -24,6 +24,7 @@ import (
 
 	dbSql "go.opentelemetry.io/auto/internal/pkg/instrumentation/bpf/database/sql"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/bpf/github.com/gin-gonic/gin"
+	otelTraceGlobal "go.opentelemetry.io/auto/internal/pkg/instrumentation/bpf/go.opentelemetry.io/otel/traceglobal"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/bpf/google.golang.org/grpc"
 	grpcServer "go.opentelemetry.io/auto/internal/pkg/instrumentation/bpf/google.golang.org/grpc/server"
 	httpClient "go.opentelemetry.io/auto/internal/pkg/instrumentation/bpf/net/http/client"
@@ -44,10 +45,11 @@ type Manager struct {
 	done           chan bool
 	incomingEvents chan *probe.Event
 	otelController *opentelemetry.Controller
+	globalImpl     bool
 }
 
 // NewManager returns a new [Manager].
-func NewManager(logger logr.Logger, otelController *opentelemetry.Controller) (*Manager, error) {
+func NewManager(logger logr.Logger, otelController *opentelemetry.Controller, globalImpl bool) (*Manager, error) {
 	logger = logger.WithName("Manager")
 	m := &Manager{
 		logger:         logger,
@@ -55,6 +57,7 @@ func NewManager(logger logr.Logger, otelController *opentelemetry.Controller) (*
 		done:           make(chan bool, 1),
 		incomingEvents: make(chan *probe.Event),
 		otelController: otelController,
+		globalImpl:     globalImpl,
 	}
 
 	err := m.registerProbes()
@@ -209,6 +212,10 @@ func (m *Manager) registerProbes() error {
 		httpClient.New(m.logger),
 		gin.New(m.logger),
 		dbSql.New(m.logger),
+	}
+
+	if m.globalImpl {
+		insts = append(insts, otelTraceGlobal.New(m.logger))
 	}
 
 	for _, i := range insts {
