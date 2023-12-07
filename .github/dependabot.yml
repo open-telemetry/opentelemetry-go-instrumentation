@@ -74,6 +74,15 @@ updates:
       interval: weekly
       day: sunday
   - package-ecosystem: docker
+    directory: /internal/test/e2e/nethttp_custom
+    labels:
+      - dependencies
+      - docker
+      - Skip Changelog
+    schedule:
+      interval: weekly
+      day: sunday
+  - package-ecosystem: docker
     directory: /internal/test/e2e/otelglobal
     labels:
       - dependencies

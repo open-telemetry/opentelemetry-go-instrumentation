@@ -168,7 +168,7 @@ func convertEvent(e *event) *probe.Event {
 		Attributes: []attribute.KeyValue{
 			semconv.HTTPMethodKey.String(method),
 			semconv.HTTPTargetKey.String(path),
-			semconv.HTTPStatusCodeKey.Int(int(e.StatusCode)),
+			semconv.HTTPResponseStatusCodeKey.Int(int(e.StatusCode)),
 		},
 	}
 }

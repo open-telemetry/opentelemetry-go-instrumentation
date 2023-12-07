@@ -70,12 +70,16 @@ func New(logger logr.Logger) probe.Probe {
 				Val: structfield.NewID("std", "net/http", "Request", "ctx"),
 			},
 			probe.StructFieldConst{
+				Key: "status_code_pos",
+				Val: structfield.NewID("std", "net/http", "Response", "StatusCode"),
+			},
+			probe.StructFieldConst{
 				Key: "buckets_ptr_pos",
 				Val: structfield.NewID("std", "runtime", "hmap", "buckets"),
 			},
 		},
 		Uprobes: map[string]probe.UprobeFunc[bpfObjects]{
-			"net/http.(*Client).do": uprobeDo,
+			"net/http.(*Transport).roundTrip": uprobeRoundTrip,
 		},
 
 		ReaderFn: func(obj bpfObjects) (*perf.Reader, error) {
@@ -86,14 +90,14 @@ func New(logger logr.Logger) probe.Probe {
 	}
 }
 
-func uprobeDo(name string, exec *link.Executable, target *process.TargetDetails, obj *bpfObjects) ([]link.Link, error) {
+func uprobeRoundTrip(name string, exec *link.Executable, target *process.TargetDetails, obj *bpfObjects) ([]link.Link, error) {
 	offset, err := target.GetFunctionOffset(name)
 	if err != nil {
 		return nil, err
 	}
 
 	opts := &link.UprobeOptions{Address: offset}
-	l, err := exec.Uprobe("", obj.UprobeHttpClientDo, opts)
+	l, err := exec.Uprobe("", obj.UprobeTransportRoundTrip, opts)
 	if err != nil {
 		return nil, err
 	}
@@ -106,7 +110,7 @@ func uprobeDo(name string, exec *link.Executable, target *process.TargetDetails,
 
 	for _, ret := range retOffsets {
 		opts := &link.UprobeOptions{Address: ret}
-		l, err := exec.Uprobe("", obj.UprobeHttpClientDoReturns, opts)
+		l, err := exec.Uprobe("", obj.UprobeTransportRoundTripReturns, opts)
 		if err != nil {
 			return nil, err
 		}
@@ -120,8 +124,9 @@ func uprobeDo(name string, exec *link.Executable, target *process.TargetDetails,
 // request-response.
 type event struct {
 	context.BaseSpanProperties
-	Method [10]byte
-	Path   [100]byte
+	StatusCode uint64
+	Method     [10]byte
+	Path       [100]byte
 }
 
 func convertEvent(e *event) *probe.Event {
@@ -157,6 +162,7 @@ func convertEvent(e *event) *probe.Event {
 		Attributes: []attribute.KeyValue{
 			semconv.HTTPMethodKey.String(method),
 			semconv.HTTPTargetKey.String(path),
+			semconv.HTTPResponseStatusCodeKey.Int(int(e.StatusCode)),
 		},
 		ParentSpanContext: pscPtr,
 	}
