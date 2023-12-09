@@ -226,7 +226,7 @@ type UprobeFunc[BPFObj any] func(symbol string, exec *link.Executable, target *p
 type Uprobe[BPFObj any] struct {
 	// Sym is the symbol name of the function to attach the eBPF program to.
 	Sym string
-	// Fn is the function that will attach the eBPF program to the function
+	// Fn is the function that will attach the eBPF program to the function.
 	Fn UprobeFunc[BPFObj]
 	// Optional is a boolean flag informing if the Uprobe is optional. If the
 	// Uprobe is optional and fails to attach, the error is logged and
