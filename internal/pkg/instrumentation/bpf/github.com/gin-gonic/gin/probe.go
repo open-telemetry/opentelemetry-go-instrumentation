@@ -65,8 +65,11 @@ func New(logger logr.Logger) probe.Probe {
 				Val: structfield.NewID("std", "net/url", "URL", "Path"),
 			},
 		},
-		Uprobes: map[string]probe.UprobeFunc[bpfObjects]{
-			"github.com/gin-gonic/gin.(*Engine).ServeHTTP": uprobeServeHTTP,
+		Uprobes: []probe.Uprobe[bpfObjects]{
+			{
+				Sym: "github.com/gin-gonic/gin.(*Engine).ServeHTTP",
+				Fn:  uprobeServeHTTP,
+			},
 		},
 
 		ReaderFn: func(obj bpfObjects) (*perf.Reader, error) {

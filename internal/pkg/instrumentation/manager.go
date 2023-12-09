@@ -35,9 +35,6 @@ import (
 	"go.opentelemetry.io/auto/internal/pkg/process"
 )
 
-// Error message returned when unable to find all instrumentation functions.
-var errNotAllFuncsFound = fmt.Errorf("not all functions found for instrumentation")
-
 // Manager handles the management of [probe.Probe] instances.
 type Manager struct {
 	logger         logr.Logger
@@ -106,10 +103,8 @@ func (m *Manager) FilterUnusedProbes(target *process.TargetDetails) {
 			}
 		}
 
-		if n := len(inst.Manifest().Symbols); funcsFound != n {
-			if funcsFound > 0 {
-				m.logger.Error(errNotAllFuncsFound, "some of expected functions not found - check instrumented functions", "instrumentation_name", name, "funcs_found", funcsFound, "funcs_expected", n)
-			}
+		if funcsFound == 0 {
+			m.logger.Info("no functions found for probe, removing", "name", name)
 			delete(m.probes, name)
 		}
 	}

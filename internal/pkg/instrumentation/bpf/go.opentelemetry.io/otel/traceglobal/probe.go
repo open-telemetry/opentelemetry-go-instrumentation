@@ -88,10 +88,20 @@ func New(logger logr.Logger) probe.Probe {
 				Val: uint64(attribute.STRINGSLICE),
 			},
 		},
-		Uprobes: map[string]probe.UprobeFunc[bpfObjects]{
-			"go.opentelemetry.io/otel/internal/global.(*tracer).Start":                   uprobeTracerStart,
-			"go.opentelemetry.io/otel/internal/global.(*nonRecordingSpan).SetAttributes": uprobeSetAttributes,
-			"go.opentelemetry.io/otel/internal/global.(*nonRecordingSpan).End":           uprobeSpanEnd,
+		Uprobes: []probe.Uprobe[bpfObjects]{
+			{
+				Sym: "go.opentelemetry.io/otel/internal/global.(*tracer).Start",
+				Fn:  uprobeTracerStart,
+			},
+			{
+				Sym:      "go.opentelemetry.io/otel/internal/global.(*nonRecordingSpan).SetAttributes",
+				Fn:       uprobeSetAttributes,
+				Optional: true,
+			},
+			{
+				Sym: "go.opentelemetry.io/otel/internal/global.(*nonRecordingSpan).End",
+				Fn:  uprobeSpanEnd,
+			},
 		},
 
 		ReaderFn: func(obj bpfObjects) (*perf.Reader, error) {

@@ -68,15 +68,22 @@ func New(logger logr.Logger) probe.Probe {
 				Val: structfield.NewID("google.golang.org/grpc", "google.golang.org/grpc/internal/transport", "headerFrame", "streamID"),
 			},
 		},
-		Uprobes: map[string]probe.UprobeFunc[bpfObjects]{
-			"google.golang.org/grpc.(*ClientConn).Invoke": uprobeInvoke,
-			"google.golang.org/grpc/internal/transport.(*http2Client).NewStream": func(name string, exec *link.Executable, target *process.TargetDetails, obj *bpfObjects) ([]link.Link, error) {
-				prog := obj.UprobeHttp2ClientNewStream
-				return uprobeFn(name, exec, target, prog)
-			},
-			"google.golang.org/grpc/internal/transport.(*loopyWriter).headerHandler": func(name string, exec *link.Executable, target *process.TargetDetails, obj *bpfObjects) ([]link.Link, error) {
-				prog := obj.UprobeLoopyWriterHeaderHandler
-				return uprobeFn(name, exec, target, prog)
+		Uprobes: []probe.Uprobe[bpfObjects]{
+			{
+				Sym: "google.golang.org/grpc.(*ClientConn).Invoke",
+				Fn:  uprobeInvoke,
+			}, {
+				Sym: "google.golang.org/grpc/internal/transport.(*http2Client).NewStream",
+				Fn: func(name string, exec *link.Executable, target *process.TargetDetails, obj *bpfObjects) ([]link.Link, error) {
+					prog := obj.UprobeHttp2ClientNewStream
+					return uprobeFn(name, exec, target, prog)
+				},
+			}, {
+				Sym: "google.golang.org/grpc/internal/transport.(*loopyWriter).headerHandler",
+				Fn: func(name string, exec *link.Executable, target *process.TargetDetails, obj *bpfObjects) ([]link.Link, error) {
+					prog := obj.UprobeLoopyWriterHeaderHandler
+					return uprobeFn(name, exec, target, prog)
+				},
 			},
 		},
 

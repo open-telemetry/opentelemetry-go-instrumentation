@@ -57,9 +57,15 @@ func New(logger logr.Logger) probe.Probe {
 				Val: shouldIncludeDBStatement(),
 			},
 		},
-		Uprobes: map[string]probe.UprobeFunc[bpfObjects]{
-			"database/sql.(*DB).queryDC": uprobeQueryDC,
-			"database/sql.(*DB).execDC":  uprobeExecDC,
+		Uprobes: []probe.Uprobe[bpfObjects]{
+			{
+				Sym: "database/sql.(*DB).queryDC",
+				Fn:  uprobeQueryDC,
+			},
+			{
+				Sym: "database/sql.(*DB).execDC",
+				Fn:  uprobeExecDC,
+			},
 		},
 
 		ReaderFn: func(obj bpfObjects) (*perf.Reader, error) {
