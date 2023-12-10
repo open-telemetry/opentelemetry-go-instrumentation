@@ -70,9 +70,15 @@ func New(logger logr.Logger) probe.Probe {
 				Val: structfield.NewID("golang.org/x/net", "golang.org/x/net/http2", "FrameHeader", "StreamID"),
 			},
 		},
-		Uprobes: map[string]probe.UprobeFunc[bpfObjects]{
-			"google.golang.org/grpc.(*Server).handleStream":                           uprobeHandleStream,
-			"google.golang.org/grpc/internal/transport.(*http2Server).operateHeaders": uprobeOperateHeaders,
+		Uprobes: []probe.Uprobe[bpfObjects]{
+			{
+				Sym: "google.golang.org/grpc.(*Server).handleStream",
+				Fn:  uprobeHandleStream,
+			},
+			{
+				Sym: "google.golang.org/grpc/internal/transport.(*http2Server).operateHeaders",
+				Fn:  uprobeOperateHeaders,
+			},
 		},
 
 		ReaderFn: func(obj bpfObjects) (*perf.Reader, error) {

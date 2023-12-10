@@ -78,8 +78,11 @@ func New(logger logr.Logger) probe.Probe {
 				Val: structfield.NewID("std", "runtime", "hmap", "buckets"),
 			},
 		},
-		Uprobes: map[string]probe.UprobeFunc[bpfObjects]{
-			"net/http.(*Transport).roundTrip": uprobeRoundTrip,
+		Uprobes: []probe.Uprobe[bpfObjects]{
+			{
+				Sym: "net/http.(*Transport).roundTrip",
+				Fn:  uprobeRoundTrip,
+			},
 		},
 
 		ReaderFn: func(obj bpfObjects) (*perf.Reader, error) {

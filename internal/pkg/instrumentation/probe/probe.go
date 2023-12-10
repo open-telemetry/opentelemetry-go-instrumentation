@@ -67,9 +67,9 @@ type Base[BPFObj any, BPFEvent any] struct {
 	// Consts are the constants that need to be injected into the eBPF program
 	// that is run by this Probe.
 	Consts []Const
-	// Uprobes is a mapping from runtime symbols to a UprobeFunc. These define
-	// the eBPF program triggers that need to setup for this Probe.
-	Uprobes map[string]UprobeFunc[BPFObj]
+	// Uprobes is a the collection of eBPF programs that need to be attached to
+	// the target process.
+	Uprobes []Uprobe[BPFObj]
 
 	// ReaderFn is a creation function for a perf.Reader based on the passed
 	// BPFObj related to the probe.
@@ -89,8 +89,8 @@ func (i *Base[BPFObj, BPFEvent]) Manifest() Manifest {
 	structfields := consts(i.Consts).structFields()
 
 	symbols := make([]string, 0, len(i.Uprobes))
-	for s := range i.Uprobes {
-		symbols = append(symbols, s)
+	for _, up := range i.Uprobes {
+		symbols = append(symbols, up.Sym)
 	}
 
 	return NewManifest(i.Name, i.InstrumentedPkg, structfields, symbols)
@@ -146,9 +146,13 @@ func (i *Base[BPFObj, BPFEvent]) buildObj(exec *link.Executable, td *process.Tar
 		return nil, err
 	}
 
-	for symb, f := range i.Uprobes {
-		links, err := f(symb, exec, td, obj)
+	for _, up := range i.Uprobes {
+		links, err := up.Fn(up.Sym, exec, td, obj)
 		if err != nil {
+			if up.Optional {
+				i.Logger.Info("failed to attach optional uprobe", "probe", i.Name, "symbol", up.Sym, "error", err)
+				continue
+			}
 			return nil, err
 		}
 		for _, l := range links {
@@ -217,6 +221,18 @@ func (i *Base[BPFObj, BPFEvent]) Close() {
 // prevent further execution of prog. The Link must be Closed during program
 // shutdown to avoid leaking system resources.
 type UprobeFunc[BPFObj any] func(symbol string, exec *link.Executable, target *process.TargetDetails, obj *BPFObj) ([]link.Link, error)
+
+// Uprobe is an eBPF program that is attached in the entry point and/or the reutrn of a function.
+type Uprobe[BPFObj any] struct {
+	// Sym is the symbol name of the function to attach the eBPF program to.
+	Sym string
+	// Fn is the function that will attach the eBPF program to the function.
+	Fn UprobeFunc[BPFObj]
+	// Optional is a boolean flag informing if the Uprobe is optional. If the
+	// Uprobe is optional and fails to attach, the error is logged and
+	// processing continues.
+	Optional bool
+}
 
 // Const is an constant that needs to be injected into an eBPF program.
 type Const interface {

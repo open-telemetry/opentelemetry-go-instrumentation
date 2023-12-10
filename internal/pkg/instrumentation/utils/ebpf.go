@@ -41,7 +41,7 @@ func LoadEBPFObjects(spec *ebpf.CollectionSpec, to interface{}, opts *ebpf.Colle
 	if err != nil && showVerifierLogs {
 		var ve *ebpf.VerifierError
 		if errors.As(err, &ve) {
-			fmt.Printf("Verifier log: %+v\n", ve)
+			fmt.Printf("Verifier log: %-100v\n", ve)
 		}
 	}
 

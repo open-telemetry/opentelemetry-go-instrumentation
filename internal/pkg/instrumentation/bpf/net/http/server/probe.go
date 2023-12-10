@@ -81,8 +81,11 @@ func New(logger logr.Logger) probe.Probe {
 				Val: structfield.NewID("std", "runtime", "hmap", "buckets"),
 			},
 		},
-		Uprobes: map[string]probe.UprobeFunc[bpfObjects]{
-			"net/http.serverHandler.ServeHTTP": uprobeServeHTTP,
+		Uprobes: []probe.Uprobe[bpfObjects]{
+			{
+				Sym: "net/http.serverHandler.ServeHTTP",
+				Fn:  uprobeServeHTTP,
+			},
 		},
 
 		ReaderFn: func(obj bpfObjects) (*perf.Reader, error) {
