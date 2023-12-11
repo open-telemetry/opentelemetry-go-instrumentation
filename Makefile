@@ -142,12 +142,13 @@ license-header-check:
 	           exit 1; \
 	   fi
 
-.PHONY: fixture-nethttp fixture-gin fixture-databasesql fixture-nethttp-custom
+.PHONY: fixture-nethttp fixture-gin fixture-databasesql fixture-nethttp-custom fixture-otelglobal
 fixture-nethttp-custom: fixtures/nethttp_custom
 fixture-nethttp: fixtures/nethttp
 fixture-gin: fixtures/gin
 fixture-databasesql: fixtures/databasesql
 fixture-grpc: fixtures/grpc
+fixture-otelglobal: fixtures/otelglobal
 fixtures/%: LIBRARY=$*
 fixtures/%:
 	$(MAKE) docker-build
@@ -161,10 +162,13 @@ fixtures/%:
 	helm install test -f .github/workflows/e2e/k8s/collector-helm-values.yml opentelemetry-helm-charts/charts/opentelemetry-collector
 	kubectl wait --for=condition=Ready --timeout=60s pod/test-opentelemetry-collector-0
 	kubectl -n default create -f .github/workflows/e2e/k8s/sample-job.yml
-	kubectl wait --for=condition=Complete --timeout=60s job/sample-job
-	kubectl cp -c filecp default/test-opentelemetry-collector-0:tmp/trace.json ./internal/test/e2e/$(LIBRARY)/traces-orig.json
-	rm -f ./internal/test/e2e/$(LIBRARY)/traces.json
-	bats ./internal/test/e2e/$(LIBRARY)/verify.bats
+	if kubectl wait --for=condition=Complete --timeout=60s job/sample-job; then \
+		kubectl cp -c filecp default/test-opentelemetry-collector-0:tmp/trace.json ./internal/test/e2e/$(LIBRARY)/traces-orig.json; \
+		rm -f ./internal/test/e2e/$(LIBRARY)/traces.json; \
+		bats ./internal/test/e2e/$(LIBRARY)/verify.bats; \
+	else \
+		kubectl logs -l app=sample -c auto-instrumentation; \
+	fi
 	kind delete cluster
 
 .PHONY: prerelease

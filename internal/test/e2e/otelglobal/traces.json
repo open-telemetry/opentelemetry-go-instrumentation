@@ -45,27 +45,21 @@
       "scopeSpans": [
         {
           "scope": {
-            "name": "go.opentelemetry.io/auto/google.golang.org/grpc",
+            "name": "go.opentelemetry.io/auto/go.opentelemetry.io/otel/internal/global",
             "version": "v0.8.0-alpha"
           },
           "spans": [
             {
               "attributes": [
                 {
-                  "key": "rpc.system",
+                  "key": "inner.key",
                   "value": {
-                    "stringValue": "grpc"
-                  }
-                },
-                {
-                  "key": "rpc.service",
-                  "value": {
-                    "stringValue": "/helloworld.Greeter/SayHello"
+                    "stringValue": "inner.value"
                   }
                 }
               ],
-              "kind": 2,
-              "name": "/helloworld.Greeter/SayHello",
+              "kind": 3,
+              "name": "child",
               "parentSpanId": "xxxxx",
               "spanId": "xxxxx",
               "status": {},
@@ -74,32 +68,32 @@
             {
               "attributes": [
                 {
-                  "key": "net.peer.port",
+                  "key": "int_key",
                   "value": {
-                    "intValue": "xxxxx"
+                    "intValue": "42"
                   }
                 },
                 {
-                  "key": "rpc.system",
+                  "key": "string_key",
                   "value": {
-                    "stringValue": "grpc"
+                    "stringValue": "forty-two"
                   }
                 },
                 {
-                  "key": "rpc.service",
+                  "key": "bool_key",
                   "value": {
-                    "stringValue": "/helloworld.Greeter/SayHello"
+                    "boolValue": true
                   }
                 },
                 {
-                  "key": "net.peer.name",
+                  "key": "float_key",
                   "value": {
-                    "stringValue": "localhost"
+                    "doubleValue": 42.3
                   }
                 }
               ],
               "kind": 3,
-              "name": "/helloworld.Greeter/SayHello",
+              "name": "parent",
               "parentSpanId": "",
               "spanId": "xxxxx",
               "status": {},

@@ -26,6 +26,7 @@ spec:
       - name: auto-instrumentation
         image: otel-go-instrumentation
         imagePullPolicy: IfNotPresent
+        command: ["/otel-go-instrumentation", "-global-impl"]
         env:
         - name: OTEL_GO_AUTO_TARGET_EXE
           value: /sample-app/main
