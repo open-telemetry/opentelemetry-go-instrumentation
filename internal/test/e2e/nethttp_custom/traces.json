@@ -6,7 +6,7 @@
           {
             "key": "process.runtime.description",
             "value": {
-              "stringValue": "go version 1.21.5 linux/amd64"
+              "stringValue": "go version 1.21.5 linux/arm64"
             }
           },
           {
@@ -67,6 +67,30 @@
                   "key": "http.response.status_code",
                   "value": {
                     "intValue": "200"
+                  }
+                },
+                {
+                  "key": "net.host.name",
+                  "value": {
+                    "stringValue": "localhost:8080"
+                  }
+                },
+                {
+                  "key": "net.protocol.name",
+                  "value": {
+                    "stringValue": "HTTP/1.1"
+                  }
+                },
+                {
+                  "key": "net.peer.name",
+                  "value": {
+                    "stringValue": "::1"
+                  }
+                },
+                {
+                  "key": "net.peer.port",
+                  "value": {
+                    "intValue": "xxxxx"
                   }
                 }
               ],
