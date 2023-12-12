@@ -16,6 +16,10 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
   This flag, when used, enables the instrumentation of the OpenTelemetry default global implementation (https://pkg.go.dev/go.opentelemetry.io/otel).
   This means that all trace telemetry from this implementation that would normally be dropped will instead be recorded with the auto-instrumentation pipeline. ([#523]https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/523)
 - Add `WithResourceAttributes` `InstrumentationOption` to configure `Instrumentation` to add additional resource attributes. ([#522](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/522))
+- Support versions `v0.18.0` and `v0.19.0` of `golang.org/x/net`. ([#524](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/524))
+- Add the status code to HTTP client instrumentation. ([#527](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/527))
+- Support versions `v1.20.12`, `v1.21.4`, and `v1.21.5` of Go standard library. ([#535](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/535))
+- Support version `v1.60.0` of `google.golang.org/grpc`. ([#555](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/555))
 
 ### Changed
 
@@ -26,6 +30,11 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 - The instrumentation scope name for the `net/http/client` instrumentation is now `go.opentelemtry.io/auto/net/http`. (#507)
 - The instrumentation scope name for the `net/http/server` instrumentation is now `go.opentelemtry.io/auto/net/http`. (#507)
 - The instrumentation for `client.Do` was changed to instrumentation for `Transport.roundTrip`. ([#529](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/529))
+
+### Fixed
+
+- Support commit hash version for dependencies.
+  If a dependency falls within a known version range used by instrumentation, and its offset structure has not changed, instrumentation will default to the known offset value instead of failing to run. ([#503](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/503))
 
 ## [v0.8.0-alpha] - 2023-11-14
 
