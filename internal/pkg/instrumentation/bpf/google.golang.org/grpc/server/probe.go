@@ -15,16 +15,19 @@
 package server
 
 import (
+	"fmt"
 	"os"
 
 	"github.com/cilium/ebpf/link"
 	"github.com/cilium/ebpf/perf"
 	"github.com/go-logr/logr"
+	"github.com/hashicorp/go-version"
 	"go.opentelemetry.io/otel/attribute"
 	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
 	"go.opentelemetry.io/otel/trace"
 	"golang.org/x/sys/unix"
 
+	"go.opentelemetry.io/auto/internal/pkg/inject"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/context"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/probe"
 	"go.opentelemetry.io/auto/internal/pkg/process"
@@ -69,6 +72,7 @@ func New(logger logr.Logger) probe.Probe {
 				Key: "frame_stream_id_pod",
 				Val: structfield.NewID("golang.org/x/net", "golang.org/x/net/http2", "FrameHeader", "StreamID"),
 			},
+			framePosConst{},
 		},
 		Uprobes: []probe.Uprobe[bpfObjects]{
 			{
@@ -87,6 +91,29 @@ func New(logger logr.Logger) probe.Probe {
 		SpecFn:    loadBpf,
 		ProcessFn: convertEvent,
 	}
+}
+
+// framePosConst is a Probe Const defining the position of the
+// http.MetaHeadersFrame parameter of the http2Server.operateHeaders method.
+type framePosConst struct{}
+
+// Prior to v1.60.0 the frame parameter was first. However, in that version a
+// context was added as the first parameter. The frame became the second
+// parameter:
+// https://github.com/grpc/grpc-go/pull/6716/files#diff-4058722211b8d52e2d5b0c0b7542059ed447a04017b69520d767e94a9493409eR334
+var paramChangeVer = version.Must(version.NewVersion("1.60.0"))
+
+func (c framePosConst) InjectOption(td *process.TargetDetails) (inject.Option, error) {
+	ver, ok := td.Libraries[pkg]
+	if !ok {
+		return nil, fmt.Errorf("unknown module version: %s", pkg)
+	}
+
+	var pos uint64 = 2
+	if ver.GreaterThanOrEqual(paramChangeVer) {
+		pos = 4
+	}
+	return inject.WithKeyValue("frame_pos", pos), nil
 }
 
 func uprobeHandleStream(name string, exec *link.Executable, target *process.TargetDetails, obj *bpfObjects) ([]link.Link, error) {
