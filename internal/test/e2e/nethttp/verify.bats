@@ -49,6 +49,11 @@ SCOPE="go.opentelemetry.io/auto/net/http"
   assert_regex "$parent_span_id" ${MATCH_A_SPAN_ID}
 }
 
+@test "server :: net peer port is valid" {
+  net_peer_port=$(server_spans_from_scope_named ${SCOPE} | jq '.attributes[] | select (.key == "net.peer.port") | .value.intValue')
+  assert_regex "$net_peer_port" ${MATCH_A_PORT_NUMBER}
+}
+
 @test "client, server :: spans have same trace ID" {
   client_trace_id=$(server_spans_from_scope_named ${SCOPE} | jq ".traceId")
   server_trace_id=$(client_spans_from_scope_named ${SCOPE} | jq ".traceId")
@@ -64,4 +69,19 @@ SCOPE="go.opentelemetry.io/auto/net/http"
 @test "server :: expected (redacted) trace output" {
   redact_json
   assert_equal "$(git --no-pager diff ${BATS_TEST_DIRNAME}/traces.json)" ""
+}
+
+@test "server :: includes net.host.name attribute" {
+  result=$(server_span_attributes_for ${SCOPE} | jq "select(.key == \"net.host.name\").value.stringValue")
+  assert_equal "$result" '"localhost:8080"'
+}
+
+@test "server :: includes net.protocol.name attribute" {
+  result=$(server_span_attributes_for ${SCOPE} | jq "select(.key == \"net.protocol.name\").value.stringValue")
+  assert_equal "$result" '"HTTP/1.1"'
+}
+
+@test "server :: includes net.peer.name attribute" {
+  result=$(server_span_attributes_for ${SCOPE} | jq "select(.key == \"net.peer.name\").value.stringValue")
+  assert_equal "$result" '"::1"'
 }

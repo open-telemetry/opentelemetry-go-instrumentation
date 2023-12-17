@@ -15,7 +15,9 @@
 package server
 
 import (
+	"net"
 	"os"
+	"strconv"
 
 	"github.com/cilium/ebpf/link"
 	"github.com/cilium/ebpf/perf"
@@ -80,6 +82,18 @@ func New(logger logr.Logger) probe.Probe {
 				Key: "buckets_ptr_pos",
 				Val: structfield.NewID("std", "runtime", "hmap", "buckets"),
 			},
+			probe.StructFieldConst{
+				Key: "remote_addr_pos",
+				Val: structfield.NewID("std", "net/http", "Request", "RemoteAddr"),
+			},
+			probe.StructFieldConst{
+				Key: "host_pos",
+				Val: structfield.NewID("std", "net/http", "Request", "Host"),
+			},
+			probe.StructFieldConst{
+				Key: "proto_pos",
+				Val: structfield.NewID("std", "net/http", "Request", "Proto"),
+			},
 		},
 		Uprobes: []probe.Uprobe[bpfObjects]{
 			{
@@ -133,11 +147,18 @@ type event struct {
 	StatusCode uint64
 	Method     [8]byte
 	Path       [128]byte
+	RemoteAddr [256]byte
+	Host       [256]byte
+	Proto      [8]byte
 }
 
 func convertEvent(e *event) *probe.Event {
 	method := unix.ByteSliceToString(e.Method[:])
 	path := unix.ByteSliceToString(e.Path[:])
+	remoteAddr := unix.ByteSliceToString(e.RemoteAddr[:])
+	host := unix.ByteSliceToString(e.Host[:])
+	proto := unix.ByteSliceToString(e.Proto[:])
+	ip, port, isRemoteAddrValid := net.SplitHostPort(remoteAddr)
 
 	sc := trace.NewSpanContext(trace.SpanContextConfig{
 		TraceID:    e.SpanContext.TraceID,
@@ -158,6 +179,24 @@ func convertEvent(e *event) *probe.Event {
 		pscPtr = nil
 	}
 
+	attributes := []attribute.KeyValue{
+		semconv.HTTPMethodKey.String(method),
+		semconv.HTTPTargetKey.String(path),
+		semconv.HTTPResponseStatusCodeKey.Int(int(e.StatusCode)),
+		semconv.NetHostName(host),
+		semconv.NetProtocolName(proto),
+	}
+
+	if isRemoteAddrValid == nil {
+		remotePeerAddr, remotePeerPort := ip, port
+
+		attributes = append(attributes, semconv.NetPeerName(remotePeerAddr))
+
+		if remotePeerPortInt, err := strconv.Atoi(remotePeerPort); err == nil {
+			attributes = append(attributes, semconv.NetPeerPort(remotePeerPortInt))
+		}
+	}
+
 	return &probe.Event{
 		Package: pkg,
 		// Do not include the high-cardinality path here (there is no
@@ -168,10 +207,6 @@ func convertEvent(e *event) *probe.Event {
 		EndTime:           int64(e.EndTime),
 		SpanContext:       &sc,
 		ParentSpanContext: pscPtr,
-		Attributes: []attribute.KeyValue{
-			semconv.HTTPMethodKey.String(method),
-			semconv.HTTPTargetKey.String(path),
-			semconv.HTTPResponseStatusCodeKey.Int(int(e.StatusCode)),
-		},
+		Attributes:        attributes,
 	}
 }

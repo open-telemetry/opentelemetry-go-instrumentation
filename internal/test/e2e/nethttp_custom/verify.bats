@@ -61,7 +61,24 @@ SCOPE="go.opentelemetry.io/auto/net/http"
   assert_equal "$client_span_id" "$server_parent_span_id"
 }
 
+@test "server :: includes net.host.name attribute" {
+  result=$(server_span_attributes_for ${SCOPE} | jq "select(.key == \"net.host.name\").value.stringValue")
+  assert_equal "$result" '"localhost:8080"'
+}
+
+@test "server :: includes net.protocol.name attribute" {
+  result=$(server_span_attributes_for ${SCOPE} | jq "select(.key == \"net.protocol.name\").value.stringValue")
+  assert_equal "$result" '"HTTP/1.1"'
+}
+
+@test "server :: includes net.peer.name attribute" {
+  result=$(server_span_attributes_for ${SCOPE} | jq "select(.key == \"net.peer.name\").value.stringValue")
+  assert_equal "$result" '"::1"'
+}
+
 @test "server :: expected (redacted) trace output" {
   redact_json
   assert_equal "$(git --no-pager diff ${BATS_TEST_DIRNAME}/traces.json)" ""
 }
+
+

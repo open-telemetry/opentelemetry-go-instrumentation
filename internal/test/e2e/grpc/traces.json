@@ -76,7 +76,7 @@
                 {
                   "key": "net.peer.port",
                   "value": {
-                    "stringValue": "1701"
+                    "intValue": "xxxxx"
                   }
                 },
                 {

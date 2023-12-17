@@ -93,6 +93,11 @@ redact_json() {
 			| .resourceSpans[].scopeSpans[].spans[].parentSpanId|= (if
 					. // "" | test("^[A-Fa-f0-9]{16}$") then "xxxxx" else (. + "")
 				end)
+			| .resourceSpans[].scopeSpans[].spans[].attributes[] |= if 
+					(.key == "net.peer.port") then .value.intValue |= (if
+				   		. // "" | test("^[1-9][0-9]{0,4}$") then "xxxxx" else (. + "") 
+					end) else . 
+				end
 			| .resourceSpans[].scopeSpans|=sort_by(.scope.name)
 			| .resourceSpans[].scopeSpans[].spans|=sort_by(.kind)
 			' > ${BATS_TEST_DIRNAME}/traces.json
@@ -105,6 +110,9 @@ MATCH_A_TRACE_ID=^"\"[A-Fa-f0-9]{32}\"$"
 
 # expect a 16-digit hexadecimal string (in quotes)
 MATCH_A_SPAN_ID=^"\"[A-Fa-f0-9]{16}\"$"
+
+# ecpect a valid port number
+MATCH_A_PORT_NUMBER=^"\"[1-9][0-9]{0,4}\"$"
 
 # Fail and display details if the expected and actual values do not
 # equal. Details include both values.

@@ -26,6 +26,9 @@ char __license[] SEC("license") = "Dual MIT/GPL";
 #define MAX_CONCURRENT 50
 #define W3C_KEY_LENGTH 11
 #define W3C_VAL_LENGTH 55
+#define REMOTE_ADDR_MAX_LEN 256
+#define HOST_MAX_LEN 256
+#define PROTO_MAX_LEN 8
 
 struct http_server_span_t
 {
@@ -33,6 +36,9 @@ struct http_server_span_t
     u64 status_code;
     char method[METHOD_MAX_LEN];
     char path[PATH_MAX_LEN];
+    char remote_addr[REMOTE_ADDR_MAX_LEN];
+    char host[HOST_MAX_LEN];
+    char proto[PROTO_MAX_LEN];
 };
 
 struct uprobe_data_t
@@ -90,6 +96,9 @@ volatile const u64 headers_ptr_pos;
 volatile const u64 buckets_ptr_pos;
 volatile const u64 req_ptr_pos;
 volatile const u64 status_code_pos;
+volatile const u64 remote_addr_pos;
+volatile const u64 host_pos;
+volatile const u64 proto_pos;
 
 static __always_inline struct span_context *extract_context_from_req_headers(void *headers_ptr_ptr)
 {
@@ -243,6 +252,14 @@ int uprobe_HandlerFunc_ServeHTTP(struct pt_regs *ctx)
     return 0;
 }
 
+void read_go_string(void *base, int offset, char *output, int maxLen, const char *errorMsg) {
+    void *ptr = (void *)(base + offset);
+    if (!get_go_string_from_user_ptr(ptr, output, maxLen)) {
+        bpf_printk("Failed to get %s", errorMsg);
+    }
+    
+}
+
 // This instrumentation attaches uprobe to the following function:
 // func (sh serverHandler) ServeHTTP(rw ResponseWriter, req *Request)
 SEC("uprobe/HandlerFunc_ServeHTTP")
@@ -264,20 +281,16 @@ int uprobe_HandlerFunc_ServeHTTP_Returns(struct pt_regs *ctx) {
     bpf_probe_read(&req_ptr, sizeof(req_ptr), (void *)(resp_ptr + req_ptr_pos));
 
     http_server_span->end_time = end_time;
-         
-    // Collect fields from response
-    // Get method from request
-    if (!get_go_string_from_user_ptr((void *)(req_ptr + method_ptr_pos), http_server_span->method, sizeof(http_server_span->method))) {
-        bpf_printk("failed to get method from request");
-        return 0;
-    }
-    // get path from Request.URL
+
     void *url_ptr = 0;
     bpf_probe_read(&url_ptr, sizeof(url_ptr), (void *)(req_ptr + url_ptr_pos));
-    if (!get_go_string_from_user_ptr((void *)(url_ptr + path_ptr_pos), http_server_span->path, sizeof(http_server_span->path))) {
-        bpf_printk("failed to get path from Request.URL");
-        return 0;
-    }
+    // Collect fields from response
+    read_go_string(req_ptr, method_ptr_pos, http_server_span->method, sizeof(http_server_span->method), "method from request");
+    read_go_string(url_ptr, path_ptr_pos, http_server_span->path, sizeof(http_server_span->path), "path from Request.URL");
+    read_go_string(req_ptr, remote_addr_pos, http_server_span->remote_addr, sizeof(http_server_span->remote_addr), "remote addr from Request.RemoteAddr");
+    read_go_string(req_ptr, host_pos, http_server_span->host, sizeof(http_server_span->host), "host from Request.Host");
+    read_go_string(req_ptr, proto_pos, http_server_span->proto, sizeof(http_server_span->proto), "proto from Request.Proto");
+
     // status code
     bpf_probe_read(&http_server_span->status_code, sizeof(http_server_span->status_code), (void *)(resp_ptr + status_code_pos));
 

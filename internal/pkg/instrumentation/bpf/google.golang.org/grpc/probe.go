@@ -16,6 +16,7 @@ package grpc
 
 import (
 	"os"
+	"strconv"
 	"strings"
 
 	"github.com/cilium/ebpf"
@@ -148,7 +149,9 @@ func convertEvent(e *event) *probe.Event {
 	// remove port
 	if parts := strings.Split(target, ":"); len(parts) > 1 {
 		target = parts[0]
-		attrs = append(attrs, semconv.NetPeerPortKey.String(parts[1]))
+		if remotePeerPortInt, err := strconv.Atoi(parts[1]); err == nil {
+			attrs = append(attrs, semconv.NetPeerPort(remotePeerPortInt))
+		}
 	}
 
 	attrs = append(attrs, semconv.RPCSystemKey.String("grpc"),
