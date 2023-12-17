@@ -67,6 +67,7 @@ volatile const u64 frame_fields_pos;
 volatile const u64 frame_stream_id_pod;
 volatile const u64 stream_id_pos;
 volatile const u64 stream_ctx_pos;
+volatile const u64 frame_pos;
 
 // This instrumentation attaches uprobe to the following function:
 // func (s *Server) handleStream(t transport.ServerTransport, stream *transport.Stream, trInfo *traceInfo)
@@ -126,7 +127,6 @@ UPROBE_RETURN(server_handleStream, struct grpc_request_t, grpc_events, events, 4
 SEC("uprobe/http2Server_operateHeader")
 int uprobe_http2Server_operateHeader(struct pt_regs *ctx)
 {
-    u64 frame_pos = 2;
     void *frame_ptr = get_argument(ctx, frame_pos);
     struct go_slice header_fields = {};
     bpf_probe_read(&header_fields, sizeof(header_fields), (void *)(frame_ptr + frame_fields_pos));
