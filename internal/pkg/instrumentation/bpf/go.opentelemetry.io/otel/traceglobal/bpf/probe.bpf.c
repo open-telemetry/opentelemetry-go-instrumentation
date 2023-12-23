@@ -62,14 +62,20 @@ struct {
 } events SEC(".maps");
 
 // Injected in init
-volatile const u64 span_name_pos;
-volatile const u64 span_attributes_pos;
+volatile const u64 tracer_delegate_pos;
 
 // This instrumentation attaches uprobe to the following function:
 // func (t *tracer) Start(ctx context.Context, name string, opts ...trace.SpanStartOption) (context.Context, trace.Span)
 // https://github.com/open-telemetry/opentelemetry-go/blob/98b32a6c3a87fbee5d34c063b9096f416b250897/internal/global/trace.go#L149
 SEC("uprobe/Start")
 int uprobe_Start(struct pt_regs *ctx) {
+    void *tracer_ptr = get_argument(ctx, 1);
+    void *delegate_ptr = NULL;
+    bpf_probe_read(&delegate_ptr, sizeof(delegate_ptr), (void*)(tracer_ptr + tracer_delegate_pos));
+    if (delegate_ptr != NULL) {
+        // Delegate is set, so we should not instrument this call
+        return 0;
+    }
     struct span_name_t span_name = {0};
 
     // Getting span name
