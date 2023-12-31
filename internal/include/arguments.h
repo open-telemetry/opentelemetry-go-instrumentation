@@ -23,7 +23,7 @@
 // Injected in init
 volatile const bool is_registers_abi;
 
-static void __always_inline *get_argument_by_reg(struct pt_regs *ctx, int index)
+void __always_inline *get_argument_by_reg(struct pt_regs *ctx, int index)
 {
     switch (index)
     {
@@ -50,14 +50,14 @@ static void __always_inline *get_argument_by_reg(struct pt_regs *ctx, int index)
     }
 }
 
-static void __always_inline *get_argument_by_stack(struct pt_regs *ctx, int index)
+void __always_inline *get_argument_by_stack(struct pt_regs *ctx, int index)
 {
     void *ptr = 0;
     bpf_probe_read(&ptr, sizeof(ptr), (void *)(PT_REGS_SP(ctx) + (index * 8)));
     return ptr;
 }
 
-static void __always_inline *get_argument(struct pt_regs *ctx, int index)
+void __always_inline *get_argument(struct pt_regs *ctx, int index)
 {
     if (is_registers_abi)
     {
