@@ -129,11 +129,7 @@ UPROBE_RETURN(server_handleStream, struct grpc_request_t, grpc_events, events, 4
 SEC("uprobe/http2Server_operateHeader")
 int uprobe_http2Server_operateHeader(struct pt_regs *ctx)
 {
-    int frame_pos = 2;
-    if (is_new_frame_pos) {
-        frame_pos = 4;
-    }
-    void *frame_ptr = get_argument(ctx, frame_pos);
+    void *frame_ptr = is_new_frame_pos ? get_argument(ctx, 4) : get_argument(ctx, 2);
     struct go_slice header_fields = {};
     bpf_probe_read(&header_fields, sizeof(header_fields), (void *)(frame_ptr + frame_fields_pos));
     char key[W3C_KEY_LENGTH] = "traceparent";
