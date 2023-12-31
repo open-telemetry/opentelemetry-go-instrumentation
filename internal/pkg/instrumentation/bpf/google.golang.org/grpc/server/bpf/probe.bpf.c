@@ -129,7 +129,7 @@ UPROBE_RETURN(server_handleStream, struct grpc_request_t, grpc_events, events, 4
 SEC("uprobe/http2Server_operateHeader")
 int uprobe_http2Server_operateHeader(struct pt_regs *ctx)
 {
-    u64 frame_pos = 2;
+    int frame_pos = 2;
     if (is_new_frame_pos) {
         frame_pos = 4;
     }
