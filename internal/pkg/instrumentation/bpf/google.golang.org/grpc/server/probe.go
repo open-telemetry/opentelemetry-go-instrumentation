@@ -109,11 +109,7 @@ func (c framePosConst) InjectOption(td *process.TargetDetails) (inject.Option, e
 		return nil, fmt.Errorf("unknown module version: %s", pkg)
 	}
 
-	var pos uint64 = 2
-	if ver.GreaterThanOrEqual(paramChangeVer) {
-		pos = 4
-	}
-	return inject.WithKeyValue("frame_pos", pos), nil
+	return inject.WithKeyValue("is_new_frame_pos", ver.GreaterThanOrEqual(paramChangeVer)), nil
 }
 
 func uprobeHandleStream(name string, exec *link.Executable, target *process.TargetDetails, obj *bpfObjects) ([]link.Link, error) {

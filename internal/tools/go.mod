@@ -4,7 +4,7 @@ go 1.18
 
 require (
 	github.com/docker/docker v24.0.7+incompatible
-	github.com/go-logr/logr v1.3.0
+	github.com/go-logr/logr v1.4.1
 	github.com/go-logr/stdr v1.2.2
 	github.com/golangci/golangci-lint v1.54.2
 	github.com/google/go-licenses v1.6.0
