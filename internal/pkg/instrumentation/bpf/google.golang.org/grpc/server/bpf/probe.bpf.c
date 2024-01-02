@@ -67,7 +67,7 @@ volatile const u64 frame_fields_pos;
 volatile const u64 frame_stream_id_pod;
 volatile const u64 stream_id_pos;
 volatile const u64 stream_ctx_pos;
-volatile const u64 frame_pos;
+volatile const bool is_new_frame_pos;
 
 // This instrumentation attaches uprobe to the following function:
 // func (s *Server) handleStream(t transport.ServerTransport, stream *transport.Stream, trInfo *traceInfo)
@@ -124,10 +124,12 @@ int uprobe_server_handleStream(struct pt_regs *ctx)
 UPROBE_RETURN(server_handleStream, struct grpc_request_t, grpc_events, events, 4, stream_ctx_pos, false)
 
 // func (d *http2Server) operateHeader(frame *http2.MetaHeadersFrame) error
+// for version 1.60 and above:
+// func (t *http2Server) operateHeaders(ctx context.Context, frame *http2.MetaHeadersFrame, handle func(*Stream)) error
 SEC("uprobe/http2Server_operateHeader")
 int uprobe_http2Server_operateHeader(struct pt_regs *ctx)
 {
-    void *frame_ptr = get_argument(ctx, frame_pos);
+    void *frame_ptr = is_new_frame_pos ? get_argument(ctx, 4) : get_argument(ctx, 2);
     struct go_slice header_fields = {};
     bpf_probe_read(&header_fields, sizeof(header_fields), (void *)(frame_ptr + frame_fields_pos));
     char key[W3C_KEY_LENGTH] = "traceparent";
