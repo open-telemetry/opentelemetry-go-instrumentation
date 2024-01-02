@@ -59,12 +59,14 @@ func New(logger logr.Logger) probe.Probe {
 		},
 		Uprobes: []probe.Uprobe[bpfObjects]{
 			{
-				Sym: "database/sql.(*DB).queryDC",
-				Fn:  uprobeQueryDC,
+				Sym:      "database/sql.(*DB).queryDC",
+				Fn:       uprobeQueryDC,
+				Optional: true,
 			},
 			{
-				Sym: "database/sql.(*DB).execDC",
-				Fn:  uprobeExecDC,
+				Sym:      "database/sql.(*DB).execDC",
+				Fn:       uprobeExecDC,
+				Optional: true,
 			},
 		},
 

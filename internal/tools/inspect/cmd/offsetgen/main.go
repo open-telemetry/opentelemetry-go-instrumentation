@@ -80,6 +80,11 @@ func manifests() ([]inspect.Manifest, error) {
 		return nil, fmt.Errorf("failed to get \"golang.org/x/net\" versions: %w", err)
 	}
 
+	goOtelVers, err := PkgVersions("go.opentelemetry.io/otel")
+	if err != nil {
+		return nil, fmt.Errorf("failed to get \"go.opentelemetry.io/otel\" versions: %w", err)
+	}
+
 	ren := func(src string) inspect.Renderer {
 		return inspect.NewRenderer(logger, src, inspect.DefaultFS)
 	}
@@ -138,6 +143,15 @@ func manifests() ([]inspect.Manifest, error) {
 			StructFields: []structfield.ID{
 				structfield.NewID("golang.org/x/net", "golang.org/x/net/http2", "MetaHeadersFrame", "Fields"),
 				structfield.NewID("golang.org/x/net", "golang.org/x/net/http2", "FrameHeader", "StreamID"),
+			},
+		},
+		{
+			Application: inspect.Application{
+				Renderer: ren("templates/go.opentelemetry.io/otel/traceglobal/*.tmpl"),
+				Versions: goOtelVers,
+			},
+			StructFields: []structfield.ID{
+				structfield.NewID("go.opentelemetry.io/otel", "go.opentelemetry.io/otel/internal/global", "tracer", "delegate"),
 			},
 		},
 	}, nil

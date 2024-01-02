@@ -20,6 +20,7 @@ import (
 	"os"
 
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/probe"
+	"go.opentelemetry.io/auto/internal/pkg/structfield"
 
 	"github.com/cilium/ebpf/link"
 	"github.com/cilium/ebpf/perf"
@@ -86,6 +87,10 @@ func New(logger logr.Logger) probe.Probe {
 			probe.KeyValConst{
 				Key: "attr_type_stringslice",
 				Val: uint64(attribute.STRINGSLICE),
+			},
+			probe.StructFieldConst{
+				Key: "tracer_delegate_pos",
+				Val: structfield.NewID("go.opentelemetry.io/otel", "go.opentelemetry.io/otel/internal/global", "tracer", "delegate"),
 			},
 		},
 		Uprobes: []probe.Uprobe[bpfObjects]{
