@@ -66,7 +66,7 @@ func (c *Controller) Trace(event *probe.Event) {
 
 	ctx = ContextWithEBPFEvent(ctx, *event)
 	_, span := c.getTracer(event.Package).
-		Start(ctx, event.Name,
+		Start(ctx, event.SpanName,
 			trace.WithAttributes(event.Attributes...),
 			trace.WithSpanKind(event.Kind),
 			trace.WithTimestamp(c.convertTime(event.StartTime)))

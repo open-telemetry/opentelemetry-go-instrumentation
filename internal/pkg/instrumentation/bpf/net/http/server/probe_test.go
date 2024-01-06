@@ -59,10 +59,8 @@ func TestProbeConvertEvent(t *testing.T) {
 		SpanID:     spanID,
 		TraceFlags: trace.FlagsSampled,
 	})
-	want := &probe.Event{
-		Package:     pkg,
-		Name:        "GET",
-		Kind:        trace.SpanKindServer,
+	want := &probe.SpanEvent{
+		SpanName:    "GET",
 		StartTime:   int64(start.UnixNano()),
 		EndTime:     int64(end.UnixNano()),
 		SpanContext: &sc,

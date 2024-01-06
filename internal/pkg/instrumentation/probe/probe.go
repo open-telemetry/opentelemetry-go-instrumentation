@@ -57,13 +57,11 @@ type Probe interface {
 // also wrap this implementation with their own type if they need to override
 // default behavior.
 type Base[BPFObj any, BPFEvent any] struct {
-	// Name is the unique name of the instrumentation probe.
-	Name string
+	// Id is a unique identifier for the probe.
+	Id ID
 	// Logger is used to log operations and errors.
 	Logger logr.Logger
 
-	// InstrumentedPkg is the package path of the instrumented code.
-	InstrumentedPkg string
 	// Consts are the constants that need to be injected into the eBPF program
 	// that is run by this Probe.
 	Consts []Const
@@ -78,7 +76,7 @@ type Base[BPFObj any, BPFEvent any] struct {
 	// probe.
 	SpecFn func() (*ebpf.CollectionSpec, error)
 	// ProcessFn processes probe events into a uniform Event type.
-	ProcessFn func(*BPFEvent) *Event
+	ProcessFn func(*BPFEvent) *SpanEvent
 
 	reader  *perf.Reader
 	closers []io.Closer
@@ -93,7 +91,7 @@ func (i *Base[BPFObj, BPFEvent]) Manifest() Manifest {
 		symbols = append(symbols, up.Sym)
 	}
 
-	return NewManifest(i.Name, i.InstrumentedPkg, structfields, symbols)
+	return NewManifest(i.Id, structfields, symbols)
 }
 
 // Load loads all instrumentation offsets.
@@ -150,7 +148,7 @@ func (i *Base[BPFObj, BPFEvent]) buildObj(exec *link.Executable, td *process.Tar
 		links, err := up.Fn(up.Sym, exec, td, obj)
 		if err != nil {
 			if up.Optional {
-				i.Logger.Info("failed to attach optional uprobe", "probe", i.Name, "symbol", up.Sym, "error", err)
+				i.Logger.Info("failed to attach optional uprobe", "probe", i.Id, "symbol", up.Sym, "error", err)
 				continue
 			}
 			return nil, err
@@ -180,16 +178,21 @@ func (i *Base[BPFObj, BPFEvent]) Run(dest chan<- *Event) {
 			continue
 		}
 
-		e, err := i.processRecord(record)
+		se, err := i.processRecord(record)
 		if err != nil {
 			i.Logger.Error(err, "failed to process perf record")
+		}
+		e := &Event{
+			Package:   i.Id.InstrumentedPkg,
+			Kind:      i.Id.SpanKind,
+			SpanEvent: *se,
 		}
 
 		dest <- e
 	}
 }
 
-func (i *Base[BPFObj, BPFEvent]) processRecord(record perf.Record) (*Event, error) {
+func (i *Base[BPFObj, BPFEvent]) processRecord(record perf.Record) (*SpanEvent, error) {
 	buf := bytes.NewBuffer(record.RawSample)
 
 	var event BPFEvent
@@ -207,7 +210,7 @@ func (i *Base[BPFObj, BPFEvent]) Close() {
 		err = errors.Join(err, c.Close())
 	}
 	if err != nil {
-		i.Logger.Error(err, "failed to cleanup", "Probe", i.Name)
+		i.Logger.Error(err, "failed to cleanup", "Probe", i.Id)
 	}
 }
 

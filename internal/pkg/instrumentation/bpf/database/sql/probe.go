@@ -34,8 +34,6 @@ import (
 //go:generate go run github.com/cilium/ebpf/cmd/bpf2go -target amd64,arm64 -cc clang -cflags $CFLAGS bpf ./bpf/probe.bpf.c
 
 const (
-	// name is the instrumentation name.
-	name = "database/sql"
 	// pkg is the package being instrumented.
 	pkg = "database/sql"
 
@@ -45,10 +43,13 @@ const (
 
 // New returns a new [probe.Probe].
 func New(logger logr.Logger) probe.Probe {
-	return &probe.Base[bpfObjects, event]{
-		Name:            name,
-		Logger:          logger.WithName(name),
+	Id := probe.ID{
+		SpanKind:        trace.SpanKindClient,
 		InstrumentedPkg: pkg,
+	}
+	return &probe.Base[bpfObjects, event]{
+		Id:     Id,
+		Logger: logger.WithName(Id.String()),
 		Consts: []probe.Const{
 			probe.RegistersABIConst{},
 			probe.AllocationConst{},
@@ -147,7 +148,7 @@ type event struct {
 	Query [256]byte
 }
 
-func convertEvent(e *event) *probe.Event {
+func convertEvent(e *event) *probe.SpanEvent {
 	query := unix.ByteSliceToString(e.Query[:])
 
 	sc := trace.NewSpanContext(trace.SpanContextConfig{
@@ -169,10 +170,8 @@ func convertEvent(e *event) *probe.Event {
 		pscPtr = nil
 	}
 
-	return &probe.Event{
-		Package:     pkg,
-		Name:        "DB",
-		Kind:        trace.SpanKindClient,
+	return &probe.SpanEvent{
+		SpanName:    "DB",
 		StartTime:   int64(e.StartTime),
 		EndTime:     int64(e.EndTime),
 		SpanContext: &sc,
