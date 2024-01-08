@@ -18,14 +18,15 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"go.opentelemetry.io/otel/trace"
 
 	"go.opentelemetry.io/auto/internal/pkg/structfield"
 )
 
 func TestNewManifest(t *testing.T) {
 	const (
-		name = "name"
-		pkg  = "pkg"
+		spanKind = trace.SpanKindServer
+		pkg      = "pkg"
 
 		a = "a"
 		b = "b"
@@ -45,16 +46,14 @@ func TestNewManifest(t *testing.T) {
 	)
 
 	got := NewManifest(
-		name,
-		pkg,
+		ID{spanKind, pkg},
 		[]structfield.ID{sAABB, sABAA, sAAAA, sAAAC, sBAAA, sAAAB, sAABA, sAABC},
 		[]string{d, a, c, b},
 	)
 	want := Manifest{
-		Name:            name,
-		InstrumentedPkg: pkg,
-		StructFields:    []structfield.ID{sAAAA, sAAAB, sAAAC, sAABA, sAABB, sAABC, sABAA, sBAAA},
-		Symbols:         []string{a, b, c, d},
+		Id:           ID{spanKind, pkg},
+		StructFields: []structfield.ID{sAAAA, sAAAB, sAAAC, sAABA, sAABB, sAABC, sABAA, sBAAA},
+		Symbols:      []string{a, b, c, d},
 	}
 	assert.Equal(t, want, got)
 }

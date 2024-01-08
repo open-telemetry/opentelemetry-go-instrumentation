@@ -37,18 +37,19 @@ import (
 //go:generate go run github.com/cilium/ebpf/cmd/bpf2go -target amd64,arm64 -cc clang -cflags $CFLAGS bpf ./bpf/probe.bpf.c
 
 const (
-	// name is the instrumentation name.
-	name = "google.golang.org/grpc/client"
 	// pkg is the package being instrumented.
 	pkg = "google.golang.org/grpc"
 )
 
 // New returns a new [probe.Probe].
 func New(logger logr.Logger) probe.Probe {
-	return &probe.Base[bpfObjects, event]{
-		Name:            name,
-		Logger:          logger.WithName(name),
+	Id := probe.ID{
+		SpanKind:        trace.SpanKindClient,
 		InstrumentedPkg: pkg,
+	}
+	return &probe.Base[bpfObjects, event]{
+		Id:     Id,
+		Logger: logger.WithName(Id.String()),
 		Consts: []probe.Const{
 			probe.RegistersABIConst{},
 			probe.AllocationConst{},
@@ -141,7 +142,7 @@ type event struct {
 }
 
 // According to https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/trace/semantic_conventions/rpc.md
-func convertEvent(e *event) *probe.Event {
+func convertEvent(e *event) *probe.SpanEvent {
 	method := unix.ByteSliceToString(e.Method[:])
 	target := unix.ByteSliceToString(e.Target[:])
 	var attrs []attribute.KeyValue
@@ -177,10 +178,8 @@ func convertEvent(e *event) *probe.Event {
 		pscPtr = nil
 	}
 
-	return &probe.Event{
-		Package:           pkg,
-		Name:              method,
-		Kind:              trace.SpanKindClient,
+	return &probe.SpanEvent{
+		SpanName:          method,
 		StartTime:         int64(e.StartTime),
 		EndTime:           int64(e.EndTime),
 		Attributes:        attrs,

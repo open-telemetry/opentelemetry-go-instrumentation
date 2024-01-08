@@ -36,18 +36,19 @@ import (
 //go:generate go run github.com/cilium/ebpf/cmd/bpf2go -target amd64,arm64 -cc clang -cflags $CFLAGS bpf ./bpf/probe.bpf.c
 
 const (
-	// name is the instrumentation name.
-	name = "net/http/server"
 	// pkg is the package being instrumented.
 	pkg = "net/http"
 )
 
 // New returns a new [probe.Probe].
 func New(logger logr.Logger) probe.Probe {
-	return &probe.Base[bpfObjects, event]{
-		Name:            name,
-		Logger:          logger.WithName(name),
+	Id := probe.ID{
+		SpanKind:        trace.SpanKindServer,
 		InstrumentedPkg: pkg,
+	}
+	return &probe.Base[bpfObjects, event]{
+		Id:     Id,
+		Logger: logger.WithName(Id.String()),
 		Consts: []probe.Const{
 			probe.RegistersABIConst{},
 			probe.StructFieldConst{
@@ -152,7 +153,7 @@ type event struct {
 	Proto      [8]byte
 }
 
-func convertEvent(e *event) *probe.Event {
+func convertEvent(e *event) *probe.SpanEvent {
 	method := unix.ByteSliceToString(e.Method[:])
 	path := unix.ByteSliceToString(e.Path[:])
 	remoteAddr := unix.ByteSliceToString(e.RemoteAddr[:])
@@ -197,12 +198,10 @@ func convertEvent(e *event) *probe.Event {
 		}
 	}
 
-	return &probe.Event{
-		Package: pkg,
+	return &probe.SpanEvent{
 		// Do not include the high-cardinality path here (there is no
 		// templatized path manifest to reference).
-		Name:              method,
-		Kind:              trace.SpanKindServer,
+		SpanName:          method,
 		StartTime:         int64(e.StartTime),
 		EndTime:           int64(e.EndTime),
 		SpanContext:       &sc,

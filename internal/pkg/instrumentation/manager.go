@@ -27,7 +27,7 @@ import (
 	dbSql "go.opentelemetry.io/auto/internal/pkg/instrumentation/bpf/database/sql"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/bpf/github.com/gin-gonic/gin"
 	otelTraceGlobal "go.opentelemetry.io/auto/internal/pkg/instrumentation/bpf/go.opentelemetry.io/otel/traceglobal"
-	"go.opentelemetry.io/auto/internal/pkg/instrumentation/bpf/google.golang.org/grpc"
+	grpcClient "go.opentelemetry.io/auto/internal/pkg/instrumentation/bpf/google.golang.org/grpc/client"
 	grpcServer "go.opentelemetry.io/auto/internal/pkg/instrumentation/bpf/google.golang.org/grpc/server"
 	httpClient "go.opentelemetry.io/auto/internal/pkg/instrumentation/bpf/net/http/client"
 	httpServer "go.opentelemetry.io/auto/internal/pkg/instrumentation/bpf/net/http/server"
@@ -40,7 +40,7 @@ import (
 // Manager handles the management of [probe.Probe] instances.
 type Manager struct {
 	logger         logr.Logger
-	probes         map[string]probe.Probe
+	probes         map[probe.ID]probe.Probe
 	done           chan bool
 	incomingEvents chan *probe.Event
 	otelController *opentelemetry.Controller
@@ -54,7 +54,7 @@ func NewManager(logger logr.Logger, otelController *opentelemetry.Controller, gl
 	logger = logger.WithName("Manager")
 	m := &Manager{
 		logger:         logger,
-		probes:         make(map[string]probe.Probe),
+		probes:         make(map[probe.ID]probe.Probe),
 		done:           make(chan bool, 1),
 		incomingEvents: make(chan *probe.Event),
 		otelController: otelController,
@@ -71,12 +71,12 @@ func NewManager(logger logr.Logger, otelController *opentelemetry.Controller, gl
 }
 
 func (m *Manager) registerProbe(p probe.Probe) error {
-	name := p.Manifest().Name
-	if _, exists := m.probes[name]; exists {
-		return fmt.Errorf("library %s registered twice, aborting", name)
+	id := p.Manifest().Id
+	if _, exists := m.probes[id]; exists {
+		return fmt.Errorf("library %s registered twice, aborting", id)
 	}
 
-	m.probes[name] = p
+	m.probes[id] = p
 	return nil
 }
 
@@ -211,7 +211,7 @@ func (m *Manager) Close() error {
 
 func (m *Manager) registerProbes() error {
 	insts := []probe.Probe{
-		grpc.New(m.logger),
+		grpcClient.New(m.logger),
 		grpcServer.New(m.logger),
 		httpServer.New(m.logger),
 		httpClient.New(m.logger),
