@@ -155,8 +155,7 @@ func (i *Instrumentation) Run(ctx context.Context) error {
 // Close closes the Instrumentation, cleaning up all used resources.
 func (i *Instrumentation) Close() error {
 	i.analyzer.Close()
-	i.manager.Close()
-	return nil
+	return i.manager.Close()
 }
 
 // InstrumentationOption applies a configuration option to [Instrumentation].

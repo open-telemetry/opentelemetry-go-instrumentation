@@ -48,7 +48,7 @@ type Probe interface {
 	Run(eventsChan chan<- *Event)
 
 	// Close stops the Probe.
-	Close()
+	Close() error
 }
 
 // Base is a base implementation of [Probe].
@@ -204,14 +204,15 @@ func (i *Base[BPFObj, BPFEvent]) processRecord(record perf.Record) (*SpanEvent, 
 }
 
 // Close stops the Probe.
-func (i *Base[BPFObj, BPFEvent]) Close() {
+func (i *Base[BPFObj, BPFEvent]) Close() error {
 	var err error
 	for _, c := range i.closers {
 		err = errors.Join(err, c.Close())
 	}
-	if err != nil {
-		i.Logger.Error(err, "failed to cleanup", "Probe", i.Id)
+	if err == nil {
+		i.Logger.Info("Closed", "Probe", i.Id)
 	}
+	return err
 }
 
 // UprobeFunc is a function that will attach a eBPF program to a perf event
