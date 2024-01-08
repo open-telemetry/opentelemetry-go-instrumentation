@@ -16,7 +16,9 @@ package instrumentation
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"sync"
 
 	"github.com/cilium/ebpf/link"
 	"github.com/cilium/ebpf/rlimit"
@@ -43,6 +45,8 @@ type Manager struct {
 	incomingEvents chan *probe.Event
 	otelController *opentelemetry.Controller
 	globalImpl     bool
+	wg             sync.WaitGroup
+	closingErrors  chan error
 }
 
 // NewManager returns a new [Manager].
@@ -55,6 +59,7 @@ func NewManager(logger logr.Logger, otelController *opentelemetry.Controller, gl
 		incomingEvents: make(chan *probe.Event),
 		otelController: otelController,
 		globalImpl:     globalImpl,
+		closingErrors:  make(chan error),
 	}
 
 	err := m.registerProbes()
@@ -122,20 +127,25 @@ func (m *Manager) Run(ctx context.Context, target *process.TargetDetails) error 
 		return err
 	}
 
+	m.wg.Add(len(m.probes))
 	for _, i := range m.probes {
-		go i.Run(m.incomingEvents)
+		go func(p probe.Probe) {
+			defer m.wg.Done()
+			p.Run(m.incomingEvents)
+		}(i)
 	}
 
 	for {
 		select {
 		case <-ctx.Done():
-			m.Close()
-			m.cleanup(target)
-			return ctx.Err()
+			m.logger.Info("shutting down all probes due to context cancellation")
+			err := m.cleanup(target)
+			return errors.Join(err, ctx.Err())
 		case <-m.done:
 			m.logger.Info("shutting down all probes due to signal")
-			m.cleanup(target)
-			return nil
+			err := m.cleanup(target)
+			m.closingErrors <- err
+			return err
 		case e := <-m.incomingEvents:
 			m.otelController.Trace(e)
 		}
@@ -163,8 +173,7 @@ func (m *Manager) load(target *process.TargetDetails) error {
 		err := i.Load(exe, target)
 		if err != nil {
 			m.logger.Error(err, "error while loading probes, cleaning up", "name", name)
-			m.cleanup(target)
-			return err
+			return errors.Join(err, m.cleanup(target))
 		}
 	}
 
@@ -181,22 +190,23 @@ func (m *Manager) mount(target *process.TargetDetails) error {
 	return bpffs.Mount(target)
 }
 
-func (m *Manager) cleanup(target *process.TargetDetails) {
+func (m *Manager) cleanup(target *process.TargetDetails) error {
+	var err error
 	close(m.incomingEvents)
 	for _, i := range m.probes {
-		i.Close()
+		err = errors.Join(err, i.Close())
 	}
 
 	m.logger.Info("Cleaning bpffs")
-	err := bpffs.Cleanup(target)
-	if err != nil {
-		m.logger.Error(err, "Failed to clean bpffs")
-	}
+	return errors.Join(err, bpffs.Cleanup(target))
 }
 
 // Close closes m.
-func (m *Manager) Close() {
+func (m *Manager) Close() error {
 	m.done <- true
+	m.wg.Wait()
+	err := <-m.closingErrors
+	return err
 }
 
 func (m *Manager) registerProbes() error {
