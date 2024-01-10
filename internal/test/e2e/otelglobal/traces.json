@@ -66,6 +66,15 @@
               "traceId": "xxxxx"
             },
             {
+              "attributes": [],
+              "kind": 3,
+              "name": "SetNameOverride",
+              "parentSpanId": "xxxxx",
+              "spanId": "xxxxx",
+              "status": {},
+              "traceId": "xxxxx"
+            },
+            {
               "attributes": [
                 {
                   "key": "int_key",

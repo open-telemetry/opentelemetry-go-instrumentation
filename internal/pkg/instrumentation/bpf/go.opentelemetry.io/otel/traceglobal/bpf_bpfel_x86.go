@@ -83,6 +83,7 @@ type bpfSpecs struct {
 type bpfProgramSpecs struct {
 	UprobeEnd           *ebpf.ProgramSpec `ebpf:"uprobe_End"`
 	UprobeSetAttributes *ebpf.ProgramSpec `ebpf:"uprobe_SetAttributes"`
+	UprobeSetName       *ebpf.ProgramSpec `ebpf:"uprobe_SetName"`
 	UprobeStart         *ebpf.ProgramSpec `ebpf:"uprobe_Start"`
 	UprobeStartReturns  *ebpf.ProgramSpec `ebpf:"uprobe_Start_Returns"`
 }
@@ -149,6 +150,7 @@ func (m *bpfMaps) Close() error {
 type bpfPrograms struct {
 	UprobeEnd           *ebpf.Program `ebpf:"uprobe_End"`
 	UprobeSetAttributes *ebpf.Program `ebpf:"uprobe_SetAttributes"`
+	UprobeSetName       *ebpf.Program `ebpf:"uprobe_SetName"`
 	UprobeStart         *ebpf.Program `ebpf:"uprobe_Start"`
 	UprobeStartReturns  *ebpf.Program `ebpf:"uprobe_Start_Returns"`
 }
@@ -157,6 +159,7 @@ func (p *bpfPrograms) Close() error {
 	return _BpfClose(
 		p.UprobeEnd,
 		p.UprobeSetAttributes,
+		p.UprobeSetName,
 		p.UprobeStart,
 		p.UprobeStartReturns,
 	)

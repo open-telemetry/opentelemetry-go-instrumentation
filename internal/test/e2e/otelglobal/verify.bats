@@ -59,6 +59,11 @@ SCOPE="go.opentelemetry.io/auto/go.opentelemetry.io/otel/internal/global"
   assert_regex "$parent_span_id" ${MATCH_A_SPAN_ID}
 }
 
+@test "server :: span set name overrides original span name" {
+  span_set_name_override=$(spans_from_scope_named ${SCOPE} | jq "select(.name == \"SetNameOverride\")" | jq ".traceId")
+  assert_regex "$trace_id" ${MATCH_A_TRACE_ID}
+}
+
 @test "server :: expected (redacted) trace output" {
   redact_json
   assert_equal "$(git --no-pager diff ${BATS_TEST_DIRNAME}/traces.json)" ""
