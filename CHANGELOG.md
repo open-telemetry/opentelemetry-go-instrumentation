@@ -8,6 +8,17 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 
 ## [Unreleased]
 
+## [v0.10.1-alpha] - 2024-01-10
+
+### Added
+
+- Support version `v0.20.0` of `golang.org/x/net`. ([#587](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/587))
+- Support version `v1.20.13` and `v1.21.6` of Go. ([#589](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/589))
+
+### Fixed
+
+- Log any failures to close running probes. ([#586](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/586))
+
 ## [v0.10.0-alpha] - 2024-01-03
 
 ### Added
@@ -255,7 +266,8 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 
 This is the first release of OpenTelemetry Go Automatic Instrumentation.
 
-[Unreleased]: https://github.com/open-telemetry/opentelemetry-go-instrumentation/compare/v0.10.0-alpha...HEAD
+[Unreleased]: https://github.com/open-telemetry/opentelemetry-go-instrumentation/compare/v0.10.1-alpha...HEAD
+[v0.10.1-alpha]: https://github.com/open-telemetry/opentelemetry-go-instrumentation/releases/tag/v0.10.1-alpha
 [v0.10.0-alpha]: https://github.com/open-telemetry/opentelemetry-go-instrumentation/releases/tag/v0.10.0-alpha
 [v0.9.0-alpha]: https://github.com/open-telemetry/opentelemetry-go-instrumentation/releases/tag/v0.9.0-alpha
 [v0.8.0-alpha]: https://github.com/open-telemetry/opentelemetry-go-instrumentation/releases/tag/v0.8.0-alpha

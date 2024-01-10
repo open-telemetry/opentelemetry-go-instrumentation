@@ -30,7 +30,7 @@
           {
             "key": "telemetry.auto.version",
             "value": {
-              "stringValue": "v0.10.0-alpha"
+              "stringValue": "v0.10.1-alpha"
             }
           },
           {
@@ -46,7 +46,7 @@
         {
           "scope": {
             "name": "go.opentelemetry.io/auto/go.opentelemetry.io/otel/internal/global",
-            "version": "v0.10.0-alpha"
+            "version": "v0.10.1-alpha"
           },
           "spans": [
             {
