@@ -35,7 +35,7 @@ SCOPE="go.opentelemetry.io/auto/go.opentelemetry.io/otel/internal/global"
 }
 
 @test "server :: trace ID present and valid in child span" {
-  trace_id=$(spans_from_scope_named ${SCOPE} | jq "select(.name == \"child\")" | jq ".traceId")
+  trace_id=$(spans_from_scope_named ${SCOPE} | jq "select(.name == \"child override\")" | jq ".traceId")
   assert_regex "$trace_id" ${MATCH_A_TRACE_ID}
 }
 
@@ -45,7 +45,7 @@ SCOPE="go.opentelemetry.io/auto/go.opentelemetry.io/otel/internal/global"
 }
 
 @test "server :: span ID present and valid in child span" {
-  trace_id=$(spans_from_scope_named ${SCOPE} | jq "select(.name == \"child\")" | jq ".spanId")
+  trace_id=$(spans_from_scope_named ${SCOPE} | jq "select(.name == \"child override\")" | jq ".spanId")
   assert_regex "$trace_id" ${MATCH_A_SPAN_ID}
 }
 
@@ -55,13 +55,8 @@ SCOPE="go.opentelemetry.io/auto/go.opentelemetry.io/otel/internal/global"
 }
 
 @test "server :: parent span ID present and valid in child span" {
-  parent_span_id=$(spans_from_scope_named ${SCOPE} | jq "select(.name == \"child\")" | jq ".parentSpanId")
+  parent_span_id=$(spans_from_scope_named ${SCOPE} | jq "select(.name == \"child override\")" | jq ".parentSpanId")
   assert_regex "$parent_span_id" ${MATCH_A_SPAN_ID}
-}
-
-@test "server :: span set name overrides original span name" {
-  span_set_name_override=$(spans_from_scope_named ${SCOPE} | jq "select(.name == \"SetNameOverride\")" | jq ".traceId")
-  assert_regex "$trace_id" ${MATCH_A_TRACE_ID}
 }
 
 @test "server :: expected (redacted) trace output" {
