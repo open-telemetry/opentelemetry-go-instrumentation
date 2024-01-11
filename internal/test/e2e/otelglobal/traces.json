@@ -59,16 +59,7 @@
                 }
               ],
               "kind": 3,
-              "name": "child",
-              "parentSpanId": "xxxxx",
-              "spanId": "xxxxx",
-              "status": {},
-              "traceId": "xxxxx"
-            },
-            {
-              "attributes": [],
-              "kind": 3,
-              "name": "SetNameOverride",
+              "name": "child override",
               "parentSpanId": "xxxxx",
               "spanId": "xxxxx",
               "status": {},

@@ -29,13 +29,7 @@ func innerFunction(ctx context.Context) {
 	defer span.End()
 
 	span.SetAttributes(attribute.String("inner.key", "inner.value"))
-}
-
-func setNameOverride(ctx context.Context) {
-	_, span := tracer.Start(ctx, "SetNameOriginal")
-	defer span.End()
-
-	span.SetName("SetNameOverride")
+	span.SetName("child override")
 }
 
 func createMainSpan(ctx context.Context) {
@@ -43,7 +37,6 @@ func createMainSpan(ctx context.Context) {
 	defer span.End()
 
 	innerFunction(ctx)
-	setNameOverride(ctx)
 
 	intAttr := attribute.Int("int_key", 42)
 	strAttr := attribute.String("string_key", "forty-two")

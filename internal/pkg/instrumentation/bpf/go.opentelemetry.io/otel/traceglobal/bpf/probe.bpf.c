@@ -179,12 +179,12 @@ int uprobe_SetName(struct pt_regs *ctx) {
         return 0;
     }
 
-    void *span_name_ptr = get_argument(ctx, 4);
+    void *span_name_ptr = get_argument(ctx, 2);
     if (span_name_ptr == NULL) {
         return 0;
     }
 
-    void *span_name_len_ptr = get_argument(ctx, 5);
+    void *span_name_len_ptr = get_argument(ctx, 3);
     if (span_name_len_ptr == NULL) {
         return 0;
     }
