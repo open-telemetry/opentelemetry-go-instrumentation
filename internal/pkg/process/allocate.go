@@ -67,6 +67,13 @@ func remoteAllocate(logger logr.Logger, pid int, mapSize uint64) (uint64, error)
 			logger.Error(err, "Failed to detach ptrace", "pid", pid)
 		}
 	}()
+
+	if err := program.SetMemLockInfinity(); err != nil {
+		logger.Error(err, "Failed to set memlock on process")
+	} else {
+		logger.Info("Set memlock on process successfully")
+	}
+
 	fd := -1
 	addr, err := program.Mmap(mapSize, uint64(fd))
 	if err != nil {
