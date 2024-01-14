@@ -100,13 +100,18 @@ func New(logger logr.Logger) probe.Probe {
 				Fn:  uprobeTracerStart,
 			},
 			{
+				Sym: "go.opentelemetry.io/otel/internal/global.(*nonRecordingSpan).End",
+				Fn:  uprobeSpanEnd,
+			},
+			{
 				Sym:      "go.opentelemetry.io/otel/internal/global.(*nonRecordingSpan).SetAttributes",
 				Fn:       uprobeSetAttributes,
 				Optional: true,
 			},
 			{
-				Sym: "go.opentelemetry.io/otel/internal/global.(*nonRecordingSpan).End",
-				Fn:  uprobeSpanEnd,
+				Sym:      "go.opentelemetry.io/otel/internal/global.(*nonRecordingSpan).SetName",
+				Fn:       uprobeSpanSetName,
+				Optional: true,
 			},
 		},
 
@@ -157,6 +162,23 @@ func uprobeSetAttributes(name string, exec *link.Executable, target *process.Tar
 
 	opts := &link.UprobeOptions{Address: offset}
 	l, err := exec.Uprobe("", obj.UprobeSetAttributes, opts)
+	if err != nil {
+		return nil, err
+	}
+
+	links := []link.Link{l}
+
+	return links, nil
+}
+
+func uprobeSpanSetName(name string, exec *link.Executable, target *process.TargetDetails, obj *bpfObjects) ([]link.Link, error) {
+	offset, err := target.GetFunctionOffset(name)
+	if err != nil {
+		return nil, err
+	}
+
+	opts := &link.UprobeOptions{Address: offset}
+	l, err := exec.Uprobe("", obj.UprobeSetName, opts)
 	if err != nil {
 		return nil, err
 	}

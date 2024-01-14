@@ -59,7 +59,7 @@
                 }
               ],
               "kind": 3,
-              "name": "child",
+              "name": "child override",
               "parentSpanId": "xxxxx",
               "spanId": "xxxxx",
               "status": {},

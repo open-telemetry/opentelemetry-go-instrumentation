@@ -64,6 +64,13 @@ struct {
 // Injected in init
 volatile const u64 tracer_delegate_pos;
 
+// read_span_name reads the span name from the provided span_name_ptr and stores the result in
+// span_name.buf.
+static __always_inline void read_span_name(struct span_name_t *span_name, const u64 span_name_len, void *span_name_ptr) {
+    const u64 span_name_size = MAX_SPAN_NAME_LEN < span_name_len ? MAX_SPAN_NAME_LEN : span_name_len;
+    bpf_probe_read(span_name->buf, span_name_size, span_name_ptr);
+}
+
 // This instrumentation attaches uprobe to the following function:
 // func (t *tracer) Start(ctx context.Context, name string, opts ...trace.SpanStartOption) (context.Context, trace.Span)
 // https://github.com/open-telemetry/opentelemetry-go/blob/98b32a6c3a87fbee5d34c063b9096f416b250897/internal/global/trace.go#L149
@@ -81,8 +88,7 @@ int uprobe_Start(struct pt_regs *ctx) {
     // Getting span name
     void *span_name_ptr = get_argument(ctx, 4);
     u64 span_name_len = (u64)get_argument(ctx, 5);
-    u64 span_name_size = MAX_SPAN_NAME_LEN < span_name_len ? MAX_SPAN_NAME_LEN : span_name_len;
-    bpf_probe_read(span_name.buf, span_name_size, span_name_ptr);
+    read_span_name(&span_name, span_name_len, span_name_ptr);
 
     // Save the span name in map to be read once the Start function returns
     void *context_ptr_val = get_Go_context(ctx, 3, 0, true);
@@ -162,6 +168,35 @@ int uprobe_SetAttributes(struct pt_regs *ctx) {
     return 0;
 }
 
+// This instrumentation attaches uprobe to the following function:
+// func (nonRecordingSpan) SetName(string)
+SEC("uprobe/SetName")
+int uprobe_SetName(struct pt_regs *ctx) {
+    void *non_recording_span_ptr = get_argument(ctx, 1);
+    struct otel_span_t *span = bpf_map_lookup_elem(&active_spans_by_span_ptr, &non_recording_span_ptr);
+    if (span == NULL) {
+        return 0;
+    }
+
+    void *span_name_ptr = get_argument(ctx, 2);
+    if (span_name_ptr == NULL) {
+        return 0;
+    }
+
+    void *span_name_len_ptr = get_argument(ctx, 3);
+    if (span_name_len_ptr == NULL) {
+        return 0;
+    }
+
+    u64 span_name_len = (u64)span_name_len_ptr;
+    struct span_name_t span_name = {0};
+
+    read_span_name(&span_name, span_name_len, span_name_ptr);
+    span->span_name = span_name;
+    bpf_map_update_elem(&active_spans_by_span_ptr, &non_recording_span_ptr, span, 0);
+    
+    return 0;
+}
 
 // This instrumentation attaches uprobe to the following function:
 // func (*nonRecordingSpan) End(...trace.SpanEndOption)
