@@ -33,14 +33,14 @@ jobs:
       - name: Checkout Repo
         uses: actions/checkout@v4
       - name: Module cache
-        uses: actions/cache@v3.3.2
+        uses: actions/cache@v3.3.3
         env:
           cache-name: go-mod-cache
         with:
           path: ~/go/pkg/mod
           key: ${{ runner.os }}-${{ env.cache-name }}-${{ hashFiles('**/go.sum') }}
       - name: Tools cache
-        uses: actions/cache@v3.3.2
+        uses: actions/cache@v3.3.3
         env:
           cache-name: go-tools-cache
         with:
