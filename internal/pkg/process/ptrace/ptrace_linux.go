@@ -221,7 +221,7 @@ func (p *TracedProgram) Step() error {
 
 // SetMemLockInfinity sets the memlock rlimit to infinity.
 func (p *TracedProgram) SetMemLockInfinity() error {
-	// pid 0 affects the current process. Requires CAP_SYS_RESOURCE.
+	// Requires CAP_SYS_RESOURCE.
 	newLimit := unix.Rlimit{Cur: unix.RLIM_INFINITY, Max: unix.RLIM_INFINITY}
 	if err := unix.Prlimit(p.pid, unix.RLIMIT_MEMLOCK, &newLimit, nil); err != nil {
 		return fmt.Errorf("failed to set memlock rlimit: %w", err)
