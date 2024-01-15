@@ -29,6 +29,7 @@ func innerFunction(ctx context.Context) {
 	defer span.End()
 
 	span.SetAttributes(attribute.String("inner.key", "inner.value"))
+	span.SetName("child override")
 }
 
 func createMainSpan(ctx context.Context) {
