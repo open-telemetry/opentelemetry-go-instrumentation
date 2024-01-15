@@ -59,7 +59,7 @@ func NewManager(logger logr.Logger, otelController *opentelemetry.Controller, gl
 		incomingEvents: make(chan *probe.Event),
 		otelController: otelController,
 		globalImpl:     globalImpl,
-		closingErrors:  make(chan error),
+		closingErrors:  make(chan error, 1),
 	}
 
 	err := m.registerProbes()
@@ -140,7 +140,9 @@ func (m *Manager) Run(ctx context.Context, target *process.TargetDetails) error 
 		case <-ctx.Done():
 			m.logger.Info("shutting down all probes due to context cancellation")
 			err := m.cleanup(target)
-			return errors.Join(err, ctx.Err())
+			err = errors.Join(err, ctx.Err())
+			m.closingErrors <- err
+			return err
 		case <-m.done:
 			m.logger.Info("shutting down all probes due to signal")
 			err := m.cleanup(target)
