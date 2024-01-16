@@ -57,8 +57,8 @@ type Probe interface {
 // also wrap this implementation with their own type if they need to override
 // default behavior.
 type Base[BPFObj any, BPFEvent any] struct {
-	// Id is a unique identifier for the probe.
-	Id ID
+	// ID is a unique identifier for the probe.
+	ID ID
 	// Logger is used to log operations and errors.
 	Logger logr.Logger
 
@@ -91,7 +91,7 @@ func (i *Base[BPFObj, BPFEvent]) Manifest() Manifest {
 		symbols = append(symbols, up.Sym)
 	}
 
-	return NewManifest(i.Id, structfields, symbols)
+	return NewManifest(i.ID, structfields, symbols)
 }
 
 // Load loads all instrumentation offsets.
@@ -148,7 +148,7 @@ func (i *Base[BPFObj, BPFEvent]) buildObj(exec *link.Executable, td *process.Tar
 		links, err := up.Fn(up.Sym, exec, td, obj)
 		if err != nil {
 			if up.Optional {
-				i.Logger.Info("failed to attach optional uprobe", "probe", i.Id, "symbol", up.Sym, "error", err)
+				i.Logger.Info("failed to attach optional uprobe", "probe", i.ID, "symbol", up.Sym, "error", err)
 				continue
 			}
 			return nil, err
@@ -183,8 +183,8 @@ func (i *Base[BPFObj, BPFEvent]) Run(dest chan<- *Event) {
 			i.Logger.Error(err, "failed to process perf record")
 		}
 		e := &Event{
-			Package:   i.Id.InstrumentedPkg,
-			Kind:      i.Id.SpanKind,
+			Package:   i.ID.InstrumentedPkg,
+			Kind:      i.ID.SpanKind,
 			SpanEvent: *se,
 		}
 
@@ -210,7 +210,7 @@ func (i *Base[BPFObj, BPFEvent]) Close() error {
 		err = errors.Join(err, c.Close())
 	}
 	if err == nil {
-		i.Logger.Info("Closed", "Probe", i.Id)
+		i.Logger.Info("Closed", "Probe", i.ID)
 	}
 	return err
 }
