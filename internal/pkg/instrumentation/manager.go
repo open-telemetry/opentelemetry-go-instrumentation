@@ -46,7 +46,7 @@ type Manager struct {
 	otelController *opentelemetry.Controller
 	globalImpl     bool
 	wg             sync.WaitGroup
-	runningErrors  chan error
+	closingErrors  chan error
 }
 
 // NewManager returns a new [Manager].
@@ -59,7 +59,7 @@ func NewManager(logger logr.Logger, otelController *opentelemetry.Controller, gl
 		incomingEvents: make(chan *probe.Event),
 		otelController: otelController,
 		globalImpl:     globalImpl,
-		runningErrors:  make(chan error, 1),
+		closingErrors:  make(chan error, 1),
 	}
 
 	err := m.registerProbes()
@@ -117,18 +117,15 @@ func (m *Manager) FilterUnusedProbes(target *process.TargetDetails) {
 
 // Run runs the event processing loop for all managed probes.
 func (m *Manager) Run(ctx context.Context, target *process.TargetDetails) error {
-	var err error
-	defer func() {
-		m.runningErrors <- err
-	}()
-
 	if len(m.probes) == 0 {
-		err = errors.New("there are no available instrumentations for target process")
+		err := errors.New("there are no available instrumentations for target process")
+		close(m.closingErrors)
 		return err
 	}
 
-	err = m.load(target)
+	err := m.load(target)
 	if err != nil {
+		close(m.closingErrors)
 		return err
 	}
 
@@ -144,13 +141,15 @@ func (m *Manager) Run(ctx context.Context, target *process.TargetDetails) error 
 		select {
 		case <-ctx.Done():
 			m.logger.Info("shutting down all probes due to context cancellation")
-			err = m.cleanup(target)
+			err := m.cleanup(target)
 			err = errors.Join(err, ctx.Err())
-			return err
+			m.closingErrors <- err
+			return nil
 		case <-m.done:
 			m.logger.Info("shutting down all probes due to signal")
-			err = m.cleanup(target)
-			return err
+			err := m.cleanup(target)
+			m.closingErrors <- err
+			return nil
 		case e := <-m.incomingEvents:
 			m.otelController.Trace(e)
 		}
@@ -209,8 +208,8 @@ func (m *Manager) cleanup(target *process.TargetDetails) error {
 // Close closes m.
 func (m *Manager) Close() error {
 	m.done <- true
+	err := <-m.closingErrors
 	m.wg.Wait()
-	err := <-m.runningErrors
 	return err
 }
 
