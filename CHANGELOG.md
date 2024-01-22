@@ -19,6 +19,7 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 ### Fixed
 
 - Log any failures to close running probes. ([#586](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/586))
+- Log explanatory error message on Linux kernel lockdown ([#290](https://github.com/open-telemetry/opentelemetry-go-instrumentation/issues/290))
 
 ## [v0.10.0-alpha] - 2024-01-03
 
