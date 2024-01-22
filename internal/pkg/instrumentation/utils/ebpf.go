@@ -21,6 +21,7 @@ import (
 	"strconv"
 
 	"github.com/cilium/ebpf"
+	"github.com/hashicorp/go-version"
 )
 
 const (
@@ -59,4 +60,24 @@ func shouldShowVerifierLogs() bool {
 	}
 
 	return false
+}
+
+// Does kernel version check and /sys/kernel/security/lockdown inspection to determine if it's
+// safe to use bpf_probe_write_user.
+func SupportsContextPropagation() bool {
+	ver, err := GetLinuxKernelVersion()
+	if err != nil {
+		return false
+	}
+
+	noLockKernel, err := version.NewVersion("5.14")
+	if err != nil {
+		fmt.Printf("Error creating version 5.14 - %v\n", err)
+	}
+
+	if ver.LessThan(noLockKernel) {
+		return true
+	}
+
+	return KernelLockdownMode() == KernelLockdownNone
 }
