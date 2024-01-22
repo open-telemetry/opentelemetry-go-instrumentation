@@ -15,8 +15,11 @@
 package utils
 
 import (
+	"bufio"
 	"fmt"
+	"os"
 	"strconv"
+	"strings"
 	"syscall"
 
 	"github.com/hashicorp/go-version"
@@ -52,4 +55,44 @@ func GetLinuxKernelVersion() (*version.Version, error) {
 	ver := fmt.Sprintf("%s.%s", strconv.Itoa(values[0]), strconv.Itoa(values[1]))
 
 	return version.NewVersion(ver)
+}
+
+type KernelLockdown uint8
+
+const (
+	KernelLockdownNone            KernelLockdown = iota + 1 // Linux Kernel security lockdown mode [none]
+	KernelLockdownIntegrity                                 // Linux Kernel security lockdown mode [integrity]
+	KernelLockdownConfidentiality                           // Linux Kernel security lockdown mode [confidentiality]
+	KernelLockdownOther                                     // Linux Kernel security lockdown mode unknown
+)
+
+// Injectable for tests.
+var lockdownPath = "/sys/kernel/security/lockdown"
+
+func KernelLockdownMode() KernelLockdown {
+	// If we can't find the file, assume no lockdown
+	if _, err := os.Stat(lockdownPath); err == nil {
+		f, err := os.Open(lockdownPath)
+		if err != nil {
+			return KernelLockdownIntegrity
+		}
+
+		defer f.Close()
+		scanner := bufio.NewScanner(f)
+		if scanner.Scan() {
+			lockdown := scanner.Text()
+			if strings.Contains(lockdown, "[none]") {
+				return KernelLockdownNone
+			} else if strings.Contains(lockdown, "[integrity]") {
+				return KernelLockdownIntegrity
+			} else if strings.Contains(lockdown, "[confidentiality]") {
+				return KernelLockdownConfidentiality
+			}
+			return KernelLockdownOther
+		}
+
+		return KernelLockdownIntegrity
+	}
+
+	return KernelLockdownNone
 }
