@@ -15,8 +15,10 @@
 package client
 
 import (
+	"fmt"
 	"os"
 
+	"github.com/cilium/ebpf"
 	"github.com/cilium/ebpf/link"
 	"github.com/cilium/ebpf/perf"
 	"github.com/go-logr/logr"
@@ -27,6 +29,7 @@ import (
 
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/context"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/probe"
+	"go.opentelemetry.io/auto/internal/pkg/instrumentation/utils"
 	"go.opentelemetry.io/auto/internal/pkg/process"
 	"go.opentelemetry.io/auto/internal/pkg/structfield"
 )
@@ -89,9 +92,17 @@ func New(logger logr.Logger) probe.Probe {
 		ReaderFn: func(obj bpfObjects) (*perf.Reader, error) {
 			return perf.NewReader(obj.Events, os.Getpagesize())
 		},
-		SpecFn:    loadBpf,
+		SpecFn:    verifyAndLoadBpf,
 		ProcessFn: convertEvent,
 	}
+}
+
+func verifyAndLoadBpf() (*ebpf.CollectionSpec, error) {
+	if !utils.SupportsContextPropagation() {
+		return nil, fmt.Errorf("the Linux Kernel doesn't support context propagation, please check if the kernel is in lockdown mode (/sys/kernel/security/lockdown)")
+	}
+
+	return loadBpf()
 }
 
 func uprobeRoundTrip(name string, exec *link.Executable, target *process.TargetDetails, obj *bpfObjects) ([]link.Link, error) {
