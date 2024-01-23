@@ -29,7 +29,7 @@ require (
 	github.com/stretchr/testify v1.8.4
 	go.opentelemetry.io/contrib/exporters/autoexport v0.46.1
 	go.opentelemetry.io/otel v1.22.0
-	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp v1.21.0
+	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp v1.22.0
 	go.opentelemetry.io/otel/sdk v1.22.0
 	go.opentelemetry.io/otel/trace v1.22.0
 	go.uber.org/zap v1.26.0
@@ -72,7 +72,7 @@ require (
 	github.com/ugorji/go/codec v1.2.11 // indirect
 	go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc v0.44.0 // indirect
 	go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp v0.44.0 // indirect
-	go.opentelemetry.io/otel/exporters/otlp/otlptrace v1.21.0 // indirect
+	go.opentelemetry.io/otel/exporters/otlp/otlptrace v1.22.0 // indirect
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc v1.21.0 // indirect
 	go.opentelemetry.io/otel/exporters/prometheus v0.44.0 // indirect
 	go.opentelemetry.io/otel/exporters/stdout/stdoutmetric v0.44.0 // indirect
@@ -87,5 +87,5 @@ require (
 	golang.org/x/text v0.14.0 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20231002182017-d307bd883b97 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20231002182017-d307bd883b97 // indirect
-	google.golang.org/protobuf v1.31.0 // indirect
+	google.golang.org/protobuf v1.32.0 // indirect
 )
