@@ -118,7 +118,7 @@ func (m *Manager) FilterUnusedProbes(target *process.TargetDetails) {
 // Run runs the event processing loop for all managed probes.
 func (m *Manager) Run(ctx context.Context, target *process.TargetDetails) error {
 	if len(m.probes) == 0 {
-		err := errors.New("there are no available instrumentations for target process")
+		err := errors.New("no instrumentation for target process")
 		close(m.closingErrors)
 		return err
 	}
