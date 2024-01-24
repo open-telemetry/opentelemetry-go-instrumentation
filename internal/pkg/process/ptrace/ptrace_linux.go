@@ -58,7 +58,10 @@ func (p *TracedProgram) Pid() int {
 }
 
 func waitPid(pid int) error {
-	ret := waitpid(pid)
+	ret, err := unix.Wait4(pid, nil, unix.WALL, nil)
+	if err != nil {
+		return err
+	}
 	if ret == pid {
 		return nil
 	}

@@ -14,7 +14,7 @@ BPF_INCLUDE += -I${REPODIR}/internal/include
 # Go default variables
 GOCMD?= go
 GOOS=linux
-CGO_ENABLED=1
+CGO_ENABLED=0
 
 .DEFAULT_GOAL := precommit
 
