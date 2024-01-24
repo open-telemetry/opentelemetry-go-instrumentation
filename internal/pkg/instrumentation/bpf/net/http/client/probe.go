@@ -40,13 +40,13 @@ const (
 
 // New returns a new [probe.Probe].
 func New(logger logr.Logger) probe.Probe {
-	Id := probe.ID{
+	id := probe.ID{
 		SpanKind:        trace.SpanKindClient,
 		InstrumentedPkg: pkg,
 	}
 	return &probe.Base[bpfObjects, event]{
-		Id:     Id,
-		Logger: logger.WithName(Id.String()),
+		ID:     id,
+		Logger: logger.WithName(id.String()),
 		Consts: []probe.Const{
 			probe.RegistersABIConst{},
 			probe.AllocationConst{},
