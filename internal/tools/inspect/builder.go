@@ -153,7 +153,7 @@ func (b *builder) createContainer(ctx context.Context, cmd []string, dir string)
 }
 
 func (b *builder) runContainer(ctx context.Context, id string) error {
-	out, err := b.cli.ContainerLogs(ctx, id, types.ContainerLogsOptions{
+	out, err := b.cli.ContainerLogs(ctx, id, container.LogsOptions{
 		ShowStdout: true,
 		ShowStderr: true,
 	})
@@ -161,7 +161,7 @@ func (b *builder) runContainer(ctx context.Context, id string) error {
 		return err
 	}
 
-	err = b.cli.ContainerStart(ctx, id, types.ContainerStartOptions{})
+	err = b.cli.ContainerStart(ctx, id, container.StartOptions{})
 	if err != nil {
 		return err
 	}
