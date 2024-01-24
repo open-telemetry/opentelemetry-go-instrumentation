@@ -38,23 +38,24 @@ var (
 
 // Analyzer is used to find actively running processes.
 type Analyzer struct {
-	logger        logr.Logger
-	done          chan bool
-	pidTickerChan <-chan time.Time
+	logger logr.Logger
+	done   chan bool
 }
 
 // NewAnalyzer returns a new [ProcessAnalyzer].
 func NewAnalyzer(logger logr.Logger) *Analyzer {
 	return &Analyzer{
-		logger:        logger.WithName("Analyzer"),
-		done:          make(chan bool, 1),
-		pidTickerChan: time.NewTicker(2 * time.Second).C,
+		logger: logger.WithName("Analyzer"),
+		done:   make(chan bool, 1),
 	}
 }
 
 // DiscoverProcessID searches for the target as an actively running process,
 // returning its PID if found.
 func (a *Analyzer) DiscoverProcessID(target *TargetArgs) (int, error) {
+	t := time.NewTicker(2 * time.Second)
+	defer t.Stop()
+
 	if target.Pid != 0 {
 		return target.Pid, nil
 	}
@@ -63,7 +64,7 @@ func (a *Analyzer) DiscoverProcessID(target *TargetArgs) (int, error) {
 		case <-a.done:
 			a.logger.Info("stopping process id discovery due to kill signal")
 			return 0, ErrInterrupted
-		case <-a.pidTickerChan:
+		case <-t.C:
 			pid, err := a.findProcessID(target)
 			if err == nil {
 				a.logger.Info("found process", "pid", pid)
