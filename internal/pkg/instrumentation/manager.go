@@ -118,12 +118,14 @@ func (m *Manager) FilterUnusedProbes(target *process.TargetDetails) {
 // Run runs the event processing loop for all managed probes.
 func (m *Manager) Run(ctx context.Context, target *process.TargetDetails) error {
 	if len(m.probes) == 0 {
-		m.logger.Info("there are no available instrumentations for target process")
-		return nil
+		err := errors.New("no instrumentation for target process")
+		close(m.closingErrors)
+		return err
 	}
 
 	err := m.load(target)
 	if err != nil {
+		close(m.closingErrors)
 		return err
 	}
 
@@ -142,12 +144,12 @@ func (m *Manager) Run(ctx context.Context, target *process.TargetDetails) error 
 			err := m.cleanup(target)
 			err = errors.Join(err, ctx.Err())
 			m.closingErrors <- err
-			return err
+			return nil
 		case <-m.done:
 			m.logger.Info("shutting down all probes due to signal")
 			err := m.cleanup(target)
 			m.closingErrors <- err
-			return err
+			return nil
 		case e := <-m.incomingEvents:
 			m.otelController.Trace(e)
 		}
@@ -206,8 +208,8 @@ func (m *Manager) cleanup(target *process.TargetDetails) error {
 // Close closes m.
 func (m *Manager) Close() error {
 	m.done <- true
-	m.wg.Wait()
 	err := <-m.closingErrors
+	m.wg.Wait()
 	return err
 }
 
