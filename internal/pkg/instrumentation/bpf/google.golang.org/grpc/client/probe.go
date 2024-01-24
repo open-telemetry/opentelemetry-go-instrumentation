@@ -15,6 +15,7 @@
 package grpc
 
 import (
+	"fmt"
 	"os"
 	"strconv"
 	"strings"
@@ -30,6 +31,7 @@ import (
 
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/context"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/probe"
+	"go.opentelemetry.io/auto/internal/pkg/instrumentation/utils"
 	"go.opentelemetry.io/auto/internal/pkg/process"
 	"go.opentelemetry.io/auto/internal/pkg/structfield"
 )
@@ -92,9 +94,17 @@ func New(logger logr.Logger) probe.Probe {
 		ReaderFn: func(obj bpfObjects) (*perf.Reader, error) {
 			return perf.NewReader(obj.Events, os.Getpagesize())
 		},
-		SpecFn:    loadBpf,
+		SpecFn:    verifyAndLoadBpf,
 		ProcessFn: convertEvent,
 	}
+}
+
+func verifyAndLoadBpf() (*ebpf.CollectionSpec, error) {
+	if !utils.SupportsContextPropagation() {
+		return nil, fmt.Errorf("the Linux Kernel doesn't support context propagation, please check if the kernel is in lockdown mode (/sys/kernel/security/lockdown)")
+	}
+
+	return loadBpf()
 }
 
 func uprobeFn(name string, exec *link.Executable, target *process.TargetDetails, prog *ebpf.Program) ([]link.Link, error) {
