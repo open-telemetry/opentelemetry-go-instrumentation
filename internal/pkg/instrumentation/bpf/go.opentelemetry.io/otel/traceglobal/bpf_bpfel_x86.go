@@ -13,11 +13,15 @@ import (
 )
 
 type bpfOtelSpanT struct {
-	StartTime  uint64
-	EndTime    uint64
-	Sc         bpfSpanContext
-	Psc        bpfSpanContext
-	SpanName   bpfSpanNameT
+	StartTime uint64
+	EndTime   uint64
+	Sc        bpfSpanContext
+	Psc       bpfSpanContext
+	SpanName  bpfSpanNameT
+	Status    struct {
+		Code        uint32
+		Description struct{ Buf [64]int8 }
+	}
 	Attributes struct {
 		Attrs [16]struct {
 			ValLength uint16
@@ -28,7 +32,7 @@ type bpfOtelSpanT struct {
 		}
 		ValidAttrs uint8
 	}
-	_ [7]byte
+	_ [3]byte
 }
 
 type bpfSliceArrayBuff struct{ Buff [1024]uint8 }
@@ -84,6 +88,7 @@ type bpfProgramSpecs struct {
 	UprobeEnd           *ebpf.ProgramSpec `ebpf:"uprobe_End"`
 	UprobeSetAttributes *ebpf.ProgramSpec `ebpf:"uprobe_SetAttributes"`
 	UprobeSetName       *ebpf.ProgramSpec `ebpf:"uprobe_SetName"`
+	UprobeSetStatus     *ebpf.ProgramSpec `ebpf:"uprobe_SetStatus"`
 	UprobeStart         *ebpf.ProgramSpec `ebpf:"uprobe_Start"`
 	UprobeStartReturns  *ebpf.ProgramSpec `ebpf:"uprobe_Start_Returns"`
 }
@@ -151,6 +156,7 @@ type bpfPrograms struct {
 	UprobeEnd           *ebpf.Program `ebpf:"uprobe_End"`
 	UprobeSetAttributes *ebpf.Program `ebpf:"uprobe_SetAttributes"`
 	UprobeSetName       *ebpf.Program `ebpf:"uprobe_SetName"`
+	UprobeSetStatus     *ebpf.Program `ebpf:"uprobe_SetStatus"`
 	UprobeStart         *ebpf.Program `ebpf:"uprobe_Start"`
 	UprobeStartReturns  *ebpf.Program `ebpf:"uprobe_Start_Returns"`
 }
@@ -160,6 +166,7 @@ func (p *bpfPrograms) Close() error {
 		p.UprobeEnd,
 		p.UprobeSetAttributes,
 		p.UprobeSetName,
+		p.UprobeSetStatus,
 		p.UprobeStart,
 		p.UprobeStartReturns,
 	)

@@ -28,6 +28,7 @@ import (
 	"golang.org/x/sys/unix"
 
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/trace"
 
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/context"
@@ -106,6 +107,11 @@ func New(logger logr.Logger) probe.Probe {
 			{
 				Sym:      "go.opentelemetry.io/otel/internal/global.(*nonRecordingSpan).SetAttributes",
 				Fn:       uprobeSetAttributes,
+				Optional: true,
+			},
+			{
+				Sym:      "go.opentelemetry.io/otel/internal/global.(*nonRecordingSpan).SetStatus",
+				Fn:       uprobeSetStatus,
 				Optional: true,
 			},
 			{
@@ -188,6 +194,23 @@ func uprobeSpanSetName(name string, exec *link.Executable, target *process.Targe
 	return links, nil
 }
 
+func uprobeSetStatus(name string, exec *link.Executable, target *process.TargetDetails, obj *bpfObjects) ([]link.Link, error) {
+	offset, err := target.GetFunctionOffset(name)
+	if err != nil {
+		return nil, err
+	}
+
+	opts := &link.UprobeOptions{Address: offset}
+	l, err := exec.Uprobe("", obj.UprobeSetStatus, opts)
+	if err != nil {
+		return nil, err
+	}
+
+	links := []link.Link{l}
+
+	return links, nil
+}
+
 func uprobeSpanEnd(name string, exec *link.Executable, target *process.TargetDetails, obj *bpfObjects) ([]link.Link, error) {
 	offset, err := target.GetFunctionOffset(name)
 	if err != nil {
@@ -218,10 +241,16 @@ type attributesBuffer struct {
 	ValidAttrs uint8
 }
 
+type status struct {
+	Code        uint32
+	Description [64]byte
+}
+
 // event represents a manual span created by the user.
 type event struct {
 	context.BaseSpanProperties
 	SpanName   [64]byte
+	Status     status
 	Attributes attributesBuffer
 }
 
@@ -254,6 +283,10 @@ func convertEvent(e *event) *probe.SpanEvent {
 		Attributes:        convertAttributes(e.Attributes),
 		SpanContext:       &sc,
 		ParentSpanContext: pscPtr,
+		Status: probe.Status{
+			Code:        codes.Code(e.Status.Code),
+			Description: string(unix.ByteSliceToString(e.Status.Description[:])),
+		},
 	}
 }
 

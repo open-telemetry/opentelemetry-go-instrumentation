@@ -20,6 +20,7 @@ import (
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
 )
 
 var tracer = otel.Tracer("trace-example")
@@ -30,6 +31,7 @@ func innerFunction(ctx context.Context) {
 
 	span.SetAttributes(attribute.String("inner.key", "inner.value"))
 	span.SetName("child override")
+	span.SetStatus(codes.Error, "i deleted the prod db sry")
 }
 
 func createMainSpan(ctx context.Context) {
@@ -43,6 +45,7 @@ func createMainSpan(ctx context.Context) {
 	boolAttr := attribute.Bool("bool_key", true)
 	floatAttr := attribute.Float64("float_key", 42.3)
 	span.SetAttributes(intAttr, strAttr, boolAttr, floatAttr)
+	span.SetStatus(codes.Ok, "this msg won't be seen")
 }
 
 func main() {

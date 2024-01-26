@@ -16,6 +16,7 @@ package probe
 
 import (
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -26,6 +27,11 @@ type Event struct {
 	SpanEvent
 }
 
+type Status struct {
+	Code        codes.Code
+	Description string
+}
+
 type SpanEvent struct {
 	SpanName          string
 	Attributes        []attribute.KeyValue
@@ -33,4 +39,5 @@ type SpanEvent struct {
 	EndTime           int64
 	SpanContext       *trace.SpanContext
 	ParentSpanContext *trace.SpanContext
+	Status            Status
 }
