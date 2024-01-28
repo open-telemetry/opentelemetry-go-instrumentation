@@ -56,6 +56,12 @@
                   "value": {
                     "stringValue": "inner.value"
                   }
+                },
+                {
+                  "key": "cat.on_keyboard",
+                  "value": {
+                    "boolValue": true
+                  }
                 }
               ],
               "kind": 3,

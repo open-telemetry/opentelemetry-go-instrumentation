@@ -92,7 +92,7 @@ static __always_inline bool set_attr_value(otel_attirbute_t *attr, go_otel_attr_
 	return false;
 }
 
-static __always_inline void convert_go_otel_attributes(void *attrs_buf, s64 slice_len, otel_attributes_t *enc_attrs)
+static __always_inline void convert_go_otel_attributes(void *attrs_buf, u64 slice_len, otel_attributes_t *enc_attrs)
 {
 	if (attrs_buf == NULL || enc_attrs == NULL){
 		return;
@@ -102,13 +102,16 @@ static __always_inline void convert_go_otel_attributes(void *attrs_buf, s64 slic
 		return;
 	}
 
-	s64 num_attrs = slice_len < OTEL_ATTRUBUTE_MAX_COUNT ? slice_len : OTEL_ATTRUBUTE_MAX_COUNT;
+	u8 num_attrs = slice_len < OTEL_ATTRUBUTE_MAX_COUNT ? slice_len : OTEL_ATTRUBUTE_MAX_COUNT;
 	go_otel_key_value_t *go_attr = (go_otel_key_value_t*)attrs_buf;
 	go_otel_attr_value_t go_attr_value = {0};
 	struct go_string go_str = {0};
-	u8 valid_attrs = 0;
+	u8 valid_attrs = enc_attrs->valid_attrs;
+	if (valid_attrs >= OTEL_ATTRUBUTE_MAX_COUNT) {
+		return;
+	}
 
-	for (u32 go_attr_index = 0; go_attr_index < num_attrs; go_attr_index++) {
+	for (u8 go_attr_index = 0; go_attr_index < num_attrs; go_attr_index++) {
 		__builtin_memset(&go_attr_value, 0, sizeof(go_otel_attr_value_t));
 		// Read the value struct
 		bpf_probe_read(&go_attr_value, sizeof(go_otel_attr_value_t), &go_attr[go_attr_index].value);
@@ -125,6 +128,13 @@ static __always_inline void convert_go_otel_attributes(void *attrs_buf, s64 slic
 			continue;
 		}
 
+		// Need to check valid_attrs otherwise the ebpf verifier thinks it's possible to exceed
+		// the max register value for a downstream call, even though it's not possible with
+		// this same check at the end of the loop.
+		if (valid_attrs >= OTEL_ATTRUBUTE_MAX_COUNT) {
+			break;
+		}
+
 		if (!get_go_string_from_user_ptr(&go_str, enc_attrs->attrs[valid_attrs].key, OTEL_ATTRIBUTE_KEY_MAX_LEN)) {
 			continue;
 		}
@@ -135,6 +145,10 @@ static __always_inline void convert_go_otel_attributes(void *attrs_buf, s64 slic
 
 		enc_attrs->attrs[valid_attrs].vtype = go_attr_value.vtype;
 		valid_attrs++;
+		if (valid_attrs >= OTEL_ATTRUBUTE_MAX_COUNT) {
+			// No more space for attributes
+			break;
+		}
 	}
 
 	enc_attrs->valid_attrs = valid_attrs;

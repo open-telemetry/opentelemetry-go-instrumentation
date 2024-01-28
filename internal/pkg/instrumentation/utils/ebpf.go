@@ -35,7 +35,7 @@ func LoadEBPFObjects(spec *ebpf.CollectionSpec, to interface{}, opts *ebpf.Colle
 	showVerifierLogs := shouldShowVerifierLogs()
 	if showVerifierLogs {
 		opts.Programs.LogSize = ebpf.DefaultVerifierLogSize * 100
-		opts.Programs.LogLevel = ebpf.LogLevelInstruction | ebpf.LogLevelBranch | ebpf.LogLevelStats
+		opts.Programs.LogLevel = /*ebpf.LogLevelInstruction | ebpf.LogLevelBranch |*/ ebpf.LogLevelStats
 	}
 
 	err := spec.LoadAndAssign(to, opts)

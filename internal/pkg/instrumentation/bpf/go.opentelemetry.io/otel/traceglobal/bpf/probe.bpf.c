@@ -143,6 +143,8 @@ int uprobe_Start_Returns(struct pt_regs *ctx) {
         otel_span->sc = generate_span_context();
     }
 
+    otel_span->attributes.valid_attrs = 0;
+
     bpf_map_update_elem(&active_spans_by_span_ptr, &span_ptr_val, otel_span, 0);
     start_tracking_span(ret_context_ptr_val, &otel_span->sc);
     return 0;

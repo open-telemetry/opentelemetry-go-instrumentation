@@ -20,6 +20,7 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 
 - Log any failures to close running probes. ([#586](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/586))
 - Log explanatory error message on Linux kernel lockdown ([#290](https://github.com/open-telemetry/opentelemetry-go-instrumentation/issues/290))
+- (otelglobal) Fixed case where multiple span.SetAttributes() calls would overwrite existing attributes ([](TODO(NOW): fill in PR once it's available))
 
 ## [v0.10.0-alpha] - 2024-01-03
 

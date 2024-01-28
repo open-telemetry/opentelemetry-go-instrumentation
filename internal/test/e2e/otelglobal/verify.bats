@@ -24,6 +24,11 @@ SCOPE="go.opentelemetry.io/auto/go.opentelemetry.io/otel/internal/global"
   assert_equal "$result" '"inner.value"'
 }
 
+@test "server :: valid bool attribute in child span" {
+  result=$(span_attributes_for ${SCOPE} | jq "select(.key == \"cat.on_keyboard\").value.boolValue")
+  assert_equal "$result" 'true'
+}
+
 @test "server :: valid bool attribute" {
   result=$(span_attributes_for ${SCOPE} | jq "select(.key == \"bool_key\").value.boolValue")
   assert_equal "$result" 'true'
