@@ -21,9 +21,19 @@
 
 char __license[] SEC("license") = "Dual MIT/GPL";
 
+#define MAX_ATTRIBUTES 4
 #define MAX_CONCURRENT 50
 #define MAX_SPAN_NAME_LEN 64
-#define MAX_ATTRIBUTES 4
+#define MAX_STATUS_DESCRIPTION_LEN 64
+
+struct span_description_t {
+    char buf[MAX_STATUS_DESCRIPTION_LEN];
+};
+
+typedef struct otel_status {
+	u32 code;
+	struct span_description_t description;
+} __attribute__((packed)) otel_status_t;
 
 struct span_name_t {
     char buf[MAX_SPAN_NAME_LEN];
@@ -32,6 +42,7 @@ struct span_name_t {
 struct otel_span_t {
     BASE_SPAN_PROPERTIES
     struct span_name_t span_name;
+    otel_status_t status;
     otel_attributes_t attributes;
 };
 
@@ -195,6 +206,40 @@ int uprobe_SetName(struct pt_regs *ctx) {
     span->span_name = span_name;
     bpf_map_update_elem(&active_spans_by_span_ptr, &non_recording_span_ptr, span, 0);
     
+    return 0;
+}
+
+// This instrumentation attaches uprobe to the following function:
+// func (nonRecordingSpan) SetStatus(codes.Code, string)
+SEC("uprobe/SetStatus")
+int uprobe_SetStatus(struct pt_regs *ctx) {
+    void *non_recording_span_ptr = get_argument(ctx, 1);
+    struct otel_span_t *span = bpf_map_lookup_elem(&active_spans_by_span_ptr, &non_recording_span_ptr);
+    if (span == NULL) {
+        return 0;
+    }
+
+    u32 status_code = (u32)get_argument(ctx, 2);
+
+    void *description_ptr = get_argument(ctx, 3);
+    if (description_ptr == NULL) {
+        return 0;
+    }
+
+    struct span_description_t description = {0};
+
+    // Getting span description
+    u64 description_len = (u64)get_argument(ctx, 4);
+    u64 description_size = MAX_STATUS_DESCRIPTION_LEN < description_len ? MAX_STATUS_DESCRIPTION_LEN : description_len;
+    bpf_probe_read(description.buf, description_size, description_ptr);
+
+    otel_status_t status = {0};
+
+    status.code = status_code;
+    status.description = description;
+    span->status = status;
+    bpf_map_update_elem(&active_spans_by_span_ptr, &non_recording_span_ptr, span, 0);
+
     return 0;
 }
 

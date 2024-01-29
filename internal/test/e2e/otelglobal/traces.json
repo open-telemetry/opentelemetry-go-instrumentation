@@ -68,7 +68,10 @@
               "name": "child override",
               "parentSpanId": "xxxxx",
               "spanId": "xxxxx",
-              "status": {},
+              "status": {
+                "code": 2,
+                "message": "i deleted the prod db sry"
+              },
               "traceId": "xxxxx"
             },
             {
@@ -102,7 +105,9 @@
               "name": "parent",
               "parentSpanId": "",
               "spanId": "xxxxx",
-              "status": {},
+              "status": {
+                "code": 1
+              },
               "traceId": "xxxxx"
             }
           ]

@@ -20,6 +20,9 @@
 /.idea/
 *.iml
 
+# VSCode
+.vscode/
+
 otel-go-instrumentation
 launcher/
 opentelemetry-helm-charts/

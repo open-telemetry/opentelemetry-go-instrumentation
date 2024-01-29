@@ -64,6 +64,18 @@ SCOPE="go.opentelemetry.io/auto/go.opentelemetry.io/otel/internal/global"
   assert_regex "$parent_span_id" ${MATCH_A_SPAN_ID}
 }
 
+@test "server :: span status present in parent" {
+  parent_status_code=$(spans_from_scope_named ${SCOPE} | jq "select(.name == \"parent\")" | jq ".status.code")
+  assert_equal "$parent_status_code" '1'
+}
+
+@test "server :: span status present in child" {
+  child_status_code=$(spans_from_scope_named ${SCOPE} | jq "select(.name == \"child override\")" | jq ".status.code")
+  assert_equal "$child_status_code" '2'
+  child_status_description=$(spans_from_scope_named ${SCOPE} | jq "select(.name == \"child override\")" | jq ".status.message")
+  assert_equal "$child_status_description" '"i deleted the prod db sry"'
+}
+
 @test "server :: expected (redacted) trace output" {
   redact_json
   assert_equal "$(git --no-pager diff ${BATS_TEST_DIRNAME}/traces.json)" ""

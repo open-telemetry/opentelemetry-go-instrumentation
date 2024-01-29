@@ -51,7 +51,7 @@ func (c *Controller) getTracer(pkg string) trace.Tracer {
 
 // Trace creates a trace span for event.
 func (c *Controller) Trace(event *probe.Event) {
-	c.logger.Info("got event", "attrs", event.Attributes)
+	c.logger.Info("got event", "attrs", event.Attributes, "status", event.Status)
 	ctx := context.Background()
 
 	if event.SpanContext == nil {
@@ -70,6 +70,7 @@ func (c *Controller) Trace(event *probe.Event) {
 			trace.WithAttributes(event.Attributes...),
 			trace.WithSpanKind(event.Kind),
 			trace.WithTimestamp(c.convertTime(event.StartTime)))
+	span.SetStatus(event.Status.Code, event.Status.Description)
 	span.End(trace.WithTimestamp(c.convertTime(event.EndTime)))
 }
 
