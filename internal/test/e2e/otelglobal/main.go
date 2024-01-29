@@ -30,6 +30,7 @@ func innerFunction(ctx context.Context) {
 	defer span.End()
 
 	span.SetAttributes(attribute.String("inner.key", "inner.value"))
+	span.SetAttributes(attribute.Bool("cat.on_keyboard", true))
 	span.SetName("child override")
 	span.SetStatus(codes.Error, "i deleted the prod db sry")
 }
