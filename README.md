@@ -52,8 +52,9 @@ To instrument an application automatically, you need the following:
 - Linux with kernel version 4.19 or higher
 - x64 or ARM processor
 - Docker image or compiled binary of OpenTelemetry Go Automatic Instrumentation
+- Go 1.18 or higher
 
-To compile the instrumentation binary, use Go 1.18 or higher.
+To compile the instrumentation binary, run `make build`.
 
 ### Instrument an application on the same host
 
@@ -72,7 +73,7 @@ To instrument an application on the same host, follow these steps:
   For example:
 
   ```sh
-  sudo OTEL_GO_AUTO_TARGET_EXE=/home/bin/service_executable OTEL_SERVICE_NAME=my_service OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318./otel-go-instrumentation`
+  sudo OTEL_GO_AUTO_TARGET_EXE=/home/bin/service_executable OTEL_SERVICE_NAME=my_service OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318 ./otel-go-instrumentation`
   ```
 
 3. Run the OpenTelemetry Go Automatic Instrumentation with root privileges.
