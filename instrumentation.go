@@ -121,7 +121,6 @@ func NewInstrumentation(ctx context.Context, opts ...InstrumentationOption) (*In
 
 	td, err := pa.Analyze(pid, mngr.GetRelevantFuncs())
 	if err != nil {
-		mngr.Close()
 		return nil, err
 	}
 
