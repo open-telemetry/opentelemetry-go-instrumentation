@@ -59,13 +59,20 @@ func (a *Analyzer) DiscoverProcessID(target *TargetArgs) (int, error) {
 	if target.Pid != 0 {
 		return target.Pid, nil
 	}
+
+	proc, err := os.Open("/proc")
+	if err != nil {
+		return 0, err
+	}
+	defer proc.Close()
+
 	for {
 		select {
 		case <-a.done:
 			a.logger.Info("stopping process id discovery due to kill signal")
 			return 0, ErrInterrupted
 		case <-t.C:
-			pid, err := a.findProcessID(target)
+			pid, err := a.findProcessID(target, proc)
 			if err == nil {
 				a.logger.Info("found process", "pid", pid)
 				return pid, nil
@@ -79,12 +86,7 @@ func (a *Analyzer) DiscoverProcessID(target *TargetArgs) (int, error) {
 	}
 }
 
-func (a *Analyzer) findProcessID(target *TargetArgs) (int, error) {
-	proc, err := os.Open("/proc")
-	if err != nil {
-		return 0, err
-	}
-
+func (a *Analyzer) findProcessID(target *TargetArgs, proc *os.File) (int, error) {
 	for {
 		dirs, err := proc.Readdir(15)
 		if err == io.EOF {

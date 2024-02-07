@@ -11,6 +11,7 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 ### Fixed
 
 - Don't call `manager.Close()` when `Analyze()` fails. ([#638](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/638))
+- Close `proc` file when done discovering PID. ([#649](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/649))
 
 ## [v0.10.1-alpha] - 2024-01-10
 
