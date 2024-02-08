@@ -15,10 +15,12 @@
 package process
 
 import (
+	"debug/buildinfo"
 	"debug/elf"
 	"errors"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/hashicorp/go-version"
 
@@ -80,15 +82,25 @@ func (a *Analyzer) Analyze(pid int, relevantFuncs map[string]interface{}) (*Targ
 		return nil, err
 	}
 
-	goVersion, modules, err := a.getModuleDetails(elfF)
+	buildInfo, err := buildinfo.Read(f)
+	if err != nil {
+		return nil, err
+	}
+	goVersion, err := version.NewVersion(strings.ReplaceAll(buildInfo.GoVersion, "go", ""))
 	if err != nil {
 		return nil, err
 	}
 	result.GoVersion = goVersion
-
-	// Include the Go standard library module.
-	modules["std"] = goVersion
-	result.Libraries = modules
+	result.Libraries = make(map[string]*version.Version, len(buildInfo.Deps)+1)
+	for _, dep := range buildInfo.Deps {
+		depVersion, err := version.NewVersion(dep.Version)
+		if err != nil {
+			a.logger.Error(err, "error parsing module version")
+			continue
+		}
+		result.Libraries[dep.Path] = depVersion
+	}
+	result.Libraries["std"] = goVersion
 
 	funcs, err := a.findFunctions(elfF, relevantFuncs)
 	if err != nil {
