@@ -8,6 +8,10 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 
 ## [Unreleased]
 
+### Added
+
+- Test build using [Go 1.22]. (#672)
+
 ### Fixed
 
 - Don't call `manager.Close()` when `Analyze()` fails. ([#638](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/638))
@@ -287,3 +291,5 @@ This is the first release of OpenTelemetry Go Automatic Instrumentation.
 [v0.2.1-alpha]: https://github.com/open-telemetry/opentelemetry-go-instrumentation/releases/tag/v0.2.1-alpha
 [v0.2.0-alpha]: https://github.com/open-telemetry/opentelemetry-go-instrumentation/releases/tag/v0.2.0-alpha
 [v0.1.0-alpha]: https://github.com/open-telemetry/opentelemetry-go-instrumentation/releases/tag/v0.1.0-alpha
+
+[Go 1.22]: https://go.dev/doc/go1.22

@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
 
 env:
-  GO_VERSION: "~1.21.1"
+  GO_VERSION: "~1.22.0"
 
 jobs:
   check-links:
@@ -56,7 +56,7 @@ jobs:
   compatibility-test:
     strategy:
       matrix:
-        go-version: ["~1.21.2", "~1.20.8"]
+        go-version: ["~1.22.0", "~1.21.6", "~1.20.8"]
         os: [ubuntu-latest]
         # GitHub Actions does not support arm* architectures on default
         # runners. It is possible to accomplish this with a self-hosted runner
