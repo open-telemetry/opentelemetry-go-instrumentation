@@ -219,7 +219,7 @@ int uprobe_SetStatus(struct pt_regs *ctx) {
         return 0;
     }
 
-    u32 status_code = (u32)get_argument(ctx, 2);
+    u64 status_code = (u64)get_argument(ctx, 2);
 
     void *description_ptr = get_argument(ctx, 3);
     if (description_ptr == NULL) {
@@ -235,7 +235,7 @@ int uprobe_SetStatus(struct pt_regs *ctx) {
 
     otel_status_t status = {0};
 
-    status.code = status_code;
+    status.code = (u32)status_code;
     status.description = description;
     span->status = status;
     bpf_map_update_elem(&active_spans_by_span_ptr, &non_recording_span_ptr, span, 0);
