@@ -19,7 +19,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"runtime"
 
 	"github.com/cilium/ebpf"
 	"github.com/hashicorp/go-version"
@@ -34,8 +33,6 @@ var (
 
 	offsets     = structfield.NewIndex()
 	errNotFound = errors.New("offset not found")
-
-	nCPU = uint32(runtime.NumCPU())
 )
 
 const (
@@ -114,7 +111,7 @@ func WithRegistersABI(value bool) Option {
 // "start_addr", and "end_addr".
 func WithAllocationDetails(details process.AllocationDetails) Option {
 	return option{
-		keyTotalCPUs: nCPU,
+		keyTotalCPUs: details.NumCPU,
 		keyStartAddr: details.StartAddr,
 		keyEndAddr:   details.EndAddr,
 	}
