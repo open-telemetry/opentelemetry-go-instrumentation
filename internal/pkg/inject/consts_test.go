@@ -41,6 +41,7 @@ func TestWithAllocationDetails(t *testing.T) {
 	details := process.AllocationDetails{
 		StartAddr: start,
 		EndAddr:   end,
+		NumCPU:    nCPU,
 	}
 
 	opts := []Option{WithAllocationDetails(details)}
