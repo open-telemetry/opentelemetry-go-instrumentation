@@ -236,7 +236,6 @@ int uprobe_Transport_roundTrip_Returns(struct pt_regs *ctx) {
         bpf_printk("probe_Transport_roundTrip_Returns: entry_state is NULL");
         return 0;
     }
-    bpf_map_delete_elem(&http_events, &key);
 
     if (is_register_abi()) {
         // Getting the returned response
@@ -249,5 +248,7 @@ int uprobe_Transport_roundTrip_Returns(struct pt_regs *ctx) {
 
     bpf_perf_event_output(ctx, &events, BPF_F_CURRENT_CPU, http_req_span, sizeof(*http_req_span));
     stop_tracking_span(&http_req_span->sc, &http_req_span->psc);
+
+    bpf_map_delete_elem(&http_events, &key);
     return 0;
 }
