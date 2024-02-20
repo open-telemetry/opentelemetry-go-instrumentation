@@ -19,6 +19,7 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 - Use `debug` packages to parse Go and modules' versions. ([#653](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/653))
 - Clean up warn in otelglobal `SetStatus()` when grabbing the status code. ([#675](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/675))
 - Reset `proc` offset after a failed iteration. ([#681](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/681))
+- Avoid using runtime.NumCPU to get the number of CPUs on the system before remote mmap ([#680](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/680))
 
 ## [v0.10.1-alpha] - 2024-01-10
 
