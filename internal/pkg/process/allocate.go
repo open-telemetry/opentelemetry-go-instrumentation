@@ -22,6 +22,7 @@ import (
 
 	"github.com/go-logr/logr"
 
+	"go.opentelemetry.io/auto/internal/pkg/instrumentation/utils"
 	"go.opentelemetry.io/auto/internal/pkg/process/ptrace"
 )
 
@@ -29,13 +30,30 @@ import (
 type AllocationDetails struct {
 	StartAddr uint64
 	EndAddr   uint64
+	NumCPU    uint64
 }
 
 // Allocate allocates memory for the instrumented process.
 func Allocate(logger logr.Logger, pid int) (*AllocationDetails, error) {
 	logger = logger.WithName("Allocate")
 
-	mapSize := uint64(os.Getpagesize() * runtime.NumCPU() * 8)
+	// runtime.NumCPU doesn't query any kind of hardware or OS state,
+	// but merely uses affinity APIs to count what CPUs the given go process is available to run on.
+	// Go's implementation of runtime.NumCPU (https://github.com/golang/go/blob/48d899dcdbed4534ed942f7ec2917cf86b18af22/src/runtime/os_linux.go#L97)
+	// uses sched_getaffinity to count the number of CPUs the process is allowed to run on.
+	// We are interested in the number of CPUs available to the system.
+	nCPU, err := utils.GetCPUCount()
+	if err != nil {
+		return nil, err
+	}
+
+	mapSize := uint64(os.Getpagesize() * nCPU * 8)
+	logger.Info(
+		"Requesting memory allocation",
+		"size", mapSize,
+		"page size", os.Getpagesize(),
+		"cpu count", nCPU)
+
 	addr, err := remoteAllocate(logger, pid, mapSize)
 	if err != nil {
 		return nil, err
@@ -43,13 +61,14 @@ func Allocate(logger logr.Logger, pid int) (*AllocationDetails, error) {
 
 	logger.Info(
 		"mmaped remote memory",
-		"start_addr", fmt.Sprintf("%X", addr),
-		"end_addr", fmt.Sprintf("%X", addr+mapSize),
+		"start_addr", fmt.Sprintf("0x%x", addr),
+		"end_addr", fmt.Sprintf("0x%x", addr+mapSize),
 	)
 
 	return &AllocationDetails{
 		StartAddr: addr,
 		EndAddr:   addr + mapSize,
+		NumCPU:    uint64(nCPU),
 	}, nil
 }
 

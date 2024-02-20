@@ -37,10 +37,11 @@ func TestWithRegistersABI(t *testing.T) {
 }
 
 func TestWithAllocationDetails(t *testing.T) {
-	const start, end uint64 = 1, 2
+	const start, end, nCPU uint64 = 1, 2, 3
 	details := process.AllocationDetails{
 		StartAddr: start,
 		EndAddr:   end,
+		NumCPU:    nCPU,
 	}
 
 	opts := []Option{WithAllocationDetails(details)}
@@ -51,8 +52,8 @@ func TestWithAllocationDetails(t *testing.T) {
 	require.Contains(t, got, keyEndAddr)
 
 	v := got[keyTotalCPUs]
-	require.IsType(t, *(new(uint32)), v)
-	assert.Equal(t, nCPU, v.(uint32))
+	require.IsType(t, *(new(uint64)), v)
+	assert.Equal(t, nCPU, v.(uint64))
 
 	v = got[keyStartAddr]
 	require.IsType(t, *(new(uint64)), v)
