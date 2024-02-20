@@ -16,6 +16,7 @@ package utils
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"os"
 	"strconv"
@@ -95,4 +96,91 @@ func KernelLockdownMode() KernelLockdown {
 	}
 
 	return KernelLockdownNone
+}
+
+// Injectable for tests, this file is one of the files LSCPU looks for.
+var cpuPresentPath = "/sys/devices/system/cpu/present"
+
+func GetCPUCountFromSysDevices() (int, error) {
+	rawFile, err := os.ReadFile(cpuPresentPath)
+	if err != nil {
+		return 0, err
+	}
+
+	cpuCount, err := parseCPUList(string(rawFile))
+	if err != nil {
+		return 0, err
+	}
+
+	return cpuCount, nil
+}
+
+func parseCPUList(raw string) (int, error) {
+	listPart := strings.Split(raw, ",")
+	count := 0
+	for _, v := range listPart {
+		if strings.Contains(v, "-") {
+			rangeC, err := parseCPURange(v)
+			if err != nil {
+				return 0, fmt.Errorf("error parsing line %s: %w", v, err)
+			}
+			count = count + rangeC
+		} else {
+			count++
+		}
+	}
+	return count, nil
+}
+
+func parseCPURange(cpuRange string) (int, error) {
+	var first, last int
+	_, err := fmt.Sscanf(cpuRange, "%d-%d", &first, &last)
+	if err != nil {
+		return 0, fmt.Errorf("error reading from range %s: %w", cpuRange, err)
+	}
+
+	return (last - first) + 1, nil
+}
+
+var procInfoPath = "/proc/cpuinfo"
+
+func GetCPUCountFromProc() (int, error) {
+	file, err := os.Open(procInfoPath)
+	if err != nil {
+		return 0, err
+	}
+	defer file.Close()
+
+	scanner := bufio.NewScanner(file)
+	count := 0
+	for scanner.Scan() {
+		if strings.Contains(scanner.Text(), "processor") {
+			count++
+		}
+	}
+
+	if err := scanner.Err(); err != nil {
+		return 0, err
+	}
+
+	return count, nil
+}
+
+func GetCPUCount() (int, error) {
+	var err error
+	// First try to get the CPU count from /sys/devices
+	cpuCount, e := GetCPUCountFromSysDevices()
+	if e == nil {
+		return cpuCount, nil
+	}
+	err = errors.Join(err, e)
+
+	// If that fails, try to get the CPU count from /proc
+	cpuCount, e = GetCPUCountFromProc()
+	if e == nil {
+		return cpuCount, nil
+	}
+	err = errors.Join(err, e)
+
+	return 0, err
 }
