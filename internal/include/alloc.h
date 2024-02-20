@@ -22,7 +22,7 @@
 #define MIN_BUFFER_SIZE 1
 
 // Injected in init
-volatile const u32 total_cpus;
+volatile const u64 total_cpus;
 volatile const u64 start_addr;
 volatile const u64 end_addr;
 
@@ -108,6 +108,12 @@ static __always_inline void *write_target_data(void *data, s32 size)
     {
         target += dist_to_next_page;
     }
+    u64 target_u = (u64)target;
+    if (target_u > end_addr || target_u < start_addr) {
+        bpf_printk("TARGET ADDRESS IS OUT OF BOUNDS: 0x%llx", target);
+        return NULL;
+    }
+
     long success = bpf_probe_write_user(target, data, size);
     if (success == 0)
     {

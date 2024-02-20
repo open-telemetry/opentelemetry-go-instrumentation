@@ -85,28 +85,28 @@ func TestLockdownParsing(t *testing.T) {
 	// Setup for testing
 	lockdownPath = path
 
-	setIntegrity(t, path, "none [integrity] confidentiality\n")
+	setContent(t, path, "none [integrity] confidentiality\n")
 	assert.Equal(t, KernelLockdownIntegrity, KernelLockdownMode())
 
-	setIntegrity(t, path, "[none] integrity confidentiality\n")
+	setContent(t, path, "[none] integrity confidentiality\n")
 	assert.Equal(t, KernelLockdownNone, KernelLockdownMode())
 
-	setIntegrity(t, path, "none integrity [confidentiality]\n")
+	setContent(t, path, "none integrity [confidentiality]\n")
 	assert.Equal(t, KernelLockdownConfidentiality, KernelLockdownMode())
 
-	setIntegrity(t, path, "whatever\n")
+	setContent(t, path, "whatever\n")
 	assert.Equal(t, KernelLockdownOther, KernelLockdownMode())
 
-	setIntegrity(t, path, "")
+	setContent(t, path, "")
 	assert.Equal(t, KernelLockdownIntegrity, KernelLockdownMode())
 
-	setIntegrity(t, path, "[none] integrity confidentiality\n")
+	setContent(t, path, "[none] integrity confidentiality\n")
 	setNotReadable(t, path)
 	assert.Equal(t, KernelLockdownIntegrity, KernelLockdownMode())
 }
 
 // Utils.
-func setIntegrity(t *testing.T, path, text string) {
+func setContent(t *testing.T, path, text string) {
 	err := os.WriteFile(path, []byte(text), 0o644)
 	assert.NoError(t, err)
 }
@@ -114,4 +114,109 @@ func setIntegrity(t *testing.T, path, text string) {
 func setNotReadable(t *testing.T, path string) {
 	err := os.Chmod(path, 0o00)
 	assert.NoError(t, err)
+}
+
+func TestGetCPUCountFromSysDevices(t *testing.T) {
+	noFile, err := os.CreateTemp("", "not_existent_fake_cpu_present")
+	assert.NoError(t, err)
+	notPath, err := filepath.Abs(noFile.Name())
+	assert.NoError(t, err)
+	assert.NoError(t, noFile.Close())
+	assert.NoError(t, os.Remove(noFile.Name()))
+
+	// Setup for testing file that doesn't exist
+	cpuPresentPath = notPath
+	ncpu, err := GetCPUCountFromSysDevices()
+	assert.Error(t, err)
+	assert.Equal(t, 0, ncpu)
+
+	tempFile, err := os.CreateTemp("", "fake_cpu_present")
+	assert.NoError(t, err)
+	path, err := filepath.Abs(tempFile.Name())
+	assert.NoError(t, err)
+	assert.NoError(t, tempFile.Close())
+
+	defer os.Remove(tempFile.Name())
+	// Setup for testing
+	cpuPresentPath = path
+
+	setContent(t, path, "0-7")
+	ncpu, err = GetCPUCountFromSysDevices()
+	assert.NoError(t, err)
+	assert.Equal(t, 8, ncpu)
+
+	setContent(t, path, "0-7,10-15")
+	ncpu, err = GetCPUCountFromSysDevices()
+	assert.NoError(t, err)
+	assert.Equal(t, 14, ncpu)
+
+	setContent(t, path, "0-7,10-15,20-23")
+	ncpu, err = GetCPUCountFromSysDevices()
+	assert.NoError(t, err)
+	assert.Equal(t, 18, ncpu)
+
+	setContent(t, path, "0-")
+	ncpu, err = GetCPUCountFromSysDevices()
+	assert.Error(t, err)
+	assert.Equal(t, 0, ncpu)
+
+	setNotReadable(t, path)
+	ncpu, err = GetCPUCountFromSysDevices()
+	assert.Error(t, err)
+	assert.Equal(t, 0, ncpu)
+}
+
+func TestGetCPUCountFromProc(t *testing.T) {
+	noFile, err := os.CreateTemp("", "not_existent_fake_cpuinfo")
+	assert.NoError(t, err)
+	notPath, err := filepath.Abs(noFile.Name())
+	assert.NoError(t, err)
+	assert.NoError(t, noFile.Close())
+	assert.NoError(t, os.Remove(noFile.Name()))
+
+	// Setup for testing file that doesn't exist
+	procInfoPath = notPath
+	ncpu, err := GetCPUCountFromProc()
+	assert.Error(t, err)
+	assert.Equal(t, 0, ncpu)
+
+	tempFile, err := os.CreateTemp("", "fake_cpuinfo")
+	assert.NoError(t, err)
+	path, err := filepath.Abs(tempFile.Name())
+	assert.NoError(t, err)
+	assert.NoError(t, tempFile.Close())
+
+	defer os.Remove(tempFile.Name())
+	// Setup for testing
+	procInfoPath = path
+
+	setContent(t, path, "processor	: 0")
+	ncpu, err = GetCPUCountFromProc()
+	assert.NoError(t, err)
+	assert.Equal(t, 1, ncpu)
+
+	setContent(t, path, "processor	: 0\nprocessor	: 1")
+	ncpu, err = GetCPUCountFromProc()
+	assert.NoError(t, err)
+	assert.Equal(t, 2, ncpu)
+
+	setContent(t, path, "processor	: 0\nprocessor	: 1\nprocessor	: 2")
+	ncpu, err = GetCPUCountFromProc()
+	assert.NoError(t, err)
+	assert.Equal(t, 3, ncpu)
+
+	setContent(t, path, "processor	: 0\nprocessor	: 1\nprocessor	: 2\nprocessor	: 3")
+	ncpu, err = GetCPUCountFromProc()
+	assert.NoError(t, err)
+	assert.Equal(t, 4, ncpu)
+
+	setContent(t, path, "processor	: 0\n some text \nprocessor	: 1")
+	ncpu, err = GetCPUCountFromProc()
+	assert.NoError(t, err)
+	assert.Equal(t, 2, ncpu)
+
+	setNotReadable(t, path)
+	ncpu, err = GetCPUCountFromProc()
+	assert.Error(t, err)
+	assert.Equal(t, 0, ncpu)
 }
