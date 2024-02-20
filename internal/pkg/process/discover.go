@@ -82,6 +82,12 @@ func (a *Analyzer) DiscoverProcessID(target *TargetArgs) (int, error) {
 			} else {
 				a.logger.Error(err, "error while searching for process", "exe_path", target.ExePath)
 			}
+
+			// Reset the file offset for next iteration
+			_, err = proc.Seek(0, 0)
+			if err != nil {
+				return 0, err
+			}
 		}
 	}
 }
