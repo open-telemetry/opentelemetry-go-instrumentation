@@ -38,6 +38,7 @@ DBOTCONF = $(TOOLS)/dbotconf
 $(TOOLS)/dbotconf: PACKAGE=go.opentelemetry.io/build-tools/dbotconf
 
 IMG_NAME ?= otel-go-instrumentation
+IMG_NAME_BASE = $(IMG_NAME)-base
 
 GOLANGCI_LINT = $(TOOLS)/golangci-lint
 $(TOOLS)/golangci-lint: PACKAGE=github.com/golangci/golangci-lint/cmd/golangci-lint
@@ -64,12 +65,16 @@ generate:
 	$(GOCMD) generate ./...
 
 .PHONY: docker-generate
-docker-generate:
-	docker run --rm -v $(shell pwd):/app golang:1.20 /bin/sh -c "apt-get update && apt-get install -y clang llvm libbpf-dev && cd ../app && make generate"
+docker-generate: docker-build-base
+	docker run --rm -v $(shell pwd):/app $(IMG_NAME_BASE) /bin/sh -c "cd ../app && make generate"
 
 .PHONY: docker-test
-docker-test:
-	docker run --rm -v $(shell pwd):/app golang:1.20 /bin/sh -c "apt-get update && apt-get install -y clang llvm libbpf-dev && cd ../app && make test"
+docker-test: docker-build-base
+	docker run --rm -v $(shell pwd):/app $(IMG_NAME_BASE) /bin/sh -c "cd ../app && make test"
+
+.PHONY: docker-precommit
+docker-precommit: docker-build-base
+	docker run --rm -v $(shell pwd):/app $(IMG_NAME_BASE) /bin/sh -c "cd ../app && make precommit"
 
 .PHONY: go-mod-tidy
 go-mod-tidy: $(ALL_GO_MOD_DIRS:%=go-mod-tidy/%)
@@ -92,8 +97,12 @@ build: generate
 	$(GOCMD) build -o otel-go-instrumentation cli/main.go
 
 .PHONY: docker-build
-docker-build:
+docker-build: docker-build-base
 	docker buildx build -t $(IMG_NAME) .
+
+.PHONY: docker-build-base
+docker-build-base:
+	docker buildx build -t $(IMG_NAME_BASE) -f Dockerfile.base .
 
 OFFSETS_OUTPUT_FILE="$(REPODIR)/internal/pkg/inject/offset_results.json"
 .PHONY: offsets
