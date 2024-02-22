@@ -120,12 +120,11 @@ int uprobe_Start_Returns(struct pt_regs *ctx) {
     if (span_name == NULL) {
         return 0;
     }
-    bpf_map_delete_elem(&span_name_by_context, &key);
 
     u32 zero_span_key = 0;
     struct otel_span_t *zero_span = bpf_map_lookup_elem(&otel_span_storage_map, &zero_span_key);
     if (zero_span == NULL) {
-        return 0;
+        goto done;
     }
 
     u32 otel_span_key = 1;
@@ -134,7 +133,7 @@ int uprobe_Start_Returns(struct pt_regs *ctx) {
     // Get a pointer to the zeroed span
     struct otel_span_t *otel_span = bpf_map_lookup_elem(&otel_span_storage_map, &otel_span_key);
     if (otel_span == NULL) {
-        return 0;
+        goto done;
     }
 
     otel_span->start_time = bpf_ktime_get_ns();
@@ -156,6 +155,9 @@ int uprobe_Start_Returns(struct pt_regs *ctx) {
 
     bpf_map_update_elem(&active_spans_by_span_ptr, &span_ptr_val, otel_span, 0);
     start_tracking_span(ret_context_ptr_val, &otel_span->sc);
+
+done:
+    bpf_map_delete_elem(&span_name_by_context, &key);
     return 0;
 }
 
@@ -253,9 +255,10 @@ int uprobe_End(struct pt_regs *ctx) {
         return 0;
     }
     span->end_time = bpf_ktime_get_ns();
-    bpf_map_delete_elem(&active_spans_by_span_ptr, &non_recording_span_ptr);
     stop_tracking_span(&span->sc, &span->psc);
 
     bpf_perf_event_output(ctx, &events, BPF_F_CURRENT_CPU, span, sizeof(*span));
+
+    bpf_map_delete_elem(&active_spans_by_span_ptr, &non_recording_span_ptr);
     return 0;
 }

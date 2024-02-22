@@ -140,7 +140,6 @@ int uprobe_LoopyWriter_HeaderHandler(struct pt_regs *ctx)
         return 0;
     }
 
-    bpf_map_delete_elem(&streamid_to_span_contexts, &stream_id);
     struct go_slice slice = {};
     struct go_slice_user_ptr slice_user_ptr = {};
     slice_user_ptr.array = (void *)(headerFrame_ptr + (headerFrame_hf_pos));
@@ -157,7 +156,7 @@ int uprobe_LoopyWriter_HeaderHandler(struct pt_regs *ctx)
     struct go_string key_str = write_user_go_string(tp_key, sizeof(tp_key));
     if (key_str.len == 0) {
         bpf_printk("key write failed, aborting ebpf probe");
-        return 0;
+        goto done;
     }
 
     // Write headers
@@ -166,12 +165,15 @@ int uprobe_LoopyWriter_HeaderHandler(struct pt_regs *ctx)
     struct go_string val_str = write_user_go_string(val, sizeof(val));
     if (val_str.len == 0) {
         bpf_printk("val write failed, aborting ebpf probe");
-        return 0;
+        goto done;
     }
     struct hpack_header_field hf = {};
     hf.name = key_str;
     hf.value = val_str;
     append_item_to_slice(&slice, &hf, sizeof(hf), &slice_user_ptr);
+done:
+    bpf_map_delete_elem(&streamid_to_span_contexts, &stream_id);
+
     return 0;
 }
 
