@@ -1,12 +1,16 @@
-FROM otel-go-instrumentation-base as builder
+FROM golang:1.22.0-bullseye as base
 
 WORKDIR /app
+
+RUN apt-get update && apt-get install -y curl clang gcc llvm make libbpf-dev
 
 # pre-copy/cache go.mod for pre-downloading dependencies and only redownloading
 # them in subsequent builds if they change
 COPY go.mod go.sum ./
-RUN go mod download && go mod verify
+RUN --mount=type=cache,target=/go/pkg \
+    go mod download && go mod verify
 
+FROM base as builder
 COPY . .
 RUN --mount=type=cache,target=/root/.cache/go-build \
     --mount=type=cache,target=/go/pkg \

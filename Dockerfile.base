@@ -1,3 +1,0 @@
-FROM golang:1.22.0-bullseye
-
-RUN apt-get update && apt-get install -y curl clang gcc llvm make libbpf-dev

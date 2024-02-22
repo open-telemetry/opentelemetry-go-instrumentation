@@ -97,12 +97,12 @@ build: generate
 	$(GOCMD) build -o otel-go-instrumentation cli/main.go
 
 .PHONY: docker-build
-docker-build: docker-build-base
+docker-build:
 	docker buildx build -t $(IMG_NAME) .
 
 .PHONY: docker-build-base
 docker-build-base:
-	docker buildx build -t $(IMG_NAME_BASE) -f Dockerfile.base .
+	docker buildx build -t $(IMG_NAME_BASE) --target base .
 
 OFFSETS_OUTPUT_FILE="$(REPODIR)/internal/pkg/inject/offset_results.json"
 .PHONY: offsets
