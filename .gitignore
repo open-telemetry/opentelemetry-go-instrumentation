@@ -5,6 +5,7 @@
 *.so
 *.dylib
 **/*.o
+!*_bpf*.o
 .tools/
 
 # Test binary, built with `go test -c`
