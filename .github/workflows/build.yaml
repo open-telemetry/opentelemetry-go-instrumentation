@@ -20,12 +20,9 @@ jobs:
           go-version: ${{ env.GO_VERSION }}
           check-latest: true
           cache-dependency-path: "**/go.sum"
-      - name: Install build dependencies
+      - name: make docker-generate
         run: |
-          sudo apt-get update && sudo apt-get install -y clang llvm libbpf-dev
-      - name: make generate
-        run: |
-          make generate
+          make docker-generate
       - name: verify output
         run: |
           make check-clean-work-tree

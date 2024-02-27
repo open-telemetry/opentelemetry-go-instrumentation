@@ -19,7 +19,7 @@ CGO_ENABLED=0
 .DEFAULT_GOAL := precommit
 
 .PHONY: precommit
-precommit: license-header-check dependabot-generate go-mod-tidy golangci-lint-fix
+precommit: license-header-check dependabot-generate go-mod-tidy generate golangci-lint-fix
 
 # Tools
 $(TOOLS):
@@ -85,7 +85,7 @@ go-mod-tidy/%:
 .PHONY: golangci-lint golangci-lint-fix
 golangci-lint-fix: ARGS=--fix
 golangci-lint-fix: golangci-lint
-golangci-lint: generate $(ALL_GO_MOD_DIRS:%=golangci-lint/%)
+golangci-lint: $(ALL_GO_MOD_DIRS:%=golangci-lint/%)
 golangci-lint/%: DIR=$*
 golangci-lint/%: | $(GOLANGCI_LINT)
 	@echo 'golangci-lint $(if $(ARGS),$(ARGS) ,)$(DIR)' \
