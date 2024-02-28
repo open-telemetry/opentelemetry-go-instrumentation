@@ -150,7 +150,7 @@ func uprobeRoundTrip(name string, exec *link.Executable, target *process.TargetD
 // request-response.
 type event struct {
 	context.BaseSpanProperties
-	Host       [128]byte
+	Host       [256]byte
 	Proto      [8]byte
 	StatusCode uint64
 	Method     [10]byte

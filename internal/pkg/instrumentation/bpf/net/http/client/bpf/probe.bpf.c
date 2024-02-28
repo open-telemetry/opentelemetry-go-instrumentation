@@ -6,7 +6,7 @@
 
 char __license[] SEC("license") = "Dual MIT/GPL";
 
-#define MAX_HOSTNAME_SIZE 128
+#define MAX_HOSTNAME_SIZE 256
 #define MAX_PROTO_SIZE 8
 #define MAX_PATH_SIZE 100
 #define MAX_METHOD_SIZE 10
