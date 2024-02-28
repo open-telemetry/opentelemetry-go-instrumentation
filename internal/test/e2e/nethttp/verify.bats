@@ -66,11 +66,6 @@ SCOPE="go.opentelemetry.io/auto/net/http"
   assert_equal "$client_span_id" "$server_parent_span_id"
 }
 
-@test "server :: expected (redacted) trace output" {
-  redact_json
-  assert_equal "$(git --no-pager diff ${BATS_TEST_DIRNAME}/traces.json)" ""
-}
-
 @test "server :: includes net.host.name attribute" {
   result=$(server_span_attributes_for ${SCOPE} | jq "select(.key == \"net.host.name\").value.stringValue")
   assert_equal "$result" '"localhost:8080"'
@@ -84,4 +79,24 @@ SCOPE="go.opentelemetry.io/auto/net/http"
 @test "server :: includes net.peer.name attribute" {
   result=$(server_span_attributes_for ${SCOPE} | jq "select(.key == \"net.peer.name\").value.stringValue")
   assert_equal "$result" '"::1"'
+}
+
+@test "client :: includes server.address attribute" {
+  result=$(client_span_attributes_for ${SCOPE} | jq "select(.key == \"server.address\").value.stringValue")
+  assert_equal "$result" '"localhost"'
+}
+
+@test "client :: includes server.port attribute" {
+  result=$(client_span_attributes_for ${SCOPE} | jq "select(.key == \"server.port\").value.intValue")
+  assert_equal "$result" '"8080"'
+}
+
+@test "client :: includes network.protocol.version attribute" {
+  result=$(client_span_attributes_for ${SCOPE} | jq "select(.key == \"network.protocol.version\").value.stringValue")
+  assert_equal "$result" '"1.1"'
+}
+
+@test "client, server :: expected (redacted) trace output" {
+  redact_json
+  assert_equal "$(git --no-pager diff ${BATS_TEST_DIRNAME}/traces.json)" ""
 }

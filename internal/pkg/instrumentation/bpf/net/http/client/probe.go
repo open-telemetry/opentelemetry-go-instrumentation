@@ -16,7 +16,10 @@ package client
 
 import (
 	"fmt"
+	"net"
 	"os"
+	"strconv"
+	"strings"
 
 	"github.com/cilium/ebpf"
 	"github.com/cilium/ebpf/link"
@@ -81,6 +84,14 @@ func New(logger logr.Logger) probe.Probe {
 				Key: "buckets_ptr_pos",
 				Val: structfield.NewID("std", "runtime", "hmap", "buckets"),
 			},
+			probe.StructFieldConst{
+				Key: "request_host_pos",
+				Val: structfield.NewID("std", "net/http", "Request", "Host"),
+			},
+			probe.StructFieldConst{
+				Key: "request_proto_pos",
+				Val: structfield.NewID("std", "net/http", "Request", "Proto"),
+			},
 		},
 		Uprobes: []probe.Uprobe[bpfObjects]{
 			{
@@ -139,6 +150,8 @@ func uprobeRoundTrip(name string, exec *link.Executable, target *process.TargetD
 // request-response.
 type event struct {
 	context.BaseSpanProperties
+	Host       [128]byte
+	Proto      [8]byte
 	StatusCode uint64
 	Method     [10]byte
 	Path       [100]byte
@@ -167,16 +180,41 @@ func convertEvent(e *event) *probe.SpanEvent {
 		pscPtr = nil
 	}
 
+	attrs := []attribute.KeyValue{
+		semconv.HTTPMethodKey.String(method),
+		semconv.HTTPTargetKey.String(path),
+		semconv.HTTPResponseStatusCodeKey.Int(int(e.StatusCode)),
+	}
+
+	host := unix.ByteSliceToString(e.Host[:])
+	var port string
+	var err error
+	if strings.Contains(host, ":") {
+		if host, port, err = net.SplitHostPort(host); err == nil {
+			if portI, err := strconv.Atoi(port); err == nil {
+				attrs = append(attrs, semconv.ServerPort(portI))
+			}
+		}
+	}
+
+	if host != "" {
+		attrs = append(attrs, semconv.ServerAddress(host))
+	}
+
+	proto := unix.ByteSliceToString(e.Proto[:])
+	if proto != "" {
+		parts := strings.Split(proto, "/")
+		if len(parts) == 2 {
+			attrs = append(attrs, semconv.NetworkProtocolVersion(parts[1]))
+		}
+	}
+
 	return &probe.SpanEvent{
-		SpanName:    path,
-		StartTime:   int64(e.StartTime),
-		EndTime:     int64(e.EndTime),
-		SpanContext: &sc,
-		Attributes: []attribute.KeyValue{
-			semconv.HTTPMethodKey.String(method),
-			semconv.HTTPTargetKey.String(path),
-			semconv.HTTPResponseStatusCodeKey.Int(int(e.StatusCode)),
-		},
+		SpanName:          path,
+		StartTime:         int64(e.StartTime),
+		EndTime:           int64(e.EndTime),
+		SpanContext:       &sc,
+		Attributes:        attrs,
 		ParentSpanContext: pscPtr,
 	}
 }
