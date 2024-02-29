@@ -12,6 +12,7 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 
 - Test build using [Go 1.22]. (#672)
 - Base Dockerfile and build caching ([#683](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/683))
+- Add `server.address`, `server.port` and `network.protocol.version` to HTTP client spans ([696](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/696))
 
 ### Fixed
 
