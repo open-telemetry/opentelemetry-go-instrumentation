@@ -26,7 +26,7 @@ require (
 	github.com/hashicorp/go-version v1.6.0
 	github.com/mattn/go-sqlite3 v1.14.22
 	github.com/pkg/errors v0.9.1
-	github.com/stretchr/testify v1.8.4
+	github.com/stretchr/testify v1.9.0
 	go.opentelemetry.io/contrib/exporters/autoexport v0.49.0
 	go.opentelemetry.io/otel v1.24.0
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp v1.24.0
