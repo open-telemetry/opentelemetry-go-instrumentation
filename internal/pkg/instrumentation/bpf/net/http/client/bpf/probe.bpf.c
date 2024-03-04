@@ -46,6 +46,13 @@ struct
 } http_client_uprobe_storage_map SEC(".maps");
 
 struct {
+	__uint(type, BPF_MAP_TYPE_LRU_HASH);
+	__type(key, void*); // the headers ptr
+	__type(value, void*); // request key, goroutine or context ptr
+	__uint(max_entries, MAX_CONCURRENT);
+} http_headers SEC(".maps");
+
+struct {
 	__uint(type, BPF_MAP_TYPE_PERF_EVENT_ARRAY);
 } events SEC(".maps");
 
@@ -59,7 +66,10 @@ volatile const u64 buckets_ptr_pos;
 volatile const u64 status_code_pos;
 volatile const u64 request_host_pos;
 volatile const u64 request_proto_pos;
+volatile const u64 io_writer_buf_ptr_pos;
+volatile const u64 io_writer_n_pos;
 
+#ifndef NO_HEADER_PROPAGATION
 static __always_inline long inject_header(void* headers_ptr, struct span_context* propagated_ctx) {
     // Read the key-value count - this field must be the first one in the hmap struct as documented in src/runtime/map.go
     u64 curr_keyvalue_count = 0;
@@ -160,6 +170,7 @@ static __always_inline long inject_header(void* headers_ptr, struct span_context
     bpf_memset((unsigned char *)bucket_map_value, sizeof(struct map_bucket), 0);
     return 0;
 }
+#endif
 
 // This instrumentation attaches uprobe to the following function:
 // func net/http/transport.roundTrip(req *Request) (*Response, error)
@@ -228,11 +239,17 @@ int uprobe_Transport_roundTrip(struct pt_regs *ctx) {
     // get headers from Request
     void *headers_ptr = 0;
     bpf_probe_read(&headers_ptr, sizeof(headers_ptr), (void *)(req_ptr+headers_ptr_pos));
+    if (headers_ptr) {
+        bpf_printk("headers_ptr = %llx, key = %llx", headers_ptr, key);
+        bpf_map_update_elem(&http_headers, &headers_ptr, &key, 0);
+    }
+
+#ifndef NO_HEADER_PROPAGATION
     long res = inject_header(headers_ptr, &httpReq->sc);
     if (res < 0) {
         bpf_printk("uprobe_Transport_roundTrip: Failed to inject header");
     }
-
+#endif
     // Write event
     bpf_map_update_elem(&http_events, &key, httpReq, 0);
     start_tracking_span(context_ptr_val, &httpReq->sc);
@@ -266,5 +283,62 @@ int uprobe_Transport_roundTrip_Returns(struct pt_regs *ctx) {
     stop_tracking_span(&http_req_span->sc, &http_req_span->psc);
 
     bpf_map_delete_elem(&http_events, &key);
+    return 0;
+}
+
+SEC("uprobe/header_writeSubset")
+int uprobe_writeSubset(struct pt_regs *ctx) {
+    u64 headers_pos = 1;
+    void *headers_ptr = get_argument(ctx, headers_pos);
+
+    u64 io_writer_pos = 3;
+    void *io_writer_ptr = get_argument(ctx, io_writer_pos);
+
+    bpf_printk("headers_ptr = %llx, io_writer_ptr = %llx", headers_ptr, io_writer_ptr);
+
+    void **key_ptr = bpf_map_lookup_elem(&http_headers, &headers_ptr);
+    if (key_ptr) {
+        void *key = *key_ptr;
+        bpf_printk("Found request key %llx", key);
+
+        struct http_request_t *http_req_span = bpf_map_lookup_elem(&http_events, &key);
+        if (http_req_span) {
+            char tp[W3C_VAL_LENGTH];
+            span_context_to_w3c_string(&http_req_span->sc, tp);
+
+            bpf_printk("Will write %s", tp);
+
+            void *buf_ptr = 0;
+            bpf_probe_read(&buf_ptr, sizeof(buf_ptr), (void *)(io_writer_ptr + io_writer_buf_ptr_pos)); // grab buf ptr
+            if (!buf_ptr) {
+                goto done;
+            }
+
+            s64 size = 0;
+            bpf_probe_read(&size, sizeof(s64), (void *)(io_writer_ptr + io_writer_buf_ptr_pos + 8)); // grab size
+
+            s64 len = 0;
+            bpf_probe_read(&len, sizeof(s64), (void *)(io_writer_ptr + io_writer_n_pos)); // grab len
+
+            bpf_printk("buf_ptr %llx, len=%d, size=%d", (void*)buf_ptr, len, size);
+
+#ifndef NO_HEADER_PROPAGATION
+            if (len < (size - W3C_VAL_LENGTH - W3C_KEY_LENGTH - 4)) { // 4 = strlen(":_") + strlen("\r\n")
+                char key[W3C_KEY_LENGTH + 2] = "Traceparent: ";
+                char end[2] = "\r\n";
+                bpf_probe_write_user(buf_ptr + (len & 0x0ffff), key, sizeof(key));
+                len += W3C_KEY_LENGTH + 2;
+                bpf_probe_write_user(buf_ptr + (len & 0x0ffff), tp, sizeof(tp));
+                len += W3C_VAL_LENGTH;
+                bpf_probe_write_user(buf_ptr + (len & 0x0ffff), end, sizeof(end));
+                len += 2;
+                bpf_probe_write_user((void *)(io_writer_ptr + io_writer_n_pos), &len, sizeof(len));
+            }
+#endif
+        }
+    }
+
+done:
+    bpf_map_delete_elem(&http_headers, &headers_ptr);
     return 0;
 }
