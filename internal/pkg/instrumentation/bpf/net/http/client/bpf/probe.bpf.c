@@ -69,109 +69,6 @@ volatile const u64 request_proto_pos;
 volatile const u64 io_writer_buf_ptr_pos;
 volatile const u64 io_writer_n_pos;
 
-#ifndef NO_HEADER_PROPAGATION
-static __always_inline long inject_header(void* headers_ptr, struct span_context* propagated_ctx) {
-    // Read the key-value count - this field must be the first one in the hmap struct as documented in src/runtime/map.go
-    u64 curr_keyvalue_count = 0;
-    long res = bpf_probe_read_user(&curr_keyvalue_count, sizeof(curr_keyvalue_count), headers_ptr);
-
-    if (res < 0) {
-        bpf_printk("Couldn't read map key-value count from user");
-        return -1;
-    }
-
-    if (curr_keyvalue_count >= 8) {
-        bpf_printk("Map size is bigger than 8, skipping context propagation");
-        return -1;
-    }
-
-    // Get pointer to temp bucket struct we store in a map (avoiding large local variable on the stack)
-    // Performing read-modify-write on the bucket
-    u32 map_id = 0;
-    struct map_bucket *bucket_map_value = bpf_map_lookup_elem(&golang_mapbucket_storage_map, &map_id);
-    if (!bucket_map_value) {
-        return -1;
-    }
-
-    void *buckets_ptr_ptr = (void*) (headers_ptr + buckets_ptr_pos);
-    void *bucket_ptr = 0; // The actual pointer to the buckets
-
-    if (curr_keyvalue_count == 0) {
-        // No key-value pairs in the Go map, need to "allocate" memory for the user
-        bucket_ptr = write_target_data(bucket_map_value, sizeof(struct map_bucket));
-        if (bucket_ptr == NULL) {
-            bpf_printk("inject_header: Failed to write bucket to user");
-            return -1;
-        }
-        // Update the buckets pointer in the hmap struct to point to newly allocated bucket
-        res = bpf_probe_write_user(buckets_ptr_ptr, &bucket_ptr, sizeof(bucket_ptr));
-        if (res < 0) {
-            bpf_printk("Failed to update the map bucket pointer for the user");
-            return -1;
-        }
-    } else {
-        // There is at least 1 key-value pair, hence the bucket pointer from the user is valid
-        // Read the bucket pointer
-        res = bpf_probe_read_user(&bucket_ptr, sizeof(bucket_ptr), buckets_ptr_ptr);
-        // Read the user's bucket to the eBPF map entry
-        bpf_probe_read_user(bucket_map_value, sizeof(struct map_bucket), bucket_ptr);
-    }
-
-    u8 bucket_index = curr_keyvalue_count & 0x7;
-
-    char traceparent_tophash = 0xee;
-    bucket_map_value->tophash[bucket_index] = traceparent_tophash;
-
-    // Prepare the key string for the user
-    char key[W3C_KEY_LENGTH] = "traceparent";
-    void *ptr = write_target_data(key, W3C_KEY_LENGTH);
-    if (ptr == NULL) {
-        bpf_printk("inject_header: Failed to write key to user");
-        return -1;
-    }
-    bucket_map_value->keys[bucket_index] = (struct go_string) {.len = W3C_KEY_LENGTH, .str = ptr};
-
-    // Prepare the value string slice
-    // First the value string which constains the span context
-    char val[W3C_VAL_LENGTH];
-    span_context_to_w3c_string(propagated_ctx, val);
-    ptr = write_target_data(val, sizeof(val));
-    if(ptr == NULL) {
-        bpf_printk("inject_header: Failed to write value to user");
-        return -1;
-    }
-
-    // The go string pointing to the above val
-    struct go_string header_value = {.len = W3C_VAL_LENGTH, .str = ptr};
-    ptr = write_target_data((void*)&header_value, sizeof(header_value));
-    if(ptr == NULL) {
-        bpf_printk("inject_header: Failed to write go_string to user");
-        return -1;
-    }
-
-    // Last, go_slice pointing to the above go_string
-    bucket_map_value->values[bucket_index] = (struct go_slice) {.array = ptr, .cap = 1, .len = 1};
-
-    // Update the map header count field
-    curr_keyvalue_count += 1;
-    res = bpf_probe_write_user(headers_ptr, &curr_keyvalue_count, sizeof(curr_keyvalue_count));
-    if (res < 0) {
-        bpf_printk("Failed to update key-value count in map header");
-        return -1;
-    }
-
-    // Update the bucket
-    res = bpf_probe_write_user(bucket_ptr, bucket_map_value, sizeof(struct map_bucket));
-    if (res < 0) {
-        bpf_printk("Failed to update bucket content");
-        return -1;
-    }
-
-    bpf_memset((unsigned char *)bucket_map_value, sizeof(struct map_bucket), 0);
-    return 0;
-}
-#endif
-
 // This instrumentation attaches uprobe to the following function:
 // func net/http/transport.roundTrip(req *Request) (*Response, error)
 SEC("uprobe/Transport_roundTrip")
@@ -244,12 +141,6 @@ int uprobe_Transport_roundTrip(struct pt_regs *ctx) {
         bpf_map_update_elem(&http_headers, &headers_ptr, &key, 0);
     }
 
-#ifndef NO_HEADER_PROPAGATION
-    long res = inject_header(headers_ptr, &httpReq->sc);
-    if (res < 0) {
-        bpf_printk("uprobe_Transport_roundTrip: Failed to inject header");
-    }
-#endif
     // Write event
     bpf_map_update_elem(&http_events, &key, httpReq, 0);
     start_tracking_span(context_ptr_val, &httpReq->sc);

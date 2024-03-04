@@ -108,8 +108,9 @@ func New(logger logr.Logger) probe.Probe {
 				Fn:  uprobeRoundTrip,
 			},
 			{
-				Sym: "net/http.Header.writeSubset",
-				Fn:  uprobeWriteSubset,
+				Sym:      "net/http.Header.writeSubset",
+				Fn:       uprobeWriteSubset,
+				Optional: true,
 			},
 		},
 
