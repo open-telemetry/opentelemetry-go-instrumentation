@@ -17,6 +17,8 @@ type bpfHttpRequestT struct {
 	EndTime    uint64
 	Sc         bpfSpanContext
 	Psc        bpfSpanContext
+	Host       [256]int8
+	Proto      [8]int8
 	StatusCode uint64
 	Method     [10]int8
 	Path       [100]int8

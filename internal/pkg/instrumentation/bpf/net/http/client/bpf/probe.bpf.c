@@ -6,6 +6,8 @@
 
 char __license[] SEC("license") = "Dual MIT/GPL";
 
+#define MAX_HOSTNAME_SIZE 256
+#define MAX_PROTO_SIZE 8
 #define MAX_PATH_SIZE 100
 #define MAX_METHOD_SIZE 10
 #define W3C_KEY_LENGTH 11
@@ -14,6 +16,8 @@ char __license[] SEC("license") = "Dual MIT/GPL";
 
 struct http_request_t {
     BASE_SPAN_PROPERTIES
+    char host[MAX_HOSTNAME_SIZE];
+    char proto[MAX_PROTO_SIZE];
     u64 status_code;
     char method[MAX_METHOD_SIZE];
     char path[MAX_PATH_SIZE];
@@ -53,6 +57,8 @@ volatile const u64 headers_ptr_pos;
 volatile const u64 ctx_ptr_pos;
 volatile const u64 buckets_ptr_pos;
 volatile const u64 status_code_pos;
+volatile const u64 request_host_pos;
+volatile const u64 request_proto_pos;
 
 static __always_inline long inject_header(void* headers_ptr, struct span_context* propagated_ctx) {
     // Read the key-value count - this field must be the first one in the hmap struct as documented in src/runtime/map.go
@@ -209,6 +215,16 @@ int uprobe_Transport_roundTrip(struct pt_regs *ctx) {
         return 0;
     }
 
+    // get host from Request
+    if (!get_go_string_from_user_ptr((void *)(req_ptr+request_host_pos), httpReq->host, sizeof(httpReq->host))) {
+        bpf_printk("uprobe_Transport_roundTrip: Failed to get host from Request");
+    }
+
+    // get proto from Request
+    if (!get_go_string_from_user_ptr((void *)(req_ptr+request_proto_pos), httpReq->proto, sizeof(httpReq->proto))) {
+        bpf_printk("uprobe_Transport_roundTrip: Failed to get proto from Request");
+    }
+
     // get headers from Request
     void *headers_ptr = 0;
     bpf_probe_read(&headers_ptr, sizeof(headers_ptr), (void *)(req_ptr+headers_ptr_pos));
@@ -236,7 +252,6 @@ int uprobe_Transport_roundTrip_Returns(struct pt_regs *ctx) {
         bpf_printk("probe_Transport_roundTrip_Returns: entry_state is NULL");
         return 0;
     }
-    bpf_map_delete_elem(&http_events, &key);
 
     if (is_register_abi()) {
         // Getting the returned response
@@ -249,5 +264,7 @@ int uprobe_Transport_roundTrip_Returns(struct pt_regs *ctx) {
 
     bpf_perf_event_output(ctx, &events, BPF_F_CURRENT_CPU, http_req_span, sizeof(*http_req_span));
     stop_tracking_span(&http_req_span->sc, &http_req_span->psc);
+
+    bpf_map_delete_elem(&http_events, &key);
     return 0;
 }
