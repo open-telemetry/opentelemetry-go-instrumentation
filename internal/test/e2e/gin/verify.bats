@@ -9,18 +9,18 @@ SCOPE="go.opentelemetry.io/auto/github.com/gin-gonic/gin"
   assert_equal "$result" '"sample-app"'
 }
 
-@test "${SCOPE} :: emits a span name '{http.method}' (per semconv)" {
+@test "${SCOPE} :: emits a span name '{http.request.method}' (per semconv)" {
   result=$(span_names_for ${SCOPE})
   assert_equal "$result" '"GET"'
 }
 
-@test "${SCOPE} :: includes http.method attribute" {
-  result=$(span_attributes_for ${SCOPE} | jq "select(.key == \"http.method\").value.stringValue")
+@test "${SCOPE} :: includes http.request.method attribute" {
+  result=$(span_attributes_for ${SCOPE} | jq "select(.key == \"http.request.method\").value.stringValue")
   assert_equal "$result" '"GET"'
 }
 
-@test "${SCOPE} :: includes http.target attribute" {
-  result=$(span_attributes_for ${SCOPE} | jq "select(.key == \"http.target\").value.stringValue")
+@test "${SCOPE} :: includes url.path attribute" {
+  result=$(span_attributes_for ${SCOPE} | jq "select(.key == \"url.path\").value.stringValue")
   assert_equal "$result" '"/hello-gin"'
 }
 

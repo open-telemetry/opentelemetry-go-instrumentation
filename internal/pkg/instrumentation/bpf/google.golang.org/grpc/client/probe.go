@@ -25,7 +25,7 @@ import (
 	"github.com/cilium/ebpf/perf"
 	"github.com/go-logr/logr"
 	"go.opentelemetry.io/otel/attribute"
-	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.24.0"
 	"go.opentelemetry.io/otel/trace"
 	"golang.org/x/sys/unix"
 
@@ -161,7 +161,7 @@ func convertEvent(e *event) *probe.SpanEvent {
 	if parts := strings.Split(target, ":"); len(parts) > 1 {
 		target = parts[0]
 		if remotePeerPortInt, err := strconv.Atoi(parts[1]); err == nil {
-			attrs = append(attrs, semconv.NetPeerPort(remotePeerPortInt))
+			attrs = append(attrs, semconv.NetworkPeerPort(remotePeerPortInt))
 		}
 	}
 

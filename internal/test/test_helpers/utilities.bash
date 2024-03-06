@@ -94,7 +94,7 @@ redact_json() {
 					. // "" | test("^[A-Fa-f0-9]{16}$") then "xxxxx" else (. + "")
 				end)
 			| .resourceSpans[].scopeSpans[].spans[].attributes[] |= if 
-					(.key == "net.peer.port") then .value.intValue |= (if
+					(.key == "network.peer.port") then .value.intValue |= (if
 				   		. // "" | test("^[1-9][0-9]{0,4}$") then "xxxxx" else (. + "") 
 					end) else . 
 				end
