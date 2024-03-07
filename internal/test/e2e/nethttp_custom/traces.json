@@ -52,13 +52,13 @@
             {
               "attributes": [
                 {
-                  "key": "http.method",
+                  "key": "http.request.method",
                   "value": {
                     "stringValue": "GET"
                   }
                 },
                 {
-                  "key": "http.target",
+                  "key": "url.path",
                   "value": {
                     "stringValue": "/hello"
                   }
@@ -70,27 +70,33 @@
                   }
                 },
                 {
-                  "key": "net.host.name",
-                  "value": {
-                    "stringValue": "localhost:8080"
-                  }
-                },
-                {
-                  "key": "net.protocol.name",
-                  "value": {
-                    "stringValue": "HTTP/1.1"
-                  }
-                },
-                {
-                  "key": "net.peer.name",
+                  "key": "network.peer.address",
                   "value": {
                     "stringValue": "::1"
                   }
                 },
                 {
-                  "key": "net.peer.port",
+                  "key": "network.peer.port",
                   "value": {
                     "intValue": "xxxxx"
+                  }
+                },
+                {
+                  "key": "server.address",
+                  "value": {
+                    "stringValue": "localhost"
+                  }
+                },
+                {
+                  "key": "server.port",
+                  "value": {
+                    "intValue": "8080"
+                  }
+                },
+                {
+                  "key": "network.protocol.version",
+                  "value": {
+                    "stringValue": "1.1"
                   }
                 }
               ],
@@ -104,13 +110,13 @@
             {
               "attributes": [
                 {
-                  "key": "http.method",
+                  "key": "http.request.method",
                   "value": {
                     "stringValue": "GET"
                   }
                 },
                 {
-                  "key": "http.target",
+                  "key": "url.path",
                   "value": {
                     "stringValue": "/hello"
                   }
@@ -122,15 +128,15 @@
                   }
                 },
                 {
-                  "key": "server.port",
-                  "value": {
-                    "intValue": "8080"
-                  }
-                },
-                {
                   "key": "server.address",
                   "value": {
                     "stringValue": "localhost"
+                  }
+                },
+                {
+                  "key": "server.port",
+                  "value": {
+                    "intValue": "8080"
                   }
                 },
                 {

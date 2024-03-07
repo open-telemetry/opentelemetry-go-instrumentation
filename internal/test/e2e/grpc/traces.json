@@ -74,7 +74,7 @@
             {
               "attributes": [
                 {
-                  "key": "net.peer.port",
+                  "key": "network.peer.port",
                   "value": {
                     "intValue": "xxxxx"
                   }
