@@ -1,0 +1,212 @@
+{
+  "resourceSpans": [
+    {
+      "resource": {
+        "attributes": [
+          {
+            "key": "process.runtime.description",
+            "value": {
+              "stringValue": "go version 1.22.0 linux/amd64"
+            }
+          },
+          {
+            "key": "process.runtime.name",
+            "value": {
+              "stringValue": "go"
+            }
+          },
+          {
+            "key": "process.runtime.version",
+            "value": {
+              "stringValue": "1.22.0"
+            }
+          },
+          {
+            "key": "service.name",
+            "value": {
+              "stringValue": "sample-app"
+            }
+          },
+          {
+            "key": "telemetry.auto.version",
+            "value": {
+              "stringValue": "v0.8.0-alpha"
+            }
+          },
+          {
+            "key": "telemetry.sdk.language",
+            "value": {
+              "stringValue": "go"
+            }
+          }
+        ]
+      },
+      "schemaUrl": "https://opentelemetry.io/schemas/1.21.0",
+      "scopeSpans": [
+        {
+          "scope": {
+            "name": "go.opentelemetry.io/auto/github.com/segmentio/kafka-go",
+            "version": "v0.8.0-alpha"
+          },
+          "spans": [
+            {
+              "attributes": [
+                {
+                  "key": "messaging.kafka.message.key",
+                  "value": {
+                    "stringValue": "key1"
+                  }
+                },
+                {
+                  "key": "messaging.destination.name",
+                  "value": {
+                    "stringValue": "topic1"
+                  }
+                },
+                {
+                  "key": "messaging.system",
+                  "value": {
+                    "stringValue": "kafka"
+                  }
+                }
+              ],
+              "kind": 4,
+              "name": "topic1 publish",
+              "parentSpanId": "",
+              "spanId": "xxxxx",
+              "status": {},
+              "traceId": "xxxxx"
+            },
+            {
+              "attributes": [
+                {
+                  "key": "messaging.kafka.message.key",
+                  "value": {
+                    "stringValue": "key2"
+                  }
+                },
+                {
+                  "key": "messaging.destination.name",
+                  "value": {
+                    "stringValue": "topic2"
+                  }
+                },
+                {
+                  "key": "messaging.system",
+                  "value": {
+                    "stringValue": "kafka"
+                  }
+                }
+              ],
+              "kind": 4,
+              "name": "topic2 publish",
+              "parentSpanId": "",
+              "spanId": "xxxxx",
+              "status": {},
+              "traceId": "xxxxx"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "resource": {
+        "attributes": [
+          {
+            "key": "process.runtime.description",
+            "value": {
+              "stringValue": "go version 1.22.0 linux/amd64"
+            }
+          },
+          {
+            "key": "process.runtime.name",
+            "value": {
+              "stringValue": "go"
+            }
+          },
+          {
+            "key": "process.runtime.version",
+            "value": {
+              "stringValue": "1.22.0"
+            }
+          },
+          {
+            "key": "service.name",
+            "value": {
+              "stringValue": "sample-app"
+            }
+          },
+          {
+            "key": "telemetry.auto.version",
+            "value": {
+              "stringValue": "v0.8.0-alpha"
+            }
+          },
+          {
+            "key": "telemetry.sdk.language",
+            "value": {
+              "stringValue": "go"
+            }
+          }
+        ]
+      },
+      "schemaUrl": "https://opentelemetry.io/schemas/1.21.0",
+      "scopeSpans": [
+        {
+          "scope": {
+            "name": "go.opentelemetry.io/auto/github.com/segmentio/kafka-go",
+            "version": "v0.8.0-alpha"
+          },
+          "spans": [
+            {
+              "attributes": [
+                {
+                  "key": "messaging.system",
+                  "value": {
+                    "stringValue": "kafka"
+                  }
+                },
+                {
+                  "key": "messaging.kafka.destination.partition",
+                  "value": {
+                    "intValue": "0"
+                  }
+                },
+                {
+                  "key": "messaging.destination.name",
+                  "value": {
+                    "stringValue": "topic1"
+                  }
+                },
+                {
+                  "key": "messaging.kafka.message.offset",
+                  "value": {
+                    "intValue": "0"
+                  }
+                },
+                {
+                  "key": "messaging.kafka.message.key",
+                  "value": {
+                    "stringValue": "key1"
+                  }
+                },
+                {
+                  "key": "messaging.kafka.consumer.group",
+                  "value": {
+                    "stringValue": "some group id"
+                  }
+                }
+              ],
+              "kind": 5,
+              "name": "topic1 receive",
+              "parentSpanId": "xxxxx",
+              "spanId": "xxxxx",
+              "status": {},
+              "traceId": "xxxxx"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

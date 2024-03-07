@@ -140,15 +140,6 @@ int uprobe_LoopyWriter_HeaderHandler(struct pt_regs *ctx)
         return 0;
     }
 
-    struct go_slice slice = {};
-    struct go_slice_user_ptr slice_user_ptr = {};
-    slice_user_ptr.array = (void *)(headerFrame_ptr + (headerFrame_hf_pos));
-    slice_user_ptr.len = (void *)(headerFrame_ptr + (headerFrame_hf_pos + 8));
-    slice_user_ptr.cap = (void *)(headerFrame_ptr + (headerFrame_hf_pos + 16));
-    bpf_probe_read(&slice.array, sizeof(slice.array), slice_user_ptr.array);
-    bpf_probe_read(&slice.len, sizeof(slice.len), slice_user_ptr.len);
-    bpf_probe_read(&slice.cap, sizeof(slice.cap), slice_user_ptr.cap);
-
     struct span_context current_span_context = {};
     bpf_probe_read(&current_span_context, sizeof(current_span_context), sc_ptr);
 
@@ -170,7 +161,7 @@ int uprobe_LoopyWriter_HeaderHandler(struct pt_regs *ctx)
     struct hpack_header_field hf = {};
     hf.name = key_str;
     hf.value = val_str;
-    append_item_to_slice(&slice, &hf, sizeof(hf), &slice_user_ptr);
+    append_item_to_slice(&hf, sizeof(hf), (void *)(headerFrame_ptr + (headerFrame_hf_pos)));
 done:
     bpf_map_delete_elem(&streamid_to_span_contexts, &stream_id);
 

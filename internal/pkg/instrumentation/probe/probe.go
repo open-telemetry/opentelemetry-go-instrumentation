@@ -76,7 +76,7 @@ type Base[BPFObj any, BPFEvent any] struct {
 	// probe.
 	SpecFn func() (*ebpf.CollectionSpec, error)
 	// ProcessFn processes probe events into a uniform Event type.
-	ProcessFn func(*BPFEvent) *SpanEvent
+	ProcessFn func(*BPFEvent) []*SpanEvent
 
 	reader  *perf.Reader
 	closers []io.Closer
@@ -185,14 +185,14 @@ func (i *Base[BPFObj, BPFEvent]) Run(dest chan<- *Event) {
 		e := &Event{
 			Package:   i.ID.InstrumentedPkg,
 			Kind:      i.ID.SpanKind,
-			SpanEvent: *se,
+			SpanEvents: se,
 		}
 
 		dest <- e
 	}
 }
 
-func (i *Base[BPFObj, BPFEvent]) processRecord(record perf.Record) (*SpanEvent, error) {
+func (i *Base[BPFObj, BPFEvent]) processRecord(record perf.Record) ([]*SpanEvent, error) {
 	buf := bytes.NewBuffer(record.RawSample)
 
 	var event BPFEvent

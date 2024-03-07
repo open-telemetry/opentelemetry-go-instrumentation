@@ -12,26 +12,22 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package client
+package consumer
 
 import (
 	"fmt"
 	"os"
-	"strings"
 
-	"github.com/cilium/ebpf"
 	"github.com/cilium/ebpf/link"
 	"github.com/cilium/ebpf/perf"
 	"github.com/go-logr/logr"
 	"go.opentelemetry.io/otel/attribute"
-	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.24.0"
 	"go.opentelemetry.io/otel/trace"
 	"golang.org/x/sys/unix"
 
-	"go.opentelemetry.io/auto/internal/pkg/instrumentation/bpf/net/http"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/context"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/probe"
-	"go.opentelemetry.io/auto/internal/pkg/instrumentation/utils"
 	"go.opentelemetry.io/auto/internal/pkg/process"
 	"go.opentelemetry.io/auto/internal/pkg/structfield"
 )
@@ -40,13 +36,13 @@ import (
 
 const (
 	// pkg is the package being instrumented.
-	pkg = "net/http"
+	pkg = "github.com/segmentio/kafka-go"
 )
 
 // New returns a new [probe.Probe].
 func New(logger logr.Logger) probe.Probe {
 	id := probe.ID{
-		SpanKind:        trace.SpanKindClient,
+		SpanKind:        trace.SpanKindConsumer,
 		InstrumentedPkg: pkg,
 	}
 	return &probe.Base[bpfObjects, event]{
@@ -56,76 +52,60 @@ func New(logger logr.Logger) probe.Probe {
 			probe.RegistersABIConst{},
 			probe.AllocationConst{},
 			probe.StructFieldConst{
-				Key: "method_ptr_pos",
-				Val: structfield.NewID("std", "net/http", "Request", "Method"),
+				Key: "message_headers_pos",
+				Val: structfield.NewID("github.com/segmentio/kafka-go", "github.com/segmentio/kafka-go", "Message", "Headers"),
 			},
 			probe.StructFieldConst{
-				Key: "url_ptr_pos",
-				Val: structfield.NewID("std", "net/http", "Request", "URL"),
+				Key: "message_key_pos",
+				Val: structfield.NewID("github.com/segmentio/kafka-go", "github.com/segmentio/kafka-go", "Message", "Key"),
 			},
 			probe.StructFieldConst{
-				Key: "path_ptr_pos",
-				Val: structfield.NewID("std", "net/url", "URL", "Path"),
+				Key: "message_topic_pos",
+				Val: structfield.NewID("github.com/segmentio/kafka-go", "github.com/segmentio/kafka-go", "Message", "Topic"),
 			},
 			probe.StructFieldConst{
-				Key: "headers_ptr_pos",
-				Val: structfield.NewID("std", "net/http", "Request", "Header"),
+				Key: "message_partition_pos",
+				Val: structfield.NewID("github.com/segmentio/kafka-go", "github.com/segmentio/kafka-go", "Message", "Partition"),
 			},
 			probe.StructFieldConst{
-				Key: "ctx_ptr_pos",
-				Val: structfield.NewID("std", "net/http", "Request", "ctx"),
+				Key: "message_offset_pos",
+				Val: structfield.NewID("github.com/segmentio/kafka-go", "github.com/segmentio/kafka-go", "Message", "Offset"),
 			},
 			probe.StructFieldConst{
-				Key: "status_code_pos",
-				Val: structfield.NewID("std", "net/http", "Response", "StatusCode"),
+				Key: "reader_config_pos",
+				Val: structfield.NewID("github.com/segmentio/kafka-go", "github.com/segmentio/kafka-go", "Reader", "config"),
 			},
 			probe.StructFieldConst{
-				Key: "buckets_ptr_pos",
-				Val: structfield.NewID("std", "runtime", "hmap", "buckets"),
-			},
-			probe.StructFieldConst{
-				Key: "request_host_pos",
-				Val: structfield.NewID("std", "net/http", "Request", "Host"),
-			},
-			probe.StructFieldConst{
-				Key: "request_proto_pos",
-				Val: structfield.NewID("std", "net/http", "Request", "Proto"),
+				Key: "reader_config_group_id_pos",
+				Val: structfield.NewID("github.com/segmentio/kafka-go", "github.com/segmentio/kafka-go", "ReaderConfig", "GroupID"),
 			},
 		},
 		Uprobes: []probe.Uprobe[bpfObjects]{
 			{
-				Sym: "net/http.(*Transport).roundTrip",
-				Fn:  uprobeRoundTrip,
+				Sym: "github.com/segmentio/kafka-go.(*Reader).FetchMessage",
+				Fn:  uprobeFetchMessage,
 			},
 		},
-
 		ReaderFn: func(obj bpfObjects) (*perf.Reader, error) {
-			return perf.NewReader(obj.Events, os.Getpagesize())
+			return perf.NewReader(obj.Events, os.Getpagesize()*100)
 		},
-		SpecFn:    verifyAndLoadBpf,
+		SpecFn:    loadBpf,
 		ProcessFn: convertEvent,
 	}
 }
 
-func verifyAndLoadBpf() (*ebpf.CollectionSpec, error) {
-	if !utils.SupportsContextPropagation() {
-		return nil, fmt.Errorf("the Linux Kernel doesn't support context propagation, please check if the kernel is in lockdown mode (/sys/kernel/security/lockdown)")
-	}
-
-	return loadBpf()
-}
-
-func uprobeRoundTrip(name string, exec *link.Executable, target *process.TargetDetails, obj *bpfObjects) ([]link.Link, error) {
+func uprobeFetchMessage(name string, exec *link.Executable, target *process.TargetDetails, obj *bpfObjects) ([]link.Link, error) {
 	offset, err := target.GetFunctionOffset(name)
 	if err != nil {
 		return nil, err
 	}
 
 	opts := &link.UprobeOptions{Address: offset}
-	l, err := exec.Uprobe("", obj.UprobeTransportRoundTrip, opts)
+	l, err := exec.Uprobe("", obj.UprobeFetchMessage, opts)
 	if err != nil {
 		return nil, err
 	}
+
 	links := []link.Link{l}
 
 	retOffsets, err := target.GetFunctionReturns(name)
@@ -135,7 +115,7 @@ func uprobeRoundTrip(name string, exec *link.Executable, target *process.TargetD
 
 	for _, ret := range retOffsets {
 		opts := &link.UprobeOptions{Address: ret}
-		l, err := exec.Uprobe("", obj.UprobeTransportRoundTripReturns, opts)
+		l, err := exec.Uprobe("", obj.UprobeFetchMessageReturns, opts)
 		if err != nil {
 			return nil, err
 		}
@@ -145,21 +125,17 @@ func uprobeRoundTrip(name string, exec *link.Executable, target *process.TargetD
 	return links, nil
 }
 
-// event represents an event in an HTTP server during an HTTP
-// request-response.
+// event represents a kafka message received by the consumer.
 type event struct {
 	context.BaseSpanProperties
-	Host       [256]byte
-	Proto      [8]byte
-	StatusCode uint64
-	Method     [10]byte
-	Path       [100]byte
+	Topic         [256]byte
+	Key           [256]byte
+	ConsumerGroup [128]byte
+	Offset        int64
+	Partition     int64
 }
 
 func convertEvent(e *event) []*probe.SpanEvent {
-	method := unix.ByteSliceToString(e.Method[:])
-	path := unix.ByteSliceToString(e.Path[:])
-
 	sc := trace.NewSpanContext(trace.SpanContextConfig{
 		TraceID:    e.SpanContext.TraceID,
 		SpanID:     e.SpanContext.SpanID,
@@ -179,37 +155,28 @@ func convertEvent(e *event) []*probe.SpanEvent {
 		pscPtr = nil
 	}
 
-	attrs := []attribute.KeyValue{
-		semconv.HTTPRequestMethodKey.String(method),
-		semconv.URLPath(path),
-		semconv.HTTPResponseStatusCodeKey.Int(int(e.StatusCode)),
-	}
+	topic := unix.ByteSliceToString(e.Topic[:])
 
-	// Server address and port
-	serverAddr, serverPort := http.ServerAddressPortAttributes(e.Host[:])
-	if serverAddr.Valid() {
-		attrs = append(attrs, serverAddr)
+	attributes := []attribute.KeyValue{
+		semconv.MessagingSystemKafka,
+		semconv.MessagingKafkaDestinationPartition(int(e.Partition)),
+		semconv.MessagingDestinationName(topic),
+		semconv.MessagingKafkaMessageOffset(int(e.Offset)),
+		semconv.MessagingKafkaMessageKey(unix.ByteSliceToString(e.Key[:])),
+		semconv.MessagingKafkaConsumerGroup(unix.ByteSliceToString(e.ConsumerGroup[:])),
 	}
-	if serverPort.Valid() {
-		attrs = append(attrs, serverPort)
-	}
-
-	proto := unix.ByteSliceToString(e.Proto[:])
-	if proto != "" {
-		parts := strings.Split(proto, "/")
-		if len(parts) == 2 {
-			attrs = append(attrs, semconv.NetworkProtocolVersion(parts[1]))
-		}
-	}
-
 	return []*probe.SpanEvent{
 		{
-			SpanName:          path,
+			SpanName:          kafkaConsumerSpanName(topic),
 			StartTime:         int64(e.StartTime),
 			EndTime:           int64(e.EndTime),
 			SpanContext:       &sc,
-			Attributes:        attrs,
 			ParentSpanContext: pscPtr,
+			Attributes:        attributes,
 		},
 	}
+}
+
+func kafkaConsumerSpanName(topic string) string {
+	return fmt.Sprintf("%s receive", topic)
 }

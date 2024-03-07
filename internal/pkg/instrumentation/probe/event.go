@@ -24,7 +24,7 @@ import (
 type Event struct {
 	Package string
 	Kind    trace.SpanKind
-	SpanEvent
+	SpanEvents []*SpanEvent
 }
 
 type Status struct {

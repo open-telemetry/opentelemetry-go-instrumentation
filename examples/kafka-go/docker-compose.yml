@@ -1,0 +1,105 @@
+version: "3.9"
+
+networks:
+  default:
+    name: roll
+    driver: bridge
+
+volumes:
+  debugfs:
+    driver: local
+    driver_opts:
+      type: debugfs
+      device: debugfs
+      o: uid=0,gid=0,mode=755
+
+services:
+  kafka:
+    depends_on:
+      - zookeeper
+    image: wurstmeister/kafka:2.12-2.3.1
+    restart: on-failure:3
+    links:
+    - zookeeper
+    expose:
+      - 9092
+    ports:
+      - 9092:9092
+      - 9093:9093
+    environment:
+      KAFKA_VERSION: '2.3.1'
+      KAFKA_BROKER_ID: '1'
+      KAFKA_CREATE_TOPICS: 'test-writer-0:3:1,test-writer-1:3:1'
+      KAFKA_DELETE_TOPIC_ENABLE: 'true'
+      KAFKA_ADVERTISED_HOST_NAME: 'kafka'
+      KAFKA_ADVERTISED_PORT: '9092'
+      KAFKA_ZOOKEEPER_CONNECT: 'zookeeper:2181'
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: 'true'
+      KAFKA_MESSAGE_MAX_BYTES: '200000000'
+      KAFKA_LISTENERS: 'PLAINTEXT://:9092,SASL_PLAINTEXT://:9093'
+      KAFKA_ADVERTISED_LISTENERS: 'PLAINTEXT://kafka:9092,SASL_PLAINTEXT://kafka:9093'
+      KAFKA_SASL_ENABLED_MECHANISMS: 'PLAIN,SCRAM-SHA-256,SCRAM-SHA-512'
+      KAFKA_AUTHORIZER_CLASS_NAME: 'kafka.security.auth.SimpleAclAuthorizer'
+      KAFKA_ALLOW_EVERYONE_IF_NO_ACL_FOUND: 'true'
+      KAFKA_OPTS: "-Djava.security.auth.login.config=/opt/kafka/config/kafka_server_jaas.conf"
+      CUSTOM_INIT_SCRIPT: |-
+        echo -e 'KafkaServer {\norg.apache.kafka.common.security.scram.ScramLoginModule required\n username="adminscram"\n password="admin-secret";\n org.apache.kafka.common.security.plain.PlainLoginModule required\n username="adminplain"\n password="admin-secret"\n user_adminplain="admin-secret";\n  };' > /opt/kafka/config/kafka_server_jaas.conf;
+        /opt/kafka/bin/kafka-configs.sh --zookeeper zookeeper:2181 --alter --add-config 'SCRAM-SHA-256=[password=admin-secret-256],SCRAM-SHA-512=[password=admin-secret-512]' --entity-type users --entity-name adminscram
+    healthcheck:
+      test: ["CMD", "kafka-topics.sh", "--list", "--zookeeper", "zookeeper:2181"]
+      interval: 5s
+      timeout: 10s
+      retries: 5
+  
+  zookeeper:
+    image: wurstmeister/zookeeper
+    expose:
+      - "2181"
+    ports:
+      - 2181:2181
+
+  kafkaapp:
+    depends_on:
+      kafka:
+        condition: service_healthy
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+    pid: "host"
+    ports:
+      - "8080:8080"
+    volumes:
+      - /proc:/host/proc
+
+  go-auto:
+    depends_on:
+      - kafkaapp
+    build:
+      context: ../..
+      dockerfile: Dockerfile
+    privileged: true
+    pid: "host"
+    environment:
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://jaeger:4318
+      - OTEL_GO_AUTO_TARGET_EXE=/app/main
+      - OTEL_SERVICE_NAME=kafkaapp
+      - OTEL_PROPAGATORS=tracecontext,baggage
+      - OTEL_GO_AUTO_SHOW_VERIFIER_LOG=true
+    volumes:
+      - /proc:/host/proc
+      - debugfs:/sys/kernel/debug
+    command: ["/otel-go-instrumentation", "-global-impl"]
+
+  jaeger:
+    image: jaegertracing/all-in-one:latest
+    ports:
+      - "16686:16686"
+      - "14268:14268"
+    environment:
+      - COLLECTOR_OTLP_ENABLED=true
+      - LOG_LEVEL=debug
+    deploy:
+      resources:
+        limits:
+          memory: 300M
+    restart: unless-stopped
