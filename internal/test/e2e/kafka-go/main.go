@@ -40,7 +40,7 @@ func produceMessages(kafkaWriter *kafka.Writer) {
 
 func getKafkaWriter() *kafka.Writer {
 	return &kafka.Writer{
-		Addr:         kafka.TCP("localhost:9093"),
+		Addr:         kafka.TCP("127.0.0.1:9092"),
 		Balancer:     &kafka.LeastBytes{},
 		RequiredAcks: 1,
 		BatchTimeout: 1 * time.Millisecond,
@@ -49,7 +49,7 @@ func getKafkaWriter() *kafka.Writer {
 
 func getKafkaReader() *kafka.Reader {
 	return kafka.NewReader(kafka.ReaderConfig{
-		Brokers:        []string{"localhost:9093"},
+		Brokers:        []string{"127.0.0.1:9092"},
 		GroupID:        "some group id",
 		Topic:          "topic1",
 		MinBytes:       1,
@@ -82,7 +82,7 @@ func main() {
 	// to create topics when auto.create.topics.enable='true'
 	fmt.Println("trying to connect to kafka")
 	for range time.Tick(5 * time.Second) {
-		_, err := kafka.DialLeader(context.Background(), "tcp", "127.0.0.1:9093", "topic1", 0)
+		_, err := kafka.DialLeader(context.Background(), "tcp", "127.0.0.1:9092", "topic1", 0)
 		if err == nil {
 			break
 		}
@@ -90,7 +90,7 @@ func main() {
 	}
 
 	fmt.Println("successfully connected to kafka")
-	_, err := kafka.DialLeader(context.Background(), "tcp", "127.0.0.1:9093", "topic2", 0)
+	_, err := kafka.DialLeader(context.Background(), "tcp", "127.0.0.1:9092", "topic2", 0)
 	if err != nil {
 		panic(err.Error())
 	}

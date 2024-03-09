@@ -7,47 +7,46 @@ import (
 	"log"
 	"net/http"
 	"time"
-	"unsafe"
 
 	kafka "github.com/segmentio/kafka-go"
-	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/attribute"
 )
 
-var tracer = otel.Tracer("trace-example")
+type server struct {
+	kafkaWriter *kafka.Writer
+}
 
-func producerHandler(kafkaWriter *kafka.Writer) func(http.ResponseWriter, *http.Request) {
-	return http.HandlerFunc(func(wrt http.ResponseWriter, req *http.Request) {
-		body, err := io.ReadAll(req.Body)
-		if err != nil {
-			log.Fatalln(err)
-		}
-		msg1 := kafka.Message{
-			Key:   []byte("key1"),
-			Value: body,
-			Topic: "topic1",
-			Headers: []kafka.Header{
-				{
-					Key:   "header1",
-					Value: []byte("value1"),
-				},
+func (s *server) producerHandler(wrt http.ResponseWriter, req *http.Request){
+	body, err := io.ReadAll(req.Body)
+	if err != nil {
+		log.Fatalln(err)
+	}
+	msg1 := kafka.Message{
+		Key:   []byte("key1"),
+		Value: body,
+		Topic: "topic1",
+		Headers: []kafka.Header{
+			{
+				Key:   "header1",
+				Value: []byte("value1"),
 			},
-		}
-		msg2 := kafka.Message{
-			Key:   []byte("key2"),
-			Topic: "topic2",
-			Value: body,
-		}
-		msgs := []kafka.Message{msg1, msg2}
-		err = kafkaWriter.WriteMessages(req.Context(),
-			msgs...,
-		)
+		},
+	}
+	msg2 := kafka.Message{
+		Key:   []byte("key2"),
+		Topic: "topic2",
+		Value: body,
+	}
+	msgs := []kafka.Message{msg1, msg2}
+	err = s.kafkaWriter.WriteMessages(req.Context(),
+		msgs...,
+	)
 
-		if err != nil {
-			_, err1 := wrt.Write([]byte(err.Error()))
-			log.Fatalln(err, err1)
-		}
-	})
+	if err != nil {
+		_, err1 := wrt.Write([]byte(err.Error()))
+		log.Fatalln(err, err1)
+	}
+
+	fmt.Fprintf(wrt, "message sent to kafka")
 }
 
 func getKafkaWriter() *kafka.Writer {
@@ -57,6 +56,7 @@ func getKafkaWriter() *kafka.Writer {
 		RequiredAcks: 1,
 		Async:        true,
 		WriteBackoffMax: 1 * time.Millisecond,
+		BatchTimeout: 1 * time.Millisecond,
 	}
 }
 
@@ -78,16 +78,10 @@ func reader() {
 	fmt.Println("start consuming ... !!")
 	for {
 		m, err := reader.ReadMessage(ctx)
-		_, span := tracer.Start(ctx, "consumer manual span")
 		if err != nil {
 			log.Fatalln(err)
 		}
-		span.SetAttributes(
-			attribute.KeyValue{Key: "topic", Value: attribute.StringValue(m.Topic)},
-			attribute.KeyValue{Key: "offset", Value: attribute.IntValue(int(m.Offset))},
-		)
 		fmt.Printf("consumed message at topic:%v partition:%v offset:%v	%s = %s\n", m.Topic, m.Partition, m.Offset, string(m.Key), string(m.Value))
-		span.End()
 	}
 }
 
@@ -107,11 +101,12 @@ func main() {
 
 	go reader()
 
+	s := &server{kafkaWriter: kafkaWriter}
+
 	// Add handle func for producer.
-	http.HandleFunc("/", producerHandler(kafkaWriter))
+	http.HandleFunc("/produce", s.producerHandler)
 
 	// Run the web server.
-	fmt.Printf("size of message: %d", unsafe.Sizeof(kafka.Message{}))
 	fmt.Println("start producer-api ... !!")
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }

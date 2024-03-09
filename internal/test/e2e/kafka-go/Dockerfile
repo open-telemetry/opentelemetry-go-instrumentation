@@ -3,13 +3,18 @@ WORKDIR /sample-app
 COPY . .
 RUN go mod init go.opentelemetry.io/auto/internal/test/e2e/kafka-go && go mod tidy && CGO_ENABLED=0 go build -o main
 
-FROM moeenz/docker-kafka-kraft:latest
-ENV KRAFT_CONTAINER_HOST_NAME=kafka
-ENV KRAFT_CREATE_TOPICS=topic1,topic2
-ENV KRAFT_PARTITIONS_PER_TOPIC=1
+FROM bitnami/kafka:latest
+
+USER root
+ENV KAFKA_CFG_PROCESS_ROLES=controller,broker
+ENV KAFKA_CFG_NODE_ID=0
+ENV KAFKA_CFG_LISTENERS=PLAINTEXT://127.0.0.1:9092,CONTROLLER://:9093
+ENV KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+ENV KAFKA_CFG_CONTROLLER_QUORUM_VOTERS=0@127.0.0.1:9093
+ENV KAFKA_CFG_CONTROLLER_LISTENER_NAMES=CONTROLLER
 WORKDIR /sample-app
 COPY --from=builder /sample-app/main .
 COPY start.sh .
 RUN chmod +x start.sh
-WORKDIR /opt/kafka
+WORKDIR /
 ENTRYPOINT ["/sample-app/start.sh"]
