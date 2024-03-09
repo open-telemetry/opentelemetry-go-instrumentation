@@ -183,8 +183,8 @@ func (i *Base[BPFObj, BPFEvent]) Run(dest chan<- *Event) {
 			i.Logger.Error(err, "failed to process perf record")
 		}
 		e := &Event{
-			Package:   i.ID.InstrumentedPkg,
-			Kind:      i.ID.SpanKind,
+			Package:    i.ID.InstrumentedPkg,
+			Kind:       i.ID.SpanKind,
 			SpanEvents: se,
 		}
 

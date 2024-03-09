@@ -1,9 +1,22 @@
+// Copyright The OpenTelemetry Authors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package main
 
 import (
 	"context"
 	"fmt"
-	"log"
 	"time"
 
 	kafka "github.com/segmentio/kafka-go"
@@ -30,28 +43,27 @@ func produceMessages(kafkaWriter *kafka.Writer) {
 	err := kafkaWriter.WriteMessages(context.Background(),
 		msgs...,
 	)
-
 	if err != nil {
-		log.Fatalln(err)
+		fmt.Printf("failed to write messages: %v\n", err)
 	}
 }
 
 func getKafkaWriter() *kafka.Writer {
 	return &kafka.Writer{
-		Addr:         kafka.TCP("127.0.0.1:9092"),
-		Balancer:     &kafka.LeastBytes{},
-		Async:        true,
-		RequiredAcks: 1,
+		Addr:            kafka.TCP("127.0.0.1:9092"),
+		Balancer:        &kafka.LeastBytes{},
+		Async:           true,
+		RequiredAcks:    1,
 		WriteBackoffMax: 1 * time.Millisecond,
-		BatchTimeout: 1 * time.Millisecond,
+		BatchTimeout:    1 * time.Millisecond,
 	}
 }
 
 func getKafkaReader() *kafka.Reader {
 	return kafka.NewReader(kafka.ReaderConfig{
-		Brokers:        []string{"127.0.0.1:9092"},
-		GroupID:        "some group id",
-		Topic:          "topic1",
+		Brokers:          []string{"127.0.0.1:9092"},
+		GroupID:          "some group id",
+		Topic:            "topic1",
 		ReadBatchTimeout: 1 * time.Millisecond,
 	})
 }
@@ -65,7 +77,7 @@ func reader(readChan chan bool) {
 	for {
 		_, err := reader.ReadMessage(context.Background())
 		if err != nil {
-			log.Fatalln(err)
+			fmt.Printf("failed to read message: %v\n", err)
 		}
 		readChan <- true
 	}

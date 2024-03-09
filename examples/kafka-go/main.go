@@ -1,3 +1,17 @@
+// Copyright The OpenTelemetry Authors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package main
 
 import (
@@ -19,10 +33,12 @@ type server struct {
 	kafkaWriter *kafka.Writer
 }
 
-func (s *server) producerHandler(wrt http.ResponseWriter, req *http.Request){
+func (s *server) producerHandler(wrt http.ResponseWriter, req *http.Request) {
 	body, err := io.ReadAll(req.Body)
 	if err != nil {
-		log.Fatalln(err)
+		fmt.Printf("failed to read request body: %v\n", err)
+		wrt.WriteHeader(http.StatusBadRequest)
+		return
 	}
 	msg1 := kafka.Message{
 		Key:   []byte("key1"),
@@ -47,7 +63,11 @@ func (s *server) producerHandler(wrt http.ResponseWriter, req *http.Request){
 
 	if err != nil {
 		_, err1 := wrt.Write([]byte(err.Error()))
-		log.Fatalln(err, err1)
+		if err1 != nil {
+			fmt.Printf("failed to write response: %v\n", err1)
+			wrt.WriteHeader(http.StatusInternalServerError)
+		}
+		return
 	}
 
 	fmt.Fprintf(wrt, "message sent to kafka")
@@ -55,20 +75,20 @@ func (s *server) producerHandler(wrt http.ResponseWriter, req *http.Request){
 
 func getKafkaWriter() *kafka.Writer {
 	return &kafka.Writer{
-		Addr: kafka.TCP("kafka:9092"),
-		Balancer:     &kafka.LeastBytes{},
-		RequiredAcks: 1,
-		Async:        true,
+		Addr:            kafka.TCP("kafka:9092"),
+		Balancer:        &kafka.LeastBytes{},
+		RequiredAcks:    1,
+		Async:           true,
 		WriteBackoffMax: 1 * time.Millisecond,
-		BatchTimeout: 1 * time.Millisecond,
+		BatchTimeout:    1 * time.Millisecond,
 	}
 }
 
 func getKafkaReader() *kafka.Reader {
 	return kafka.NewReader(kafka.ReaderConfig{
-		Brokers:  []string{"kafka:9092"},
-		GroupID:  "some group id",
-		Topic:    "topic1",
+		Brokers:          []string{"kafka:9092"},
+		GroupID:          "some group id",
+		Topic:            "topic1",
 		ReadBatchTimeout: 1 * time.Millisecond,
 	})
 }
@@ -83,7 +103,8 @@ func reader() {
 	for {
 		m, err := reader.ReadMessage(ctx)
 		if err != nil {
-			log.Fatalln(err)
+			fmt.Printf("failed to read message: %v\n", err)
+			continue
 		}
 		_, span := tracer.Start(ctx, "consumer manual span")
 		span.SetAttributes(
