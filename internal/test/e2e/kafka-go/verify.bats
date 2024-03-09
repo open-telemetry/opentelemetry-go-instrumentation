@@ -33,6 +33,12 @@ SCOPE="go.opentelemetry.io/auto/github.com/segmentio/kafka-go"
   assert_equal "$result_separated" '"key1" "key2"'
 }
 
+@test "producer :: valid {messaging.batch.message_count} for all spans" {
+  batch_sizes=$(producer_span_attributes_for ${SCOPE} | jq "select(.key == \"messaging.batch.message_count\").value.intValue")
+  result_separated=$(echo $batch_sizes | sed 's/\n/,/g')
+  assert_equal "$result_separated" '"2" "2"'
+}
+
 @test "consumer :: valid {messaging.kafka.message.key}" {
   topics=$(consumer_span_attributes_for ${SCOPE} | jq "select(.key == \"messaging.kafka.message.key\").value.stringValue" | sort )
   assert_equal "$topics" '"key1"'

@@ -6,7 +6,7 @@
           {
             "key": "process.runtime.description",
             "value": {
-              "stringValue": "go version 1.22.0 linux/arm64"
+              "stringValue": "go version 1.22.0 linux/amd64"
             }
           },
           {
@@ -68,6 +68,18 @@
                   "value": {
                     "stringValue": "kafka"
                   }
+                },
+                {
+                  "key": "messaging.operation",
+                  "value": {
+                    "stringValue": "publish"
+                  }
+                },
+                {
+                  "key": "messaging.batch.message_count",
+                  "value": {
+                    "intValue": "2"
+                  }
                 }
               ],
               "kind": 4,
@@ -96,6 +108,18 @@
                   "value": {
                     "stringValue": "kafka"
                   }
+                },
+                {
+                  "key": "messaging.operation",
+                  "value": {
+                    "stringValue": "publish"
+                  }
+                },
+                {
+                  "key": "messaging.batch.message_count",
+                  "value": {
+                    "intValue": "2"
+                  }
                 }
               ],
               "kind": 4,
@@ -115,7 +139,7 @@
           {
             "key": "process.runtime.description",
             "value": {
-              "stringValue": "go version 1.22.0 linux/arm64"
+              "stringValue": "go version 1.22.0 linux/amd64"
             }
           },
           {
@@ -164,6 +188,12 @@
                   "key": "messaging.system",
                   "value": {
                     "stringValue": "kafka"
+                  }
+                },
+                {
+                  "key": "messaging.operation",
+                  "value": {
+                    "stringValue": "receive"
                   }
                 },
                 {

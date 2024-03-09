@@ -159,6 +159,7 @@ func convertEvent(e *event) []*probe.SpanEvent {
 
 	attributes := []attribute.KeyValue{
 		semconv.MessagingSystemKafka,
+		semconv.MessagingOperationReceive,
 		semconv.MessagingKafkaDestinationPartition(int(e.Partition)),
 		semconv.MessagingDestinationName(topic),
 		semconv.MessagingKafkaMessageOffset(int(e.Offset)),

@@ -155,9 +155,13 @@ func convertEvent(e *event) []*probe.SpanEvent {
 
 	globalTopic := unix.ByteSliceToString(e.GlobalTopic[:])
 
-	var commonAttrs []attribute.KeyValue = []attribute.KeyValue{semconv.MessagingSystemKafka}
+	var commonAttrs []attribute.KeyValue = []attribute.KeyValue{semconv.MessagingSystemKafka, semconv.MessagingOperationPublish}
 	if len(globalTopic) > 0 {
 		commonAttrs = append(commonAttrs, semconv.MessagingDestinationName(globalTopic))
+	}
+
+	if e.ValidMessages > 0 {
+		commonAttrs = append(commonAttrs, semconv.MessagingBatchMessageCount(int(e.ValidMessages)))
 	}
 
 	var res []*probe.SpanEvent
