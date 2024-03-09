@@ -31,8 +31,6 @@ func produceMessages(kafkaWriter *kafka.Writer) {
 		msgs...,
 	)
 
-	fmt.Printf("msgs after produce: %+v\n", msgs)
-
 	if err != nil {
 		log.Fatalln(err)
 	}
@@ -42,7 +40,9 @@ func getKafkaWriter() *kafka.Writer {
 	return &kafka.Writer{
 		Addr:         kafka.TCP("127.0.0.1:9092"),
 		Balancer:     &kafka.LeastBytes{},
+		Async:        true,
 		RequiredAcks: 1,
+		WriteBackoffMax: 1 * time.Millisecond,
 		BatchTimeout: 1 * time.Millisecond,
 	}
 }
@@ -52,11 +52,7 @@ func getKafkaReader() *kafka.Reader {
 		Brokers:        []string{"127.0.0.1:9092"},
 		GroupID:        "some group id",
 		Topic:          "topic1",
-		MinBytes:       1,
-		MaxBytes:       10e6,
-		ReadBackoffMin: 1 * time.Millisecond,
-		ReadBackoffMax: 10 * time.Millisecond,
-		MaxWait:        100 * time.Millisecond,
+		ReadBatchTimeout: 1 * time.Millisecond,
 	})
 }
 

@@ -9,7 +9,11 @@ import (
 	"time"
 
 	kafka "github.com/segmentio/kafka-go"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
 )
+
+var tracer = otel.Tracer("trace-example")
 
 type server struct {
 	kafkaWriter *kafka.Writer
@@ -81,7 +85,14 @@ func reader() {
 		if err != nil {
 			log.Fatalln(err)
 		}
+		_, span := tracer.Start(ctx, "consumer manual span")
+		span.SetAttributes(
+			attribute.String("topic", m.Topic),
+			attribute.Int64("partition", int64(m.Partition)),
+			attribute.Int64("offset", int64(m.Offset)),
+		)
 		fmt.Printf("consumed message at topic:%v partition:%v offset:%v	%s = %s\n", m.Topic, m.Partition, m.Offset, string(m.Key), string(m.Value))
+		span.End()
 	}
 }
 
@@ -99,6 +110,7 @@ func main() {
 		panic(err.Error())
 	}
 
+	time.Sleep(5 * time.Second)
 	go reader()
 
 	s := &server{kafkaWriter: kafkaWriter}

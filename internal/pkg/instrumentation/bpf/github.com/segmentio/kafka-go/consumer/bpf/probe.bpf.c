@@ -154,8 +154,10 @@ int uprobe_FetchMessage(struct pt_regs *ctx) {
     struct kafka_request_t *kafka_request = bpf_map_lookup_elem(&kafka_events, &goroutine);
     if (kafka_request == NULL)
     {
-        bpf_printk("uuprobe/read: kafka_request is NULL");
-        return 0;
+        // The current goroutine has no kafka request,
+        // this can happen in the first time FetchMessage is called
+        // Save the context for the return probe for in-process context propagation
+        goto save_context;
     }
 
     get_go_string_from_user_ptr((void *)(reader + reader_config_pos + reader_config_group_id_pos), kafka_request->consumer_group, sizeof(kafka_request->consumer_group));
@@ -164,6 +166,8 @@ int uprobe_FetchMessage(struct pt_regs *ctx) {
     bpf_perf_event_output(ctx, &events, BPF_F_CURRENT_CPU, kafka_request, sizeof(*kafka_request));
     stop_tracking_span(&kafka_request->sc, &kafka_request->psc);
     bpf_map_delete_elem(&kafka_events, &goroutine);
+
+save_context:
     // Save the context for the return probe
     bpf_map_update_elem(&goroutine_to_go_context, &goroutine, &context_data_ptr, 0);
     return 0;

@@ -59,7 +59,12 @@ jobs:
           repository: 'open-telemetry/opentelemetry-helm-charts'
           path: opentelemetry-helm-charts
       - name: Helm install collector
-        run: helm install test -f .github/workflows/e2e/k8s/collector-helm-values.yml opentelemetry-helm-charts/charts/opentelemetry-collector
+        run: |
+          if [ -f ./internal/test/e2e/${{ matrix.library }}/collector-helm-values.yml ]; then
+            helm install test -f ./internal/test/e2e/${{ matrix.library }}/collector-helm-values.yml opentelemetry-helm-charts/charts/opentelemetry-collector
+          else
+            helm install test -f .github/workflows/e2e/k8s/collector-helm-values.yml opentelemetry-helm-charts/charts/opentelemetry-collector
+          fi
       - name: check collector status
         # The loop is needed if the pod is not created yet
         # once https://github.com/kubernetes/kubectl/issues/1516 is fixed we can remove the loop
