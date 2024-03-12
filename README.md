@@ -39,7 +39,11 @@ or create a virtual machine to compile and run OpenTelemetry Go Automatic Instru
 
 ## Get started
 
-See [Getting started](`docs/getting-started.md`) for setup, deployment, and configuration steps.
+See [Getting started](docs/getting-started.md) for setup, deployment, and configuration steps.
+
+You can also try the [Tutorial](docs/tutorial) for a guide on setting up a sample Emojivoto application.
+
+For technical and design info, see [How it works](docs/how-it-works.md).
 
 ## Contributing
 
