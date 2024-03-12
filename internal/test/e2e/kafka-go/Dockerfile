@@ -1,4 +1,4 @@
-FROM golang:1.22.0 AS builder
+FROM golang:1.22.1 AS builder
 WORKDIR /sample-app
 COPY . .
 RUN go mod init go.opentelemetry.io/auto/internal/test/e2e/kafka-go && go mod tidy && CGO_ENABLED=0 go build -o main
