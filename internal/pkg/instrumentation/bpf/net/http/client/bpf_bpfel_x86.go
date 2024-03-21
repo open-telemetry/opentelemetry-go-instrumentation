@@ -75,6 +75,7 @@ type bpfSpecs struct {
 type bpfProgramSpecs struct {
 	UprobeTransportRoundTrip        *ebpf.ProgramSpec `ebpf:"uprobe_Transport_roundTrip"`
 	UprobeTransportRoundTripReturns *ebpf.ProgramSpec `ebpf:"uprobe_Transport_roundTrip_Returns"`
+	UprobeWriteSubset               *ebpf.ProgramSpec `ebpf:"uprobe_writeSubset"`
 }
 
 // bpfMapSpecs contains maps before they are loaded into the kernel.
@@ -86,6 +87,7 @@ type bpfMapSpecs struct {
 	GolangMapbucketStorageMap  *ebpf.MapSpec `ebpf:"golang_mapbucket_storage_map"`
 	HttpClientUprobeStorageMap *ebpf.MapSpec `ebpf:"http_client_uprobe_storage_map"`
 	HttpEvents                 *ebpf.MapSpec `ebpf:"http_events"`
+	HttpHeaders                *ebpf.MapSpec `ebpf:"http_headers"`
 	SliceArrayBuffMap          *ebpf.MapSpec `ebpf:"slice_array_buff_map"`
 	TrackedSpans               *ebpf.MapSpec `ebpf:"tracked_spans"`
 	TrackedSpansBySc           *ebpf.MapSpec `ebpf:"tracked_spans_by_sc"`
@@ -115,6 +117,7 @@ type bpfMaps struct {
 	GolangMapbucketStorageMap  *ebpf.Map `ebpf:"golang_mapbucket_storage_map"`
 	HttpClientUprobeStorageMap *ebpf.Map `ebpf:"http_client_uprobe_storage_map"`
 	HttpEvents                 *ebpf.Map `ebpf:"http_events"`
+	HttpHeaders                *ebpf.Map `ebpf:"http_headers"`
 	SliceArrayBuffMap          *ebpf.Map `ebpf:"slice_array_buff_map"`
 	TrackedSpans               *ebpf.Map `ebpf:"tracked_spans"`
 	TrackedSpansBySc           *ebpf.Map `ebpf:"tracked_spans_by_sc"`
@@ -127,6 +130,7 @@ func (m *bpfMaps) Close() error {
 		m.GolangMapbucketStorageMap,
 		m.HttpClientUprobeStorageMap,
 		m.HttpEvents,
+		m.HttpHeaders,
 		m.SliceArrayBuffMap,
 		m.TrackedSpans,
 		m.TrackedSpansBySc,
@@ -139,12 +143,14 @@ func (m *bpfMaps) Close() error {
 type bpfPrograms struct {
 	UprobeTransportRoundTrip        *ebpf.Program `ebpf:"uprobe_Transport_roundTrip"`
 	UprobeTransportRoundTripReturns *ebpf.Program `ebpf:"uprobe_Transport_roundTrip_Returns"`
+	UprobeWriteSubset               *ebpf.Program `ebpf:"uprobe_writeSubset"`
 }
 
 func (p *bpfPrograms) Close() error {
 	return _BpfClose(
 		p.UprobeTransportRoundTrip,
 		p.UprobeTransportRoundTripReturns,
+		p.UprobeWriteSubset,
 	)
 }
 

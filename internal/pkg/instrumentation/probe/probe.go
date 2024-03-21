@@ -86,9 +86,9 @@ type Base[BPFObj any, BPFEvent any] struct {
 func (i *Base[BPFObj, BPFEvent]) Manifest() Manifest {
 	structfields := consts(i.Consts).structFields()
 
-	symbols := make([]string, 0, len(i.Uprobes))
+	symbols := make([]FunctionSymbol, 0, len(i.Uprobes))
 	for _, up := range i.Uprobes {
-		symbols = append(symbols, up.Sym)
+		symbols = append(symbols, FunctionSymbol{Symbol: up.Sym, Optional: up.Optional})
 	}
 
 	return NewManifest(i.ID, structfields, symbols)

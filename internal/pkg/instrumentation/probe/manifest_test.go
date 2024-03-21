@@ -23,6 +23,10 @@ import (
 	"go.opentelemetry.io/auto/internal/pkg/structfield"
 )
 
+func fs(s string) FunctionSymbol {
+	return FunctionSymbol{Symbol: s, Optional: false}
+}
+
 func TestNewManifest(t *testing.T) {
 	const (
 		spanKind = trace.SpanKindServer
@@ -48,12 +52,12 @@ func TestNewManifest(t *testing.T) {
 	got := NewManifest(
 		ID{spanKind, pkg},
 		[]structfield.ID{sAABB, sABAA, sAAAA, sAAAC, sBAAA, sAAAB, sAABA, sAABC},
-		[]string{d, a, c, b},
+		[]FunctionSymbol{fs(d), fs(a), fs(c), fs(b)},
 	)
 	want := Manifest{
 		Id:           ID{spanKind, pkg},
 		StructFields: []structfield.ID{sAAAA, sAAAB, sAAAC, sAABA, sAABB, sAABC, sABAA, sBAAA},
-		Symbols:      []string{a, b, c, d},
+		Symbols:      []FunctionSymbol{fs(a), fs(b), fs(c), fs(d)},
 	}
 	assert.Equal(t, want, got)
 }

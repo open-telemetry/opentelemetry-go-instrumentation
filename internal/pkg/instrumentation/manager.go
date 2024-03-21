@@ -85,7 +85,7 @@ func (m *Manager) GetRelevantFuncs() map[string]interface{} {
 	funcsMap := make(map[string]interface{})
 	for _, i := range m.probes {
 		for _, s := range i.Manifest().Symbols {
-			funcsMap[s] = nil
+			funcsMap[s.Symbol] = nil
 		}
 	}
 
@@ -103,8 +103,10 @@ func (m *Manager) FilterUnusedProbes(target *process.TargetDetails) {
 	for name, inst := range m.probes {
 		funcsFound := 0
 		for _, s := range inst.Manifest().Symbols {
-			if _, exists := existingFuncMap[s]; exists {
-				funcsFound++
+			if !s.Optional {
+				if _, exists := existingFuncMap[s.Symbol]; exists {
+					funcsFound++
+				}
 			}
 		}
 
