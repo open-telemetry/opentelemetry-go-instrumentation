@@ -104,7 +104,7 @@ func NewInstrumentation(ctx context.Context, opts ...InstrumentationOption) (*In
 	}
 
 	pa := process.NewAnalyzer(logger)
-	pid, err := pa.DiscoverProcessID(&c.target)
+	pid, err := pa.DiscoverProcessID(ctx, &c.target)
 	if err != nil {
 		return nil, err
 	}
@@ -153,7 +153,6 @@ func (i *Instrumentation) Run(ctx context.Context) error {
 
 // Close closes the Instrumentation, cleaning up all used resources.
 func (i *Instrumentation) Close() error {
-	i.analyzer.Close()
 	return i.manager.Close()
 }
 

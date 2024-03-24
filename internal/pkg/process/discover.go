@@ -15,6 +15,7 @@
 package process
 
 import (
+	"context"
 	"errors"
 	"io"
 	"os"
@@ -39,20 +40,18 @@ var (
 // Analyzer is used to find actively running processes.
 type Analyzer struct {
 	logger logr.Logger
-	done   chan bool
 }
 
 // NewAnalyzer returns a new [ProcessAnalyzer].
 func NewAnalyzer(logger logr.Logger) *Analyzer {
 	return &Analyzer{
 		logger: logger.WithName("Analyzer"),
-		done:   make(chan bool, 1),
 	}
 }
 
 // DiscoverProcessID searches for the target as an actively running process,
 // returning its PID if found.
-func (a *Analyzer) DiscoverProcessID(target *TargetArgs) (int, error) {
+func (a *Analyzer) DiscoverProcessID(ctx context.Context, target *TargetArgs) (int, error) {
 	t := time.NewTicker(2 * time.Second)
 	defer t.Stop()
 
@@ -68,7 +67,7 @@ func (a *Analyzer) DiscoverProcessID(target *TargetArgs) (int, error) {
 
 	for {
 		select {
-		case <-a.done:
+		case <-ctx.Done():
 			a.logger.Info("stopping process id discovery due to kill signal")
 			return 0, ErrInterrupted
 		case <-t.C:
@@ -135,9 +134,4 @@ func (a *Analyzer) findProcessID(target *TargetArgs, proc *os.File) (int, error)
 	}
 
 	return 0, ErrProcessNotFound
-}
-
-// Close closes the analyzer.
-func (a *Analyzer) Close() {
-	a.done <- true
 }

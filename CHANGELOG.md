@@ -24,6 +24,7 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 - Reset `proc` offset after a failed iteration. ([#681](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/681))
 - Avoid using runtime.NumCPU to get the number of CPUs on the system before remote mmap ([#680](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/680))
 - Cleanup eBPF maps only when we stop using the memory ([#682](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/682))
+- Handle Ctrl-C signal while searching for the target PID ([#731](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/731))
 
 ## [v0.10.1-alpha] - 2024-01-10
 
