@@ -118,5 +118,5 @@ func TestProbeConvertEvent(t *testing.T) {
 			attribute.String("string_key2", "string value 2"),
 		},
 	}
-	assert.Equal(t, want, got)
+	assert.Equal(t, want, got[0])
 }

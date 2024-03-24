@@ -254,7 +254,7 @@ type event struct {
 	Attributes attributesBuffer
 }
 
-func convertEvent(e *event) *probe.SpanEvent {
+func convertEvent(e *event) []*probe.SpanEvent {
 	spanName := unix.ByteSliceToString(e.SpanName[:])
 
 	sc := trace.NewSpanContext(trace.SpanContextConfig{
@@ -276,16 +276,18 @@ func convertEvent(e *event) *probe.SpanEvent {
 		pscPtr = nil
 	}
 
-	return &probe.SpanEvent{
-		SpanName:          spanName,
-		StartTime:         int64(e.StartTime),
-		EndTime:           int64(e.EndTime),
-		Attributes:        convertAttributes(e.Attributes),
-		SpanContext:       &sc,
-		ParentSpanContext: pscPtr,
-		Status: probe.Status{
-			Code:        codes.Code(e.Status.Code),
-			Description: string(unix.ByteSliceToString(e.Status.Description[:])),
+	return []*probe.SpanEvent{
+		{
+			SpanName:          spanName,
+			StartTime:         int64(e.StartTime),
+			EndTime:           int64(e.EndTime),
+			Attributes:        convertAttributes(e.Attributes),
+			SpanContext:       &sc,
+			ParentSpanContext: pscPtr,
+			Status: probe.Status{
+				Code:        codes.Code(e.Status.Code),
+				Description: string(unix.ByteSliceToString(e.Status.Description[:])),
+			},
 		},
 	}
 }

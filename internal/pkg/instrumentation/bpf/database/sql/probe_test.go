@@ -59,5 +59,5 @@ func TestProbeConvertEvent(t *testing.T) {
 			semconv.DBStatementKey.String("SELECT * FROM foo"),
 		},
 	}
-	assert.Equal(t, want, got)
+	assert.Equal(t, want, got[0])
 }

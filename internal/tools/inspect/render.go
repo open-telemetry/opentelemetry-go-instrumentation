@@ -30,6 +30,7 @@ import (
 //go:embed templates/net/http/*.tmpl
 //go:embed templates/runtime/*.tmpl
 //go:embed templates/go.opentelemetry.io/otel/traceglobal/*.tmpl
+//go:embed templates/github.com/segmentio/kafka-go/*.tmpl
 var DefaultFS embed.FS
 
 // Renderer renders templates from an fs.FS.

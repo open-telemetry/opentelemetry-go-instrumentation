@@ -61,5 +61,5 @@ func TestProbeConvertEvent(t *testing.T) {
 			semconv.URLPath("/foo/bar"),
 		},
 	}
-	assert.Equal(t, want, got)
+	assert.Equal(t, want, got[0])
 }

@@ -151,13 +151,14 @@ license-header-check:
 	           exit 1; \
 	   fi
 
-.PHONY: fixture-nethttp fixture-gin fixture-databasesql fixture-nethttp-custom fixture-otelglobal
+.PHONY: fixture-nethttp fixture-gin fixture-databasesql fixture-nethttp-custom fixture-otelglobal fixture-kafka-go
 fixture-nethttp-custom: fixtures/nethttp_custom
 fixture-nethttp: fixtures/nethttp
 fixture-gin: fixtures/gin
 fixture-databasesql: fixtures/databasesql
 fixture-grpc: fixtures/grpc
 fixture-otelglobal: fixtures/otelglobal
+fixture-kafka-go: fixtures/kafka-go
 fixtures/%: LIBRARY=$*
 fixtures/%:
 	$(MAKE) docker-build
@@ -168,7 +169,15 @@ fixtures/%:
 	if [ ! -d "opentelemetry-helm-charts" ]; then \
 		git clone https://github.com/open-telemetry/opentelemetry-helm-charts.git; \
 	fi
-	helm install test -f .github/workflows/e2e/k8s/collector-helm-values.yml opentelemetry-helm-charts/charts/opentelemetry-collector
+	if [ -f ./internal/test/e2e/$(LIBRARY)/collector-helm-values.yml ]; then \
+		helm install test -f ./internal/test/e2e/$(LIBRARY)/collector-helm-values.yml opentelemetry-helm-charts/charts/opentelemetry-collector; \
+	else \
+		helm install test -f .github/workflows/e2e/k8s/collector-helm-values.yml opentelemetry-helm-charts/charts/opentelemetry-collector; \
+	fi
+	while : ; do \
+		kubectl get pod/test-opentelemetry-collector-0 && break; \
+		sleep 5; \
+	done
 	kubectl wait --for=condition=Ready --timeout=60s pod/test-opentelemetry-collector-0
 	kubectl -n default create -f .github/workflows/e2e/k8s/sample-job.yml
 	if kubectl wait --for=condition=Complete --timeout=60s job/sample-job; then \
@@ -178,7 +187,7 @@ fixtures/%:
 	else \
 		kubectl logs -l app=sample -c auto-instrumentation; \
 	fi
-	kind delete cluster
+	 kind delete cluster
 
 .PHONY: prerelease
 prerelease: | $(MULTIMOD)

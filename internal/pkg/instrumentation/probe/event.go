@@ -22,9 +22,9 @@ import (
 
 // Event is a telemetry event that happens within an instrumented package.
 type Event struct {
-	Package string
-	Kind    trace.SpanKind
-	SpanEvent
+	Package    string
+	Kind       trace.SpanKind
+	SpanEvents []*SpanEvent
 }
 
 type Status struct {

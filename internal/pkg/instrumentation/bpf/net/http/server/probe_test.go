@@ -75,5 +75,5 @@ func TestProbeConvertEvent(t *testing.T) {
 			semconv.NetworkProtocolVersion("1.1"),
 		},
 	}
-	assert.Equal(t, want, got)
+	assert.Equal(t, want, got[0])
 }

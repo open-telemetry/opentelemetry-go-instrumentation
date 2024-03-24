@@ -1,0 +1,14 @@
+package main
+
+import (
+	kafka "github.com/segmentio/kafka-go"
+)
+
+func main() {
+	kw := kafka.Writer{}
+	kr := kafka.NewReader(kafka.ReaderConfig{})
+	m := kafka.Message{}
+
+	kw.WriteMessages(nil, m)
+	kr.ReadMessage(nil)
+}
