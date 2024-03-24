@@ -21,9 +21,9 @@ import (
 	"io"
 	"path/filepath"
 
-	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/filters"
+	"github.com/docker/docker/api/types/image"
 	"github.com/docker/docker/api/types/mount"
 	"github.com/docker/docker/client"
 	"github.com/docker/docker/pkg/stdcopy"
@@ -102,7 +102,7 @@ func (b *builder) runCmd(ctx context.Context, cmd []string, dir string) error {
 
 func (b *builder) pullImage(ctx context.Context) error {
 	// Do not pull image if already present.
-	summaries, err := b.cli.ImageList(ctx, types.ImageListOptions{
+	summaries, err := b.cli.ImageList(ctx, image.ListOptions{
 		Filters: filters.NewArgs(
 			filters.Arg("reference", b.GoImage),
 		),
@@ -115,7 +115,7 @@ func (b *builder) pullImage(ctx context.Context) error {
 		return nil
 	}
 
-	rc, err := b.cli.ImagePull(ctx, b.GoImage, types.ImagePullOptions{})
+	rc, err := b.cli.ImagePull(ctx, b.GoImage, image.PullOptions{})
 	if err != nil {
 		return err
 	}
