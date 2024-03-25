@@ -20,4 +20,6 @@ module-sets:
 excluded-modules:
   - github.com/hashicorp/go-version
   - go.opentelemetry.io/auto/examples
+  - go.opentelemetry.io/auto/examples/rolldice
+  - go.opentelemetry.io/auto/examples/httpPlusdb
   - go.opentelemetry.io/auto/internal/tools
