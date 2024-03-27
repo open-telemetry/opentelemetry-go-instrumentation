@@ -9,9 +9,9 @@ SCOPE="go.opentelemetry.io/auto/net/http"
   assert_equal "$result" '"sample-app"'
 }
 
-@test "server :: emits a span name '{http.request.method}' (per semconv)" {
+@test "server :: emits a span name '{http.request.method} {url.path}' (per semconv)" {
   result=$(server_span_names_for ${SCOPE})
-  assert_equal "$result" '"GET"'
+  assert_equal "$result" '"GET /hello"'
 }
 
 @test "server :: includes http.request.method attribute" {
