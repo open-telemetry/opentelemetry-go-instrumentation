@@ -27,7 +27,7 @@ func hello(w http.ResponseWriter, _ *http.Request) {
 }
 
 func main() {
-	http.HandleFunc("/hello", hello)
+	http.HandleFunc("/hello/{id}", hello)
 	go func() {
 		_ = http.ListenAndServe(":8080", nil)
 	}()
@@ -35,7 +35,7 @@ func main() {
 	// give time for auto-instrumentation to start up
 	time.Sleep(5 * time.Second)
 
-	resp, err := http.Get("http://localhost:8080/hello")
+	resp, err := http.Get("http://localhost:8080/hello/42")
 	if err != nil {
 		log.Fatal(err)
 	}

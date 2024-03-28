@@ -122,10 +122,16 @@
                   "value": {
                     "stringValue": "1.1"
                   }
+                },
+                {
+                  "key": "http.route",
+                  "value": {
+                    "stringValue": "/query_db"
+                  }
                 }
               ],
               "kind": 2,
-              "name": "GET",
+              "name": "GET /query_db",
               "parentSpanId": "xxxxx",
               "spanId": "xxxxx",
               "status": {},

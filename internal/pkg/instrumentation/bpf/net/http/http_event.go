@@ -15,6 +15,7 @@
 package http
 
 import (
+	"errors"
 	"net"
 	"strconv"
 	"strings"
@@ -59,5 +60,41 @@ func NetPeerAddressPortAttributes(host []byte) (addr attribute.KeyValue, port at
 	if hostString != "" {
 		addr = semconv.NetworkPeerAddress(hostString)
 	}
+	return
+}
+
+var (
+	// ErrEmptyPattern is returned when the input pattern is empty.
+	ErrEmptyPattern = errors.New("empty pattern")
+	// ErrMissingPathOrHost is returned when the input pattern is missing path or host.
+	ErrMissingPathOrHost = errors.New("missing path or host")
+)
+
+// The string's syntax is
+//
+//	[METHOD] [HOST]/[PATH]
+//
+// https://cs.opensource.google/go/go/+/master:src/net/http/pattern.go;l=84;drc=b47f2febea5c570fef4a5c27a46473f511fbdaa3?q=PATTERN%20STRUCT&ss=go%2Fgo
+func ParsePattern(s string) (method, host, path string, err error) {
+	if len(s) == 0 {
+		return "", "", "", ErrEmptyPattern
+	}
+
+	method, rest, found := s, "", false
+	if i := strings.IndexAny(s, " \t"); i >= 0 {
+		method, rest, found = s[:i], strings.TrimLeft(s[i+1:], " \t"), true
+	}
+	if !found {
+		rest = method
+		method = ""
+	}
+
+	i := strings.IndexByte(rest, '/')
+	if i < 0 {
+		return "", "", "", ErrMissingPathOrHost
+	}
+	host = rest[:i]
+	path = rest[i:]
+	err = nil
 	return
 }
