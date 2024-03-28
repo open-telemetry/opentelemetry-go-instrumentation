@@ -186,7 +186,7 @@ func newInstConfig(ctx context.Context, opts []InstrumentationOption) (instConfi
 
 	// Defaults.
 	if c.serviceName == "" {
-		c.serviceName = c.defualtServiceName()
+		c.serviceName = c.defaultServiceName()
 	}
 	if c.traceExp == nil {
 		var e error
@@ -202,7 +202,7 @@ func newInstConfig(ctx context.Context, opts []InstrumentationOption) (instConfi
 	return c, err
 }
 
-func (c instConfig) defualtServiceName() string {
+func (c instConfig) defaultServiceName() string {
 	name := "unknown_service"
 	if c.target.ExePath != "" {
 		name = fmt.Sprintf("%s:%s", name, filepath.Base(c.target.ExePath))
