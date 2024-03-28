@@ -60,7 +60,7 @@
                 {
                   "key": "url.path",
                   "value": {
-                    "stringValue": "/hello"
+                    "stringValue": "/hello/42"
                   }
                 },
                 {
@@ -98,10 +98,16 @@
                   "value": {
                     "stringValue": "1.1"
                   }
+                },
+                {
+                  "key": "http.route",
+                  "value": {
+                    "stringValue": "/hello/{id}"
+                  }
                 }
               ],
               "kind": 2,
-              "name": "GET /hello",
+              "name": "GET /hello/{id}",
               "parentSpanId": "xxxxx",
               "spanId": "xxxxx",
               "status": {},
@@ -118,7 +124,7 @@
                 {
                   "key": "url.path",
                   "value": {
-                    "stringValue": "/hello"
+                    "stringValue": "/hello/42"
                   }
                 },
                 {
@@ -147,7 +153,7 @@
                 }
               ],
               "kind": 3,
-              "name": "/hello",
+              "name": "/hello/42",
               "parentSpanId": "",
               "spanId": "xxxxx",
               "status": {},

@@ -11,7 +11,7 @@ SCOPE="go.opentelemetry.io/auto/net/http"
 
 @test "server :: emits a span name '{http.request.method} {url.path}' (per semconv)" {
   result=$(server_span_names_for ${SCOPE})
-  assert_equal "$result" '"GET /hello"'
+  assert_equal "$result" '"GET /hello/{id}"'
 }
 
 @test "server :: includes http.request.method attribute" {
@@ -21,7 +21,7 @@ SCOPE="go.opentelemetry.io/auto/net/http"
 
 @test "server :: includes url.path attribute" {
   result=$(server_span_attributes_for ${SCOPE} | jq "select(.key == \"url.path\").value.stringValue")
-  assert_equal "$result" '"/hello"'
+  assert_equal "$result" '"/hello/42"'
 }
 
 @test "server :: includes hhttp.response.status_code attribute" {

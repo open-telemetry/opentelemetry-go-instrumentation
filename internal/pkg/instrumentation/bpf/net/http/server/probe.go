@@ -174,20 +174,22 @@ func uprobeServeHTTP(name string, exec *link.Executable, target *process.TargetD
 // request-response.
 type event struct {
 	context.BaseSpanProperties
-	StatusCode uint64
-	Method     [8]byte
-	Path       [128]byte
-	RemoteAddr [256]byte
-	Host       [256]byte
-	Proto      [8]byte
+	StatusCode  uint64
+	Method      [8]byte
+	Path        [128]byte
+	PathPattern [128]byte
+	RemoteAddr  [256]byte
+	Host        [256]byte
+	Proto       [8]byte
 }
 
 func convertEvent(e *event) *probe.SpanEvent {
 	path := unix.ByteSliceToString(e.Path[:])
 	method := unix.ByteSliceToString(e.Method[:])
+	patternPath := unix.ByteSliceToString(e.PathPattern[:])
 
 	isValidPatternPath := true
-	_, _, patternPath, err := http.ParsePattern(path)
+	_, _, patternPath, err := http.ParsePattern(patternPath)
 	if err != nil || patternPath == "" {
 		isValidPatternPath = false
 	}
@@ -247,6 +249,7 @@ func convertEvent(e *event) *probe.SpanEvent {
 	spanName := method
 	if isPatternPathSupported && isValidPatternPath {
 		spanName = spanName + " " + patternPath
+		attributes = append(attributes, semconv.HTTPRouteKey.String(patternPath))
 	}
 
 	return &probe.SpanEvent{

@@ -18,6 +18,7 @@ import (
 	"errors"
 	"testing"
 )
+
 // TestParsePattern tests the ParsePattern function with various inputs.
 func TestParsePattern(t *testing.T) {
 	// Define test cases

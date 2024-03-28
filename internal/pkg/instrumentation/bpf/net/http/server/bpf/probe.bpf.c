@@ -36,6 +36,7 @@ struct http_server_span_t
     u64 status_code;
     char method[METHOD_MAX_LEN];
     char path[PATH_MAX_LEN];
+    char path_pattern[PATH_MAX_LEN];
     char remote_addr[REMOTE_ADDR_MAX_LEN];
     char host[HOST_MAX_LEN];
     char proto[PROTO_MAX_LEN];
@@ -296,11 +297,10 @@ int uprobe_HandlerFunc_ServeHTTP_Returns(struct pt_regs *ctx) {
         void *pat_ptr = NULL;
         bpf_probe_read(&pat_ptr, sizeof(pat_ptr), (void *)(req_ptr + req_pat_pos));
         if (pat_ptr != NULL) {
-            read_go_string(pat_ptr, pat_str_pos, http_server_span->path, sizeof(http_server_span->path), "patterned path from Request");
+            read_go_string(pat_ptr, pat_str_pos, http_server_span->path_pattern, sizeof(http_server_span->path), "patterned path from Request");
         }
-    } else {
-        read_go_string(url_ptr, path_ptr_pos, http_server_span->path, sizeof(http_server_span->path), "path from Request.URL");
     }
+    read_go_string(url_ptr, path_ptr_pos, http_server_span->path, sizeof(http_server_span->path), "path from Request.URL");
     read_go_string(req_ptr, remote_addr_pos, http_server_span->remote_addr, sizeof(http_server_span->remote_addr), "remote addr from Request.RemoteAddr");
     read_go_string(req_ptr, host_pos, http_server_span->host, sizeof(http_server_span->host), "host from Request.Host");
     read_go_string(req_ptr, proto_pos, http_server_span->proto, sizeof(http_server_span->proto), "proto from Request.Proto");
