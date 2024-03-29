@@ -8,6 +8,10 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 
 ## [Unreleased]
 
+### Added
+
+- kafka-go instrumentation ([#709](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/709))
+
 
 ## [v0.11.0-alpha] - 2024-03-26
 
@@ -17,7 +21,6 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 - Base Dockerfile and build caching ([#683](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/683))
 - Add `server.address`, `server.port` and `network.protocol.version` to HTTP client spans ([#696](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/696))
 - Update http server attributes to latest semantic conventions ([#708](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/708))
-- kafka-go instrumentation ([#709](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/709))
 
 ### Fixed
 
