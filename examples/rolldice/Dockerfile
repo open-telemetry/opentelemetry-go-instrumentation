@@ -1,4 +1,4 @@
-FROM golang:1.22.0
+FROM golang:1.22.1
 WORKDIR /app
 COPY ./*.go .
 RUN go mod init main

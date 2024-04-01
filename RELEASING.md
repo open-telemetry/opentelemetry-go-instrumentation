@@ -2,7 +2,14 @@
 
 ## Release PR
 
-First, decide which module sets will be released and update their versions
+Fetch the latest `main` branch from upstream and checkout a new branch for your prerelease PR:
+
+```
+git fetch origin
+git checkout origin/main -b prerelease
+```
+
+Then, decide which module sets will be released and update their versions
 in `versions.yaml`.  Commit this change to a new branch.
 
 1. Run the `prerelease` make target. It creates a branch
@@ -11,6 +18,8 @@ in `versions.yaml`.  Commit this change to a new branch.
     ```
     make prerelease MODSET=<module set>
     ```
+    
+    `<module set>` refers to the [set name in `versions.yaml`](https://github.com/open-telemetry/opentelemetry-go-instrumentation/blob/f18c1b2e0702d8ac31699c5e923590d714d0c1dc/versions.yaml#L16)
 
 2. Verify the changes.
 
@@ -35,8 +44,10 @@ in `versions.yaml`.  Commit this change to a new branch.
 
    - Move all the `Unreleased` changes into a new section following the title scheme (`[<new tag>] - <date of release>`).
    - Update all the appropriate links at the bottom.
+   
+4. Update [`version.go`](version.go) with the latest release version.
 
-4. Push the changes to upstream and create a Pull Request on GitHub.
+5. Push the changes to your branch and create a Pull Request on GitHub.
     Be sure to include the curated changes from the [Changelog](./CHANGELOG.md) in the description.
 
 ## Tag

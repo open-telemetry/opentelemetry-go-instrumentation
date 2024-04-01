@@ -118,7 +118,9 @@ static __always_inline void *write_target_data(void *data, s32 size)
     if (success == 0)
     {
         s32 start_index = 0;
-        u64 updated_start = start + size;
+        // Update the start position of this chunk, taking into account possible adjustments
+        // we made to be page aligned
+        u64 updated_start = target_u + size;
 
         // align updated_start to 8 bytes
         if (updated_start % 8 != 0) {

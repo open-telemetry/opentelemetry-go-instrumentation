@@ -16,9 +16,7 @@ package client
 
 import (
 	"fmt"
-	"net"
 	"os"
-	"strconv"
 	"strings"
 
 	"github.com/cilium/ebpf"
@@ -30,6 +28,7 @@ import (
 	"go.opentelemetry.io/otel/trace"
 	"golang.org/x/sys/unix"
 
+	"go.opentelemetry.io/auto/internal/pkg/instrumentation/bpf/net/http"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/context"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/probe"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/utils"
@@ -210,24 +209,18 @@ func convertEvent(e *event) *probe.SpanEvent {
 	}
 
 	attrs := []attribute.KeyValue{
-		semconv.HTTPMethodKey.String(method),
-		semconv.HTTPTargetKey.String(path),
+		semconv.HTTPRequestMethodKey.String(method),
+		semconv.URLPath(path),
 		semconv.HTTPResponseStatusCodeKey.Int(int(e.StatusCode)),
 	}
 
-	host := unix.ByteSliceToString(e.Host[:])
-	var port string
-	var err error
-	if strings.Contains(host, ":") {
-		if host, port, err = net.SplitHostPort(host); err == nil {
-			if portI, err := strconv.Atoi(port); err == nil {
-				attrs = append(attrs, semconv.ServerPort(portI))
-			}
-		}
+	// Server address and port
+	serverAddr, serverPort := http.ServerAddressPortAttributes(e.Host[:])
+	if serverAddr.Valid() {
+		attrs = append(attrs, serverAddr)
 	}
-
-	if host != "" {
-		attrs = append(attrs, semconv.ServerAddress(host))
+	if serverPort.Valid() {
+		attrs = append(attrs, serverPort)
 	}
 
 	proto := unix.ByteSliceToString(e.Proto[:])

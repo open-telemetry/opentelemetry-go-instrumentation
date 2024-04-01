@@ -21,7 +21,7 @@ import (
 	"github.com/cilium/ebpf/perf"
 	"github.com/go-logr/logr"
 	"go.opentelemetry.io/otel/attribute"
-	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.24.0"
 	"go.opentelemetry.io/otel/trace"
 	"golang.org/x/sys/unix"
 
@@ -151,8 +151,8 @@ func convertEvent(e *event) *probe.SpanEvent {
 		EndTime:     int64(e.EndTime),
 		SpanContext: &sc,
 		Attributes: []attribute.KeyValue{
-			semconv.HTTPMethodKey.String(method),
-			semconv.HTTPTargetKey.String(path),
+			semconv.HTTPRequestMethodKey.String(method),
+			semconv.URLPath(path),
 		},
 		ParentSpanContext: pscPtr,
 	}
