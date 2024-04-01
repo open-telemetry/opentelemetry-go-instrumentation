@@ -8,6 +8,10 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 
 ## [Unreleased]
 
+### Fixed
+
+- Pass PID to `UprobeOptions` ([#742](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/742))
+
 
 ## [v0.11.0-alpha] - 2024-03-26
 
