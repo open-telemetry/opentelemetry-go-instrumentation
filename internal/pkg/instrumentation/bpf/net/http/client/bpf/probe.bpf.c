@@ -240,7 +240,6 @@ int uprobe_Transport_roundTrip(struct pt_regs *ctx) {
     void *headers_ptr = 0;
     bpf_probe_read(&headers_ptr, sizeof(headers_ptr), (void *)(req_ptr+headers_ptr_pos));
     if (headers_ptr) {
-        bpf_printk("headers_ptr = %llx, key = %llx", headers_ptr, key);
         bpf_map_update_elem(&http_headers, &headers_ptr, &key, 0);
     }
 
@@ -294,19 +293,14 @@ int uprobe_writeSubset(struct pt_regs *ctx) {
     u64 io_writer_pos = 3;
     void *io_writer_ptr = get_argument(ctx, io_writer_pos);
 
-    bpf_printk("headers_ptr = %llx, io_writer_ptr = %llx", headers_ptr, io_writer_ptr);
-
     void **key_ptr = bpf_map_lookup_elem(&http_headers, &headers_ptr);
     if (key_ptr) {
         void *key = *key_ptr;
-        bpf_printk("Found request key %llx", key);
 
         struct http_request_t *http_req_span = bpf_map_lookup_elem(&http_events, &key);
         if (http_req_span) {
             char tp[W3C_VAL_LENGTH];
             span_context_to_w3c_string(&http_req_span->sc, tp);
-
-            bpf_printk("Will write %s", tp);
 
             void *buf_ptr = 0;
             bpf_probe_read(&buf_ptr, sizeof(buf_ptr), (void *)(io_writer_ptr + io_writer_buf_ptr_pos)); // grab buf ptr
@@ -319,8 +313,6 @@ int uprobe_writeSubset(struct pt_regs *ctx) {
 
             s64 len = 0;
             bpf_probe_read(&len, sizeof(s64), (void *)(io_writer_ptr + io_writer_n_pos)); // grab len
-
-            bpf_printk("buf_ptr %llx, len=%d, size=%d", (void*)buf_ptr, len, size);
 
 #ifndef NO_HEADER_PROPAGATION
             if (len < (size - W3C_VAL_LENGTH - W3C_KEY_LENGTH - 4)) { // 4 = strlen(":_") + strlen("\r\n")
