@@ -22,6 +22,7 @@ import (
 	"github.com/go-logr/stdr"
 	"github.com/hashicorp/go-version"
 	"github.com/stretchr/testify/assert"
+
 	"go.opentelemetry.io/auto/internal/pkg/process"
 	"go.opentelemetry.io/auto/internal/pkg/process/binary"
 )
