@@ -15,18 +15,18 @@
 package server
 
 import (
-	"net"
 	"os"
-	"strconv"
+	"strings"
 
 	"github.com/cilium/ebpf/link"
 	"github.com/cilium/ebpf/perf"
 	"github.com/go-logr/logr"
 	"go.opentelemetry.io/otel/attribute"
-	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.24.0"
 	"go.opentelemetry.io/otel/trace"
 	"golang.org/x/sys/unix"
 
+	"go.opentelemetry.io/auto/internal/pkg/instrumentation/bpf/net/http"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/context"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/probe"
 	"go.opentelemetry.io/auto/internal/pkg/process"
@@ -156,10 +156,7 @@ type event struct {
 func convertEvent(e *event) *probe.SpanEvent {
 	method := unix.ByteSliceToString(e.Method[:])
 	path := unix.ByteSliceToString(e.Path[:])
-	remoteAddr := unix.ByteSliceToString(e.RemoteAddr[:])
-	host := unix.ByteSliceToString(e.Host[:])
 	proto := unix.ByteSliceToString(e.Proto[:])
-	ip, port, isRemoteAddrValid := net.SplitHostPort(remoteAddr)
 
 	sc := trace.NewSpanContext(trace.SpanContextConfig{
 		TraceID:    e.SpanContext.TraceID,
@@ -181,20 +178,33 @@ func convertEvent(e *event) *probe.SpanEvent {
 	}
 
 	attributes := []attribute.KeyValue{
-		semconv.HTTPMethodKey.String(method),
-		semconv.HTTPTargetKey.String(path),
+		semconv.HTTPRequestMethodKey.String(method),
+		semconv.URLPath(path),
 		semconv.HTTPResponseStatusCodeKey.Int(int(e.StatusCode)),
-		semconv.NetHostName(host),
-		semconv.NetProtocolName(proto),
 	}
 
-	if isRemoteAddrValid == nil {
-		remotePeerAddr, remotePeerPort := ip, port
+	// Client address and port
+	peerAddr, peerPort := http.NetPeerAddressPortAttributes(e.RemoteAddr[:])
+	if peerAddr.Valid() {
+		attributes = append(attributes, peerAddr)
+	}
+	if peerPort.Valid() {
+		attributes = append(attributes, peerPort)
+	}
 
-		attributes = append(attributes, semconv.NetPeerName(remotePeerAddr))
+	// Server address and port
+	serverAddr, serverPort := http.ServerAddressPortAttributes(e.Host[:])
+	if serverAddr.Valid() {
+		attributes = append(attributes, serverAddr)
+	}
+	if serverPort.Valid() {
+		attributes = append(attributes, serverPort)
+	}
 
-		if remotePeerPortInt, err := strconv.Atoi(remotePeerPort); err == nil {
-			attributes = append(attributes, semconv.NetPeerPort(remotePeerPortInt))
+	if proto != "" {
+		parts := strings.Split(proto, "/")
+		if len(parts) == 2 {
+			attributes = append(attributes, semconv.NetworkProtocolVersion(parts[1]))
 		}
 	}
 

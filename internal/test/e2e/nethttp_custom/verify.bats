@@ -9,18 +9,18 @@ SCOPE="go.opentelemetry.io/auto/net/http"
   assert_equal "$result" '"sample-app"'
 }
 
-@test "server :: emits a span name '{http.method}' (per semconv)" {
+@test "server :: emits a span name '{http.request.method}' (per semconv)" {
   result=$(server_span_names_for ${SCOPE})
   assert_equal "$result" '"GET"'
 }
 
-@test "server :: includes http.method attribute" {
-  result=$(server_span_attributes_for ${SCOPE} | jq "select(.key == \"http.method\").value.stringValue")
+@test "server :: includes http.request.method attribute" {
+  result=$(server_span_attributes_for ${SCOPE} | jq "select(.key == \"http.request.method\").value.stringValue")
   assert_equal "$result" '"GET"'
 }
 
-@test "server :: includes http.target attribute" {
-  result=$(server_span_attributes_for ${SCOPE} | jq "select(.key == \"http.target\").value.stringValue")
+@test "server :: includes url.path attribute" {
+  result=$(server_span_attributes_for ${SCOPE} | jq "select(.key == \"url.path\").value.stringValue")
   assert_equal "$result" '"/hello"'
 }
 
@@ -61,18 +61,18 @@ SCOPE="go.opentelemetry.io/auto/net/http"
   assert_equal "$client_span_id" "$server_parent_span_id"
 }
 
-@test "server :: includes net.host.name attribute" {
-  result=$(server_span_attributes_for ${SCOPE} | jq "select(.key == \"net.host.name\").value.stringValue")
-  assert_equal "$result" '"localhost:8080"'
+@test "server :: includes server.address attribute" {
+  result=$(server_span_attributes_for ${SCOPE} | jq "select(.key == \"server.address\").value.stringValue")
+  assert_equal "$result" '"localhost"'
 }
 
-@test "server :: includes net.protocol.name attribute" {
-  result=$(server_span_attributes_for ${SCOPE} | jq "select(.key == \"net.protocol.name\").value.stringValue")
-  assert_equal "$result" '"HTTP/1.1"'
+@test "server :: includes network.protocol.version attribute" {
+  result=$(server_span_attributes_for ${SCOPE} | jq "select(.key == \"network.protocol.version\").value.stringValue")
+  assert_equal "$result" '"1.1"'
 }
 
-@test "server :: includes net.peer.name attribute" {
-  result=$(server_span_attributes_for ${SCOPE} | jq "select(.key == \"net.peer.name\").value.stringValue")
+@test "server :: includes network.peer.address attribute" {
+  result=$(server_span_attributes_for ${SCOPE} | jq "select(.key == \"network.peer.address\").value.stringValue")
   assert_equal "$result" '"::1"'
 }
 
@@ -83,6 +83,11 @@ SCOPE="go.opentelemetry.io/auto/net/http"
 
 @test "client :: includes server.port attribute" {
   result=$(client_span_attributes_for ${SCOPE} | jq "select(.key == \"server.port\").value.intValue")
+  assert_equal "$result" '"8080"'
+}
+
+@test "server :: includes server.port attribute" {
+  result=$(server_span_attributes_for ${SCOPE} | jq "select(.key == \"server.port\").value.intValue")
   assert_equal "$result" '"8080"'
 }
 

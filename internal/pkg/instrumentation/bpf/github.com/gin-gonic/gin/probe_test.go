@@ -20,7 +20,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"go.opentelemetry.io/otel/attribute"
-	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.24.0"
 	"go.opentelemetry.io/otel/trace"
 
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/context"
@@ -57,8 +57,8 @@ func TestProbeConvertEvent(t *testing.T) {
 		EndTime:     int64(end.UnixNano()),
 		SpanContext: &sc,
 		Attributes: []attribute.KeyValue{
-			semconv.HTTPMethodKey.String("GET"),
-			semconv.HTTPTargetKey.String("/foo/bar"),
+			semconv.HTTPRequestMethodKey.String("GET"),
+			semconv.URLPath("/foo/bar"),
 		},
 	}
 	assert.Equal(t, want, got)

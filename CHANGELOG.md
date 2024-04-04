@@ -8,11 +8,21 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 
 ## [Unreleased]
 
+
+## [v0.11.0-alpha] - 2024-03-26
+
 ### Added
 
 - Test build using [Go 1.22]. (#672)
 - Base Dockerfile and build caching ([#683](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/683))
-- Add `server.address`, `server.port` and `network.protocol.version` to HTTP client spans ([696](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/696))
+- Add `server.address`, `server.port` and `network.protocol.version` to HTTP client spans ([#696](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/696))
+- Update http server attributes to latest semantic conventions ([#708](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/708))
+- Support `golang.org/x/net/http2@v0.23.0`. ([#744](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/744))
+- Support `google.golang.org/grpc@v1.61.2`. ([#744](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/744))
+- Support `google.golang.org/grpc@v1.62.2`. ([#744](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/744))
+- Support `google.golang.org/grpc@v1.63.0`. ([#744](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/744))
+- Support Go `v1.21.9`. ([#744](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/744))
+- Support Go `v1.22.2`. ([#744](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/744))
 
 ### Fixed
 
@@ -23,6 +33,7 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 - Reset `proc` offset after a failed iteration. ([#681](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/681))
 - Avoid using runtime.NumCPU to get the number of CPUs on the system before remote mmap ([#680](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/680))
 - Cleanup eBPF maps only when we stop using the memory ([#682](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/682))
+- Fix start offset calculation in mmaped memory area ([#738](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/738))
 
 ## [v0.10.1-alpha] - 2024-01-10
 
@@ -286,7 +297,8 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 
 This is the first release of OpenTelemetry Go Automatic Instrumentation.
 
-[Unreleased]: https://github.com/open-telemetry/opentelemetry-go-instrumentation/compare/v0.10.1-alpha...HEAD
+[Unreleased]: https://github.com/open-telemetry/opentelemetry-go-instrumentation/compare/v0.11.0-alpha...HEAD
+[v0.11.0-alpha]: https://github.com/open-telemetry/opentelemetry-go-instrumentation/releases/tag/v0.11.0-alpha
 [v0.10.1-alpha]: https://github.com/open-telemetry/opentelemetry-go-instrumentation/releases/tag/v0.10.1-alpha
 [v0.10.0-alpha]: https://github.com/open-telemetry/opentelemetry-go-instrumentation/releases/tag/v0.10.0-alpha
 [v0.9.0-alpha]: https://github.com/open-telemetry/opentelemetry-go-instrumentation/releases/tag/v0.9.0-alpha
