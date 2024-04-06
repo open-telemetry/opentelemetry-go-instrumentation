@@ -10,8 +10,16 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 
 ### Added
 
-- Support http server path templated from go version 1.22 (`http.route` attribute and modified span name) ([#740](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/740))
-
+- Support `golang.org/x/net/http2@v0.23.0`. ([#744](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/744))
+- Support `google.golang.org/grpc@v1.61.2`. ([#744](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/744))
+- Support `google.golang.org/grpc@v1.62.2`. ([#744](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/744))
+- Support `google.golang.org/grpc@v1.63.0`. ([#744](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/744))
+- Support Go `v1.21.9`. ([#744](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/744))
+- Support Go `v1.22.2`. ([#744](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/744))
+- Support `golang.org/x/net/http2@v0.24.0`. ([#746](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/746))
+- Support `go.opentelemetry.io/otel@v1.25.0`. ([#748](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/748))
+- Support HTTP server path template added in Go version 1.22.
+  The `http.route` attribute is included and the span name updated to use this information. ([#740](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/740))
 
 ## [v0.11.0-alpha] - 2024-03-26
 
