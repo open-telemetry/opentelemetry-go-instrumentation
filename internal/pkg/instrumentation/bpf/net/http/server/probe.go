@@ -189,7 +189,7 @@ func convertEvent(e *event) *probe.SpanEvent {
 	patternPath := unix.ByteSliceToString(e.PathPattern[:])
 
 	isValidPatternPath := true
-	_, _, patternPath, err := http.ParsePattern(patternPath)
+	patternPath, err := http.ParsePattern(patternPath)
 	if err != nil || patternPath == "" {
 		isValidPatternPath = false
 	}

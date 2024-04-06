@@ -25,56 +25,42 @@ func TestParsePattern(t *testing.T) {
 	tests := []struct {
 		name    string
 		input   string
-		method  string
-		host    string
 		path    string
 		wantErr error
 	}{
 		{
 			name:    "Normal case",
 			input:   "GET example.com/test/{id}",
-			method:  "GET",
-			host:    "example.com",
 			path:    "/test/{id}",
 			wantErr: nil,
 		},
 		{
 			name:    "No method",
 			input:   "example.com/test",
-			method:  "",
-			host:    "example.com",
 			path:    "/test",
 			wantErr: nil,
 		},
 		{
 			name:    "Empty input",
 			input:   "",
-			method:  "",
-			host:    "",
 			path:    "",
 			wantErr: ErrEmptyPattern,
 		},
 		{
 			name:    "Missing path or host",
 			input:   "GET example.com",
-			method:  "",
-			host:    "",
 			path:    "",
 			wantErr: ErrMissingPathOrHost,
 		},
 		{
 			name:    "Simple / path with host",
 			input:   "GET example.com/",
-			method:  "GET",
-			host:    "example.com",
 			path:    "/",
 			wantErr: nil,
 		},
 		{
 			name:    "Simple / path without host",
 			input:   "GET /",
-			method:  "GET",
-			host:    "",
 			path:    "/",
 			wantErr: nil,
 		},
@@ -82,11 +68,11 @@ func TestParsePattern(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			method, host, path, err := ParsePattern(tc.input)
+			path, err := ParsePattern(tc.input)
 
-			if method != tc.method || host != tc.host || path != tc.path || !errors.Is(err, tc.wantErr) {
-				t.Errorf("TestParsePattern(%q) = %q, %q, %q, %v; want %q, %q, %q, %v",
-					tc.input, method, host, path, err, tc.method, tc.host, tc.path, tc.wantErr)
+			if path != tc.path || !errors.Is(err, tc.wantErr) {
+				t.Errorf("TestParsePattern(%q) = %q, %v; want %q, %v",
+					tc.input, path, err, tc.path, tc.wantErr)
 			}
 		})
 	}

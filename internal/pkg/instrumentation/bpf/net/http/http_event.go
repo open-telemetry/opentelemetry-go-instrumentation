@@ -75,9 +75,10 @@ var (
 //	[METHOD] [HOST]/[PATH]
 //
 // https://cs.opensource.google/go/go/+/master:src/net/http/pattern.go;l=84;drc=b47f2febea5c570fef4a5c27a46473f511fbdaa3?q=PATTERN%20STRUCT&ss=go%2Fgo
-func ParsePattern(s string) (method, host, path string, err error) {
+// Copyright 2023 The Go Authors. All rights reserved.
+func ParsePattern(s string) (path string, err error) {
 	if len(s) == 0 {
-		return "", "", "", ErrEmptyPattern
+		return "", ErrEmptyPattern
 	}
 
 	method, rest, found := s, "", false
@@ -86,14 +87,12 @@ func ParsePattern(s string) (method, host, path string, err error) {
 	}
 	if !found {
 		rest = method
-		method = ""
 	}
 
 	i := strings.IndexByte(rest, '/')
 	if i < 0 {
-		return "", "", "", ErrMissingPathOrHost
+		return "", ErrMissingPathOrHost
 	}
-	host = rest[:i]
 	path = rest[i:]
 	err = nil
 	return
