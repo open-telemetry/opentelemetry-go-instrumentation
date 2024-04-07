@@ -58,6 +58,8 @@ int uprobe_GinEngine_ServeHTTP(struct pt_regs *ctx) {
     void *req_ptr = get_argument(ctx, request_pos);
     void *req_ctx_ptr = get_Go_context(ctx, 4, ctx_ptr_pos, false);
 
+    bpf_printk("Gin context %llx", req_ctx_ptr);
+
     // Get method from request
     if (!get_go_string_from_user_ptr((void *)(req_ptr + method_ptr_pos), httpReq.method, sizeof(httpReq.method))) {
         bpf_printk("failed to get method from request");

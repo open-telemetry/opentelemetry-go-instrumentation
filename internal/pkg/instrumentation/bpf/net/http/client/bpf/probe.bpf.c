@@ -176,6 +176,7 @@ int uprobe_Transport_roundTrip_Returns(struct pt_regs *ctx) {
     return 0;
 }
 
+#ifndef NO_HEADER_PROPAGATION
 SEC("uprobe/header_writeSubset")
 int uprobe_writeSubset(struct pt_regs *ctx) {
     u64 headers_pos = 1;
@@ -196,28 +197,45 @@ int uprobe_writeSubset(struct pt_regs *ctx) {
             void *buf_ptr = 0;
             bpf_probe_read(&buf_ptr, sizeof(buf_ptr), (void *)(io_writer_ptr + io_writer_buf_ptr_pos)); // grab buf ptr
             if (!buf_ptr) {
+                bpf_printk("uprobe_writeSubset: Failed to get buf from io writer");
                 goto done;
             }
 
             s64 size = 0;
-            bpf_probe_read(&size, sizeof(s64), (void *)(io_writer_ptr + io_writer_buf_ptr_pos + 8)); // grab size
+            if (bpf_probe_read(&size, sizeof(s64), (void *)(io_writer_ptr + io_writer_buf_ptr_pos + 8))) { // grab size
+                bpf_printk("uprobe_writeSubset: Failed to get size from io writer");
+                goto done;
+            }
 
             s64 len = 0;
-            bpf_probe_read(&len, sizeof(s64), (void *)(io_writer_ptr + io_writer_n_pos)); // grab len
+            if (bpf_probe_read(&len, sizeof(s64), (void *)(io_writer_ptr + io_writer_n_pos))) { // grab len
+                bpf_printk("uprobe_writeSubset: Failed to get len from io writer");
+                goto done;
+            }
 
-#ifndef NO_HEADER_PROPAGATION
             if (len < (size - W3C_VAL_LENGTH - W3C_KEY_LENGTH - 4)) { // 4 = strlen(":_") + strlen("\r\n")
                 char key[W3C_KEY_LENGTH + 2] = "Traceparent: ";
                 char end[2] = "\r\n";
-                bpf_probe_write_user(buf_ptr + (len & 0x0ffff), key, sizeof(key));
+                if (bpf_probe_write_user(buf_ptr + (len & 0x0ffff), key, sizeof(key))) {
+                    bpf_printk("uprobe_writeSubset: Failed to write trace parent key in buffer");
+                    goto done;
+                }
                 len += W3C_KEY_LENGTH + 2;
-                bpf_probe_write_user(buf_ptr + (len & 0x0ffff), tp, sizeof(tp));
+                if (bpf_probe_write_user(buf_ptr + (len & 0x0ffff), tp, sizeof(tp))) {
+                    bpf_printk("uprobe_writeSubset: Failed to write trace parent value in buffer");
+                    goto done;
+                }
                 len += W3C_VAL_LENGTH;
-                bpf_probe_write_user(buf_ptr + (len & 0x0ffff), end, sizeof(end));
+                if (bpf_probe_write_user(buf_ptr + (len & 0x0ffff), end, sizeof(end))) {
+                    bpf_printk("uprobe_writeSubset: Failed to write new line in buffer");
+                    goto done;
+                }
                 len += 2;
-                bpf_probe_write_user((void *)(io_writer_ptr + io_writer_n_pos), &len, sizeof(len));
+                if (bpf_probe_write_user((void *)(io_writer_ptr + io_writer_n_pos), &len, sizeof(len))) {
+                    bpf_printk("uprobe_writeSubset: Failed to change io writer n");
+                    goto done;
+                }
             }
-#endif
         }
     }
 
@@ -225,3 +243,12 @@ done:
     bpf_map_delete_elem(&http_headers, &headers_ptr);
     return 0;
 }
+#else
+// Not used at all, empty stub needed to ensure both versions of the bpf program are
+// able to compile with bpf2go. The userspace code will avoid loading the probe if
+// context propagation is not enabled.
+SEC("uprobe/header_writeSubset")
+int uprobe_writeSubset(struct pt_regs *ctx) {
+    return 0;
+}
+#endif

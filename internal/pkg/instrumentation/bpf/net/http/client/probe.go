@@ -50,6 +50,29 @@ func New(logger logr.Logger) probe.Probe {
 		SpanKind:        trace.SpanKindClient,
 		InstrumentedPkg: pkg,
 	}
+
+	uprobes := []probe.Uprobe[bpfObjects]{
+		{
+			Sym: "net/http.(*Transport).roundTrip",
+			Fn:  uprobeRoundTrip,
+		},
+	}
+
+	// If the kernel supports context propagation, we enable the
+	// probe which writes the data in the outgoing buffer.
+	if utils.SupportsContextPropagation() {
+		uprobes = append(uprobes,
+			probe.Uprobe[bpfObjects]{
+				Sym: "net/http.Header.writeSubset",
+				Fn:  uprobeWriteSubset,
+				// We mark this probe as dependent on roundTrip, so we don't accidentally
+				// enable this bpf program, if the executable has compiled in writeSubset,
+				// but doesn't have any http roundTrip.
+				DependsOn: []string{"net/http.(*Transport).roundTrip"},
+			},
+		)
+	}
+
 	return &probe.Base[bpfObjects, event]{
 		ID:     id,
 		Logger: logger.WithName(id.String()),
@@ -101,18 +124,7 @@ func New(logger logr.Logger) probe.Probe {
 				Val: structfield.NewID("std", "bufio", "Writer", "n"),
 			},
 		},
-		Uprobes: []probe.Uprobe[bpfObjects]{
-			{
-				Sym: "net/http.(*Transport).roundTrip",
-				Fn:  uprobeRoundTrip,
-			},
-			{
-				Sym:       "net/http.Header.writeSubset",
-				Fn:        uprobeWriteSubset,
-				DependsOn: []string{"net/http.(*Transport).roundTrip"},
-			},
-		},
-
+		Uprobes: uprobes,
 		ReaderFn: func(obj bpfObjects) (*perf.Reader, error) {
 			return perf.NewReader(obj.Events, os.Getpagesize())
 		},
