@@ -103,14 +103,7 @@ func (m *Manager) FilterUnusedProbes(target *process.TargetDetails) {
 	for name, inst := range m.probes {
 		funcsFound := false
 		for _, s := range inst.Manifest().Symbols {
-			if len(s.DependsOn) != 0 {
-				for _, depends := range s.DependsOn {
-					if _, exists := existingFuncMap[depends]; exists {
-						funcsFound = true
-						break
-					}
-				}
-			} else {
+			if len(s.DependsOn) == 0 {
 				if _, exists := existingFuncMap[s.Symbol]; exists {
 					funcsFound = true
 					break
