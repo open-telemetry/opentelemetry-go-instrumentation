@@ -68,8 +68,10 @@ var tr = &http.Transport{
 	TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 }
 
+// MyRoundTripper is a custom HTTP RoundTripper.
 type MyRoundTripper struct{}
 
+// RoundTrip perform the req.
 func (rt *MyRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
 	req.Header.Add("X-My-Header", "my-value")
 
