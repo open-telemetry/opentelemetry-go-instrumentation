@@ -12,7 +12,7 @@ require (
 	go.opentelemetry.io/auto v0.7.0-alpha
 	go.opentelemetry.io/build-tools/dbotconf v0.13.0
 	go.opentelemetry.io/build-tools/multimod v0.13.0
-	golang.org/x/sync v0.6.0
+	golang.org/x/sync v0.7.0
 )
 
 require (
