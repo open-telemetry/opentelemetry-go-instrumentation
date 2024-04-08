@@ -1,4 +1,4 @@
-FROM golang:1.22.1
+FROM golang:1.22.2
 WORKDIR /sample-app
 COPY . .
 RUN go mod init go.opentelemetry.io/auto/internal/test/e2e/otelglobal && go mod tidy && go build -o main
