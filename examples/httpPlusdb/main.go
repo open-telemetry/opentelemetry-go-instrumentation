@@ -68,7 +68,6 @@ func NewServer() *Server {
 	}
 
 	_, err = database.Exec(tableDefinition)
-
 	if err != nil {
 		panic(err)
 	}
