@@ -16,6 +16,6 @@ RUN --mount=type=cache,target=/root/.cache/go-build \
     --mount=type=cache,target=/go/pkg \
     make build
 
-FROM gcr.io/distroless/base-debian12@sha256:28a7f1fe3058f3efef4b7e5fe99f9c11d00eb09d9693b80bcb9d1f59989ba44a
+FROM gcr.io/distroless/base-debian12@sha256:611d30d7f6d9992c37b1e1a212eefdf1f7c671deb56db3707e24eb01da8c4c2a
 COPY --from=builder /app/otel-go-instrumentation /
 CMD ["/otel-go-instrumentation"]
