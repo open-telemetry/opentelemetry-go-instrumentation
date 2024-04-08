@@ -1,6 +1,6 @@
 module go.opentelemetry.io/auto
 
-go 1.18
+go 1.21
 
 retract (
 	v0.6.5 // Contains retractions only.

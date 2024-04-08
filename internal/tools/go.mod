@@ -1,6 +1,6 @@
 module go.opentelemetry.io/auto/internal/tools
 
-go 1.18
+go 1.21
 
 require (
 	github.com/docker/docker v26.0.0+incompatible
