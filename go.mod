@@ -1,6 +1,6 @@
 module go.opentelemetry.io/auto
 
-go 1.18
+go 1.21
 
 retract (
 	v0.6.5 // Contains retractions only.
@@ -34,7 +34,7 @@ require (
 	go.opentelemetry.io/otel/trace v1.24.0
 	go.uber.org/zap v1.27.0
 	golang.org/x/arch v0.7.0
-	golang.org/x/sys v0.18.0
+	golang.org/x/sys v0.19.0
 	google.golang.org/grpc v1.63.0
 	google.golang.org/grpc/examples v0.0.0-20231110164914-591c48187c4b
 	gopkg.in/yaml.v3 v3.0.1
