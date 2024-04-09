@@ -85,7 +85,7 @@ func uprobeQueryDC(name string, exec *link.Executable, target *process.TargetDet
 		return nil, err
 	}
 
-	opts := &link.UprobeOptions{Address: offset}
+	opts := &link.UprobeOptions{Address: offset, PID: target.PID}
 	l, err := exec.Uprobe("", obj.UprobeQueryDC, opts)
 	if err != nil {
 		return nil, err
@@ -116,7 +116,7 @@ func uprobeExecDC(name string, exec *link.Executable, target *process.TargetDeta
 		return nil, err
 	}
 
-	opts := &link.UprobeOptions{Address: offset}
+	opts := &link.UprobeOptions{Address: offset, PID: target.PID}
 	l, err := exec.Uprobe("", obj.UprobeExecDC, opts)
 	if err != nil {
 		return nil, err
