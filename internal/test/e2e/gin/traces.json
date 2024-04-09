@@ -6,7 +6,7 @@
           {
             "key": "process.runtime.description",
             "value": {
-              "stringValue": "go version 1.22.1 linux/amd64"
+              "stringValue": "go version 1.22.2 linux/amd64"
             }
           },
           {
@@ -18,7 +18,7 @@
           {
             "key": "process.runtime.version",
             "value": {
-              "stringValue": "1.22.1"
+              "stringValue": "1.22.2"
             }
           },
           {
@@ -30,7 +30,7 @@
           {
             "key": "telemetry.auto.version",
             "value": {
-              "stringValue": "v0.10.1-alpha"
+              "stringValue": "v0.11.0-alpha"
             }
           },
           {
@@ -46,7 +46,7 @@
         {
           "scope": {
             "name": "go.opentelemetry.io/auto/github.com/gin-gonic/gin",
-            "version": "v0.10.1-alpha"
+            "version": "v0.11.0-alpha"
           },
           "spans": [
             {
@@ -76,7 +76,7 @@
         {
           "scope": {
             "name": "go.opentelemetry.io/auto/net/http",
-            "version": "v0.10.1-alpha"
+            "version": "v0.11.0-alpha"
           },
           "spans": [
             {
