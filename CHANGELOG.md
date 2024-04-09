@@ -14,6 +14,8 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 - Support `google.golang.org/grpc@v1.61.2`. ([#744](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/744))
 - Support `google.golang.org/grpc@v1.62.2`. ([#744](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/744))
 - Support `google.golang.org/grpc@v1.63.0`. ([#744](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/744))
+- Support `google.golang.org/grpc@v1.63.1`. ([#761](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/761))
+- Support `google.golang.org/grpc@v1.63.2`. ([#761](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/761))
 - Support Go `v1.21.9`. ([#744](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/744))
 - Support Go `v1.22.2`. ([#744](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/744))
 - Support `golang.org/x/net/http2@v0.24.0`. ([#746](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/746))
