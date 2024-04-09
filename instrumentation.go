@@ -104,7 +104,7 @@ func NewInstrumentation(ctx context.Context, opts ...InstrumentationOption) (*In
 	}
 
 	pa := process.NewAnalyzer(logger)
-	pid, err := pa.DiscoverProcessID(&c.target)
+	pid, err := pa.DiscoverProcessID(ctx, &c.target)
 	if err != nil {
 		return nil, err
 	}
@@ -153,7 +153,6 @@ func (i *Instrumentation) Run(ctx context.Context) error {
 
 // Close closes the Instrumentation, cleaning up all used resources.
 func (i *Instrumentation) Close() error {
-	i.analyzer.Close()
 	return i.manager.Close()
 }
 
@@ -186,7 +185,7 @@ func newInstConfig(ctx context.Context, opts []InstrumentationOption) (instConfi
 
 	// Defaults.
 	if c.serviceName == "" {
-		c.serviceName = c.defualtServiceName()
+		c.serviceName = c.defaultServiceName()
 	}
 	if c.traceExp == nil {
 		var e error
@@ -202,7 +201,7 @@ func newInstConfig(ctx context.Context, opts []InstrumentationOption) (instConfi
 	return c, err
 }
 
-func (c instConfig) defualtServiceName() string {
+func (c instConfig) defaultServiceName() string {
 	name := "unknown_service"
 	if c.target.ExePath != "" {
 		name = fmt.Sprintf("%s:%s", name, filepath.Base(c.target.ExePath))

@@ -113,7 +113,7 @@ func uprobeFn(name string, exec *link.Executable, target *process.TargetDetails,
 		return nil, err
 	}
 
-	opts := &link.UprobeOptions{Address: offset}
+	opts := &link.UprobeOptions{Address: offset, PID: target.PID}
 	l, err := exec.Uprobe("", prog, opts)
 	if err != nil {
 		return nil, err
