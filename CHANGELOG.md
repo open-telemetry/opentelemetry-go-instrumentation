@@ -21,6 +21,10 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 - Support `golang.org/x/net/http2@v0.24.0`. ([#746](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/746))
 - Support `go.opentelemetry.io/otel@v1.25.0`. ([#748](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/748))
 
+### Fixed
+
+- Handle Ctrl-C signal while searching for the target PID ([#731](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/731))
+
 ## [v0.11.0-alpha] - 2024-03-26
 
 ### Added
