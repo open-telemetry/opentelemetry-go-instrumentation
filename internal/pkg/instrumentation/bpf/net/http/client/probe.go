@@ -203,7 +203,7 @@ func convertEvent(e *event) *probe.SpanEvent {
 	}
 
 	return &probe.SpanEvent{
-		SpanName:          path,
+		SpanName:          method,
 		StartTime:         int64(e.StartTime),
 		EndTime:           int64(e.EndTime),
 		SpanContext:       &sc,
