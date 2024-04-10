@@ -119,7 +119,25 @@ updates:
       interval: weekly
       day: sunday
   - package-ecosystem: gomod
-    directory: /examples
+    directory: /examples/httpPlusdb
+    labels:
+      - dependencies
+      - go
+      - Skip Changelog
+    schedule:
+      interval: weekly
+      day: sunday
+  - package-ecosystem: gomod
+    directory: /examples/kafka-go
+    labels:
+      - dependencies
+      - go
+      - Skip Changelog
+    schedule:
+      interval: weekly
+      day: sunday
+  - package-ecosystem: gomod
+    directory: /examples/rolldice
     labels:
       - dependencies
       - go

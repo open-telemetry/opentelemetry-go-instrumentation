@@ -119,7 +119,7 @@ func uprobeHandleStream(name string, exec *link.Executable, target *process.Targ
 		return nil, err
 	}
 
-	opts := &link.UprobeOptions{Address: offset}
+	opts := &link.UprobeOptions{Address: offset, PID: target.PID}
 	l, err := exec.Uprobe("", obj.UprobeServerHandleStream, opts)
 	if err != nil {
 		return nil, err
@@ -149,7 +149,7 @@ func uprobeOperateHeaders(name string, exec *link.Executable, target *process.Ta
 		return nil, err
 	}
 
-	opts := &link.UprobeOptions{Address: offset}
+	opts := &link.UprobeOptions{Address: offset, PID: target.PID}
 	l, err := exec.Uprobe("", obj.UprobeHttp2ServerOperateHeader, opts)
 	if err != nil {
 		return nil, err

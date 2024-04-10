@@ -121,7 +121,7 @@ func uprobeRoundTrip(name string, exec *link.Executable, target *process.TargetD
 		return nil, err
 	}
 
-	opts := &link.UprobeOptions{Address: offset}
+	opts := &link.UprobeOptions{Address: offset, PID: target.PID}
 	l, err := exec.Uprobe("", obj.UprobeTransportRoundTrip, opts)
 	if err != nil {
 		return nil, err
