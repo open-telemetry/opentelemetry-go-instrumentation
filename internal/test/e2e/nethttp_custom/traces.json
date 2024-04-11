@@ -147,7 +147,7 @@
                 }
               ],
               "kind": 3,
-              "name": "/hello",
+              "name": "GET",
               "parentSpanId": "",
               "spanId": "xxxxx",
               "status": {},
