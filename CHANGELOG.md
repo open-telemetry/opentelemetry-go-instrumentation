@@ -8,6 +8,9 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 
 ## [Unreleased]
 
+### Fixed
+- Change HTTP client span name to `{http.request.method}` ([#775](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/775))
+
 
 ## [v0.12.0-alpha] - 2024-04-10
 
@@ -29,7 +32,6 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 
 - Handle Ctrl-C signal while searching for the target PID ([#731](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/731))
 - Pass PID to `UprobeOptions` ([#742](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/742))
-- Change HTTP client span name to `{http.request.method}` ([#775](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/775))
 
 ## [v0.11.0-alpha] - 2024-03-26
 
