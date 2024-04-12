@@ -33,7 +33,7 @@ func main() {
 	}()
 
 	// give time for auto-instrumentation to start up
-	time.Sleep(5 * time.Second)
+	time.Sleep(10 * time.Second)
 
 	resp, err := http.Get("http://localhost:8080/hello-gin")
 	if err != nil {
@@ -48,5 +48,5 @@ func main() {
 	_ = resp.Body.Close()
 
 	// give time for auto-instrumentation to report signal
-	time.Sleep(5 * time.Second)
+	time.Sleep(10 * time.Second)
 }
