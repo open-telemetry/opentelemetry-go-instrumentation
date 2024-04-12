@@ -25,7 +25,6 @@ import (
 	"github.com/go-logr/logr"
 
 	dbSql "go.opentelemetry.io/auto/internal/pkg/instrumentation/bpf/database/sql"
-	"go.opentelemetry.io/auto/internal/pkg/instrumentation/bpf/github.com/gin-gonic/gin"
 	otelTraceGlobal "go.opentelemetry.io/auto/internal/pkg/instrumentation/bpf/go.opentelemetry.io/otel/traceglobal"
 	grpcClient "go.opentelemetry.io/auto/internal/pkg/instrumentation/bpf/google.golang.org/grpc/client"
 	grpcServer "go.opentelemetry.io/auto/internal/pkg/instrumentation/bpf/google.golang.org/grpc/server"
@@ -220,7 +219,6 @@ func (m *Manager) registerProbes() error {
 		grpcServer.New(m.logger),
 		httpServer.New(m.logger),
 		httpClient.New(m.logger),
-		gin.New(m.logger),
 		dbSql.New(m.logger),
 	}
 
