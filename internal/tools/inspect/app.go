@@ -100,7 +100,7 @@ func (a *app) GetOffset(id structfield.ID) (uint64, bool) {
 		return 0, false
 	}
 
-	e, err := findEntry(r, dwarf.TagMember, id.Field)
+	e, err := findEntryInChildren(r, dwarf.TagMember, id.Field)
 	if err != nil {
 		return 0, false
 	}
@@ -131,6 +131,26 @@ func findEntry(r *dwarf.Reader, tag dwarf.Tag, name string) (*dwarf.Entry, error
 	for {
 		entry, err := r.Next()
 		if err == io.EOF || entry == nil {
+			break
+		}
+
+		if entry.Tag == tag {
+			if f, ok := entryField(entry, dwarf.AttrName); ok {
+				if name == f.Val.(string) {
+					return entry, nil
+				}
+			}
+		}
+	}
+	return nil, errors.New("not found")
+}
+
+// findEntryInChildren returns the DWARF entry with a tag equal to name read from r, only
+// considering the children of the current entry. An error is returned if the entry cannot be found.
+func findEntryInChildren(r *dwarf.Reader, tag dwarf.Tag, name string) (*dwarf.Entry, error) {
+	for {
+		entry, err := r.Next()
+		if err == io.EOF || entry == nil || entry.Tag == 0 {
 			break
 		}
 
