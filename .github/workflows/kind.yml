@@ -33,7 +33,7 @@ jobs:
           cd internal/test/e2e/${{ matrix.library }}
           docker build -t sample-app:latest .
       - name: Set up Helm
-        uses: azure/setup-helm@v3.5
+        uses: azure/setup-helm@v4
         with:
           version: v3.9.0
       - name: Create kind cluster
