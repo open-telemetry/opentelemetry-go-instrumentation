@@ -171,7 +171,7 @@
                 }
               ],
               "kind": 3,
-              "name": "/query_db",
+              "name": "GET",
               "parentSpanId": "",
               "spanId": "xxxxx",
               "status": {},

@@ -25,7 +25,6 @@ import (
 	"github.com/go-logr/logr"
 
 	dbSql "go.opentelemetry.io/auto/internal/pkg/instrumentation/bpf/database/sql"
-	"go.opentelemetry.io/auto/internal/pkg/instrumentation/bpf/github.com/gin-gonic/gin"
 	kafkaConsumer "go.opentelemetry.io/auto/internal/pkg/instrumentation/bpf/github.com/segmentio/kafka-go/consumer"
 	kafkaProducer "go.opentelemetry.io/auto/internal/pkg/instrumentation/bpf/github.com/segmentio/kafka-go/producer"
 	otelTraceGlobal "go.opentelemetry.io/auto/internal/pkg/instrumentation/bpf/go.opentelemetry.io/otel/traceglobal"
@@ -222,7 +221,6 @@ func (m *Manager) registerProbes() error {
 		grpcServer.New(m.logger),
 		httpServer.New(m.logger),
 		httpClient.New(m.logger),
-		gin.New(m.logger),
 		dbSql.New(m.logger),
 		kafkaProducer.New(m.logger),
 		kafkaConsumer.New(m.logger),
