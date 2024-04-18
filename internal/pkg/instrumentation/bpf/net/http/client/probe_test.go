@@ -22,6 +22,7 @@ import (
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/context"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/probe"
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
 	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
 	"go.opentelemetry.io/otel/trace"
 )
@@ -85,6 +86,36 @@ func TestConvertEvent(t *testing.T) {
 						semconv.HTTPResponseStatusCodeKey.Int(200),
 						semconv.ServerAddress("google.com"),
 					},
+				},
+			},
+		},
+		{
+			name: "client event code 400",
+			event: &event{
+				Host:       host,
+				Proto:      proto,
+				StatusCode: uint64(400),
+				Method:     method,
+				Path:       path,
+				BaseSpanProperties: context.BaseSpanProperties{
+					StartTime:   uint64(startTime.Unix()),
+					EndTime:     uint64(endTime.Unix()),
+					SpanContext: context.EBPFSpanContext{TraceID: trId, SpanID: spId},
+				},
+			},
+			expected: []*probe.SpanEvent{
+				{
+					SpanName:    methodString,
+					SpanContext: &spanContext,
+					StartTime:   startTime.Unix(),
+					EndTime:     endTime.Unix(),
+					Attributes: []attribute.KeyValue{
+						semconv.HTTPRequestMethodKey.String(methodString),
+						semconv.URLPath(pathString),
+						semconv.HTTPResponseStatusCodeKey.Int(400),
+						semconv.ServerAddress("google.com"),
+					},
+					Status: probe.Status{Code: codes.Error},
 				},
 			},
 		},

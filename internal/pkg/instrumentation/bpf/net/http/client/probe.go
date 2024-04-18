@@ -24,6 +24,7 @@ import (
 	"github.com/cilium/ebpf/perf"
 	"github.com/go-logr/logr"
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
 	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
 	"go.opentelemetry.io/otel/trace"
 	"golang.org/x/sys/unix"
@@ -247,14 +248,18 @@ func convertEvent(e *event) []*probe.SpanEvent {
 		}
 	}
 
-	return []*probe.SpanEvent{
-		{
-			SpanName:          method,
-			StartTime:         int64(e.StartTime),
-			EndTime:           int64(e.EndTime),
-			SpanContext:       &sc,
-			Attributes:        attrs,
-			ParentSpanContext: pscPtr,
-		},
+	spanEvent := &probe.SpanEvent{
+		SpanName:          method,
+		StartTime:         int64(e.StartTime),
+		EndTime:           int64(e.EndTime),
+		SpanContext:       &sc,
+		Attributes:        attrs,
+		ParentSpanContext: pscPtr,
 	}
+
+	if int(e.StatusCode) >= 400 && int(e.StatusCode) < 600 {
+		spanEvent.Status = probe.Status{Code: codes.Error}
+	}
+
+	return []*probe.SpanEvent{spanEvent}
 }
