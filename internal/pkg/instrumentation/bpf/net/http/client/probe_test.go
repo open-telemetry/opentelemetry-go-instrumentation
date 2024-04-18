@@ -31,13 +31,16 @@ func TestConvertEvent(t *testing.T) {
 	startTime := time.Now()
 	endTime := startTime.Add(1 * time.Second)
 	hostString := "google.com"
-	protoString := "1.1"
+	protoString := "HTTP/1.1"
+	protoFooString := "foo/2.2"
 	methodString := "GET"
 	pathString := "/home"
 	var host [256]byte
 	copy(host[:], hostString)
 	var proto [8]byte
 	copy(proto[:], protoString)
+	var protoFoo [8]byte
+	copy(protoFoo[:], protoFooString)
 	var method [10]byte
 	copy(method[:], methodString)
 	var path [100]byte
@@ -84,7 +87,8 @@ func TestConvertEvent(t *testing.T) {
 						semconv.HTTPRequestMethodKey.String(methodString),
 						semconv.URLPath(pathString),
 						semconv.HTTPResponseStatusCodeKey.Int(200),
-						semconv.ServerAddress("google.com"),
+						semconv.ServerAddress(hostString),
+						semconv.NetworkProtocolVersion("1.1"),
 					},
 				},
 			},
@@ -113,9 +117,72 @@ func TestConvertEvent(t *testing.T) {
 						semconv.HTTPRequestMethodKey.String(methodString),
 						semconv.URLPath(pathString),
 						semconv.HTTPResponseStatusCodeKey.Int(400),
-						semconv.ServerAddress("google.com"),
+						semconv.ServerAddress(hostString),
+						semconv.NetworkProtocolVersion("1.1"),
 					},
 					Status: probe.Status{Code: codes.Error},
+				},
+			},
+		},
+		{
+			name: "client event code 500",
+			event: &event{
+				Host:       host,
+				Proto:      proto,
+				StatusCode: uint64(500),
+				Method:     method,
+				Path:       path,
+				BaseSpanProperties: context.BaseSpanProperties{
+					StartTime:   uint64(startTime.Unix()),
+					EndTime:     uint64(endTime.Unix()),
+					SpanContext: context.EBPFSpanContext{TraceID: trId, SpanID: spId},
+				},
+			},
+			expected: []*probe.SpanEvent{
+				{
+					SpanName:    methodString,
+					SpanContext: &spanContext,
+					StartTime:   startTime.Unix(),
+					EndTime:     endTime.Unix(),
+					Attributes: []attribute.KeyValue{
+						semconv.HTTPRequestMethodKey.String(methodString),
+						semconv.URLPath(pathString),
+						semconv.HTTPResponseStatusCodeKey.Int(500),
+						semconv.ServerAddress(hostString),
+						semconv.NetworkProtocolVersion("1.1"),
+					},
+					Status: probe.Status{Code: codes.Error},
+				},
+			},
+		},
+		{
+			name: "non-http protocol.name",
+			event: &event{
+				Host:       host,
+				Proto:      protoFoo,
+				StatusCode: uint64(200),
+				Method:     method,
+				Path:       path,
+				BaseSpanProperties: context.BaseSpanProperties{
+					StartTime:   uint64(startTime.Unix()),
+					EndTime:     uint64(endTime.Unix()),
+					SpanContext: context.EBPFSpanContext{TraceID: trId, SpanID: spId},
+				},
+			},
+			expected: []*probe.SpanEvent{
+				{
+					SpanName:    methodString,
+					SpanContext: &spanContext,
+					StartTime:   startTime.Unix(),
+					EndTime:     endTime.Unix(),
+					Attributes: []attribute.KeyValue{
+						semconv.HTTPRequestMethodKey.String(methodString),
+						semconv.URLPath(pathString),
+						semconv.HTTPResponseStatusCodeKey.Int(200),
+						semconv.ServerAddress(hostString),
+						semconv.NetworkProtocolName("foo"),
+						semconv.NetworkProtocolVersion("2.2"),
+					},
 				},
 			},
 		},
