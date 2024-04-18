@@ -145,6 +145,12 @@
                   "value": {
                     "stringValue": "1.1"
                   }
+                },
+                {
+                  "key": "url.full",
+                  "value": {
+                    "stringValue": "http://localhost/hello"
+                  }
                 }
               ],
               "flags": 256,

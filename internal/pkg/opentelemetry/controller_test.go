@@ -27,7 +27,6 @@ import (
 	"github.com/go-logr/stdr"
 	"github.com/stretchr/testify/assert"
 
-	"go.opentelemetry.io/auto/internal/pkg/instrumentation/probe"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
@@ -36,9 +35,11 @@ import (
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
 	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
 	"go.opentelemetry.io/otel/trace"
+
+	"go.opentelemetry.io/auto/internal/pkg/instrumentation/probe"
 )
 
-// copied from instrumentation.go
+// copied from instrumentation.go.
 func instResource() *resource.Resource {
 	runVer := strings.TrimPrefix(runtime.Version(), "go")
 	runName := runtime.Compiler
@@ -76,7 +77,10 @@ func TestTrace(t *testing.T) {
 		sdktrace.WithBatcher(exporter),
 		sdktrace.WithResource(instResource()),
 	)
-	defer tp.Shutdown(context.Background())
+	defer func() {
+		err := tp.Shutdown(context.Background())
+		assert.NoError(t, err)
+	}()
 
 	ctrl, err := NewController(logger, tp, "test")
 	assert.NoError(t, err)
