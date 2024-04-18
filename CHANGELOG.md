@@ -8,7 +8,12 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 
 ## [Unreleased]
 
+### Added
+
+- kafka-go instrumentation ([#709](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/709))
+
 ### Fixed
+
 - Change HTTP client span name to `{http.request.method}` ([#775](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/775))
 
 

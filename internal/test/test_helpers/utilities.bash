@@ -42,6 +42,22 @@ client_span_attributes_for() {
 		jq ".attributes[]"
 }
 
+ # Returns a list of attributes emitted by a given library/scope on producer spans.
+producer_span_attributes_for() {
+ 	# $1 - library/scope name
+
+ 	producer_spans_from_scope_named $1 | \
+ 		jq ".attributes[]"
+ }
+
+ # Returns a list of attributes emitted by a given library/scope on consumer spans.
+consumer_span_attributes_for() {
+ 	# $1 - library/scope name
+
+ 	consumer_spans_from_scope_named $1 | \
+ 		jq ".attributes[]"
+ }
+
 # Returns a list of all resource attributes
 resource_attributes_received() {
 	spans_received | jq ".resource.attributes[]?"
@@ -64,6 +80,18 @@ server_spans_from_scope_named() {
 client_spans_from_scope_named() {
 	spans_from_scope_named $1 | jq "select(.kind == 3)"
 }
+
+ # Returns an array of all producer spans emitted by a given library/scope
+ 	# $1 - library/scope name
+producer_spans_from_scope_named() {
+ 	spans_from_scope_named $1 | jq "select(.kind == 4)"
+ }
+
+ # Returns an array of all consumer spans emitted by a given library/scope
+ 	# $1 - library/scope name
+consumer_spans_from_scope_named() {
+ 	spans_from_scope_named $1 | jq "select(.kind == 5)"
+ }
 
 # Returns an array of all spans received
 spans_received() {

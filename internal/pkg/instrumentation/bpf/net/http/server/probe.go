@@ -153,7 +153,7 @@ type event struct {
 	Proto      [8]byte
 }
 
-func convertEvent(e *event) *probe.SpanEvent {
+func convertEvent(e *event) []*probe.SpanEvent {
 	method := unix.ByteSliceToString(e.Method[:])
 	path := unix.ByteSliceToString(e.Path[:])
 	proto := unix.ByteSliceToString(e.Proto[:])
@@ -208,14 +208,16 @@ func convertEvent(e *event) *probe.SpanEvent {
 		}
 	}
 
-	return &probe.SpanEvent{
-		// Do not include the high-cardinality path here (there is no
-		// templatized path manifest to reference).
-		SpanName:          method,
-		StartTime:         int64(e.StartTime),
-		EndTime:           int64(e.EndTime),
-		SpanContext:       &sc,
-		ParentSpanContext: pscPtr,
-		Attributes:        attributes,
+	return []*probe.SpanEvent{
+		{
+			// Do not include the high-cardinality path here (there is no
+			// templatized path manifest to reference).
+			SpanName:          method,
+			StartTime:         int64(e.StartTime),
+			EndTime:           int64(e.EndTime),
+			SpanContext:       &sc,
+			ParentSpanContext: pscPtr,
+			Attributes:        attributes,
+		},
 	}
 }
