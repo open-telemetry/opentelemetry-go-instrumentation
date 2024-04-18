@@ -243,6 +243,9 @@ func convertEvent(e *event) []*probe.SpanEvent {
 	if proto != "" {
 		parts := strings.Split(proto, "/")
 		if len(parts) == 2 {
+			if parts[0] != "HTTP" {
+				attributes = append(attributes, semconv.NetworkProtocolName(parts[0]))
+			}
 			attributes = append(attributes, semconv.NetworkProtocolVersion(parts[1]))
 		}
 	}

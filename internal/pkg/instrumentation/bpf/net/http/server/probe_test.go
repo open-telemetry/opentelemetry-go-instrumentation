@@ -41,9 +41,9 @@ func TestProbeConvertEvent(t *testing.T) {
 		TraceFlags: trace.FlagsSampled,
 	})
 
-	testCases := []struct{
-		name string
-		event *event
+	testCases := []struct {
+		name     string
+		event    *event
 		expected []*probe.SpanEvent
 	}{
 		{
@@ -81,6 +81,46 @@ func TestProbeConvertEvent(t *testing.T) {
 						semconv.ServerAddress("localhost"),
 						semconv.ServerPort(8080),
 						semconv.NetworkProtocolVersion("1.1"),
+					},
+				},
+			},
+		},
+		{
+			name: "proto name added when not HTTP",
+			event: &event{
+				BaseSpanProperties: context.BaseSpanProperties{
+					StartTime:   uint64(start.UnixNano()),
+					EndTime:     uint64(end.UnixNano()),
+					SpanContext: context.EBPFSpanContext{TraceID: traceID, SpanID: spanID},
+				},
+				StatusCode: 200,
+				// "GET"
+				Method: [8]byte{0x47, 0x45, 0x54},
+				// "/foo/bar"
+				Path: [128]byte{0x2f, 0x66, 0x6f, 0x6f, 0x2f, 0x62, 0x61, 0x72},
+				// "www.google.com:8080"
+				RemoteAddr: [256]byte{0x77, 0x77, 0x77, 0x2e, 0x67, 0x6f, 0x6f, 0x67, 0x6c, 0x65, 0x2e, 0x63, 0x6f, 0x6d, 0x3a, 0x38, 0x30, 0x38, 0x30, 0x0},
+				// "localhost:8080"
+				Host: [256]byte{0x6c, 0x6f, 0x63, 0x61, 0x6c, 0x68, 0x6f, 0x73, 0x74, 0x3a, 0x38, 0x30, 0x38, 0x30, 0x0},
+				// "FOO/2.2"
+				Proto: [8]byte{0x46, 0x4f, 0x4f, 0x2f, 0x32, 0x2e, 0x32},
+			},
+			expected: []*probe.SpanEvent{
+				{
+					SpanName:    "GET",
+					StartTime:   int64(start.UnixNano()),
+					EndTime:     int64(end.UnixNano()),
+					SpanContext: &sc,
+					Attributes: []attribute.KeyValue{
+						semconv.HTTPRequestMethodKey.String("GET"),
+						semconv.URLPath("/foo/bar"),
+						semconv.HTTPResponseStatusCodeKey.Int(200),
+						semconv.NetworkPeerAddress("www.google.com"),
+						semconv.NetworkPeerPort(8080),
+						semconv.ServerAddress("localhost"),
+						semconv.ServerPort(8080),
+						semconv.NetworkProtocolName("FOO"),
+						semconv.NetworkProtocolVersion("2.2"),
 					},
 				},
 			},
@@ -166,7 +206,7 @@ func TestProbeConvertEvent(t *testing.T) {
 		},
 	}
 
-	for _, tt := range testCases{
+	for _, tt := range testCases {
 		t.Run(tt.name, func(t *testing.T) {
 			out := convertEvent(tt.event)
 			assert.Equal(t, tt.expected, out)
