@@ -29,11 +29,12 @@ import (
 
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/probe"
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
-	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -128,13 +129,101 @@ func TestTrace(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "http/client",
+			event: &probe.Event{
+				Package: "net/http",
+				Kind:    trace.SpanKindClient,
+				SpanEvents: []*probe.SpanEvent{
+					{
+						SpanName:    "GET",
+						StartTime:   startTime.Unix(),
+						EndTime:     endTime.Unix(),
+						SpanContext: &spanContext,
+						Attributes: []attribute.KeyValue{
+							semconv.HTTPRequestMethodKey.String("GET"),
+							semconv.URLPath("/"),
+							semconv.HTTPResponseStatusCodeKey.Int(200),
+							semconv.ServerAddress("https://google.com"),
+							semconv.ServerPort(8080),
+						},
+					},
+				},
+			},
+			expected: tracetest.SpanStubs{
+				{
+					Name:      "GET",
+					SpanKind:  trace.SpanKindClient,
+					StartTime: convertedStartTime,
+					EndTime:   convertedEndTime,
+					Resource:  instResource(),
+					InstrumentationLibrary: instrumentation.Library{
+						Name:    "go.opentelemetry.io/auto/net/http",
+						Version: "test",
+					},
+					Attributes: []attribute.KeyValue{
+						semconv.HTTPRequestMethodKey.String("GET"),
+						semconv.URLPath("/"),
+						semconv.HTTPResponseStatusCodeKey.Int(200),
+						semconv.ServerAddress("https://google.com"),
+						semconv.ServerPort(8080),
+					},
+				},
+			},
+		},
+		{
+			name: "http/client with status code",
+			event: &probe.Event{
+				Package: "net/http",
+				Kind:    trace.SpanKindClient,
+				SpanEvents: []*probe.SpanEvent{
+					{
+						SpanName:    "GET",
+						StartTime:   startTime.Unix(),
+						EndTime:     endTime.Unix(),
+						SpanContext: &spanContext,
+						Attributes: []attribute.KeyValue{
+							semconv.HTTPRequestMethodKey.String("GET"),
+							semconv.URLPath("/"),
+							semconv.HTTPResponseStatusCodeKey.Int(500),
+							semconv.ServerAddress("https://google.com"),
+							semconv.ServerPort(8080),
+						},
+						Status: probe.Status{Code: codes.Error},
+					},
+				},
+			},
+			expected: tracetest.SpanStubs{
+				{
+					Name:      "GET",
+					SpanKind:  trace.SpanKindClient,
+					StartTime: convertedStartTime,
+					EndTime:   convertedEndTime,
+					Resource:  instResource(),
+					InstrumentationLibrary: instrumentation.Library{
+						Name:    "go.opentelemetry.io/auto/net/http",
+						Version: "test",
+					},
+					Attributes: []attribute.KeyValue{
+						semconv.HTTPRequestMethodKey.String("GET"),
+						semconv.URLPath("/"),
+						semconv.HTTPResponseStatusCodeKey.Int(500),
+						semconv.ServerAddress("https://google.com"),
+						semconv.ServerPort(8080),
+					},
+					Status: sdktrace.Status{Code: codes.Error},
+				},
+			},
+		},
 	}
 
 	for _, tt := range testCases {
 		t.Run(tt.name, func(t *testing.T) {
+			defer exporter.Reset()
 			ctrl.Trace(tt.event)
 			tp.ForceFlush(context.Background())
 			spans := exporter.GetSpans()
+			assert.Equal(t, len(tt.expected), len(spans))
 
 			// span contexts get modified by exporter, update expected with output
 			for i, span := range spans {
