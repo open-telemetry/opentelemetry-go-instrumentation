@@ -35,7 +35,7 @@ func main() {
 	// give time for auto-instrumentation to start up
 	time.Sleep(5 * time.Second)
 
-	resp, err := http.Get("http://localhost:8080/hello/42")
+	resp, err := http.Get("http://user@localhost:8080/hello/42?query=true#fragment")
 	if err != nil {
 		log.Fatal(err)
 	}

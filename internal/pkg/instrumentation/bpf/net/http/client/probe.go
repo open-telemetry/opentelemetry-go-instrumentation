@@ -16,6 +16,7 @@ package client
 
 import (
 	"fmt"
+	"net/url"
 	"os"
 	"strings"
 
@@ -124,6 +125,46 @@ func New(logger logr.Logger) probe.Probe {
 				Key: "io_writer_n_pos",
 				Val: structfield.NewID("std", "bufio", "Writer", "n"),
 			},
+			probe.StructFieldConst{
+				Key: "scheme_pos",
+				Val: structfield.NewID("std", "net/url", "URL", "Scheme"),
+			},
+			probe.StructFieldConst{
+				Key: "opaque_pos",
+				Val: structfield.NewID("std", "net/url", "URL", "Opaque"),
+			},
+			probe.StructFieldConst{
+				Key: "user_ptr_pos",
+				Val: structfield.NewID("std", "net/url", "URL", "User"),
+			},
+			probe.StructFieldConst{
+				Key: "raw_path_pos",
+				Val: structfield.NewID("std", "net/url", "URL", "RawPath"),
+			},
+			probe.StructFieldConst{
+				Key: "omit_host_pos",
+				Val: structfield.NewID("std", "net/url", "URL", "OmitHost"),
+			},
+			probe.StructFieldConst{
+				Key: "force_query_pos",
+				Val: structfield.NewID("std", "net/url", "URL", "ForceQuery"),
+			},
+			probe.StructFieldConst{
+				Key: "raw_query_pos",
+				Val: structfield.NewID("std", "net/url", "URL", "RawQuery"),
+			},
+			probe.StructFieldConst{
+				Key: "fragment_pos",
+				Val: structfield.NewID("std", "net/url", "URL", "Fragment"),
+			},
+			probe.StructFieldConst{
+				Key: "raw_fragment_pos",
+				Val: structfield.NewID("std", "net/url", "URL", "RawFragment"),
+			},
+			probe.StructFieldConst{
+				Key: "username_pos",
+				Val: structfield.NewID("std", "net/url", "Userinfo", "username"),
+			},
 		},
 		Uprobes: uprobes,
 		ReaderFn: func(obj bpfObjects) (*perf.Reader, error) {
@@ -192,16 +233,42 @@ func uprobeWriteSubset(name string, exec *link.Executable, target *process.Targe
 // request-response.
 type event struct {
 	context.BaseSpanProperties
-	Host       [256]byte
-	Proto      [8]byte
-	StatusCode uint64
-	Method     [10]byte
-	Path       [100]byte
+	Host        [128]byte
+	Proto       [8]byte
+	StatusCode  uint64
+	Method      [10]byte
+	Path        [100]byte
+	Scheme      [8]byte
+	Opaque      [8]byte
+	RawPath     [8]byte
+	Username    [8]byte
+	RawQuery    [128]byte
+	Fragment    [50]byte
+	RawFragment [50]byte
+	ForceQuery  uint8
+	OmitHost    uint8
 }
 
 func convertEvent(e *event) []*probe.SpanEvent {
 	method := unix.ByteSliceToString(e.Method[:])
 	path := unix.ByteSliceToString(e.Path[:])
+	scheme := unix.ByteSliceToString(e.Scheme[:])
+	opaque := unix.ByteSliceToString(e.Opaque[:])
+	host := unix.ByteSliceToString(e.Host[:])
+	rawPath := unix.ByteSliceToString(e.RawPath[:])
+	rawQuery := unix.ByteSliceToString(e.RawQuery[:])
+	username := unix.ByteSliceToString(e.Username[:])
+	fragment := unix.ByteSliceToString(e.Fragment[:])
+	rawFragment := unix.ByteSliceToString(e.RawFragment[:])
+	forceQuery := e.ForceQuery != 0
+	omitHost := e.OmitHost != 0
+	var user *url.Userinfo
+	if len(username) > 0 {
+		// check that username!="", otherwise url.User will instantiate
+		// an empty, non-nil *Userinfo object which url.String() will parse
+		// to just "@" in the final fullUrl
+		user = url.User(username)
+	}
 
 	sc := trace.NewSpanContext(trace.SpanContextConfig{
 		TraceID:    e.SpanContext.TraceID,
@@ -231,6 +298,23 @@ func convertEvent(e *event) []*probe.SpanEvent {
 		attrs = append(attrs, semconv.URLPath(path))
 	}
 
+	url := &url.URL{
+		Path:        path,
+		Scheme:      scheme,
+		Opaque:      opaque,
+		Host:        host,
+		RawPath:     rawPath,
+		User:        user,
+		RawQuery:    rawQuery,
+		Fragment:    fragment,
+		RawFragment: rawFragment,
+		ForceQuery:  forceQuery,
+		OmitHost:    omitHost,
+	}
+
+	fullURL := url.String()
+	attrs = append(attrs, semconv.URLFull(fullURL))
+
 	// Server address and port
 	serverAddr, serverPort := http.ServerAddressPortAttributes(e.Host[:])
 	if serverAddr.Valid() {
@@ -241,7 +325,6 @@ func convertEvent(e *event) []*probe.SpanEvent {
 	}
 
 	proto := unix.ByteSliceToString(e.Proto[:])
-	scheme := ""
 	if proto != "" {
 		parts := strings.Split(proto, "/")
 		if len(parts) == 2 {
@@ -252,9 +335,6 @@ func convertEvent(e *event) []*probe.SpanEvent {
 			attrs = append(attrs, semconv.NetworkProtocolVersion(parts[1]))
 		}
 	}
-
-	fullURL := fmt.Sprintf("%s://%s%s", scheme, serverAddr.Value.AsString(), path)
-	attrs = append(attrs, semconv.URLFull(fullURL))
 
 	spanEvent := &probe.SpanEvent{
 		SpanName:          method,
