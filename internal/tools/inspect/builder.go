@@ -66,16 +66,24 @@ func newBuilder(l logr.Logger, cli *client.Client, goVer *version.Version) *buil
 }
 
 // Build builds the appV version of a Go application located in dir.
-func (b *builder) Build(ctx context.Context, dir string, appV *version.Version) (string, error) {
+func (b *builder) Build(ctx context.Context, dir string, appV *version.Version, modName string) (string, error) {
 	b.log.V(2).Info("building application...", "version", appV, "dir", dir, "image", b.GoImage)
 
 	app := fmt.Sprintf("app%s", appV.Original())
+	goGetCmd := fmt.Sprintf("go get %s@%s", modName, appV.Original())
+	goModTidyCmd := "go mod tidy -compat=1.17"
 	var cmd string
+
 	if b.goVer != nil && b.goVer.LessThan(minCompatVer) {
-		cmd = "go mod tidy && go build -o " + app
-	} else {
-		cmd = "go mod tidy -compat=1.17 && go build -o " + app
+		goModTidyCmd = "go mod tidy"
 	}
+
+	if b.goVer == nil {
+		cmd = fmt.Sprintf("%s && %s && go build -o %s", goModTidyCmd, goGetCmd, app)
+	} else {
+		cmd = fmt.Sprintf("%s && go build -o %s", goModTidyCmd, app)
+	}
+
 	if err := b.runCmd(ctx, []string{"sh", "-c", cmd}, dir); err != nil {
 		return "", err
 	}

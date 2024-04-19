@@ -69,7 +69,12 @@ func newApp(ctx context.Context, l logr.Logger, j job) (*app, error) {
 		return nil, err
 	}
 
-	a.exec, err = j.Builder.Build(ctx, a.tmpDir, a.AppVer)
+	if len(j.Fields) == 0 {
+		return nil, errors.New("no fields to analyze")
+	}
+	modName := j.Fields[0].ModPath
+
+	a.exec, err = j.Builder.Build(ctx, a.tmpDir, a.AppVer, modName)
 	if err != nil {
 		return nil, err
 	}
