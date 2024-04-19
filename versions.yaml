@@ -22,4 +22,5 @@ excluded-modules:
   - go.opentelemetry.io/auto/examples
   - go.opentelemetry.io/auto/examples/rolldice
   - go.opentelemetry.io/auto/examples/httpPlusdb
+  - go.opentelemetry.io/auto/examples/kafka-go
   - go.opentelemetry.io/auto/internal/tools

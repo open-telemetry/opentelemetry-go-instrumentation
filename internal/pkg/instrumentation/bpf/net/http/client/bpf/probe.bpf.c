@@ -10,8 +10,6 @@ char __license[] SEC("license") = "Dual MIT/GPL";
 #define MAX_PROTO_SIZE 8
 #define MAX_PATH_SIZE 100
 #define MAX_METHOD_SIZE 10
-#define W3C_KEY_LENGTH 11
-#define W3C_VAL_LENGTH 55
 #define MAX_CONCURRENT 50
 
 struct http_request_t {

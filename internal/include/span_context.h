@@ -18,6 +18,8 @@
 #include "utils.h"
 
 #define SPAN_CONTEXT_STRING_SIZE 55
+#define W3C_KEY_LENGTH 11 // length of the "traceparent" key
+#define W3C_VAL_LENGTH 55
 
 struct span_context
 {

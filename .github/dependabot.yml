@@ -29,6 +29,15 @@ updates:
       interval: weekly
       day: sunday
   - package-ecosystem: docker
+    directory: /examples/kafka-go
+    labels:
+      - dependencies
+      - docker
+      - Skip Changelog
+    schedule:
+      interval: weekly
+      day: sunday
+  - package-ecosystem: docker
     directory: /examples/rolldice
     labels:
       - dependencies
@@ -57,6 +66,15 @@ updates:
       day: sunday
   - package-ecosystem: docker
     directory: /internal/test/e2e/grpc
+    labels:
+      - dependencies
+      - docker
+      - Skip Changelog
+    schedule:
+      interval: weekly
+      day: sunday
+  - package-ecosystem: docker
+    directory: /internal/test/e2e/kafka-go
     labels:
       - dependencies
       - docker
@@ -101,7 +119,7 @@ updates:
       interval: weekly
       day: sunday
   - package-ecosystem: gomod
-    directory: /examples
+    directory: /examples/httpPlusdb
     labels:
       - dependencies
       - go
@@ -110,7 +128,7 @@ updates:
       interval: weekly
       day: sunday
   - package-ecosystem: gomod
-    directory: /examples/httpPlusdb
+    directory: /examples/kafka-go
     labels:
       - dependencies
       - go
