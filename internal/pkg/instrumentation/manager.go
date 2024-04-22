@@ -71,10 +71,32 @@ func NewManager(logger logr.Logger, otelController *opentelemetry.Controller, gl
 	return m, nil
 }
 
+func (m *Manager) validateProbeDependents(id probe.ID, symbols []probe.FunctionSymbol) error {
+	// Validate that dependent probes point to real standalone probes.
+	funcsMap := make(map[string]interface{})
+	for _, s := range symbols {
+		funcsMap[s.Symbol] = nil
+	}
+
+	for _, s := range symbols {
+		for _, d := range s.DependsOn {
+			if _, exists := funcsMap[d]; !exists {
+				return fmt.Errorf("library %s has declared a dependent function %s for probe %s which does not exist, aborting", id, d, s.Symbol)
+			}
+		}
+	}
+
+	return nil
+}
+
 func (m *Manager) registerProbe(p probe.Probe) error {
 	id := p.Manifest().Id
 	if _, exists := m.probes[id]; exists {
 		return fmt.Errorf("library %s registered twice, aborting", id)
+	}
+
+	if err := m.validateProbeDependents(id, p.Manifest().Symbols); err != nil {
+		return err
 	}
 
 	m.probes[id] = p

@@ -23,6 +23,7 @@ import (
 	"github.com/hashicorp/go-version"
 	"github.com/stretchr/testify/assert"
 
+	"go.opentelemetry.io/auto/internal/pkg/instrumentation/probe"
 	"go.opentelemetry.io/auto/internal/pkg/process"
 	"go.opentelemetry.io/auto/internal/pkg/process/binary"
 )
@@ -100,6 +101,89 @@ func TestProbeFiltering(t *testing.T) {
 		}
 		m.FilterUnusedProbes(&td)
 		assert.Equal(t, 1, len(m.probes))
+	})
+}
+
+func TestDependencyChecks(t *testing.T) {
+	m := fakeManager(t)
+
+	t.Run("Dependent probes match", func(t *testing.T) {
+		syms := []probe.FunctionSymbol{
+			{
+				Symbol:    "A",
+				DependsOn: nil,
+			},
+			{
+				Symbol:    "B",
+				DependsOn: []string{"A"},
+			},
+		}
+
+		assert.Nil(t, m.validateProbeDependents(probe.ID{InstrumentedPkg: "test"}, syms))
+	})
+
+	t.Run("Second dependent missing", func(t *testing.T) {
+		syms := []probe.FunctionSymbol{
+			{
+				Symbol:    "A",
+				DependsOn: nil,
+			},
+			{
+				Symbol:    "B",
+				DependsOn: []string{"A", "C"},
+			},
+		}
+
+		assert.NotNil(t, m.validateProbeDependents(probe.ID{InstrumentedPkg: "test"}, syms))
+	})
+
+	t.Run("Second dependent present", func(t *testing.T) {
+		syms := []probe.FunctionSymbol{
+			{
+				Symbol:    "A",
+				DependsOn: nil,
+			},
+			{
+				Symbol:    "B",
+				DependsOn: []string{"A", "C"},
+			},
+			{
+				Symbol:    "C",
+				DependsOn: []string{"A"},
+			},
+		}
+
+		assert.Nil(t, m.validateProbeDependents(probe.ID{InstrumentedPkg: "test"}, syms))
+	})
+
+	t.Run("Dependent wrong", func(t *testing.T) {
+		syms := []probe.FunctionSymbol{
+			{
+				Symbol:    "A",
+				DependsOn: nil,
+			},
+			{
+				Symbol:    "B",
+				DependsOn: []string{"A1"},
+			},
+		}
+
+		assert.NotNil(t, m.validateProbeDependents(probe.ID{InstrumentedPkg: "test"}, syms))
+	})
+
+	t.Run("Two probes without dependents", func(t *testing.T) {
+		syms := []probe.FunctionSymbol{
+			{
+				Symbol:    "A",
+				DependsOn: nil,
+			},
+			{
+				Symbol:    "B",
+				DependsOn: []string{},
+			},
+		}
+
+		assert.Nil(t, m.validateProbeDependents(probe.ID{InstrumentedPkg: "test"}, syms))
 	})
 }
 
