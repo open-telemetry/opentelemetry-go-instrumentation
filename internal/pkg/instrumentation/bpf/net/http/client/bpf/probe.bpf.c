@@ -212,23 +212,15 @@ int uprobe_writeSubset(struct pt_regs *ctx) {
             }
 
             if (len < (size - W3C_VAL_LENGTH - W3C_KEY_LENGTH - 4)) { // 4 = strlen(":_") + strlen("\r\n")
-                char key[W3C_KEY_LENGTH + 2] = "Traceparent: ";
+                char tp_str[W3C_KEY_LENGTH + 2 + W3C_VAL_LENGTH + 2] = "Traceparent: ";
                 char end[2] = "\r\n";
-                if (bpf_probe_write_user(buf_ptr + (len & 0x0ffff), key, sizeof(key))) {
+                __builtin_memcpy(&tp_str[W3C_KEY_LENGTH + 2], tp, sizeof(tp));
+                __builtin_memcpy(&tp_str[W3C_KEY_LENGTH + 2 + W3C_VAL_LENGTH], end, sizeof(end));
+                if (bpf_probe_write_user(buf_ptr + (len & 0x0ffff), tp_str, sizeof(tp_str))) {
                     bpf_printk("uprobe_writeSubset: Failed to write trace parent key in buffer");
                     goto done;
                 }
-                len += W3C_KEY_LENGTH + 2;
-                if (bpf_probe_write_user(buf_ptr + (len & 0x0ffff), tp, sizeof(tp))) {
-                    bpf_printk("uprobe_writeSubset: Failed to write trace parent value in buffer");
-                    goto done;
-                }
-                len += W3C_VAL_LENGTH;
-                if (bpf_probe_write_user(buf_ptr + (len & 0x0ffff), end, sizeof(end))) {
-                    bpf_printk("uprobe_writeSubset: Failed to write new line in buffer");
-                    goto done;
-                }
-                len += 2;
+                len += W3C_KEY_LENGTH + 2 + W3C_VAL_LENGTH + 2;
                 if (bpf_probe_write_user((void *)(io_writer_ptr + io_writer_n_pos), &len, sizeof(len))) {
                     bpf_printk("uprobe_writeSubset: Failed to change io writer n");
                     goto done;
