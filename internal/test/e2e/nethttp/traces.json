@@ -30,7 +30,7 @@
           {
             "key": "telemetry.auto.version",
             "value": {
-              "stringValue": "v0.11.0-alpha"
+              "stringValue": "v0.12.0-alpha"
             }
           },
           {
@@ -46,7 +46,7 @@
         {
           "scope": {
             "name": "go.opentelemetry.io/auto/net/http",
-            "version": "v0.11.0-alpha"
+            "version": "v0.12.0-alpha"
           },
           "spans": [
             {
@@ -147,7 +147,7 @@
                 }
               ],
               "kind": 3,
-              "name": "/hello",
+              "name": "GET",
               "parentSpanId": "",
               "spanId": "xxxxx",
               "status": {},

@@ -198,7 +198,7 @@ type event struct {
 	Path       [100]byte
 }
 
-func convertEvent(e *event) *probe.SpanEvent {
+func convertEvent(e *event) []*probe.SpanEvent {
 	method := unix.ByteSliceToString(e.Method[:])
 	path := unix.ByteSliceToString(e.Path[:])
 
@@ -244,12 +244,14 @@ func convertEvent(e *event) *probe.SpanEvent {
 		}
 	}
 
-	return &probe.SpanEvent{
-		SpanName:          path,
-		StartTime:         int64(e.StartTime),
-		EndTime:           int64(e.EndTime),
-		SpanContext:       &sc,
-		Attributes:        attrs,
-		ParentSpanContext: pscPtr,
+	return []*probe.SpanEvent{
+		{
+			SpanName:          method,
+			StartTime:         int64(e.StartTime),
+			EndTime:           int64(e.EndTime),
+			SpanContext:       &sc,
+			Attributes:        attrs,
+			ParentSpanContext: pscPtr,
+		},
 	}
 }
