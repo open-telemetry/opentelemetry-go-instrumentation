@@ -11,6 +11,7 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 ### Added
 
 - kafka-go instrumentation ([#709](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/709))
+- Support `go.opentelemetry.io/otel@v1.26.0`. ([#796](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/796))
 
 ### Fixed
 
