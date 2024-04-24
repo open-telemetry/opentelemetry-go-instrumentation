@@ -37,6 +37,7 @@ import (
 )
 
 //go:generate go run github.com/cilium/ebpf/cmd/bpf2go -target amd64,arm64 -cc clang -cflags $CFLAGS bpf ./bpf/probe.bpf.c
+//go:generate go run github.com/cilium/ebpf/cmd/bpf2go -target amd64,arm64 -cc clang -cflags $CFLAGS bpf_no_tp ./bpf/probe.bpf.c -- -DNO_HEADER_PROPAGATION
 
 const (
 	// pkg is the package being instrumented.
@@ -49,6 +50,29 @@ func New(logger logr.Logger) probe.Probe {
 		SpanKind:        trace.SpanKindClient,
 		InstrumentedPkg: pkg,
 	}
+
+	uprobes := []probe.Uprobe[bpfObjects]{
+		{
+			Sym: "net/http.(*Transport).roundTrip",
+			Fn:  uprobeRoundTrip,
+		},
+	}
+
+	// If the kernel supports context propagation, we enable the
+	// probe which writes the data in the outgoing buffer.
+	if utils.SupportsContextPropagation() {
+		uprobes = append(uprobes,
+			probe.Uprobe[bpfObjects]{
+				Sym: "net/http.Header.writeSubset",
+				Fn:  uprobeWriteSubset,
+				// We mark this probe as dependent on roundTrip, so we don't accidentally
+				// enable this bpf program, if the executable has compiled in writeSubset,
+				// but doesn't have any http roundTrip.
+				DependsOn: []string{"net/http.(*Transport).roundTrip"},
+			},
+		)
+	}
+
 	return &probe.Base[bpfObjects, event]{
 		ID:     id,
 		Logger: logger.WithName(id.String()),
@@ -91,14 +115,16 @@ func New(logger logr.Logger) probe.Probe {
 				Key: "request_proto_pos",
 				Val: structfield.NewID("std", "net/http", "Request", "Proto"),
 			},
-		},
-		Uprobes: []probe.Uprobe[bpfObjects]{
-			{
-				Sym: "net/http.(*Transport).roundTrip",
-				Fn:  uprobeRoundTrip,
+			probe.StructFieldConst{
+				Key: "io_writer_buf_ptr_pos",
+				Val: structfield.NewID("std", "bufio", "Writer", "buf"),
+			},
+			probe.StructFieldConst{
+				Key: "io_writer_n_pos",
+				Val: structfield.NewID("std", "bufio", "Writer", "n"),
 			},
 		},
-
+		Uprobes: uprobes,
 		ReaderFn: func(obj bpfObjects) (*perf.Reader, error) {
 			return perf.NewReader(obj.Events, os.Getpagesize())
 		},
@@ -109,7 +135,8 @@ func New(logger logr.Logger) probe.Probe {
 
 func verifyAndLoadBpf() (*ebpf.CollectionSpec, error) {
 	if !utils.SupportsContextPropagation() {
-		return nil, fmt.Errorf("the Linux Kernel doesn't support context propagation, please check if the kernel is in lockdown mode (/sys/kernel/security/lockdown)")
+		fmt.Fprintf(os.Stderr, "the Linux Kernel doesn't support context propagation, please check if the kernel is in lockdown mode (/sys/kernel/security/lockdown)")
+		return loadBpf_no_tp()
 	}
 
 	return loadBpf()
@@ -143,6 +170,21 @@ func uprobeRoundTrip(name string, exec *link.Executable, target *process.TargetD
 	}
 
 	return links, nil
+}
+
+func uprobeWriteSubset(name string, exec *link.Executable, target *process.TargetDetails, obj *bpfObjects) ([]link.Link, error) {
+	offset, err := target.GetFunctionOffset(name)
+	if err != nil {
+		return nil, err
+	}
+
+	opts := &link.UprobeOptions{Address: offset}
+	l, err := exec.Uprobe("", obj.UprobeWriteSubset, opts)
+	if err != nil {
+		return nil, err
+	}
+
+	return []link.Link{l}, nil
 }
 
 // event represents an event in an HTTP server during an HTTP

@@ -86,9 +86,9 @@ type Base[BPFObj any, BPFEvent any] struct {
 func (i *Base[BPFObj, BPFEvent]) Manifest() Manifest {
 	structfields := consts(i.Consts).structFields()
 
-	symbols := make([]string, 0, len(i.Uprobes))
+	symbols := make([]FunctionSymbol, 0, len(i.Uprobes))
 	for _, up := range i.Uprobes {
-		symbols = append(symbols, up.Sym)
+		symbols = append(symbols, FunctionSymbol{Symbol: up.Sym, DependsOn: up.DependsOn})
 	}
 
 	return NewManifest(i.ID, structfields, symbols)
@@ -235,7 +235,8 @@ type Uprobe[BPFObj any] struct {
 	// Optional is a boolean flag informing if the Uprobe is optional. If the
 	// Uprobe is optional and fails to attach, the error is logged and
 	// processing continues.
-	Optional bool
+	Optional  bool
+	DependsOn []string
 }
 
 // Const is an constant that needs to be injected into an eBPF program.

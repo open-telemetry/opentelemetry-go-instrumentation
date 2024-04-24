@@ -23,6 +23,12 @@ import (
 	"go.opentelemetry.io/auto/internal/pkg/structfield"
 )
 
+// Wrapper object for the Manifest function symbol.
+type FunctionSymbol struct {
+	Symbol    string
+	DependsOn []string
+}
+
 // Manifest contains information about a package being instrumented.
 type Manifest struct {
 	// ID is a unique identifier for the probe.
@@ -34,7 +40,7 @@ type Manifest struct {
 
 	// Symbols are the runtime symbols that are used to attach a probe's eBPF
 	// program to a perf events.
-	Symbols []string
+	Symbols []FunctionSymbol
 }
 
 // ID is a unique identifier for a probe.
@@ -52,7 +58,7 @@ func (id ID) String() string {
 // NewManifest returns a new Manifest for the instrumentation probe with name
 // that instruments pkg. The structfields and symbols will be sorted in-place
 // and added directly to the returned Manifest.
-func NewManifest(id ID, structfields []structfield.ID, symbols []string) Manifest {
+func NewManifest(id ID, structfields []structfield.ID, symbols []FunctionSymbol) Manifest {
 	sort.Slice(structfields, func(i, j int) bool {
 		if structfields[i].ModPath == structfields[j].ModPath {
 			if structfields[i].PkgPath == structfields[j].PkgPath {
@@ -66,7 +72,9 @@ func NewManifest(id ID, structfields []structfield.ID, symbols []string) Manifes
 		return structfields[i].ModPath < structfields[j].ModPath
 	})
 
-	sort.Strings(symbols)
+	sort.Slice(symbols, func(i, j int) bool {
+		return symbols[i].Symbol < symbols[j].Symbol
+	})
 
 	return Manifest{
 		Id:           id,
