@@ -1,6 +1,7 @@
 module go.opentelemetry.io/auto
 
-go 1.21
+go 1.21.0
+
 toolchain go1.22.2
 
 retract (
