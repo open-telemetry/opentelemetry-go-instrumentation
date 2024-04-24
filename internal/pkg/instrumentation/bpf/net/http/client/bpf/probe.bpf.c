@@ -175,6 +175,8 @@ int uprobe_Transport_roundTrip_Returns(struct pt_regs *ctx) {
 }
 
 #ifndef NO_HEADER_PROPAGATION
+// This instrumentation attaches uprobe to the following function:
+// func (h Header) net/http.Header.writeSubset(w io.Writer, exclude map[string]bool, trace *httptrace.ClientTrace) error
 SEC("uprobe/header_writeSubset")
 int uprobe_writeSubset(struct pt_regs *ctx) {
     u64 headers_pos = 1;
@@ -200,7 +202,7 @@ int uprobe_writeSubset(struct pt_regs *ctx) {
             }
 
             s64 size = 0;
-            if (bpf_probe_read(&size, sizeof(s64), (void *)(io_writer_ptr + io_writer_buf_ptr_pos + 8))) { // grab size
+            if (bpf_probe_read(&size, sizeof(s64), (void *)(io_writer_ptr + io_writer_buf_ptr_pos + offsetof(struct go_slice, cap)))) { // grab capacity
                 bpf_printk("uprobe_writeSubset: Failed to get size from io writer");
                 goto done;
             }

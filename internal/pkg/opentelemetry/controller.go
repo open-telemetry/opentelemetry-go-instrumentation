@@ -52,7 +52,7 @@ func (c *Controller) getTracer(pkg string) trace.Tracer {
 // Trace creates a trace span for event.
 func (c *Controller) Trace(event *probe.Event) {
 	for _, se := range event.SpanEvents {
-		c.logger.Info("got event", "kind", event.Kind.String(), "pkg", event.Package, "attrs", se.Attributes)
+		c.logger.Info("got event", "kind", event.Kind.String(), "pkg", event.Package, "attrs", se.Attributes, "traceID", se.SpanContext.TraceID().String(), "spanID", se.SpanContext.SpanID().String())
 		ctx := context.Background()
 
 		if se.SpanContext == nil {
