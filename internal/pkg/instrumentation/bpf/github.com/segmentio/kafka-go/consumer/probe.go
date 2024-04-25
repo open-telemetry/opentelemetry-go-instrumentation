@@ -12,9 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package gin
+package consumer
 
 import (
+	"fmt"
 	"os"
 
 	"github.com/cilium/ebpf/link"
@@ -35,13 +36,13 @@ import (
 
 const (
 	// pkg is the package being instrumented.
-	pkg = "github.com/gin-gonic/gin"
+	pkg = "github.com/segmentio/kafka-go"
 )
 
 // New returns a new [probe.Probe].
 func New(logger logr.Logger) probe.Probe {
 	id := probe.ID{
-		SpanKind:        trace.SpanKindServer,
+		SpanKind:        trace.SpanKindConsumer,
 		InstrumentedPkg: pkg,
 	}
 	return &probe.Base[bpfObjects, event]{
@@ -49,49 +50,62 @@ func New(logger logr.Logger) probe.Probe {
 		Logger: logger.WithName(id.String()),
 		Consts: []probe.Const{
 			probe.RegistersABIConst{},
+			probe.AllocationConst{},
 			probe.StructFieldConst{
-				Key: "method_ptr_pos",
-				Val: structfield.NewID("std", "net/http", "Request", "Method"),
+				Key: "message_headers_pos",
+				Val: structfield.NewID("github.com/segmentio/kafka-go", "github.com/segmentio/kafka-go", "Message", "Headers"),
 			},
 			probe.StructFieldConst{
-				Key: "url_ptr_pos",
-				Val: structfield.NewID("std", "net/http", "Request", "URL"),
+				Key: "message_key_pos",
+				Val: structfield.NewID("github.com/segmentio/kafka-go", "github.com/segmentio/kafka-go", "Message", "Key"),
 			},
 			probe.StructFieldConst{
-				Key: "ctx_ptr_pos",
-				Val: structfield.NewID("std", "net/http", "Request", "ctx"),
+				Key: "message_topic_pos",
+				Val: structfield.NewID("github.com/segmentio/kafka-go", "github.com/segmentio/kafka-go", "Message", "Topic"),
 			},
 			probe.StructFieldConst{
-				Key: "path_ptr_pos",
-				Val: structfield.NewID("std", "net/url", "URL", "Path"),
+				Key: "message_partition_pos",
+				Val: structfield.NewID("github.com/segmentio/kafka-go", "github.com/segmentio/kafka-go", "Message", "Partition"),
+			},
+			probe.StructFieldConst{
+				Key: "message_offset_pos",
+				Val: structfield.NewID("github.com/segmentio/kafka-go", "github.com/segmentio/kafka-go", "Message", "Offset"),
+			},
+			probe.StructFieldConst{
+				Key: "reader_config_pos",
+				Val: structfield.NewID("github.com/segmentio/kafka-go", "github.com/segmentio/kafka-go", "Reader", "config"),
+			},
+			probe.StructFieldConst{
+				Key: "reader_config_group_id_pos",
+				Val: structfield.NewID("github.com/segmentio/kafka-go", "github.com/segmentio/kafka-go", "ReaderConfig", "GroupID"),
 			},
 		},
 		Uprobes: []probe.Uprobe[bpfObjects]{
 			{
-				Sym: "github.com/gin-gonic/gin.(*Engine).ServeHTTP",
-				Fn:  uprobeServeHTTP,
+				Sym: "github.com/segmentio/kafka-go.(*Reader).FetchMessage",
+				Fn:  uprobeFetchMessage,
 			},
 		},
-
 		ReaderFn: func(obj bpfObjects) (*perf.Reader, error) {
-			return perf.NewReader(obj.Events, os.Getpagesize())
+			return perf.NewReader(obj.Events, os.Getpagesize()*100)
 		},
 		SpecFn:    loadBpf,
 		ProcessFn: convertEvent,
 	}
 }
 
-func uprobeServeHTTP(name string, exec *link.Executable, target *process.TargetDetails, obj *bpfObjects) ([]link.Link, error) {
+func uprobeFetchMessage(name string, exec *link.Executable, target *process.TargetDetails, obj *bpfObjects) ([]link.Link, error) {
 	offset, err := target.GetFunctionOffset(name)
 	if err != nil {
 		return nil, err
 	}
 
 	opts := &link.UprobeOptions{Address: offset}
-	l, err := exec.Uprobe("", obj.UprobeGinEngineServeHTTP, opts)
+	l, err := exec.Uprobe("", obj.UprobeFetchMessage, opts)
 	if err != nil {
 		return nil, err
 	}
+
 	links := []link.Link{l}
 
 	retOffsets, err := target.GetFunctionReturns(name)
@@ -101,7 +115,7 @@ func uprobeServeHTTP(name string, exec *link.Executable, target *process.TargetD
 
 	for _, ret := range retOffsets {
 		opts := &link.UprobeOptions{Address: ret}
-		l, err := exec.Uprobe("", obj.UprobeGinEngineServeHTTP_Returns, opts)
+		l, err := exec.Uprobe("", obj.UprobeFetchMessageReturns, opts)
 		if err != nil {
 			return nil, err
 		}
@@ -111,18 +125,17 @@ func uprobeServeHTTP(name string, exec *link.Executable, target *process.TargetD
 	return links, nil
 }
 
-// event represents an event in the gin-gonic/gin server during an HTTP
-// request-response.
+// event represents a kafka message received by the consumer.
 type event struct {
 	context.BaseSpanProperties
-	Method [7]byte
-	Path   [100]byte
+	Topic         [256]byte
+	Key           [256]byte
+	ConsumerGroup [128]byte
+	Offset        int64
+	Partition     int64
 }
 
-func convertEvent(e *event) *probe.SpanEvent {
-	method := unix.ByteSliceToString(e.Method[:])
-	path := unix.ByteSliceToString(e.Path[:])
-
+func convertEvent(e *event) []*probe.SpanEvent {
 	sc := trace.NewSpanContext(trace.SpanContextConfig{
 		TraceID:    e.SpanContext.TraceID,
 		SpanID:     e.SpanContext.SpanID,
@@ -142,18 +155,29 @@ func convertEvent(e *event) *probe.SpanEvent {
 		pscPtr = nil
 	}
 
-	return &probe.SpanEvent{
-		// Do not include the high-cardinality path here (there is no
-		// templatized path manifest to reference, given we are instrumenting
-		// Engine.ServeHTTP which is not passed a Gin Context).
-		SpanName:    method,
-		StartTime:   int64(e.StartTime),
-		EndTime:     int64(e.EndTime),
-		SpanContext: &sc,
-		Attributes: []attribute.KeyValue{
-			semconv.HTTPRequestMethodKey.String(method),
-			semconv.URLPath(path),
-		},
-		ParentSpanContext: pscPtr,
+	topic := unix.ByteSliceToString(e.Topic[:])
+
+	attributes := []attribute.KeyValue{
+		semconv.MessagingSystemKafka,
+		semconv.MessagingOperationReceive,
+		semconv.MessagingKafkaDestinationPartition(int(e.Partition)),
+		semconv.MessagingDestinationName(topic),
+		semconv.MessagingKafkaMessageOffset(int(e.Offset)),
+		semconv.MessagingKafkaMessageKey(unix.ByteSliceToString(e.Key[:])),
+		semconv.MessagingKafkaConsumerGroup(unix.ByteSliceToString(e.ConsumerGroup[:])),
 	}
+	return []*probe.SpanEvent{
+		{
+			SpanName:          kafkaConsumerSpanName(topic),
+			StartTime:         int64(e.StartTime),
+			EndTime:           int64(e.EndTime),
+			SpanContext:       &sc,
+			ParentSpanContext: pscPtr,
+			Attributes:        attributes,
+		},
+	}
+}
+
+func kafkaConsumerSpanName(topic string) string {
+	return fmt.Sprintf("%s receive", topic)
 }

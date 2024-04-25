@@ -38,7 +38,7 @@ func TestWithServiceName(t *testing.T) {
 	// No service name provided - check for default value
 	c, err = newInstConfig(ctx, []InstrumentationOption{})
 	require.NoError(t, err)
-	assert.Equal(t, c.defualtServiceName(), c.serviceName)
+	assert.Equal(t, c.defaultServiceName(), c.serviceName)
 }
 
 func TestWithPID(t *testing.T) {

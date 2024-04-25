@@ -135,7 +135,7 @@ func uprobeTracerStart(name string, exec *link.Executable, target *process.Targe
 		return nil, err
 	}
 
-	opts := &link.UprobeOptions{Address: offset}
+	opts := &link.UprobeOptions{Address: offset, PID: target.PID}
 	l, err := exec.Uprobe("", obj.UprobeStart, opts)
 	if err != nil {
 		return nil, err
@@ -166,7 +166,7 @@ func uprobeSetAttributes(name string, exec *link.Executable, target *process.Tar
 		return nil, err
 	}
 
-	opts := &link.UprobeOptions{Address: offset}
+	opts := &link.UprobeOptions{Address: offset, PID: target.PID}
 	l, err := exec.Uprobe("", obj.UprobeSetAttributes, opts)
 	if err != nil {
 		return nil, err
@@ -183,7 +183,7 @@ func uprobeSpanSetName(name string, exec *link.Executable, target *process.Targe
 		return nil, err
 	}
 
-	opts := &link.UprobeOptions{Address: offset}
+	opts := &link.UprobeOptions{Address: offset, PID: target.PID}
 	l, err := exec.Uprobe("", obj.UprobeSetName, opts)
 	if err != nil {
 		return nil, err
@@ -200,7 +200,7 @@ func uprobeSetStatus(name string, exec *link.Executable, target *process.TargetD
 		return nil, err
 	}
 
-	opts := &link.UprobeOptions{Address: offset}
+	opts := &link.UprobeOptions{Address: offset, PID: target.PID}
 	l, err := exec.Uprobe("", obj.UprobeSetStatus, opts)
 	if err != nil {
 		return nil, err
@@ -217,7 +217,7 @@ func uprobeSpanEnd(name string, exec *link.Executable, target *process.TargetDet
 		return nil, err
 	}
 
-	opts := &link.UprobeOptions{Address: offset}
+	opts := &link.UprobeOptions{Address: offset, PID: target.PID}
 	l, err := exec.Uprobe("", obj.UprobeEnd, opts)
 	if err != nil {
 		return nil, err
@@ -254,7 +254,7 @@ type event struct {
 	Attributes attributesBuffer
 }
 
-func convertEvent(e *event) *probe.SpanEvent {
+func convertEvent(e *event) []*probe.SpanEvent {
 	spanName := unix.ByteSliceToString(e.SpanName[:])
 
 	sc := trace.NewSpanContext(trace.SpanContextConfig{
@@ -276,16 +276,18 @@ func convertEvent(e *event) *probe.SpanEvent {
 		pscPtr = nil
 	}
 
-	return &probe.SpanEvent{
-		SpanName:          spanName,
-		StartTime:         int64(e.StartTime),
-		EndTime:           int64(e.EndTime),
-		Attributes:        convertAttributes(e.Attributes),
-		SpanContext:       &sc,
-		ParentSpanContext: pscPtr,
-		Status: probe.Status{
-			Code:        codes.Code(e.Status.Code),
-			Description: string(unix.ByteSliceToString(e.Status.Description[:])),
+	return []*probe.SpanEvent{
+		{
+			SpanName:          spanName,
+			StartTime:         int64(e.StartTime),
+			EndTime:           int64(e.EndTime),
+			Attributes:        convertAttributes(e.Attributes),
+			SpanContext:       &sc,
+			ParentSpanContext: pscPtr,
+			Status: probe.Status{
+				Code:        codes.Code(e.Status.Code),
+				Description: string(unix.ByteSliceToString(e.Status.Description[:])),
+			},
 		},
 	}
 }

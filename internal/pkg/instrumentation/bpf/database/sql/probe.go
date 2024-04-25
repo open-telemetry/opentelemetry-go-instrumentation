@@ -85,7 +85,7 @@ func uprobeQueryDC(name string, exec *link.Executable, target *process.TargetDet
 		return nil, err
 	}
 
-	opts := &link.UprobeOptions{Address: offset}
+	opts := &link.UprobeOptions{Address: offset, PID: target.PID}
 	l, err := exec.Uprobe("", obj.UprobeQueryDC, opts)
 	if err != nil {
 		return nil, err
@@ -116,7 +116,7 @@ func uprobeExecDC(name string, exec *link.Executable, target *process.TargetDeta
 		return nil, err
 	}
 
-	opts := &link.UprobeOptions{Address: offset}
+	opts := &link.UprobeOptions{Address: offset, PID: target.PID}
 	l, err := exec.Uprobe("", obj.UprobeExecDC, opts)
 	if err != nil {
 		return nil, err
@@ -148,7 +148,7 @@ type event struct {
 	Query [256]byte
 }
 
-func convertEvent(e *event) *probe.SpanEvent {
+func convertEvent(e *event) []*probe.SpanEvent {
 	query := unix.ByteSliceToString(e.Query[:])
 
 	sc := trace.NewSpanContext(trace.SpanContextConfig{
@@ -170,15 +170,17 @@ func convertEvent(e *event) *probe.SpanEvent {
 		pscPtr = nil
 	}
 
-	return &probe.SpanEvent{
-		SpanName:    "DB",
-		StartTime:   int64(e.StartTime),
-		EndTime:     int64(e.EndTime),
-		SpanContext: &sc,
-		Attributes: []attribute.KeyValue{
-			semconv.DBStatementKey.String(query),
+	return []*probe.SpanEvent{
+		{
+			SpanName:    "DB",
+			StartTime:   int64(e.StartTime),
+			EndTime:     int64(e.EndTime),
+			SpanContext: &sc,
+			Attributes: []attribute.KeyValue{
+				semconv.DBStatementKey.String(query),
+			},
+			ParentSpanContext: pscPtr,
 		},
-		ParentSpanContext: pscPtr,
 	}
 }
 

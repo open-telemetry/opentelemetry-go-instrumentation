@@ -25,7 +25,8 @@ import (
 	"github.com/go-logr/logr"
 
 	dbSql "go.opentelemetry.io/auto/internal/pkg/instrumentation/bpf/database/sql"
-	"go.opentelemetry.io/auto/internal/pkg/instrumentation/bpf/github.com/gin-gonic/gin"
+	kafkaConsumer "go.opentelemetry.io/auto/internal/pkg/instrumentation/bpf/github.com/segmentio/kafka-go/consumer"
+	kafkaProducer "go.opentelemetry.io/auto/internal/pkg/instrumentation/bpf/github.com/segmentio/kafka-go/producer"
 	otelTraceGlobal "go.opentelemetry.io/auto/internal/pkg/instrumentation/bpf/go.opentelemetry.io/otel/traceglobal"
 	grpcClient "go.opentelemetry.io/auto/internal/pkg/instrumentation/bpf/google.golang.org/grpc/client"
 	grpcServer "go.opentelemetry.io/auto/internal/pkg/instrumentation/bpf/google.golang.org/grpc/server"
@@ -70,10 +71,32 @@ func NewManager(logger logr.Logger, otelController *opentelemetry.Controller, gl
 	return m, nil
 }
 
+func (m *Manager) validateProbeDependents(id probe.ID, symbols []probe.FunctionSymbol) error {
+	// Validate that dependent probes point to real standalone probes.
+	funcsMap := make(map[string]interface{})
+	for _, s := range symbols {
+		funcsMap[s.Symbol] = nil
+	}
+
+	for _, s := range symbols {
+		for _, d := range s.DependsOn {
+			if _, exists := funcsMap[d]; !exists {
+				return fmt.Errorf("library %s has declared a dependent function %s for probe %s which does not exist, aborting", id, d, s.Symbol)
+			}
+		}
+	}
+
+	return nil
+}
+
 func (m *Manager) registerProbe(p probe.Probe) error {
 	id := p.Manifest().Id
 	if _, exists := m.probes[id]; exists {
 		return fmt.Errorf("library %s registered twice, aborting", id)
+	}
+
+	if err := m.validateProbeDependents(id, p.Manifest().Symbols); err != nil {
+		return err
 	}
 
 	m.probes[id] = p
@@ -85,7 +108,7 @@ func (m *Manager) GetRelevantFuncs() map[string]interface{} {
 	funcsMap := make(map[string]interface{})
 	for _, i := range m.probes {
 		for _, s := range i.Manifest().Symbols {
-			funcsMap[s] = nil
+			funcsMap[s.Symbol] = nil
 		}
 	}
 
@@ -103,9 +126,11 @@ func (m *Manager) FilterUnusedProbes(target *process.TargetDetails) {
 	for name, inst := range m.probes {
 		funcsFound := false
 		for _, s := range inst.Manifest().Symbols {
-			if _, exists := existingFuncMap[s]; exists {
-				funcsFound = true
-				break
+			if len(s.DependsOn) == 0 {
+				if _, exists := existingFuncMap[s.Symbol]; exists {
+					funcsFound = true
+					break
+				}
 			}
 		}
 
@@ -220,8 +245,9 @@ func (m *Manager) registerProbes() error {
 		grpcServer.New(m.logger),
 		httpServer.New(m.logger),
 		httpClient.New(m.logger),
-		gin.New(m.logger),
 		dbSql.New(m.logger),
+		kafkaProducer.New(m.logger),
+		kafkaConsumer.New(m.logger),
 	}
 
 	if m.globalImpl {

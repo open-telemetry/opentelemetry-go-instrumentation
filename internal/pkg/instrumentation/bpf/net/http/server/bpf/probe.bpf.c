@@ -24,8 +24,6 @@ char __license[] SEC("license") = "Dual MIT/GPL";
 #define MAX_BUCKETS 8
 #define METHOD_MAX_LEN 8
 #define MAX_CONCURRENT 50
-#define W3C_KEY_LENGTH 11
-#define W3C_VAL_LENGTH 55
 #define REMOTE_ADDR_MAX_LEN 256
 #define HOST_MAX_LEN 256
 #define PROTO_MAX_LEN 8

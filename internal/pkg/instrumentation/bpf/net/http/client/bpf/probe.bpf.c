@@ -10,8 +10,6 @@ char __license[] SEC("license") = "Dual MIT/GPL";
 #define MAX_PROTO_SIZE 8
 #define MAX_PATH_SIZE 100
 #define MAX_METHOD_SIZE 10
-#define W3C_KEY_LENGTH 11
-#define W3C_VAL_LENGTH 55
 #define MAX_CONCURRENT 50
 
 struct http_request_t {
@@ -46,6 +44,13 @@ struct
 } http_client_uprobe_storage_map SEC(".maps");
 
 struct {
+	__uint(type, BPF_MAP_TYPE_LRU_HASH);
+	__type(key, void*); // the headers ptr
+	__type(value, void*); // request key, goroutine or context ptr
+	__uint(max_entries, MAX_CONCURRENT);
+} http_headers SEC(".maps");
+
+struct {
 	__uint(type, BPF_MAP_TYPE_PERF_EVENT_ARRAY);
 } events SEC(".maps");
 
@@ -59,107 +64,8 @@ volatile const u64 buckets_ptr_pos;
 volatile const u64 status_code_pos;
 volatile const u64 request_host_pos;
 volatile const u64 request_proto_pos;
-
-static __always_inline long inject_header(void* headers_ptr, struct span_context* propagated_ctx) {
-    // Read the key-value count - this field must be the first one in the hmap struct as documented in src/runtime/map.go
-    u64 curr_keyvalue_count = 0;
-    long res = bpf_probe_read_user(&curr_keyvalue_count, sizeof(curr_keyvalue_count), headers_ptr);
-
-    if (res < 0) {
-        bpf_printk("Couldn't read map key-value count from user");
-        return -1;
-    }
-
-    if (curr_keyvalue_count >= 8) {
-        bpf_printk("Map size is bigger than 8, skipping context propagation");
-        return -1;
-    }
-
-    // Get pointer to temp bucket struct we store in a map (avoiding large local variable on the stack)
-    // Performing read-modify-write on the bucket
-    u32 map_id = 0;
-    struct map_bucket *bucket_map_value = bpf_map_lookup_elem(&golang_mapbucket_storage_map, &map_id);
-    if (!bucket_map_value) {
-        return -1;
-    }
-
-    void *buckets_ptr_ptr = (void*) (headers_ptr + buckets_ptr_pos);
-    void *bucket_ptr = 0; // The actual pointer to the buckets
-
-    if (curr_keyvalue_count == 0) {
-        // No key-value pairs in the Go map, need to "allocate" memory for the user
-        bucket_ptr = write_target_data(bucket_map_value, sizeof(struct map_bucket));
-        if (bucket_ptr == NULL) {
-            bpf_printk("inject_header: Failed to write bucket to user");
-            return -1;
-        }
-        // Update the buckets pointer in the hmap struct to point to newly allocated bucket
-        res = bpf_probe_write_user(buckets_ptr_ptr, &bucket_ptr, sizeof(bucket_ptr));
-        if (res < 0) {
-            bpf_printk("Failed to update the map bucket pointer for the user");
-            return -1;
-        }
-    } else {
-        // There is at least 1 key-value pair, hence the bucket pointer from the user is valid
-        // Read the bucket pointer
-        res = bpf_probe_read_user(&bucket_ptr, sizeof(bucket_ptr), buckets_ptr_ptr);
-        // Read the user's bucket to the eBPF map entry
-        bpf_probe_read_user(bucket_map_value, sizeof(struct map_bucket), bucket_ptr);
-    }
-
-    u8 bucket_index = curr_keyvalue_count & 0x7;
-
-    char traceparent_tophash = 0xee;
-    bucket_map_value->tophash[bucket_index] = traceparent_tophash;
-
-    // Prepare the key string for the user
-    char key[W3C_KEY_LENGTH] = "traceparent";
-    void *ptr = write_target_data(key, W3C_KEY_LENGTH);
-    if (ptr == NULL) {
-        bpf_printk("inject_header: Failed to write key to user");
-        return -1;
-    }
-    bucket_map_value->keys[bucket_index] = (struct go_string) {.len = W3C_KEY_LENGTH, .str = ptr};
-
-    // Prepare the value string slice
-    // First the value string which constains the span context
-    char val[W3C_VAL_LENGTH];
-    span_context_to_w3c_string(propagated_ctx, val);
-    ptr = write_target_data(val, sizeof(val));
-    if(ptr == NULL) {
-        bpf_printk("inject_header: Failed to write value to user");
-        return -1;
-    }
-
-    // The go string pointing to the above val
-    struct go_string header_value = {.len = W3C_VAL_LENGTH, .str = ptr};
-    ptr = write_target_data((void*)&header_value, sizeof(header_value));
-    if(ptr == NULL) {
-        bpf_printk("inject_header: Failed to write go_string to user");
-        return -1;
-    }
-
-    // Last, go_slice pointing to the above go_string
-    bucket_map_value->values[bucket_index] = (struct go_slice) {.array = ptr, .cap = 1, .len = 1};
-
-    // Update the map header count field
-    curr_keyvalue_count += 1;
-    res = bpf_probe_write_user(headers_ptr, &curr_keyvalue_count, sizeof(curr_keyvalue_count));
-    if (res < 0) {
-        bpf_printk("Failed to update key-value count in map header");
-        return -1;
-    }
-
-    // Update the bucket
-    res = bpf_probe_write_user(bucket_ptr, bucket_map_value, sizeof(struct map_bucket));
-    if (res < 0) {
-        bpf_printk("Failed to update bucket content");
-        return -1;
-    }
-
-    bpf_memset((unsigned char *)bucket_map_value, sizeof(struct map_bucket), 0);
-    return 0;
-}
+volatile const u64 io_writer_buf_ptr_pos;
+volatile const u64 io_writer_n_pos;
 
 // This instrumentation attaches uprobe to the following function:
 // func net/http/transport.roundTrip(req *Request) (*Response, error)
@@ -228,9 +134,8 @@ int uprobe_Transport_roundTrip(struct pt_regs *ctx) {
     // get headers from Request
     void *headers_ptr = 0;
     bpf_probe_read(&headers_ptr, sizeof(headers_ptr), (void *)(req_ptr+headers_ptr_pos));
-    long res = inject_header(headers_ptr, &httpReq->sc);
-    if (res < 0) {
-        bpf_printk("uprobe_Transport_roundTrip: Failed to inject header");
+    if (headers_ptr) {
+        bpf_map_update_elem(&http_headers, &headers_ptr, &key, 0);
     }
 
     // Write event
@@ -268,3 +173,74 @@ int uprobe_Transport_roundTrip_Returns(struct pt_regs *ctx) {
     bpf_map_delete_elem(&http_events, &key);
     return 0;
 }
+
+#ifndef NO_HEADER_PROPAGATION
+// This instrumentation attaches uprobe to the following function:
+// func (h Header) net/http.Header.writeSubset(w io.Writer, exclude map[string]bool, trace *httptrace.ClientTrace) error
+SEC("uprobe/header_writeSubset")
+int uprobe_writeSubset(struct pt_regs *ctx) {
+    u64 headers_pos = 1;
+    void *headers_ptr = get_argument(ctx, headers_pos);
+
+    u64 io_writer_pos = 3;
+    void *io_writer_ptr = get_argument(ctx, io_writer_pos);
+
+    void **key_ptr = bpf_map_lookup_elem(&http_headers, &headers_ptr);
+    if (key_ptr) {
+        void *key = *key_ptr;
+
+        struct http_request_t *http_req_span = bpf_map_lookup_elem(&http_events, &key);
+        if (http_req_span) {
+            char tp[W3C_VAL_LENGTH];
+            span_context_to_w3c_string(&http_req_span->sc, tp);
+
+            void *buf_ptr = 0;
+            bpf_probe_read(&buf_ptr, sizeof(buf_ptr), (void *)(io_writer_ptr + io_writer_buf_ptr_pos)); // grab buf ptr
+            if (!buf_ptr) {
+                bpf_printk("uprobe_writeSubset: Failed to get buf from io writer");
+                goto done;
+            }
+
+            s64 size = 0;
+            if (bpf_probe_read(&size, sizeof(s64), (void *)(io_writer_ptr + io_writer_buf_ptr_pos + offsetof(struct go_slice, cap)))) { // grab capacity
+                bpf_printk("uprobe_writeSubset: Failed to get size from io writer");
+                goto done;
+            }
+
+            s64 len = 0;
+            if (bpf_probe_read(&len, sizeof(s64), (void *)(io_writer_ptr + io_writer_n_pos))) { // grab len
+                bpf_printk("uprobe_writeSubset: Failed to get len from io writer");
+                goto done;
+            }
+
+            if (len < (size - W3C_VAL_LENGTH - W3C_KEY_LENGTH - 4)) { // 4 = strlen(":_") + strlen("\r\n")
+                char tp_str[W3C_KEY_LENGTH + 2 + W3C_VAL_LENGTH + 2] = "Traceparent: ";
+                char end[2] = "\r\n";
+                __builtin_memcpy(&tp_str[W3C_KEY_LENGTH + 2], tp, sizeof(tp));
+                __builtin_memcpy(&tp_str[W3C_KEY_LENGTH + 2 + W3C_VAL_LENGTH], end, sizeof(end));
+                if (bpf_probe_write_user(buf_ptr + (len & 0x0ffff), tp_str, sizeof(tp_str))) {
+                    bpf_printk("uprobe_writeSubset: Failed to write trace parent key in buffer");
+                    goto done;
+                }
+                len += W3C_KEY_LENGTH + 2 + W3C_VAL_LENGTH + 2;
+                if (bpf_probe_write_user((void *)(io_writer_ptr + io_writer_n_pos), &len, sizeof(len))) {
+                    bpf_printk("uprobe_writeSubset: Failed to change io writer n");
+                    goto done;
+                }
+            }
+        }
+    }
+
+done:
+    bpf_map_delete_elem(&http_headers, &headers_ptr);
+    return 0;
+}
+#else
+// Not used at all, empty stub needed to ensure both versions of the bpf program are
+// able to compile with bpf2go. The userspace code will avoid loading the probe if
+// context propagation is not enabled.
+SEC("uprobe/header_writeSubset")
+int uprobe_writeSubset(struct pt_regs *ctx) {
+    return 0;
+}
+#endif

@@ -77,7 +77,7 @@ type Base[BPFObj any, BPFEvent any] struct {
 	// probe.
 	SpecFn func() (*ebpf.CollectionSpec, error)
 	// ProcessFn processes probe events into a uniform Event type.
-	ProcessFn func(*BPFEvent) *SpanEvent
+	ProcessFn func(*BPFEvent) []*SpanEvent
 
 	reader  *perf.Reader
 	closers []io.Closer
@@ -87,9 +87,9 @@ type Base[BPFObj any, BPFEvent any] struct {
 func (i *Base[BPFObj, BPFEvent]) Manifest() Manifest {
 	structfields := consts(i.Consts).structFields()
 
-	symbols := make([]string, 0, len(i.Uprobes))
+	symbols := make([]FunctionSymbol, 0, len(i.Uprobes))
 	for _, up := range i.Uprobes {
-		symbols = append(symbols, up.Sym)
+		symbols = append(symbols, FunctionSymbol{Symbol: up.Sym, DependsOn: up.DependsOn})
 	}
 
 	return NewManifest(i.ID, structfields, symbols)
@@ -184,16 +184,16 @@ func (i *Base[BPFObj, BPFEvent]) Run(dest chan<- *Event) {
 			i.Logger.Error(err, "failed to process perf record")
 		}
 		e := &Event{
-			Package:   i.ID.InstrumentedPkg,
-			Kind:      i.ID.SpanKind,
-			SpanEvent: *se,
+			Package:    i.ID.InstrumentedPkg,
+			Kind:       i.ID.SpanKind,
+			SpanEvents: se,
 		}
 
 		dest <- e
 	}
 }
 
-func (i *Base[BPFObj, BPFEvent]) processRecord(record perf.Record) (*SpanEvent, error) {
+func (i *Base[BPFObj, BPFEvent]) processRecord(record perf.Record) ([]*SpanEvent, error) {
 	buf := bytes.NewBuffer(record.RawSample)
 
 	var event BPFEvent
@@ -236,7 +236,8 @@ type Uprobe[BPFObj any] struct {
 	// Optional is a boolean flag informing if the Uprobe is optional. If the
 	// Uprobe is optional and fails to attach, the error is logged and
 	// processing continues.
-	Optional bool
+	Optional  bool
+	DependsOn []string
 }
 
 // Const is an constant that needs to be injected into an eBPF program.

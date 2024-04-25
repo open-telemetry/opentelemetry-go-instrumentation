@@ -51,27 +51,29 @@ func (c *Controller) getTracer(pkg string) trace.Tracer {
 
 // Trace creates a trace span for event.
 func (c *Controller) Trace(event *probe.Event) {
-	c.logger.Info("got event", "attrs", event.Attributes, "status", event.Status)
-	ctx := context.Background()
+	for _, se := range event.SpanEvents {
+		c.logger.Info("got event", "kind", event.Kind.String(), "pkg", event.Package, "attrs", se.Attributes, "traceID", se.SpanContext.TraceID().String(), "spanID", se.SpanContext.SpanID().String())
+		ctx := context.Background()
 
-	if event.SpanContext == nil {
-		c.logger.Info("got event without context - dropping")
-		return
+		if se.SpanContext == nil {
+			c.logger.Info("got event without context - dropping")
+			return
+		}
+
+		// TODO: handle remote parent
+		if se.ParentSpanContext != nil {
+			ctx = trace.ContextWithSpanContext(ctx, *se.ParentSpanContext)
+		}
+
+		ctx = ContextWithEBPFEvent(ctx, *se)
+		_, span := c.getTracer(event.Package).
+			Start(ctx, se.SpanName,
+				trace.WithAttributes(se.Attributes...),
+				trace.WithSpanKind(event.Kind),
+				trace.WithTimestamp(c.convertTime(se.StartTime)))
+		span.SetStatus(se.Status.Code, se.Status.Description)
+		span.End(trace.WithTimestamp(c.convertTime(se.EndTime)))
 	}
-
-	// TODO: handle remote parent
-	if event.ParentSpanContext != nil {
-		ctx = trace.ContextWithSpanContext(ctx, *event.ParentSpanContext)
-	}
-
-	ctx = ContextWithEBPFEvent(ctx, *event)
-	_, span := c.getTracer(event.Package).
-		Start(ctx, event.SpanName,
-			trace.WithAttributes(event.Attributes...),
-			trace.WithSpanKind(event.Kind),
-			trace.WithTimestamp(c.convertTime(event.StartTime)))
-	span.SetStatus(event.Status.Code, event.Status.Description)
-	span.End(trace.WithTimestamp(c.convertTime(event.EndTime)))
 }
 
 func (c *Controller) convertTime(t int64) time.Time {

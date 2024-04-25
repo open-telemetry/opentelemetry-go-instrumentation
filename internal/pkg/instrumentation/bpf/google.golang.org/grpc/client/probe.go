@@ -113,7 +113,7 @@ func uprobeFn(name string, exec *link.Executable, target *process.TargetDetails,
 		return nil, err
 	}
 
-	opts := &link.UprobeOptions{Address: offset}
+	opts := &link.UprobeOptions{Address: offset, PID: target.PID}
 	l, err := exec.Uprobe("", prog, opts)
 	if err != nil {
 		return nil, err
@@ -152,7 +152,7 @@ type event struct {
 }
 
 // According to https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/trace/semantic_conventions/rpc.md
-func convertEvent(e *event) *probe.SpanEvent {
+func convertEvent(e *event) []*probe.SpanEvent {
 	method := unix.ByteSliceToString(e.Method[:])
 	target := unix.ByteSliceToString(e.Target[:])
 	var attrs []attribute.KeyValue
@@ -188,12 +188,14 @@ func convertEvent(e *event) *probe.SpanEvent {
 		pscPtr = nil
 	}
 
-	return &probe.SpanEvent{
-		SpanName:          method,
-		StartTime:         int64(e.StartTime),
-		EndTime:           int64(e.EndTime),
-		Attributes:        attrs,
-		SpanContext:       &sc,
-		ParentSpanContext: pscPtr,
+	return []*probe.SpanEvent{
+		{
+			SpanName:          method,
+			StartTime:         int64(e.StartTime),
+			EndTime:           int64(e.EndTime),
+			Attributes:        attrs,
+			SpanContext:       &sc,
+			ParentSpanContext: pscPtr,
+		},
 	}
 }

@@ -146,7 +146,7 @@ func uprobeServeHTTP(name string, exec *link.Executable, target *process.TargetD
 		return nil, err
 	}
 
-	opts := &link.UprobeOptions{Address: offset}
+	opts := &link.UprobeOptions{Address: offset, PID: target.PID}
 	l, err := exec.Uprobe("", obj.UprobeHandlerFuncServeHTTP, opts)
 	if err != nil {
 		return nil, err
@@ -183,7 +183,7 @@ type event struct {
 	Proto       [8]byte
 }
 
-func convertEvent(e *event) *probe.SpanEvent {
+func convertEvent(e *event) []*probe.SpanEvent {
 	path := unix.ByteSliceToString(e.Path[:])
 	method := unix.ByteSliceToString(e.Method[:])
 	patternPath := unix.ByteSliceToString(e.PathPattern[:])
@@ -252,12 +252,14 @@ func convertEvent(e *event) *probe.SpanEvent {
 		attributes = append(attributes, semconv.HTTPRouteKey.String(patternPath))
 	}
 
-	return &probe.SpanEvent{
-		SpanName:          spanName,
-		StartTime:         int64(e.StartTime),
-		EndTime:           int64(e.EndTime),
-		SpanContext:       &sc,
-		ParentSpanContext: pscPtr,
-		Attributes:        attributes,
+	return []*probe.SpanEvent{
+		{
+			SpanName:          spanName,
+			StartTime:         int64(e.StartTime),
+			EndTime:           int64(e.EndTime),
+			SpanContext:       &sc,
+			ParentSpanContext: pscPtr,
+			Attributes:        attributes,
+		},
 	}
 }

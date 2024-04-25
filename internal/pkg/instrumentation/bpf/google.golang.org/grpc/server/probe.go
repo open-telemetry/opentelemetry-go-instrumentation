@@ -119,7 +119,7 @@ func uprobeHandleStream(name string, exec *link.Executable, target *process.Targ
 		return nil, err
 	}
 
-	opts := &link.UprobeOptions{Address: offset}
+	opts := &link.UprobeOptions{Address: offset, PID: target.PID}
 	l, err := exec.Uprobe("", obj.UprobeServerHandleStream, opts)
 	if err != nil {
 		return nil, err
@@ -149,7 +149,7 @@ func uprobeOperateHeaders(name string, exec *link.Executable, target *process.Ta
 		return nil, err
 	}
 
-	opts := &link.UprobeOptions{Address: offset}
+	opts := &link.UprobeOptions{Address: offset, PID: target.PID}
 	l, err := exec.Uprobe("", obj.UprobeHttp2ServerOperateHeader, opts)
 	if err != nil {
 		return nil, err
@@ -163,7 +163,7 @@ type event struct {
 	Method [100]byte
 }
 
-func convertEvent(e *event) *probe.SpanEvent {
+func convertEvent(e *event) []*probe.SpanEvent {
 	method := unix.ByteSliceToString(e.Method[:])
 
 	sc := trace.NewSpanContext(trace.SpanContextConfig{
@@ -185,15 +185,17 @@ func convertEvent(e *event) *probe.SpanEvent {
 		pscPtr = nil
 	}
 
-	return &probe.SpanEvent{
-		SpanName:  method,
-		StartTime: int64(e.StartTime),
-		EndTime:   int64(e.EndTime),
-		Attributes: []attribute.KeyValue{
-			semconv.RPCSystemKey.String("grpc"),
-			semconv.RPCServiceKey.String(method),
+	return []*probe.SpanEvent{
+		{
+			SpanName:  method,
+			StartTime: int64(e.StartTime),
+			EndTime:   int64(e.EndTime),
+			Attributes: []attribute.KeyValue{
+				semconv.RPCSystemKey.String("grpc"),
+				semconv.RPCServiceKey.String(method),
+			},
+			ParentSpanContext: pscPtr,
+			SpanContext:       &sc,
 		},
-		ParentSpanContext: pscPtr,
-		SpanContext:       &sc,
 	}
 }

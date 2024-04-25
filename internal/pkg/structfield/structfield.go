@@ -19,6 +19,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"sort"
+	"strings"
 	"sync"
 
 	"github.com/hashicorp/go-version"
@@ -248,7 +249,7 @@ func (o *Offsets) Get(ver *version.Version) (uint64, bool) {
 	v, ok := o.values[newVerKey(ver)]
 	o.mu.RUnlock()
 
-	if !ok && o.uo.valid {
+	if strings.HasPrefix(ver.String(), "0.0.0") && !ok && o.uo.valid {
 		// If we don't have the exact version, but we only have one offset, we
 		// fallback to use that offset. This can happen when a non official version is being used
 		// which contains commit hash in the version string.

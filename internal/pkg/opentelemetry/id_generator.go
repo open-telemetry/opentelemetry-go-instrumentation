@@ -31,18 +31,18 @@ func NewEBPFSourceIDGenerator() *EBPFSourceIDGenerator {
 }
 
 // ContextWithEBPFEvent returns a copy of parent in which event is stored.
-func ContextWithEBPFEvent(parent context.Context, event probe.Event) context.Context {
+func ContextWithEBPFEvent(parent context.Context, event probe.SpanEvent) context.Context {
 	return context.WithValue(parent, eBPFEventKey{}, event)
 }
 
 // EventFromContext returns the event within ctx if one exists.
-func EventFromContext(ctx context.Context) *probe.Event {
+func EventFromContext(ctx context.Context) *probe.SpanEvent {
 	val := ctx.Value(eBPFEventKey{})
 	if val == nil {
 		return nil
 	}
 
-	event, ok := val.(probe.Event)
+	event, ok := val.(probe.SpanEvent)
 	if !ok {
 		return nil
 	}

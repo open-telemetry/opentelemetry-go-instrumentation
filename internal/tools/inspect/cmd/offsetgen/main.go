@@ -85,6 +85,11 @@ func manifests() ([]inspect.Manifest, error) {
 		return nil, fmt.Errorf("failed to get \"go.opentelemetry.io/otel\" versions: %w", err)
 	}
 
+	kafkaGoVers, err := PkgVersions("github.com/segmentio/kafka-go")
+	if err != nil {
+		return nil, fmt.Errorf("failed to get \"github.com/segmentio/kafka-go\" versions: %w", err)
+	}
+
 	ren := func(src string) inspect.Renderer {
 		return inspect.NewRenderer(logger, src, inspect.DefaultFS)
 	}
@@ -120,6 +125,8 @@ func manifests() ([]inspect.Manifest, error) {
 				structfield.NewID("std", "net/http", "Request", "pat"),
 				structfield.NewID("std", "net/http", "pattern", "str"),
 				structfield.NewID("std", "net/url", "URL", "Path"),
+				structfield.NewID("std", "bufio", "Writer", "buf"),
+				structfield.NewID("std", "bufio", "Writer", "n"),
 			},
 		},
 		{
@@ -154,6 +161,24 @@ func manifests() ([]inspect.Manifest, error) {
 			},
 			StructFields: []structfield.ID{
 				structfield.NewID("go.opentelemetry.io/otel", "go.opentelemetry.io/otel/internal/global", "tracer", "delegate"),
+			},
+		},
+		{
+			Application: inspect.Application{
+				Renderer: ren("templates/github.com/segmentio/kafka-go/*.tmpl"),
+				Versions: kafkaGoVers,
+			},
+			StructFields: []structfield.ID{
+				structfield.NewID("github.com/segmentio/kafka-go", "github.com/segmentio/kafka-go", "Message", "Topic"),
+				structfield.NewID("github.com/segmentio/kafka-go", "github.com/segmentio/kafka-go", "Message", "Partition"),
+				structfield.NewID("github.com/segmentio/kafka-go", "github.com/segmentio/kafka-go", "Message", "Offset"),
+				structfield.NewID("github.com/segmentio/kafka-go", "github.com/segmentio/kafka-go", "Message", "Key"),
+				structfield.NewID("github.com/segmentio/kafka-go", "github.com/segmentio/kafka-go", "Message", "Headers"),
+				structfield.NewID("github.com/segmentio/kafka-go", "github.com/segmentio/kafka-go", "Message", "Time"),
+				structfield.NewID("github.com/segmentio/kafka-go", "github.com/segmentio/kafka-go", "Writer", "Topic"),
+				structfield.NewID("github.com/segmentio/kafka-go", "github.com/segmentio/kafka-go", "Reader", "config"),
+				structfield.NewID("github.com/segmentio/kafka-go", "github.com/segmentio/kafka-go", "ReaderConfig", "GroupID"),
+				structfield.NewID("github.com/segmentio/kafka-go", "github.com/segmentio/kafka-go", "Conn", "clientID"),
 			},
 		},
 	}, nil
