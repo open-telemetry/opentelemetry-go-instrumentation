@@ -31,7 +31,7 @@ SCOPE="go.opentelemetry.io/auto/net/http"
 
 @test "client :: includes url.path attribute" {
   result=$(client_span_attributes_for ${SCOPE} | jq "select(.key == \"url.path\").value.stringValue")
-  assert_equal "$result" '"/hello"'
+  assert_equal "$result" '"/hello/42"'
 }
 
 @test "server :: includes hhttp.response.status_code attribute" {
