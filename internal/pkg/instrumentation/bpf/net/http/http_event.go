@@ -12,6 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Copyright 2023 The Go Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
+
 package http
 
 import (
@@ -75,7 +79,6 @@ var (
 //	[METHOD] [HOST]/[PATH]
 //
 // https://cs.opensource.google/go/go/+/master:src/net/http/pattern.go;l=84;drc=b47f2febea5c570fef4a5c27a46473f511fbdaa3?q=PATTERN%20STRUCT&ss=go%2Fgo
-// Copyright 2023 The Go Authors. All rights reserved.
 func ParsePattern(s string) (path string, err error) {
 	if len(s) == 0 {
 		return "", ErrEmptyPattern
