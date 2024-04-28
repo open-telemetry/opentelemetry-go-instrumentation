@@ -64,6 +64,7 @@
                   }
                 }
               ],
+              "flags": 768,
               "kind": 2,
               "name": "/helloworld.Greeter/SayHello",
               "parentSpanId": "xxxxx",
@@ -98,6 +99,7 @@
                   }
                 }
               ],
+              "flags": 256,
               "kind": 3,
               "name": "/helloworld.Greeter/SayHello",
               "parentSpanId": "",

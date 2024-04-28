@@ -64,6 +64,7 @@
                   }
                 }
               ],
+              "flags": 768,
               "kind": 3,
               "name": "child override",
               "parentSpanId": "xxxxx",
@@ -101,6 +102,7 @@
                   }
                 }
               ],
+              "flags": 256,
               "kind": 3,
               "name": "parent",
               "parentSpanId": "",
