@@ -82,6 +82,7 @@
                   }
                 }
               ],
+              "flags": 256,
               "kind": 4,
               "name": "topic1 publish",
               "parentSpanId": "",
@@ -122,6 +123,7 @@
                   }
                 }
               ],
+              "flags": 256,
               "kind": 4,
               "name": "topic2 publish",
               "parentSpanId": "",
@@ -227,6 +229,7 @@
                   }
                 }
               ],
+              "flags": 768,
               "kind": 5,
               "name": "topic1 receive",
               "parentSpanId": "xxxxx",

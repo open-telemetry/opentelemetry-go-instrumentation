@@ -58,6 +58,7 @@
                   }
                 }
               ],
+              "flags": 768,
               "kind": 3,
               "name": "DB",
               "parentSpanId": "xxxxx",
@@ -124,6 +125,7 @@
                   }
                 }
               ],
+              "flags": 768,
               "kind": 2,
               "name": "GET",
               "parentSpanId": "xxxxx",
@@ -170,6 +172,7 @@
                   }
                 }
               ],
+              "flags": 256,
               "kind": 3,
               "name": "GET",
               "parentSpanId": "",
