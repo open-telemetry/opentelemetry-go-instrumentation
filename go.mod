@@ -1,6 +1,8 @@
 module go.opentelemetry.io/auto
 
-go 1.21
+go 1.21.0
+
+toolchain go1.22.2
 
 retract (
 	v0.6.5 // Contains retractions only.
@@ -18,7 +20,7 @@ retract (
 )
 
 require (
-	github.com/cilium/ebpf v0.12.3
+	github.com/cilium/ebpf v0.15.0
 	github.com/gin-gonic/gin v1.9.1
 	github.com/go-logr/logr v1.4.1
 	github.com/go-logr/stdr v1.2.2
