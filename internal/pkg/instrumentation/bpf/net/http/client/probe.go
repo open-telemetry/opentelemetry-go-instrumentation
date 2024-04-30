@@ -223,8 +223,11 @@ func convertEvent(e *event) []*probe.SpanEvent {
 
 	attrs := []attribute.KeyValue{
 		semconv.HTTPRequestMethodKey.String(method),
-		semconv.URLPath(path),
 		semconv.HTTPResponseStatusCodeKey.Int(int(e.StatusCode)),
+	}
+
+	if path != "" {
+		attrs = append(attrs, semconv.HTTPURL(path))
 	}
 
 	// Server address and port
