@@ -82,17 +82,13 @@ func (a *Analyzer) Analyze(pid int, relevantFuncs map[string]interface{}) (*Targ
 		return nil, err
 	}
 
-	buildInfo, err := buildinfo.Read(f)
-	if err != nil {
-		return nil, err
-	}
-	goVersion, err := version.NewVersion(strings.ReplaceAll(buildInfo.GoVersion, "go", ""))
+	goVersion, err := version.NewVersion(strings.ReplaceAll(a.BuildInfo.GoVersion, "go", ""))
 	if err != nil {
 		return nil, err
 	}
 	result.GoVersion = goVersion
-	result.Libraries = make(map[string]*version.Version, len(buildInfo.Deps)+1)
-	for _, dep := range buildInfo.Deps {
+	result.Libraries = make(map[string]*version.Version, len(a.BuildInfo.Deps)+1)
+	for _, dep := range a.BuildInfo.Deps {
 		depVersion, err := version.NewVersion(dep.Version)
 		if err != nil {
 			a.logger.Error(err, "error parsing module version")
@@ -116,6 +112,22 @@ func (a *Analyzer) Analyze(pid int, relevantFuncs map[string]interface{}) (*Targ
 	}
 
 	return result, nil
+}
+
+func (a *Analyzer) SetBuildInfo(pid int) error {
+	f, err := os.Open(fmt.Sprintf("/proc/%d/exe", pid))
+	if err != nil {
+		return err
+	}
+
+	defer f.Close()
+	bi, err := buildinfo.Read(f)
+	if err != nil {
+		return err
+	}
+
+	a.BuildInfo = bi
+	return nil
 }
 
 func (a *Analyzer) findFunctions(elfF *elf.File, relevantFuncs map[string]interface{}) ([]*binary.Func, error) {

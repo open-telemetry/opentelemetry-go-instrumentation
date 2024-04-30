@@ -16,6 +16,7 @@ package auto
 
 import (
 	"context"
+	"debug/buildinfo"
 	"errors"
 	"fmt"
 	"log"
@@ -109,7 +110,12 @@ func NewInstrumentation(ctx context.Context, opts ...InstrumentationOption) (*In
 		return nil, err
 	}
 
-	ctrl, err := opentelemetry.NewController(logger, c.tracerProvider(), Version())
+	err = pa.SetBuildInfo(pid)
+	if err != nil {
+		return nil, err
+	}
+
+	ctrl, err := opentelemetry.NewController(logger, c.tracerProvider(pa.BuildInfo), Version())
 	if err != nil {
 		return nil, err
 	}
@@ -220,18 +226,28 @@ func (c instConfig) validate() error {
 	return c.target.Validate()
 }
 
-func (c instConfig) tracerProvider() *trace.TracerProvider {
+func (c instConfig) tracerProvider(bi *buildinfo.BuildInfo) *trace.TracerProvider {
 	return trace.NewTracerProvider(
 		trace.WithSampler(c.sampler),
-		trace.WithResource(c.res()),
+		trace.WithResource(c.res(bi)),
 		trace.WithBatcher(c.traceExp),
 		trace.WithIDGenerator(opentelemetry.NewEBPFSourceIDGenerator()),
 	)
 }
 
-func (c instConfig) res() *resource.Resource {
-	runVer := strings.TrimPrefix(runtime.Version(), "go")
-	runName := runtime.Compiler
+func (c instConfig) res(bi *buildinfo.BuildInfo) *resource.Resource {
+	runVer := strings.ReplaceAll(bi.GoVersion, "go", "")
+
+	var compiler string
+
+	for _, setting := range bi.Settings {
+		if setting.Key == "-compiler" {
+			compiler = setting.Value
+			break
+		}
+	}
+
+	runName := compiler
 	if runName == "gc" {
 		runName = "go"
 	}
