@@ -16,7 +16,8 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 ### Fixed
 
 - Change HTTP client span name to `{http.request.method}` ([#775](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/775))
-- Support empty url path in HTTP client probe ([#810](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/810))
+- Don't set empty URL path in HTTP client probe. ([#810](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/810))
+- Don't fail HTTP client probe attribute resolution on empty URL path. ([#810](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/810))
 
 
 ## [v0.12.0-alpha] - 2024-04-10
