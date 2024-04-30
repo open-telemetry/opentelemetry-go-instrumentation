@@ -50,12 +50,12 @@ func newCache(l logr.Logger) *Cache {
 	return &Cache{log: l.WithName("cache")}
 }
 
-// GetOffset returns the cached offset and true for the id at the specified
-// version. If the cache does not contain a valid offset for the provided
+// GetOffset returns the cached offset key and true for the id at the specified
+// version is found in the cache. If the cache does not contain a valid offset for the provided
 // values, 0 and false are returned.
-func (c *Cache) GetOffset(ver *version.Version, id structfield.ID) (uint64, bool) {
+func (c *Cache) GetOffset(ver *version.Version, id structfield.ID) (structfield.OffsetKey, bool) {
 	if c.data == nil {
-		return 0, false
+		return structfield.OffsetKey{}, false
 	}
 
 	off, ok := c.data.GetOffset(id, ver)
