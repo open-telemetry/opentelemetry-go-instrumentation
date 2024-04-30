@@ -227,7 +227,7 @@ func convertEvent(e *event) []*probe.SpanEvent {
 	}
 
 	if path != "" {
-		attrs = append(attrs, semconv.HTTPURL(path))
+		attrs = append(attrs, semconv.URLPath(path))
 	}
 
 	// Server address and port
