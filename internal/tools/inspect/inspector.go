@@ -181,11 +181,8 @@ func (i *Inspector) Do(ctx context.Context) (*structfield.Index, error) {
 	for results := range c {
 		for _, r := range results {
 			i.logResult(r)
-			if !r.Found {
-				continue
-			}
 
-			index.PutOffset(r.StructField, r.Version, r.Offset)
+			index.PutOffset(r.StructField, r.Version, r.Offset, r.Valid)
 		}
 	}
 
@@ -206,7 +203,8 @@ type result struct {
 	StructField structfield.ID
 	Version     *version.Version
 	Offset      uint64
-	Found       bool
+	// Valid is true if the offset is valid for the struct field at the specified version.
+	Valid bool
 }
 
 func (i *Inspector) do(ctx context.Context, j job) (out []result, err error) {
@@ -216,8 +214,8 @@ func (i *Inspector) do(ctx context.Context, j job) (out []result, err error) {
 		out = append(out, result{
 			StructField: f,
 			Version:     j.AppVer,
-			Offset:      o,
-			Found:       ok,
+			Offset:      o.Offset,
+			Valid:       o.Valid,
 		})
 		if !ok {
 			uncachedIndices = append(uncachedIndices, len(out)-1)
@@ -247,7 +245,7 @@ func (i *Inspector) do(ctx context.Context, j job) (out []result, err error) {
 	defer app.Close()
 
 	for _, i := range uncachedIndices {
-		out[i].Offset, out[i].Found = app.GetOffset(out[i].StructField)
+		out[i].Offset, out[i].Valid = app.GetOffset(out[i].StructField)
 	}
 
 	return out, nil
@@ -256,7 +254,7 @@ func (i *Inspector) do(ctx context.Context, j job) (out []result, err error) {
 func (i *Inspector) logResult(r result) {
 	msg := "offset "
 	kv := []interface{}{"version", r.Version, "id", r.StructField}
-	if !r.Found {
+	if !r.Valid {
 		msg += "not found"
 	} else {
 		msg += "found"

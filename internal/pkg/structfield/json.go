@@ -17,7 +17,7 @@ package structfield
 import "github.com/hashicorp/go-version"
 
 type jsonOffset struct {
-	Offset   uint64             `json:"offset"`
+	Offset   *uint64            `json:"offset"`
 	Versions []*version.Version `json:"versions"`
 }
 
@@ -27,11 +27,20 @@ type jsonField struct {
 }
 
 func (jf *jsonField) addOffsets(off *Offsets) {
+	var jOff *jsonOffset
 	for o, vers := range off.index() {
-		jOff := find(&jf.Offsets, func(jo *jsonOffset) bool {
-			return o == jo.Offset
-		})
-		jOff.Offset = o
+		if !o.Valid {
+			jOff = find(&jf.Offsets, func(jo *jsonOffset) bool {
+				return jo.Offset == nil
+			})
+			jOff.Offset = nil
+		} else {
+			jOff = find(&jf.Offsets, func(jo *jsonOffset) bool {
+				return jo.Offset != nil && o.Offset == *jo.Offset
+			})
+			offTmp := o
+			jOff.Offset = &offTmp.Offset
+		}
 
 		jOff.Versions = mergeSorted(jOff.Versions, vers, func(a, b *version.Version) int {
 			return a.Compare(b)

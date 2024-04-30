@@ -142,15 +142,15 @@
                   }
                 },
                 {
-                  "key": "url.path",
-                  "value": {
-                    "stringValue": "/query_db"
-                  }
-                },
-                {
                   "key": "http.response.status_code",
                   "value": {
                     "intValue": "200"
+                  }
+                },
+                {
+                  "key": "url.path",
+                  "value": {
+                    "stringValue": "/query_db"
                   }
                 },
                 {

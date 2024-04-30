@@ -31,8 +31,11 @@ var (
 	//go:embed offset_results.json
 	offsetsData string
 
-	offsets     = structfield.NewIndex()
+	offsets = structfield.NewIndex()
+	// No offset found in the cache.
 	errNotFound = errors.New("offset not found")
+	// Invalid offset found in the cache. This required field is not supported in the version.
+	errInvalid = errors.New("invalid offset for the field in version")
 )
 
 const (
@@ -140,5 +143,10 @@ func WithOffset(key string, id structfield.ID, ver *version.Version) Option {
 			err: fmt.Errorf("%w: %s (%s)", errNotFound, id, ver),
 		}
 	}
-	return WithKeyValue(key, off)
+	if !off.Valid {
+		return errOpt{
+			err: fmt.Errorf("%w: %s (%s)", errInvalid, id, ver),
+		}
+	}
+	return WithKeyValue(key, off.Offset)
 }
