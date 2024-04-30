@@ -16,6 +16,7 @@ package process
 
 import (
 	"context"
+	"debug/buildinfo"
 	"errors"
 	"io"
 	"os"
@@ -39,7 +40,8 @@ var (
 
 // Analyzer is used to find actively running processes.
 type Analyzer struct {
-	logger logr.Logger
+	logger    logr.Logger
+	BuildInfo *buildinfo.BuildInfo
 }
 
 // NewAnalyzer returns a new [ProcessAnalyzer].
