@@ -117,15 +117,15 @@
                   }
                 },
                 {
-                  "key": "url.path",
-                  "value": {
-                    "stringValue": "/hello-gin"
-                  }
-                },
-                {
                   "key": "http.response.status_code",
                   "value": {
                     "intValue": "200"
+                  }
+                },
+                {
+                  "key": "http.url",
+                  "value": {
+                    "stringValue": "/hello-gin"
                   }
                 },
                 {
