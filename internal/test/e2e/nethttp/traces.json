@@ -123,12 +123,6 @@
                   }
                 },
                 {
-                  "key": "url.path",
-                  "value": {
-                    "stringValue": "/hello/42"
-                  }
-                },
-                {
                   "key": "http.response.status_code",
                   "value": {
                     "intValue": "200"
@@ -137,7 +131,7 @@
                 {
                   "key": "url.path",
                   "value": {
-                    "stringValue": "/hello"
+                    "stringValue": "/hello/42"
                   }
                 },
                 {

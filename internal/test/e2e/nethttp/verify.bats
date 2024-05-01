@@ -9,7 +9,7 @@ SCOPE="go.opentelemetry.io/auto/net/http"
   assert_equal "$result" '"sample-app"'
 }
 
-@test "server :: emits a span name '{http.request.method} {url.path}' (per semconv)" {
+@test "server :: emits a span name '{http.request.method} {http.route}' (per semconv)" {
   result=$(server_span_names_for ${SCOPE})
   assert_equal "$result" '"GET /hello/{id}"'
 }
@@ -89,6 +89,11 @@ SCOPE="go.opentelemetry.io/auto/net/http"
 @test "server :: includes network.peer.address attribute" {
   result=$(server_span_attributes_for ${SCOPE} | jq "select(.key == \"network.peer.address\").value.stringValue")
   assert_equal "$result" '"::1"'
+}
+
+@test "server :: includes http.route attribute" {
+  result=$(server_span_attributes_for ${SCOPE} | jq "select(.key == \"http.route\").value.stringValue")
+  assert_equal "$result" '"/hello/{id}"'
 }
 
 @test "client :: includes server.address attribute" {
