@@ -21,11 +21,13 @@ import (
 	"github.com/cilium/ebpf/link"
 	"github.com/cilium/ebpf/perf"
 	"github.com/go-logr/logr"
+	"github.com/hashicorp/go-version"
 	"go.opentelemetry.io/otel/attribute"
 	semconv "go.opentelemetry.io/otel/semconv/v1.24.0"
 	"go.opentelemetry.io/otel/trace"
 	"golang.org/x/sys/unix"
 
+	"go.opentelemetry.io/auto/internal/pkg/inject"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/bpf/net/http"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/context"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/probe"
@@ -95,6 +97,21 @@ func New(logger logr.Logger) probe.Probe {
 				Key: "proto_pos",
 				Val: structfield.NewID("std", "net/http", "Request", "Proto"),
 			},
+			probe.StructFieldConstMinVersion{
+				StructField: probe.StructFieldConst{
+					Key: "req_pat_pos",
+					Val: structfield.NewID("std", "net/http", "Request", "pat"),
+				},
+				MinVersion: patternPathMinVersion,
+			},
+			probe.StructFieldConstMinVersion{
+				StructField: probe.StructFieldConst{
+					Key: "pat_str_pos",
+					Val: structfield.NewID("std", "net/http", "pattern", "str"),
+				},
+				MinVersion: patternPathMinVersion,
+			},
+			patternPathSupportedConst{},
 		},
 		Uprobes: []probe.Uprobe[bpfObjects]{
 			{
@@ -109,6 +126,18 @@ func New(logger logr.Logger) probe.Probe {
 		SpecFn:    loadBpf,
 		ProcessFn: convertEvent,
 	}
+}
+
+type patternPathSupportedConst struct{}
+
+var (
+	patternPathMinVersion  = version.Must(version.NewVersion("1.22.0"))
+	isPatternPathSupported = false
+)
+
+func (c patternPathSupportedConst) InjectOption(td *process.TargetDetails) (inject.Option, error) {
+	isPatternPathSupported = td.GoVersion.GreaterThanOrEqual(patternPathMinVersion)
+	return inject.WithKeyValue("pattern_path_supported", isPatternPathSupported), nil
 }
 
 func uprobeServeHTTP(name string, exec *link.Executable, target *process.TargetDetails, obj *bpfObjects) ([]link.Link, error) {
@@ -145,17 +174,26 @@ func uprobeServeHTTP(name string, exec *link.Executable, target *process.TargetD
 // request-response.
 type event struct {
 	context.BaseSpanProperties
-	StatusCode uint64
-	Method     [8]byte
-	Path       [128]byte
-	RemoteAddr [256]byte
-	Host       [256]byte
-	Proto      [8]byte
+	StatusCode  uint64
+	Method      [8]byte
+	Path        [128]byte
+	PathPattern [128]byte
+	RemoteAddr  [256]byte
+	Host        [256]byte
+	Proto       [8]byte
 }
 
 func convertEvent(e *event) []*probe.SpanEvent {
-	method := unix.ByteSliceToString(e.Method[:])
 	path := unix.ByteSliceToString(e.Path[:])
+	method := unix.ByteSliceToString(e.Method[:])
+	patternPath := unix.ByteSliceToString(e.PathPattern[:])
+
+	isValidPatternPath := true
+	patternPath, err := http.ParsePattern(patternPath)
+	if err != nil || patternPath == "" {
+		isValidPatternPath = false
+	}
+
 	proto := unix.ByteSliceToString(e.Proto[:])
 
 	sc := trace.NewSpanContext(trace.SpanContextConfig{
@@ -208,11 +246,15 @@ func convertEvent(e *event) []*probe.SpanEvent {
 		}
 	}
 
+	spanName := method
+	if isPatternPathSupported && isValidPatternPath {
+		spanName = spanName + " " + patternPath
+		attributes = append(attributes, semconv.HTTPRouteKey.String(patternPath))
+	}
+
 	return []*probe.SpanEvent{
 		{
-			// Do not include the high-cardinality path here (there is no
-			// templatized path manifest to reference).
-			SpanName:          method,
+			SpanName:          spanName,
 			StartTime:         int64(e.StartTime),
 			EndTime:           int64(e.EndTime),
 			SpanContext:       &sc,

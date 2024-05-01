@@ -21,16 +21,17 @@ type bpfSpanContext struct {
 
 type bpfUprobeDataT struct {
 	Span struct {
-		StartTime  uint64
-		EndTime    uint64
-		Sc         bpfSpanContext
-		Psc        bpfSpanContext
-		StatusCode uint64
-		Method     [8]int8
-		Path       [128]int8
-		RemoteAddr [256]int8
-		Host       [256]int8
-		Proto      [8]int8
+		StartTime   uint64
+		EndTime     uint64
+		Sc          bpfSpanContext
+		Psc         bpfSpanContext
+		StatusCode  uint64
+		Method      [8]int8
+		Path        [128]int8
+		PathPattern [128]int8
+		RemoteAddr  [256]int8
+		Host        [256]int8
+		Proto       [8]int8
 	}
 	RespPtr uint64
 }

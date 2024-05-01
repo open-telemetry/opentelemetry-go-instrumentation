@@ -26,6 +26,7 @@ import (
 	"github.com/cilium/ebpf/link"
 	"github.com/cilium/ebpf/perf"
 	"github.com/go-logr/logr"
+	"github.com/hashicorp/go-version"
 
 	"go.opentelemetry.io/auto/internal/pkg/inject"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/bpffs"
@@ -266,7 +267,7 @@ func (c consts) injectOpts(td *process.TargetDetails) ([]inject.Option, error) {
 	for _, cnst := range c {
 		o, e := cnst.InjectOption(td)
 		err = errors.Join(err, e)
-		if e == nil {
+		if e == nil && o != nil {
 			out = append(out, o)
 		}
 	}
@@ -289,6 +290,33 @@ func (c StructFieldConst) InjectOption(td *process.TargetDetails) (inject.Option
 		return nil, fmt.Errorf("unknown module version: %s", c.Val.ModPath)
 	}
 	return inject.WithOffset(c.Key, c.Val, ver), nil
+}
+
+// StructFieldConstMinVersion is a [Const] for a struct field offset. These struct field
+// ID needs to be known offsets in the [inject] package. The offset is only
+// injected if the module version is greater than or equal to the MinVersion.
+type StructFieldConstMinVersion struct {
+	StructField StructFieldConst
+	MinVersion  *version.Version
+}
+
+// InjectOption returns the appropriately configured [inject.WithOffset] if the
+// version of the struct field module is known and is greater than or equal to
+// the MinVersion. If the module version is not known, an error is returned.
+// If the module version is known but is less than the MinVersion, no offset is
+// injected.
+func (c StructFieldConstMinVersion) InjectOption(td *process.TargetDetails) (inject.Option, error) {
+	sf := c.StructField
+	ver, ok := td.Libraries[sf.Val.ModPath]
+	if !ok {
+		return nil, fmt.Errorf("unknown module version: %s", sf.Val.ModPath)
+	}
+
+	if !ver.GreaterThanOrEqual(c.MinVersion) {
+		return nil, nil
+	}
+
+	return inject.WithOffset(sf.Key, sf.Val, ver), nil
 }
 
 // AllocationConst is a [Const] for all the allocation details that need to be
