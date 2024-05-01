@@ -118,7 +118,6 @@ int uprobe_Transport_roundTrip(struct pt_regs *ctx) {
     bpf_probe_read(&url_ptr, sizeof(url_ptr), (void *)(req_ptr+url_ptr_pos));
     if (!get_go_string_from_user_ptr((void *)(url_ptr+path_ptr_pos), httpReq->path, sizeof(httpReq->path))) {
         bpf_printk("uprobe_Transport_roundTrip: Failed to get path from Request.URL");
-        return 0;
     }
 
     // get host from Request

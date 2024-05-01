@@ -76,8 +76,8 @@ func TestWithOffset(t *testing.T) {
 	origOff := offsets
 	t.Cleanup(func() { offsets = origOff })
 	offsets = structfield.NewIndex()
-	offsets.PutOffset(id, v10, off)
-	offsets.PutOffset(id, v18, off)
+	offsets.PutOffset(id, v10, off, true)
+	offsets.PutOffset(id, v18, off, true)
 
 	const name = "test_name"
 	opts := []Option{WithOffset(name, id, v10)}

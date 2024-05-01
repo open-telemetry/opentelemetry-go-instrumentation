@@ -58,6 +58,7 @@
                   }
                 }
               ],
+              "flags": 768,
               "kind": 3,
               "name": "DB",
               "parentSpanId": "xxxxx",
@@ -130,6 +131,7 @@
                   }
                 }
               ],
+              "flags": 768,
               "kind": 2,
               "name": "GET /query_db",
               "parentSpanId": "xxxxx",
@@ -146,15 +148,15 @@
                   }
                 },
                 {
-                  "key": "url.path",
-                  "value": {
-                    "stringValue": "/query_db"
-                  }
-                },
-                {
                   "key": "http.response.status_code",
                   "value": {
                     "intValue": "200"
+                  }
+                },
+                {
+                  "key": "url.path",
+                  "value": {
+                    "stringValue": "/query_db"
                   }
                 },
                 {
@@ -176,6 +178,7 @@
                   }
                 }
               ],
+              "flags": 256,
               "kind": 3,
               "name": "GET",
               "parentSpanId": "",

@@ -53,17 +53,17 @@ func (i *Index) get(id ID) (*Offsets, bool) {
 // GetOffset returns the offset value and true for the version ver of id
 // contained in the Index i. It will return zero and false for any id not
 // contained in i.
-func (i *Index) GetOffset(id ID, ver *version.Version) (uint64, bool) {
+func (i *Index) GetOffset(id ID, ver *version.Version) (OffsetKey, bool) {
 	i.dataMu.RLock()
 	defer i.dataMu.RUnlock()
 
 	return i.getOffset(id, ver)
 }
 
-func (i *Index) getOffset(id ID, ver *version.Version) (uint64, bool) {
+func (i *Index) getOffset(id ID, ver *version.Version) (OffsetKey, bool) {
 	offs, ok := i.get(id)
 	if !ok {
-		return 0, false
+		return OffsetKey{}, false
 	}
 	o, ok := offs.Get(ver)
 	return o, ok
@@ -88,20 +88,20 @@ func (i *Index) put(id ID, offsets *Offsets) {
 //
 // This will update any existing offsets stored for id with offset. If ver
 // already exists within those offsets it will overwrite that value.
-func (i *Index) PutOffset(id ID, ver *version.Version, offset uint64) {
+func (i *Index) PutOffset(id ID, ver *version.Version, offset uint64, valid bool) {
 	i.dataMu.Lock()
 	defer i.dataMu.Unlock()
 
-	i.putOffset(id, ver, offset)
+	i.putOffset(id, ver, offset, valid)
 }
 
-func (i *Index) putOffset(id ID, ver *version.Version, offset uint64) {
+func (i *Index) putOffset(id ID, ver *version.Version, offset uint64, valid bool) {
 	off, ok := i.get(id)
 	if !ok {
 		off = NewOffsets()
 		i.put(id, off)
 	}
-	off.Put(ver, offset)
+	off.Put(ver, OffsetKey{Offset: offset, Valid: valid})
 }
 
 // UnmarshalJSON unmarshals the offset JSON data into i.
@@ -132,7 +132,12 @@ func (i *Index) UnmarshalJSON(data []byte) error {
 								off = new(Offsets)
 								m[key] = off
 							}
-							off.Put(v, o.Offset)
+
+							if o.Offset == nil {
+								off.Put(v, OffsetKey{Valid: false})
+							} else {
+								off.Put(v, OffsetKey{Offset: *o.Offset, Valid: true})
+							}
 						}
 					}
 				}
@@ -167,7 +172,13 @@ func (i *Index) MarshalJSON() ([]byte, error) {
 			for _, s := range p.Structs {
 				for _, f := range s.Fields {
 					sort.Slice(f.Offsets, func(i, j int) bool {
-						return f.Offsets[i].Offset < f.Offsets[j].Offset
+						if f.Offsets[i].Offset == nil {
+							return true
+						}
+						if f.Offsets[j].Offset == nil {
+							return false
+						}
+						return *f.Offsets[i].Offset < *f.Offsets[j].Offset
 					})
 				}
 				sort.Slice(s.Fields, func(i, j int) bool {
@@ -240,9 +251,9 @@ func NewOffsets() *Offsets {
 
 // Get returns the offset in bytes and true if known. Otherwise, 0 and false
 // are returned.
-func (o *Offsets) Get(ver *version.Version) (uint64, bool) {
+func (o *Offsets) Get(ver *version.Version) (OffsetKey, bool) {
 	if o == nil {
-		return 0, false
+		return OffsetKey{}, false
 	}
 
 	o.mu.RLock()
@@ -253,14 +264,15 @@ func (o *Offsets) Get(ver *version.Version) (uint64, bool) {
 		// If we don't have the exact version, but we only have one offset, we
 		// fallback to use that offset. This can happen when a non official version is being used
 		// which contains commit hash in the version string.
-		return o.uo.value, true
+		return OffsetKey{Offset: o.uo.value, Valid: true}, true
 	}
+
 	return v.offset, ok
 }
 
 // Put sets the offset value for ver. If an offset for ver is already known
 // (i.e. ver.Equal(other) == true), this will overwrite that value.
-func (o *Offsets) Put(ver *version.Version, offset uint64) {
+func (o *Offsets) Put(ver *version.Version, offset OffsetKey) {
 	ov := offsetVersion{offset: offset, version: ver}
 
 	o.mu.Lock()
@@ -268,23 +280,23 @@ func (o *Offsets) Put(ver *version.Version, offset uint64) {
 
 	if o.values == nil {
 		o.values = map[verKey]offsetVersion{newVerKey(ver): ov}
-		o.uo.valid = true
-		o.uo.value = ov.offset
+		o.uo.valid = ov.offset.Valid
+		o.uo.value = ov.offset.Offset
 		return
 	}
 
 	o.values[newVerKey(ver)] = ov
 
-	if o.uo.valid && o.uo.value != ov.offset {
+	if o.uo.valid && o.uo.value != ov.offset.Offset {
 		o.uo.valid = false
 	}
 }
 
-func (o *Offsets) index() map[uint64][]*version.Version {
+func (o *Offsets) index() map[OffsetKey][]*version.Version {
 	o.mu.RLock()
 	defer o.mu.RUnlock()
 
-	out := make(map[uint64][]*version.Version)
+	out := make(map[OffsetKey][]*version.Version)
 	for _, ov := range o.values {
 		vers, ok := out[ov.offset]
 		if ok {
@@ -308,6 +320,14 @@ type verKey struct {
 	metadata            string
 }
 
+// OffsetKey is the offset of a specific struct field in a specific version.
+// If Valid is false, the offset is not known for the struct field at the
+// specified version.
+type OffsetKey struct {
+	Offset uint64
+	Valid  bool
+}
+
 func newVerKey(v *version.Version) verKey {
 	var segs [3]int
 	copy(segs[:], v.Segments())
@@ -321,6 +341,6 @@ func newVerKey(v *version.Version) verKey {
 }
 
 type offsetVersion struct {
-	offset  uint64
+	offset  OffsetKey
 	version *version.Version
 }

@@ -106,6 +106,7 @@
                   }
                 }
               ],
+              "flags": 768,
               "kind": 2,
               "name": "GET /hello/{id}",
               "parentSpanId": "xxxxx",
@@ -134,6 +135,12 @@
                   }
                 },
                 {
+                  "key": "url.path",
+                  "value": {
+                    "stringValue": "/hello"
+                  }
+                },
+                {
                   "key": "server.address",
                   "value": {
                     "stringValue": "localhost"
@@ -152,6 +159,7 @@
                   }
                 }
               ],
+              "flags": 256,
               "kind": 3,
               "name": "GET",
               "parentSpanId": "",

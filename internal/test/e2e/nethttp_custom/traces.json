@@ -100,6 +100,7 @@
                   }
                 }
               ],
+              "flags": 768,
               "kind": 2,
               "name": "GET",
               "parentSpanId": "xxxxx",
@@ -116,15 +117,15 @@
                   }
                 },
                 {
-                  "key": "url.path",
-                  "value": {
-                    "stringValue": "/hello"
-                  }
-                },
-                {
                   "key": "http.response.status_code",
                   "value": {
                     "intValue": "200"
+                  }
+                },
+                {
+                  "key": "url.path",
+                  "value": {
+                    "stringValue": "/hello"
                   }
                 },
                 {
@@ -146,6 +147,7 @@
                   }
                 }
               ],
+              "flags": 256,
               "kind": 3,
               "name": "GET",
               "parentSpanId": "",
