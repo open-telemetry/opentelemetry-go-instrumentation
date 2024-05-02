@@ -13,7 +13,7 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 - kafka-go instrumentation ([#709](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/709))
 - Support `go.opentelemetry.io/otel@v1.26.0`. ([#796](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/796))
 - Support HTTP server path template added in Go version 1.22.
-The `http.route` attribute is included and the span name updated to use this information. ([#740](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/740))
+- The `http.route` attribute is included and the span name updated to use this information. ([#740](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/740))
 - Support `golang.org/x/net` v0.25.0. ([#821](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/821))
 - Support Go `v1.21.10`. ([#824](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/824))
 - Support Go `v1.22.3`. ([#824](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/824))
@@ -26,7 +26,7 @@ The `http.route` attribute is included and the span name updated to use this inf
 - Don't fail HTTP client probe attribute resolution on empty URL path. ([#810](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/810))
 - Extract `process.runtime.version` and `process.runtime.name` from instrumented process. ([#811](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/811))
 - Support Go versions from apps defining GOEXPERIMENT. ([#813](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/813))
-- Update `net/http` instrumentation to comply with semantic conventions. ([#790](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/790))
+- Update `net/http` instrumentation to comply with semantic conventions v1.25.0. ([#790](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/790))
 
 ## [v0.12.0-alpha] - 2024-04-10
 
