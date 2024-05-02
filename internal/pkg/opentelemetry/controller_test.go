@@ -54,7 +54,7 @@ func instResource() *resource.Resource {
 	attrs := []attribute.KeyValue{
 		semconv.ServiceNameKey.String("unknown_service"),
 		semconv.TelemetrySDKLanguageGo,
-		semconv.TelemetryAutoVersionKey.String("1.25.0"),
+		semconv.TelemetryDistroVersionKey.String("1.25.0"),
 		semconv.ProcessRuntimeName(runName),
 		semconv.ProcessRuntimeVersion(runVer),
 		semconv.ProcessRuntimeDescription(runDesc),
