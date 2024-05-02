@@ -129,6 +129,12 @@
                   }
                 },
                 {
+                  "key": "url.full",
+                  "value": {
+                    "stringValue": "http://localhost:8080/hello-gin"
+                  }
+                },
+                {
                   "key": "server.address",
                   "value": {
                     "stringValue": "localhost"
@@ -144,12 +150,6 @@
                   "key": "network.protocol.version",
                   "value": {
                     "stringValue": "1.1"
-                  }
-                },
-                {
-                  "key": "url.full",
-                  "value": {
-                    "stringValue": "http://localhost/hello-gin"
                   }
                 }
               ],
