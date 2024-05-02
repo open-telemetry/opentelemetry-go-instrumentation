@@ -331,7 +331,6 @@ func convertEvent(e *event) []*probe.SpanEvent {
 			if parts[0] != "HTTP" {
 				attrs = append(attrs, semconv.NetworkProtocolName(parts[0]))
 			}
-			scheme = strings.ToLower(parts[0])
 			attrs = append(attrs, semconv.NetworkProtocolVersion(parts[1]))
 		}
 	}
