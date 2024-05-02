@@ -298,7 +298,7 @@ func convertEvent(e *event) []*probe.SpanEvent {
 		attrs = append(attrs, semconv.URLPath(path))
 	}
 
-	url := &url.URL{
+	urlObj := &url.URL{
 		Path:        path,
 		Scheme:      scheme,
 		Opaque:      opaque,
@@ -312,7 +312,7 @@ func convertEvent(e *event) []*probe.SpanEvent {
 		OmitHost:    omitHost,
 	}
 
-	fullURL := url.String()
+	fullURL := urlObj.String()
 	attrs = append(attrs, semconv.URLFull(fullURL))
 
 	// Server address and port
