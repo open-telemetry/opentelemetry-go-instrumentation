@@ -160,6 +160,12 @@
                   }
                 },
                 {
+                  "key": "url.full",
+                  "value": {
+                    "stringValue": "http://localhost:8080/query_db"
+                  }
+                },
+                {
                   "key": "server.address",
                   "value": {
                     "stringValue": "localhost"
@@ -175,12 +181,6 @@
                   "key": "network.protocol.version",
                   "value": {
                     "stringValue": "1.1"
-                  }
-                },
-                {
-                  "key": "url.full",
-                  "value": {
-                    "stringValue": "http://localhost/query_db"
                   }
                 }
               ],
