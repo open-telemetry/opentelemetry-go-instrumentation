@@ -34,6 +34,7 @@ struct http_server_span_t
     u64 status_code;
     char method[METHOD_MAX_LEN];
     char path[PATH_MAX_LEN];
+    char path_pattern[PATH_MAX_LEN];
     char remote_addr[REMOTE_ADDR_MAX_LEN];
     char host[HOST_MAX_LEN];
     char proto[PROTO_MAX_LEN];
@@ -97,6 +98,12 @@ volatile const u64 status_code_pos;
 volatile const u64 remote_addr_pos;
 volatile const u64 host_pos;
 volatile const u64 proto_pos;
+
+// A flag indicating whether pattern handlers are supported
+volatile const bool pattern_path_supported;
+// In case pattern handlers are supported the following offsets will be used:
+volatile const u64 req_pat_pos;
+volatile const u64 pat_str_pos;
 
 static __always_inline struct span_context *extract_context_from_req_headers(void *headers_ptr_ptr)
 {
@@ -284,6 +291,13 @@ int uprobe_HandlerFunc_ServeHTTP_Returns(struct pt_regs *ctx) {
     bpf_probe_read(&url_ptr, sizeof(url_ptr), (void *)(req_ptr + url_ptr_pos));
     // Collect fields from response
     read_go_string(req_ptr, method_ptr_pos, http_server_span->method, sizeof(http_server_span->method), "method from request");
+    if (pattern_path_supported) {
+        void *pat_ptr = NULL;
+        bpf_probe_read(&pat_ptr, sizeof(pat_ptr), (void *)(req_ptr + req_pat_pos));
+        if (pat_ptr != NULL) {
+            read_go_string(pat_ptr, pat_str_pos, http_server_span->path_pattern, sizeof(http_server_span->path), "patterned path from Request");
+        }
+    }
     read_go_string(url_ptr, path_ptr_pos, http_server_span->path, sizeof(http_server_span->path), "path from Request.URL");
     read_go_string(req_ptr, remote_addr_pos, http_server_span->remote_addr, sizeof(http_server_span->remote_addr), "remote addr from Request.RemoteAddr");
     read_go_string(req_ptr, host_pos, http_server_span->host, sizeof(http_server_span->host), "host from Request.Host");
