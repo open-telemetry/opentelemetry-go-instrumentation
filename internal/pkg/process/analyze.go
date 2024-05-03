@@ -82,7 +82,7 @@ func (a *Analyzer) Analyze(pid int, relevantFuncs map[string]interface{}) (*Targ
 		return nil, err
 	}
 
-	goVersion, err := version.NewVersion(strings.ReplaceAll(a.BuildInfo.GoVersion, "go", ""))
+	goVersion, err := version.NewVersion(a.BuildInfo.GoVersion)
 	if err != nil {
 		return nil, err
 	}
@@ -126,8 +126,19 @@ func (a *Analyzer) SetBuildInfo(pid int) error {
 		return err
 	}
 
+	bi.GoVersion = parseGoVersion(bi.GoVersion)
+
 	a.BuildInfo = bi
 	return nil
+}
+
+func parseGoVersion(vers string) string {
+	vers = strings.ReplaceAll(vers, "go", "")
+	// Trims GOEXPERIMENT version suffix if present.
+	if idx := strings.Index(vers, " X:"); idx > 0 {
+		vers = vers[:idx]
+	}
+	return vers
 }
 
 func (a *Analyzer) findFunctions(elfF *elf.File, relevantFuncs map[string]interface{}) ([]*binary.Func, error) {
