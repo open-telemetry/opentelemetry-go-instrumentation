@@ -236,7 +236,7 @@ func (c instConfig) tracerProvider(bi *buildinfo.BuildInfo) *trace.TracerProvide
 }
 
 func (c instConfig) res(bi *buildinfo.BuildInfo) *resource.Resource {
-	runVer := strings.ReplaceAll(bi.GoVersion, "go", "")
+	runVer := bi.GoVersion
 
 	var compiler string
 

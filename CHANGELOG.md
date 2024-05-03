@@ -21,6 +21,7 @@ The `http.route` attribute is included and the span name updated to use this inf
 - Don't set empty URL path in HTTP client probe. ([#810](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/810))
 - Don't fail HTTP client probe attribute resolution on empty URL path. ([#810](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/810))
 - Extract `process.runtime.version` and `process.runtime.name` from instrumented process. ([#811](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/811))
+- Support Go versions from apps defining GOEXPERIMENT. ([#813](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/813))
 
 ## [v0.12.0-alpha] - 2024-04-10
 
