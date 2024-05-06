@@ -8,16 +8,16 @@ char __license[] SEC("license") = "Dual MIT/GPL";
 
 #define MAX_HOSTNAME_SIZE 128
 #define MAX_PROTO_SIZE 8
-#define MAX_PATH_SIZE 100
+#define MAX_PATH_SIZE 128
 #define MAX_SCHEME_SIZE 8
 #define MAX_OPAQUE_SIZE 8
 #define MAX_RAWPATH_SIZE 8
 #define MAX_RAWQUERY_SIZE 128
-#define MAX_FRAGMENT_SIZE 50
-#define MAX_RAWFRAGMENT_SIZE 50
+#define MAX_FRAGMENT_SIZE 56
+#define MAX_RAWFRAGMENT_SIZE 56
 #define MAX_USERNAME_SIZE 8
-#define MAX_METHOD_SIZE 10
-#define MAX_CONCURRENT 50
+#define MAX_METHOD_SIZE 16
+#define MAX_CONCURRENT 56
 
 struct http_request_t {
     BASE_SPAN_PROPERTIES

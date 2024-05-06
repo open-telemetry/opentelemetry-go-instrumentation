@@ -236,15 +236,15 @@ type event struct {
 	Host        [128]byte
 	Proto       [8]byte
 	StatusCode  uint64
-	Method      [10]byte
-	Path        [100]byte
+	Method      [16]byte
+	Path        [128]byte
 	Scheme      [8]byte
 	Opaque      [8]byte
 	RawPath     [8]byte
 	Username    [8]byte
 	RawQuery    [128]byte
-	Fragment    [50]byte
-	RawFragment [50]byte
+	Fragment    [56]byte
+	RawFragment [56]byte
 	ForceQuery  uint8
 	OmitHost    uint8
 }

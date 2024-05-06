@@ -50,9 +50,9 @@ func TestConvertEvent(t *testing.T) {
 	copy(proto[:], protoString)
 	var protoFoo [8]byte
 	copy(protoFoo[:], protoFooString)
-	var method [10]byte
+	var method [16]byte
 	copy(method[:], methodString)
-	var path [100]byte
+	var path [128]byte
 	copy(path[:], pathString)
 	var scheme [8]byte
 	copy(scheme[:], schemeString)
@@ -66,9 +66,9 @@ func TestConvertEvent(t *testing.T) {
 	copy(username[:], []byte(usernameString))
 	var rawQuery [128]byte
 	copy(rawQuery[:], []byte(rawQueryString))
-	var fragment [50]byte
+	var fragment [56]byte
 	copy(fragment[:], []byte(fragmentString))
-	var rawFragment [50]byte
+	var rawFragment [56]byte
 	copy(rawFragment[:], []byte(rawFragmentString))
 
 	spId, err := trace.SpanIDFromHex("00f067aa0ba902b7")
