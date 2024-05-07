@@ -15,6 +15,8 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 - Support HTTP server path template added in Go version 1.22.
 The `http.route` attribute is included and the span name updated to use this information. ([#740](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/740))
 - Support `golang.org/x/net` v0.25.0. ([#821](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/821))
+- Support Go `v1.21.10`. ([#824](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/824))
+- Support Go `v1.22.3`. ([#824](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/824))
 
 ### Fixed
 
