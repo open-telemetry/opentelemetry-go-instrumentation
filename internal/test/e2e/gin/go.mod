@@ -1,6 +1,6 @@
 module go.opentelemetry.io/auto/internal/test/e2e/gin
 
-go 1.22
+go 1.22.0
 
 require github.com/gin-gonic/gin v1.9.1
 
