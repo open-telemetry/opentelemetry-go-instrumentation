@@ -6,6 +6,7 @@
 *.dylib
 **/*.o
 .tools/
+**/internal/test/e2e/*/main
 
 # Test binary, built with `go test -c`
 *.test
