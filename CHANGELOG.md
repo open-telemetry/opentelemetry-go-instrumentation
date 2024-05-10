@@ -17,6 +17,7 @@ The `http.route` attribute is included and the span name updated to use this inf
 - Support `golang.org/x/net` v0.25.0. ([#821](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/821))
 - Support Go `v1.21.10`. ([#824](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/824))
 - Support Go `v1.22.3`. ([#824](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/824))
+- Support `google.golang.org/grpc` `1.65.0-dev`. ([#827](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/827))
 
 ### Fixed
 
