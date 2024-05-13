@@ -172,6 +172,14 @@ func TestWithResourceAttributes(t *testing.T) {
 	})
 }
 
+func TestWithLogLevel(t *testing.T) {
+	c, err := newInstConfig(context.Background(), []InstrumentationOption{WithLogLevel("error")})
+
+	require.NoError(t, err)
+
+	assert.Equal(t, "error", c.logLevel)
+}
+
 func mockEnv(t *testing.T, env map[string]string) {
 	orig := lookupEnv
 	t.Cleanup(func() { lookupEnv = orig })

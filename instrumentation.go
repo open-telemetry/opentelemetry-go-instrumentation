@@ -72,8 +72,17 @@ type Instrumentation struct {
 // binary or pid.
 var errUndefinedTarget = fmt.Errorf("undefined target Go binary, consider setting the %s environment variable pointing to the target binary to instrument", envTargetExeKey)
 
-func newLogger() logr.Logger {
-	zapLog, err := zap.NewProduction()
+func newLogger(logLevel string) logr.Logger {
+	level, err := zap.ParseAtomicLevel(logLevel)
+	if err != nil {
+		level, _ = zap.ParseAtomicLevel(zap.InfoLevel.String())
+	}
+
+	config := zap.NewProductionConfig()
+
+	config.Level.SetLevel(level.Level())
+
+	zapLog, err := config.Build()
 
 	var logger logr.Logger
 	if err != nil {
@@ -92,14 +101,6 @@ func newLogger() logr.Logger {
 // If conflicting or duplicate options are provided, the last one will have
 // precedence and be used.
 func NewInstrumentation(ctx context.Context, opts ...InstrumentationOption) (*Instrumentation, error) {
-	// TODO: pass this in as an option.
-	//
-	// We likely want to use slog instead of logr in the longterm. Wait until
-	// that package has enough Go version support and then switch to that so we
-	// can expose it in an option.
-	logger := newLogger()
-	logger = logger.WithName("Instrumentation")
-
 	c, err := newInstConfig(ctx, opts)
 	if err != nil {
 		return nil, err
@@ -107,6 +108,11 @@ func NewInstrumentation(ctx context.Context, opts ...InstrumentationOption) (*In
 	if err := c.validate(); err != nil {
 		return nil, err
 	}
+
+	// We likely want to use slog instead of logr in the longterm. Wait until
+	// that package has enough Go version support
+	logger := newLogger(c.logLevel)
+	logger = logger.WithName("Instrumentation")
 
 	pa := process.NewAnalyzer(logger)
 	pid, err := pa.DiscoverProcessID(ctx, &c.target)
@@ -179,6 +185,7 @@ type instConfig struct {
 	additionalResAttrs []attribute.KeyValue
 	globalImpl         bool
 	loadIndicator      chan struct{}
+	logLevel           string
 }
 
 func newInstConfig(ctx context.Context, opts []InstrumentationOption) (instConfig, error) {
@@ -207,6 +214,10 @@ func newInstConfig(ctx context.Context, opts []InstrumentationOption) (instConfi
 
 	if c.sampler == nil {
 		c.sampler = trace.AlwaysSample()
+	}
+
+	if c.logLevel == "" {
+		c.logLevel = "info"
 	}
 
 	return c, err
@@ -487,6 +498,15 @@ func WithResourceAttributes(attrs ...attribute.KeyValue) InstrumentationOption {
 func WithLoadedIndicator(indicator chan struct{}) InstrumentationOption {
 	return fnOpt(func(_ context.Context, c instConfig) (instConfig, error) {
 		c.loadIndicator = indicator
+		return c, nil
+	})
+}
+
+// WithLogLevel returns an [InstrumentationOption] that will configure
+// an [Instrumentation] with the logger level visibility defined as inputed.
+func WithLogLevel(level string) InstrumentationOption {
+	return fnOpt(func(ctx context.Context, c instConfig) (instConfig, error) {
+		c.logLevel = level
 		return c, nil
 	})
 }
