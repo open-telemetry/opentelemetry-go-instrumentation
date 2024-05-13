@@ -1,4 +1,4 @@
-FROM golang:1.22.2 AS builder
+FROM golang:1.22.3 AS builder
 WORKDIR /sample-app
 COPY . .
 RUN CGO_ENABLED=0 go build -o main
