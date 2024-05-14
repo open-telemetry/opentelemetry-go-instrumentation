@@ -6,11 +6,18 @@
 
 char __license[] SEC("license") = "Dual MIT/GPL";
 
-#define MAX_HOSTNAME_SIZE 256
+#define MAX_HOSTNAME_SIZE 128
 #define MAX_PROTO_SIZE 8
-#define MAX_PATH_SIZE 100
-#define MAX_METHOD_SIZE 10
-#define MAX_CONCURRENT 50
+#define MAX_PATH_SIZE 128
+#define MAX_SCHEME_SIZE 8
+#define MAX_OPAQUE_SIZE 8
+#define MAX_RAWPATH_SIZE 8
+#define MAX_RAWQUERY_SIZE 128
+#define MAX_FRAGMENT_SIZE 56
+#define MAX_RAWFRAGMENT_SIZE 56
+#define MAX_USERNAME_SIZE 8
+#define MAX_METHOD_SIZE 16
+#define MAX_CONCURRENT 56
 
 struct http_request_t {
     BASE_SPAN_PROPERTIES
@@ -19,6 +26,15 @@ struct http_request_t {
     u64 status_code;
     char method[MAX_METHOD_SIZE];
     char path[MAX_PATH_SIZE];
+    char scheme[MAX_SCHEME_SIZE];
+    char opaque[MAX_OPAQUE_SIZE];
+    char raw_path[MAX_RAWPATH_SIZE];
+    char username[MAX_USERNAME_SIZE];
+    char raw_query[MAX_RAWQUERY_SIZE];
+    char fragment[MAX_FRAGMENT_SIZE];
+    char raw_fragment[MAX_RAWFRAGMENT_SIZE];
+    u8 force_query;
+    u8 omit_host;
 };
 
 struct {
@@ -64,6 +80,16 @@ volatile const u64 buckets_ptr_pos;
 volatile const u64 status_code_pos;
 volatile const u64 request_host_pos;
 volatile const u64 request_proto_pos;
+volatile const u64 scheme_pos;
+volatile const u64 opaque_pos;
+volatile const u64 user_ptr_pos;
+volatile const u64 raw_path_pos;
+volatile const u64 omit_host_pos;
+volatile const u64 force_query_pos;
+volatile const u64 raw_query_pos;
+volatile const u64 fragment_pos;
+volatile const u64 raw_fragment_pos;
+volatile const u64 username_pos;
 volatile const u64 io_writer_buf_ptr_pos;
 volatile const u64 io_writer_n_pos;
 
@@ -119,6 +145,49 @@ int uprobe_Transport_roundTrip(struct pt_regs *ctx) {
     if (!get_go_string_from_user_ptr((void *)(url_ptr+path_ptr_pos), httpReq->path, sizeof(httpReq->path))) {
         bpf_printk("uprobe_Transport_roundTrip: Failed to get path from Request.URL");
     }
+
+    // get scheme from Request.URL
+    if (!get_go_string_from_user_ptr((void *)(url_ptr+scheme_pos), httpReq->scheme, sizeof(httpReq->scheme))) {
+        bpf_printk("uprobe_Transport_roundTrip: Failed to get scheme from Request.URL");
+    }
+
+    // get opaque from Request.URL
+    if (!get_go_string_from_user_ptr((void *)(url_ptr+opaque_pos), httpReq->opaque, sizeof(httpReq->opaque))) {
+        bpf_printk("uprobe_Transport_roundTrip: Failed to get opaque from Request.URL");
+    }
+
+    // get RawPath from Request.URL
+    if (!get_go_string_from_user_ptr((void *)(url_ptr+raw_path_pos), httpReq->raw_path, sizeof(httpReq->raw_path))) {
+        bpf_printk("uprobe_Transport_roundTrip: Failed to get RawPath from Request.URL");
+    }
+
+    // get username from Request.URL.User
+    void *user_ptr = 0;
+    bpf_probe_read(&user_ptr, sizeof(user_ptr), (void *)(url_ptr+user_ptr_pos));
+    if (!get_go_string_from_user_ptr((void *)(user_ptr+username_pos), httpReq->username, sizeof(httpReq->username))) {
+        bpf_printk("uprobe_Transport_roundTrip: Failed to get RawQuery from Request.URL");
+    }
+
+    // get RawQuery from Request.URL
+    if (!get_go_string_from_user_ptr((void *)(url_ptr+raw_query_pos), httpReq->raw_query, sizeof(httpReq->raw_query))) {
+        bpf_printk("uprobe_Transport_roundTrip: Failed to get RawQuery from Request.URL");
+    }
+
+    // get Fragment from Request.URL
+    if (!get_go_string_from_user_ptr((void *)(url_ptr+fragment_pos), httpReq->fragment, sizeof(httpReq->fragment))) {
+        bpf_printk("uprobe_Transport_roundTrip: Failed to get Fragment from Request.URL");
+    }
+
+    // get RawFragment from Request.URL
+    if (!get_go_string_from_user_ptr((void *)(url_ptr+raw_fragment_pos), httpReq->raw_fragment, sizeof(httpReq->raw_fragment))) {
+        bpf_printk("uprobe_Transport_roundTrip: Failed to get RawFragment from Request.URL");
+    }
+
+    // get ForceQuery from Request.URL
+    bpf_probe_read(&httpReq->force_query, sizeof(httpReq->force_query), (void *)(url_ptr+force_query_pos));
+
+    // get OmitHost from Request.URL
+    bpf_probe_read(&httpReq->omit_host, sizeof(httpReq->omit_host), (void *)(url_ptr+omit_host_pos));
 
     // get host from Request
     if (!get_go_string_from_user_ptr((void *)(req_ptr+request_host_pos), httpReq->host, sizeof(httpReq->host))) {

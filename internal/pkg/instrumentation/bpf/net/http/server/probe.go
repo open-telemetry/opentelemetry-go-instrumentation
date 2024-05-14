@@ -23,7 +23,8 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/hashicorp/go-version"
 	"go.opentelemetry.io/otel/attribute"
-	semconv "go.opentelemetry.io/otel/semconv/v1.24.0"
+	"go.opentelemetry.io/otel/codes"
+	semconv "go.opentelemetry.io/otel/semconv/v1.25.0"
 	"go.opentelemetry.io/otel/trace"
 	"golang.org/x/sys/unix"
 
@@ -242,6 +243,9 @@ func convertEvent(e *event) []*probe.SpanEvent {
 	if proto != "" {
 		parts := strings.Split(proto, "/")
 		if len(parts) == 2 {
+			if parts[0] != "HTTP" {
+				attributes = append(attributes, semconv.NetworkProtocolName(parts[0]))
+			}
 			attributes = append(attributes, semconv.NetworkProtocolVersion(parts[1]))
 		}
 	}
@@ -252,14 +256,18 @@ func convertEvent(e *event) []*probe.SpanEvent {
 		attributes = append(attributes, semconv.HTTPRouteKey.String(patternPath))
 	}
 
-	return []*probe.SpanEvent{
-		{
-			SpanName:          spanName,
-			StartTime:         int64(e.StartTime),
-			EndTime:           int64(e.EndTime),
-			SpanContext:       &sc,
-			ParentSpanContext: pscPtr,
-			Attributes:        attributes,
-		},
+	spanEvent := &probe.SpanEvent{
+		SpanName:          spanName,
+		StartTime:         int64(e.StartTime),
+		EndTime:           int64(e.EndTime),
+		SpanContext:       &sc,
+		ParentSpanContext: pscPtr,
+		Attributes:        attributes,
 	}
+
+	if int(e.StatusCode) >= 500 && int(e.StatusCode) < 600 {
+		spanEvent.Status = probe.Status{Code: codes.Error}
+	}
+
+	return []*probe.SpanEvent{spanEvent}
 }

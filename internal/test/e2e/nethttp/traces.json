@@ -135,6 +135,12 @@
                   }
                 },
                 {
+                  "key": "url.full",
+                  "value": {
+                    "stringValue": "http://user@localhost:8080/hello/42?query=true#fragment"
+                  }
+                },
+                {
                   "key": "server.address",
                   "value": {
                     "stringValue": "localhost"

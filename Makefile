@@ -26,7 +26,7 @@ $(TOOLS):
 	@mkdir -p $@
 $(TOOLS)/%: | $(TOOLS)
 	cd $(TOOLS_MOD_DIR) && \
-	$(GOCMD) build -o $@ $(PACKAGE)
+	$(GOCMD) build  -buildvcs=false -o $@ $(PACKAGE)
 
 MULTIMOD = $(TOOLS)/multimod
 $(TOOLS)/multimod: PACKAGE=go.opentelemetry.io/build-tools/multimod

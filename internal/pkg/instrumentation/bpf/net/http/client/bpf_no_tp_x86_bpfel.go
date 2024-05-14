@@ -13,16 +13,25 @@ import (
 )
 
 type bpf_no_tpHttpRequestT struct {
-	StartTime  uint64
-	EndTime    uint64
-	Sc         bpf_no_tpSpanContext
-	Psc        bpf_no_tpSpanContext
-	Host       [256]int8
-	Proto      [8]int8
-	StatusCode uint64
-	Method     [10]int8
-	Path       [100]int8
-	_          [2]byte
+	StartTime   uint64
+	EndTime     uint64
+	Sc          bpf_no_tpSpanContext
+	Psc         bpf_no_tpSpanContext
+	Host        [128]int8
+	Proto       [8]int8
+	StatusCode  uint64
+	Method      [16]int8
+	Path        [128]int8
+	Scheme      [8]int8
+	Opaque      [8]int8
+	RawPath     [8]int8
+	Username    [8]int8
+	RawQuery    [128]int8
+	Fragment    [56]int8
+	RawFragment [56]int8
+	ForceQuery  uint8
+	OmitHost    uint8
+	_           [6]byte
 }
 
 type bpf_no_tpSliceArrayBuff struct{ Buff [1024]uint8 }
