@@ -111,6 +111,11 @@ SCOPE="go.opentelemetry.io/auto/net/http"
   assert_equal "$result" '"1.1"'
 }
 
+@test "client :: includes url.full attribute" {
+  result=$(client_span_attributes_for ${SCOPE} | jq "select(.key == \"url.full\").value.stringValue")
+  assert_equal "$result" '"http://user@localhost:8080/hello/42?query=true#fragment"'
+}
+
 @test "client, server :: expected (redacted) trace output" {
   redact_json
   assert_equal "$(git --no-pager diff ${BATS_TEST_DIRNAME}/traces.json)" ""
