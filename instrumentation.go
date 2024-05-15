@@ -39,6 +39,7 @@ import (
 	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
 
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation"
+	internalLog "go.opentelemetry.io/auto/internal/pkg/log"
 	"go.opentelemetry.io/auto/internal/pkg/opentelemetry"
 	"go.opentelemetry.io/auto/internal/pkg/process"
 )
@@ -58,6 +59,8 @@ const (
 	// envOtelGlobalImplKey is the key for the environment variable value enabling to opt-in for the
 	// OpenTelemetry global implementation. It should be a boolean value.
 	envOtelGlobalImplKey = "OTEL_GO_AUTO_GLOBAL"
+	// envLogLevelKey is the key for the environment variable value containing the log level.
+	envLogLevelKey = "OTEL_LOG_LEVEL"
 )
 
 // Instrumentation manages and controls all OpenTelemetry Go
@@ -72,10 +75,11 @@ type Instrumentation struct {
 // binary or pid.
 var errUndefinedTarget = fmt.Errorf("undefined target Go binary, consider setting the %s environment variable pointing to the target binary to instrument", envTargetExeKey)
 
-func newLogger(logLevel string) logr.Logger {
-	level, err := zap.ParseAtomicLevel(logLevel)
+func newLogger(logLevel internalLog.Level) logr.Logger {
+	level, err := zap.ParseAtomicLevel(logLevel.String())
+
 	if err != nil {
-		level, _ = zap.ParseAtomicLevel(zap.InfoLevel.String())
+		level, _ = zap.ParseAtomicLevel(internalLog.LevelInfo.String())
 	}
 
 	config := zap.NewProductionConfig()
@@ -185,7 +189,7 @@ type instConfig struct {
 	additionalResAttrs []attribute.KeyValue
 	globalImpl         bool
 	loadIndicator      chan struct{}
-	logLevel           string
+	logLevel           internalLog.Level
 }
 
 func newInstConfig(ctx context.Context, opts []InstrumentationOption) (instConfig, error) {
@@ -394,6 +398,11 @@ func WithEnv() InstrumentationOption {
 				c.globalImpl = boolVal
 			}
 		}
+		if l, ok := lookupEnv(envLogLevelKey); ok {
+			var e error
+			c.logLevel, e = internalLog.ParseLevel(l)
+			err = errors.Join(err, e)
+		}
 		return c, err
 	})
 }
@@ -506,7 +515,13 @@ func WithLoadedIndicator(indicator chan struct{}) InstrumentationOption {
 // an [Instrumentation] with the logger level visibility defined as inputed.
 func WithLogLevel(level string) InstrumentationOption {
 	return fnOpt(func(ctx context.Context, c instConfig) (instConfig, error) {
-		c.logLevel = level
+		l, err := internalLog.ParseLevel(level)
+		if err != nil {
+			return c, err
+		}
+
+		c.logLevel = l
+
 		return c, nil
 	})
 }

@@ -22,6 +22,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"go.opentelemetry.io/auto/internal/pkg/log"
 	"go.opentelemetry.io/otel/attribute"
 	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
 )
@@ -81,6 +82,21 @@ func TestWithEnv(t *testing.T) {
 		c, err := newInstConfig(context.Background(), []InstrumentationOption{WithEnv()})
 		require.NoError(t, err)
 		assert.Equal(t, name, c.serviceName)
+	})
+
+	t.Run("OTEL_LOG_LEVEL", func(t *testing.T) {
+		const name = "debug"
+		mockEnv(t, map[string]string{"OTEL_LOG_LEVEL": name})
+
+		c, err := newInstConfig(context.Background(), []InstrumentationOption{WithEnv()})
+		require.NoError(t, err)
+		assert.Equal(t, log.LevelDebug, c.logLevel)
+
+		const wrong = "invalid"
+
+		mockEnv(t, map[string]string{"OTEL_LOG_LEVEL": wrong})
+		_, err = newInstConfig(context.Background(), []InstrumentationOption{WithEnv()})
+		require.Error(t, err)
 	})
 }
 
@@ -173,11 +189,19 @@ func TestWithResourceAttributes(t *testing.T) {
 }
 
 func TestWithLogLevel(t *testing.T) {
-	c, err := newInstConfig(context.Background(), []InstrumentationOption{WithLogLevel("error")})
+	t.Run("With Valid Input", func(t *testing.T) {
+		c, err := newInstConfig(context.Background(), []InstrumentationOption{WithLogLevel("error")})
 
-	require.NoError(t, err)
+		require.NoError(t, err)
 
-	assert.Equal(t, "error", c.logLevel)
+		assert.Equal(t, log.LevelError, c.logLevel)
+	})
+
+	t.Run("Will Validate Input", func(t *testing.T) {
+		_, err := newInstConfig(context.Background(), []InstrumentationOption{WithLogLevel("invalid")})
+
+		require.Error(t, err)
+	})
 }
 
 func mockEnv(t *testing.T, env map[string]string) {
