@@ -70,16 +70,16 @@ func (a *Analyzer) DiscoverProcessID(ctx context.Context, target *TargetArgs) (i
 	for {
 		select {
 		case <-ctx.Done():
-			a.logger.Info("stopping process id discovery due to kill signal")
+			a.logger.V(-1).Info("stopping process id discovery due to kill signal")
 			return 0, ErrInterrupted
 		case <-t.C:
 			pid, err := a.findProcessID(target, proc)
 			if err == nil {
-				a.logger.Info("found process", "pid", pid)
+				a.logger.V(-1).Info("found process", "pid", pid)
 				return pid, nil
 			}
 			if err == ErrProcessNotFound {
-				a.logger.Info("process not found yet, trying again soon", "exe_path", target.ExePath)
+				a.logger.V(-1).Info("process not found yet, trying again soon", "exe_path", target.ExePath)
 			} else {
 				a.logger.Error(err, "error while searching for process", "exe_path", target.ExePath)
 			}

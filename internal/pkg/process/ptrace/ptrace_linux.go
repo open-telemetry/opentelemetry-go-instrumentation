@@ -116,7 +116,7 @@ func NewTracedProgram(pid int, logger logr.Logger) (*TracedProgram, error) {
 					retryCount[tid]++
 				}
 				if retryCount[tid] < threadRetryLimit {
-					logger.Info("retry attaching thread", "tid", tid, "retryCount", retryCount[tid], "limit", threadRetryLimit)
+					logger.V(-1).Info("retry attaching thread", "tid", tid, "retryCount", retryCount[tid], "limit", threadRetryLimit)
 					continue
 				}
 
@@ -135,7 +135,7 @@ func NewTracedProgram(pid int, logger logr.Logger) (*TracedProgram, error) {
 				return nil, errors.WithStack(err)
 			}
 
-			logger.Info("attach successfully", "tid", tid)
+			logger.V(-1).Info("attach successfully", "tid", tid)
 			tids[tid] = true
 			tidMap[tid] = true
 		}
@@ -247,7 +247,7 @@ func (p *TracedProgram) Madvise(addr uint64, length uint64) error {
 	}
 
 	minVersion := version.Must(version.NewVersion("5.14"))
-	p.logger.Info("Detected linux kernel version", "version", ver)
+	p.logger.V(-1).Info("Detected linux kernel version", "version", ver)
 	if ver.GreaterThanOrEqual(minVersion) {
 		advice = syscall.MADV_WILLNEED | MadvisePopulateRead | MadvisePopulateWrite
 	}
@@ -259,6 +259,6 @@ func (p *TracedProgram) Madvise(addr uint64, length uint64) error {
 // Mlock runs mlock syscall.
 func (p *TracedProgram) Mlock(addr uint64, length uint64) error {
 	ret, err := p.Syscall(syscall.SYS_MLOCK, addr, length, 0, 0, 0, 0)
-	p.logger.Info("mlock ret", "ret", ret)
+	p.logger.V(-1).Info("mlock ret", "ret", ret)
 	return err
 }

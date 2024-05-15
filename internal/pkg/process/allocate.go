@@ -48,7 +48,7 @@ func Allocate(logger logr.Logger, pid int) (*AllocationDetails, error) {
 	}
 
 	mapSize := uint64(os.Getpagesize() * nCPU * 8)
-	logger.Info(
+	logger.V(-1).Info(
 		"Requesting memory allocation",
 		"size", mapSize,
 		"page size", os.Getpagesize(),
@@ -59,7 +59,7 @@ func Allocate(logger logr.Logger, pid int) (*AllocationDetails, error) {
 		return nil, err
 	}
 
-	logger.Info(
+	logger.V(-1).Info(
 		"mmaped remote memory",
 		"start_addr", fmt.Sprintf("0x%x", addr),
 		"end_addr", fmt.Sprintf("0x%x", addr+mapSize),
@@ -81,7 +81,7 @@ func remoteAllocate(logger logr.Logger, pid int, mapSize uint64) (uint64, error)
 	}
 
 	defer func() {
-		logger.Info("Detaching from process", "pid", pid)
+		logger.V(-1).Info("Detaching from process", "pid", pid)
 		err := program.Detach()
 		if err != nil {
 			logger.Error(err, "Failed to detach ptrace", "pid", pid)
@@ -91,7 +91,7 @@ func remoteAllocate(logger logr.Logger, pid int, mapSize uint64) (uint64, error)
 	if err := program.SetMemLockInfinity(); err != nil {
 		logger.Error(err, "Failed to set memlock on process")
 	} else {
-		logger.Info("Set memlock on process successfully")
+		logger.V(-1).Info("Set memlock on process successfully")
 	}
 
 	fd := -1
