@@ -77,7 +77,6 @@ var errUndefinedTarget = fmt.Errorf("undefined target Go binary, consider settin
 
 func newLogger(logLevel internalLog.Level) logr.Logger {
 	level, err := zap.ParseAtomicLevel(logLevel.String())
-
 	if err != nil {
 		level, _ = zap.ParseAtomicLevel(internalLog.LevelInfo.String())
 	}

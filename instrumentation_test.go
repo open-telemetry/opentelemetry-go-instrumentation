@@ -22,9 +22,10 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"go.opentelemetry.io/auto/internal/pkg/log"
 	"go.opentelemetry.io/otel/attribute"
 	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
+
+	"go.opentelemetry.io/auto/internal/pkg/log"
 )
 
 func TestWithServiceName(t *testing.T) {
