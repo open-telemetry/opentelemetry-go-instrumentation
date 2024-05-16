@@ -149,7 +149,7 @@ func (i *Base[BPFObj, BPFEvent]) buildObj(exec *link.Executable, td *process.Tar
 		links, err := up.Fn(up.Sym, exec, td, obj)
 		if err != nil {
 			if up.Optional {
-				i.Logger.V(-1).Info("failed to attach optional uprobe", "probe", i.ID, "symbol", up.Sym, "error", err)
+				i.Logger.V(1).Info("failed to attach optional uprobe", "probe", i.ID, "symbol", up.Sym, "error", err)
 				continue
 			}
 			return nil, err
@@ -175,7 +175,7 @@ func (i *Base[BPFObj, BPFEvent]) Run(dest chan<- *Event) {
 		}
 
 		if record.LostSamples != 0 {
-			i.Logger.V(-1).Info("perf event ring buffer full", "dropped", record.LostSamples)
+			i.Logger.V(1).Info("perf event ring buffer full", "dropped", record.LostSamples)
 			continue
 		}
 
@@ -211,7 +211,7 @@ func (i *Base[BPFObj, BPFEvent]) Close() error {
 		err = errors.Join(err, c.Close())
 	}
 	if err == nil {
-		i.Logger.V(-1).Info("Closed", "Probe", i.ID)
+		i.Logger.V(1).Info("Closed", "Probe", i.ID)
 	}
 	return err
 }

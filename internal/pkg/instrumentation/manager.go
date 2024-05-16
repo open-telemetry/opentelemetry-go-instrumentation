@@ -137,7 +137,7 @@ func (m *Manager) FilterUnusedProbes(target *process.TargetDetails) {
 		}
 
 		if !funcsFound {
-			m.logger.V(-1).Info("no functions found for probe, removing", "name", name)
+			m.logger.V(1).Info("no functions found for probe, removing", "name", name)
 			delete(m.probes, name)
 		}
 	}
@@ -172,13 +172,13 @@ func (m *Manager) Run(ctx context.Context, target *process.TargetDetails) error 
 	for {
 		select {
 		case <-ctx.Done():
-			m.logger.V(-1).Info("shutting down all probes due to context cancellation")
+			m.logger.V(1).Info("shutting down all probes due to context cancellation")
 			err := m.cleanup(target)
 			err = errors.Join(err, ctx.Err())
 			m.closingErrors <- err
 			return nil
 		case <-m.done:
-			m.logger.V(-1).Info("shutting down all probes due to signal")
+			m.logger.V(1).Info("shutting down all probes due to signal")
 			err := m.cleanup(target)
 			m.closingErrors <- err
 			return nil
@@ -205,7 +205,7 @@ func (m *Manager) load(target *process.TargetDetails) error {
 
 	// Load probes
 	for name, i := range m.probes {
-		m.logger.V(-1).Info("loading probe", "name", name)
+		m.logger.V(0).Info("loading probe", "name", name)
 		err := i.Load(exe, target)
 		if err != nil {
 			m.logger.Error(err, "error while loading probes, cleaning up", "name", name)
@@ -213,15 +213,15 @@ func (m *Manager) load(target *process.TargetDetails) error {
 		}
 	}
 
-	m.logger.V(-1).Info("loaded probes to memory", "total_probes", len(m.probes))
+	m.logger.V(1).Info("loaded probes to memory", "total_probes", len(m.probes))
 	return nil
 }
 
 func (m *Manager) mount(target *process.TargetDetails) error {
 	if target.AllocationDetails != nil {
-		m.logger.V(-1).Info("Mounting bpffs", "allocations_details", target.AllocationDetails)
+		m.logger.V(1).Info("Mounting bpffs", "allocations_details", target.AllocationDetails)
 	} else {
-		m.logger.V(-1).Info("Mounting bpffs")
+		m.logger.V(1).Info("Mounting bpffs")
 	}
 	return bpffs.Mount(target)
 }
@@ -233,7 +233,7 @@ func (m *Manager) cleanup(target *process.TargetDetails) error {
 		err = errors.Join(err, i.Close())
 	}
 
-	m.logger.V(-1).Info("Cleaning bpffs")
+	m.logger.V(1).Info("Cleaning bpffs")
 	return errors.Join(err, bpffs.Cleanup(target))
 }
 
