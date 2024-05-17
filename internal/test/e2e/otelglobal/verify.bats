@@ -2,7 +2,7 @@
 
 load ../../test_helpers/utilities
 
-SCOPE="go.opentelemetry.io/auto/go.opentelemetry.io/otel/internal/global"
+SCOPE="trace-example"
 
 @test "go-auto :: includes service.name in resource attributes" {
   result=$(resource_attributes_received | jq "select(.key == \"service.name\").value.stringValue")

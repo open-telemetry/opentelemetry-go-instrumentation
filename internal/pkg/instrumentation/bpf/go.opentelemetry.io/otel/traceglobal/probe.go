@@ -94,6 +94,10 @@ func New(logger logr.Logger) probe.Probe {
 				Key: "tracer_delegate_pos",
 				Val: structfield.NewID("go.opentelemetry.io/otel", "go.opentelemetry.io/otel/internal/global", "tracer", "delegate"),
 			},
+			probe.StructFieldConst{
+				Key: "tracer_name_pos",
+				Val: structfield.NewID("go.opentelemetry.io/otel", "go.opentelemetry.io/otel/internal/global", "tracer", "name"),
+			},
 		},
 		Uprobes: []probe.Uprobe[bpfObjects]{
 			{
@@ -252,6 +256,7 @@ type event struct {
 	SpanName   [64]byte
 	Status     status
 	Attributes attributesBuffer
+	TracerName [128]byte
 }
 
 func convertEvent(e *event) []*probe.SpanEvent {
@@ -288,6 +293,7 @@ func convertEvent(e *event) []*probe.SpanEvent {
 				Code:        codes.Code(e.Status.Code),
 				Description: string(unix.ByteSliceToString(e.Status.Description[:])),
 			},
+			TracerName: unix.ByteSliceToString(e.TracerName[:]),
 		},
 	}
 }

@@ -32,7 +32,8 @@ type bpfOtelSpanT struct {
 		}
 		ValidAttrs uint8
 	}
-	_ [3]byte
+	TracerName bpfTracerNameT
+	_          [3]byte
 }
 
 type bpfSliceArrayBuff struct{ Buff [1024]uint8 }
@@ -43,6 +44,8 @@ type bpfSpanContext struct {
 }
 
 type bpfSpanNameT struct{ Buf [64]int8 }
+
+type bpfTracerNameT struct{ Buf [128]int8 }
 
 // loadBpf returns the embedded CollectionSpec for bpf.
 func loadBpf() (*ebpf.CollectionSpec, error) {
@@ -103,6 +106,7 @@ type bpfMapSpecs struct {
 	OtelSpanStorageMap   *ebpf.MapSpec `ebpf:"otel_span_storage_map"`
 	SliceArrayBuffMap    *ebpf.MapSpec `ebpf:"slice_array_buff_map"`
 	SpanNameByContext    *ebpf.MapSpec `ebpf:"span_name_by_context"`
+	TracerNameByContext  *ebpf.MapSpec `ebpf:"tracer_name_by_context"`
 	TrackedSpans         *ebpf.MapSpec `ebpf:"tracked_spans"`
 	TrackedSpansBySc     *ebpf.MapSpec `ebpf:"tracked_spans_by_sc"`
 }
@@ -132,6 +136,7 @@ type bpfMaps struct {
 	OtelSpanStorageMap   *ebpf.Map `ebpf:"otel_span_storage_map"`
 	SliceArrayBuffMap    *ebpf.Map `ebpf:"slice_array_buff_map"`
 	SpanNameByContext    *ebpf.Map `ebpf:"span_name_by_context"`
+	TracerNameByContext  *ebpf.Map `ebpf:"tracer_name_by_context"`
 	TrackedSpans         *ebpf.Map `ebpf:"tracked_spans"`
 	TrackedSpansBySc     *ebpf.Map `ebpf:"tracked_spans_by_sc"`
 }
@@ -144,6 +149,7 @@ func (m *bpfMaps) Close() error {
 		m.OtelSpanStorageMap,
 		m.SliceArrayBuffMap,
 		m.SpanNameByContext,
+		m.TracerNameByContext,
 		m.TrackedSpans,
 		m.TrackedSpansBySc,
 	)

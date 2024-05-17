@@ -25,6 +25,7 @@ char __license[] SEC("license") = "Dual MIT/GPL";
 #define MAX_CONCURRENT 50
 #define MAX_SPAN_NAME_LEN 64
 #define MAX_STATUS_DESCRIPTION_LEN 64
+#define MAX_TRACER_NAME_LEN 128
 
 struct span_description_t {
     char buf[MAX_STATUS_DESCRIPTION_LEN];
@@ -39,11 +40,16 @@ struct span_name_t {
     char buf[MAX_SPAN_NAME_LEN];
 };
 
+typedef struct tracer_name {
+    char buf[MAX_TRACER_NAME_LEN];
+} tracer_name_t;
+
 struct otel_span_t {
     BASE_SPAN_PROPERTIES
     struct span_name_t span_name;
     otel_status_t status;
     otel_attributes_t attributes;
+    tracer_name_t tracer_name;
 };
 
 struct {
@@ -60,6 +66,13 @@ struct {
 	__uint(max_entries, MAX_CONCURRENT);
 } span_name_by_context SEC(".maps");
 
+struct {
+	__uint(type, BPF_MAP_TYPE_HASH);
+	__type(key, void*);
+	__type(value, tracer_name_t);
+	__uint(max_entries, MAX_CONCURRENT);
+} tracer_name_by_context SEC(".maps");
+
 struct
 {
     __uint(type, BPF_MAP_TYPE_PERCPU_ARRAY);
@@ -74,6 +87,7 @@ struct {
 
 // Injected in init
 volatile const u64 tracer_delegate_pos;
+volatile const u64 tracer_name_pos;
 
 // read_span_name reads the span name from the provided span_name_ptr and stores the result in
 // span_name.buf.
@@ -105,6 +119,14 @@ int uprobe_Start(struct pt_regs *ctx) {
     void *context_ptr_val = get_Go_context(ctx, 3, 0, true);
     void *key = get_consistent_key(ctx, context_ptr_val);
     bpf_map_update_elem(&span_name_by_context, &key, &span_name, 0);
+
+    // Get the tracer name
+    tracer_name_t tracer_name = {0};
+    if (!get_go_string_from_user_ptr((void*)(tracer_ptr + tracer_name_pos), tracer_name.buf, MAX_TRACER_NAME_LEN)) {
+        bpf_printk("Failed to read tracer name");
+    } else {
+        bpf_map_update_elem(&tracer_name_by_context, &key, &tracer_name, 0);
+    }
     return 0;
 }
 
@@ -119,6 +141,11 @@ int uprobe_Start_Returns(struct pt_regs *ctx) {
     struct span_name_t *span_name = bpf_map_lookup_elem(&span_name_by_context, &key); 
     if (span_name == NULL) {
         return 0;
+    }
+
+    tracer_name_t *tracer_name = bpf_map_lookup_elem(&tracer_name_by_context, &key);
+    if (tracer_name == NULL) {
+        goto done_without_tracer_name;
     }
 
     u32 zero_span_key = 0;
@@ -137,7 +164,8 @@ int uprobe_Start_Returns(struct pt_regs *ctx) {
     }
 
     otel_span->start_time = bpf_ktime_get_ns();
-    copy_byte_arrays((unsigned char*)span_name->buf, (unsigned char*)otel_span->span_name.buf, MAX_SPAN_NAME_LEN);
+    otel_span->span_name = *span_name;
+    otel_span->tracer_name = *tracer_name;
 
     // Get the ** returned ** context and Span (concrete type of the interfaces)
     void *ret_context_ptr_val = get_argument(ctx, 2);
@@ -157,6 +185,8 @@ int uprobe_Start_Returns(struct pt_regs *ctx) {
     start_tracking_span(ret_context_ptr_val, &otel_span->sc);
 
 done:
+    bpf_map_delete_elem(&tracer_name_by_context, &key);
+done_without_tracer_name:
     bpf_map_delete_elem(&span_name_by_context, &key);
     return 0;
 }

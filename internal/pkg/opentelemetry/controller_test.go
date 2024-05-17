@@ -237,3 +237,34 @@ func TestTrace(t *testing.T) {
 		})
 	}
 }
+
+func TestGetTracer(t *testing.T) {
+	logger := stdr.New(log.New(os.Stderr, "", log.LstdFlags))
+
+	exporter := tracetest.NewInMemoryExporter()
+	tp := sdktrace.NewTracerProvider(
+		sdktrace.WithSampler(sdktrace.AlwaysSample()),
+		sdktrace.WithBatcher(exporter),
+		sdktrace.WithResource(instResource()),
+	)
+	defer func() {
+		err := tp.Shutdown(context.Background())
+		assert.NoError(t, err)
+	}()
+
+	ctrl, err := NewController(logger, tp, "test")
+	assert.NoError(t, err)
+
+	t1 := ctrl.getTracer("foo/bar", "test")
+	assert.Equal(t, t1, ctrl.tracersMap["test"])
+	assert.Nil(t, ctrl.tracersMap["foo/bar"])
+
+	t2 := ctrl.getTracer("net/http", "")
+	assert.Equal(t, t2, ctrl.tracersMap["net/http"])
+
+	t3 := ctrl.getTracer("foo/bar", "test")
+	assert.Equal(t, t1, t3)
+
+	t4 := ctrl.getTracer("net/http", "")
+	assert.Equal(t, t2, t4)
+}

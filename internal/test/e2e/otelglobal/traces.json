@@ -45,8 +45,7 @@
       "scopeSpans": [
         {
           "scope": {
-            "name": "go.opentelemetry.io/auto/go.opentelemetry.io/otel/internal/global",
-            "version": "v0.12.0-alpha"
+            "name": "trace-example"
           },
           "spans": [
             {

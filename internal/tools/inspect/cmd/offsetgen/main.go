@@ -171,6 +171,7 @@ func manifests() ([]inspect.Manifest, error) {
 			},
 			StructFields: []structfield.ID{
 				structfield.NewID("go.opentelemetry.io/otel", "go.opentelemetry.io/otel/internal/global", "tracer", "delegate"),
+				structfield.NewID("go.opentelemetry.io/otel", "go.opentelemetry.io/otel/internal/global", "tracer", "name"),
 			},
 		},
 		{

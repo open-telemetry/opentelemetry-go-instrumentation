@@ -35,17 +35,32 @@ type Controller struct {
 	bootTime       int64
 }
 
-func (c *Controller) getTracer(pkg string) trace.Tracer {
-	t, exists := c.tracersMap[pkg]
+func (c *Controller) getTracer(pkg, tracerName string) trace.Tracer {
+	var (
+		newTracer trace.Tracer
+		tracerKey = pkg
+	)
+
+	if tracerName != "" {
+		tracerKey = tracerName
+	}
+
+	t, exists := c.tracersMap[tracerKey]
 	if exists {
 		return t
 	}
 
-	newTracer := c.tracerProvider.Tracer(
-		"go.opentelemetry.io/auto/"+pkg,
-		trace.WithInstrumentationVersion(c.version),
-	)
-	c.tracersMap[pkg] = newTracer
+	if tracerName != "" {
+		// If the user has provided a tracer name, use it.
+		newTracer = c.tracerProvider.Tracer(tracerName)
+	} else {
+		newTracer = c.tracerProvider.Tracer(
+			"go.opentelemetry.io/auto/"+pkg,
+			trace.WithInstrumentationVersion(c.version),
+		)
+	}
+
+	c.tracersMap[tracerKey] = newTracer
 	return newTracer
 }
 
@@ -66,7 +81,7 @@ func (c *Controller) Trace(event *probe.Event) {
 		}
 
 		ctx = ContextWithEBPFEvent(ctx, *se)
-		_, span := c.getTracer(event.Package).
+		_, span := c.getTracer(event.Package, se.TracerName).
 			Start(ctx, se.SpanName,
 				trace.WithAttributes(se.Attributes...),
 				trace.WithSpanKind(event.Kind),
