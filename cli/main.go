@@ -71,7 +71,7 @@ func main() {
 	var logLevel string
 
 	flag.BoolVar(&globalImpl, "global-impl", false, "Record telemetry from the OpenTelemetry default global implementation")
-	flag.StringVar(&logLevel, "log-level", "info", "Define log visibility level")
+	flag.StringVar(&logLevel, "log-level", "", "Define log visibility level, default is `info`")
 
 	flag.Usage = usage
 	flag.Parse()
@@ -102,7 +102,9 @@ func main() {
 		instOptions = append(instOptions, auto.WithGlobal())
 	}
 
-	instOptions = append(instOptions, auto.WithLogLevel(logLevel))
+	if logLevel != "" {
+		instOptions = append(instOptions, auto.WithLogLevel(logLevel))
+	}
 
 	inst, err := auto.NewInstrumentation(ctx, instOptions...)
 	if err != nil {

@@ -361,9 +361,10 @@ var lookupEnv = os.LookupEnv
 //   - OTEL_SERVICE_NAME (or OTEL_RESOURCE_ATTRIBUTES): sets the service name
 //   - OTEL_TRACES_EXPORTER: sets the trace exporter
 //   - OTEL_GO_AUTO_GLOBAL: enables the OpenTelemetry global implementation
+//   - OTEL_LOG_LEVEL: sets the log level
 //
 // This option may conflict with [WithTarget], [WithPID], [WithTraceExporter],
-// [WithServiceName] and [WithGlobal] if their respective environment variable is defined.
+// [WithServiceName], [WithGlobal] and [WithLogLevel] if their respective environment variable is defined.
 // If more than one of these options are used, the last one provided to an
 // [Instrumentation] will be used.
 //
