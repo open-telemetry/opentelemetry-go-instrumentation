@@ -93,7 +93,8 @@ func main() {
 
 	logger.Info("building OpenTelemetry Go instrumentation ...", "globalImpl", globalImpl)
 
-	instOptions := []auto.InstrumentationOption{auto.WithEnv()}
+	loadedIndicator := make(chan struct{})
+	instOptions := []auto.InstrumentationOption{auto.WithEnv(), auto.WithLoadedIndicator(loadedIndicator)}
 	if globalImpl {
 		instOptions = append(instOptions, auto.WithGlobal())
 	}
@@ -103,6 +104,15 @@ func main() {
 		logger.Error(err, "failed to create instrumentation")
 		return
 	}
+
+	go func() {
+		select {
+		case <-ctx.Done():
+			return
+		case <-loadedIndicator:
+			logger.Info("instrumentation loaded successfully")
+		}
+	}()
 
 	logger.Info("starting instrumentation...")
 	if err = inst.Run(ctx); err != nil && !errors.Is(err, process.ErrInterrupted) {

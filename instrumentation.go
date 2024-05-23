@@ -124,7 +124,7 @@ func NewInstrumentation(ctx context.Context, opts ...InstrumentationOption) (*In
 		return nil, err
 	}
 
-	mngr, err := instrumentation.NewManager(logger, ctrl, c.globalImpl)
+	mngr, err := instrumentation.NewManager(logger, ctrl, c.globalImpl, c.loadIndicator)
 	if err != nil {
 		return nil, err
 	}
@@ -178,6 +178,7 @@ type instConfig struct {
 	serviceName        string
 	additionalResAttrs []attribute.KeyValue
 	globalImpl         bool
+	loadIndicator      chan struct{}
 }
 
 func newInstConfig(ctx context.Context, opts []InstrumentationOption) (instConfig, error) {
@@ -475,6 +476,17 @@ func WithGlobal() InstrumentationOption {
 func WithResourceAttributes(attrs ...attribute.KeyValue) InstrumentationOption {
 	return fnOpt(func(_ context.Context, c instConfig) (instConfig, error) {
 		c.additionalResAttrs = append(c.additionalResAttrs, attrs...)
+		return c, nil
+	})
+}
+
+// WithLoadedIndicator returns an [InstrumentationOption] that will configure an
+// [Instrumentation] to close the provided indicator channel when the target
+// process has been instrumented (i.e. all probes have been loaded).
+// The provided indicator channel needs to be initialized by the caller.
+func WithLoadedIndicator(indicator chan struct{}) InstrumentationOption {
+	return fnOpt(func(_ context.Context, c instConfig) (instConfig, error) {
+		c.loadIndicator = indicator
 		return c, nil
 	})
 }
