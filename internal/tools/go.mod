@@ -6,7 +6,7 @@ toolchain go1.22.2
 
 require (
 	github.com/docker/docker v26.1.3+incompatible
-	github.com/go-logr/logr v1.4.1
+	github.com/go-logr/logr v1.4.2
 	github.com/go-logr/stdr v1.2.2
 	github.com/golangci/golangci-lint v1.54.2
 	github.com/google/go-licenses v1.6.0
