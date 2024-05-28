@@ -10,7 +10,7 @@ require (
 	github.com/go-logr/stdr v1.2.2
 	github.com/golangci/golangci-lint v1.54.2
 	github.com/google/go-licenses v1.6.0
-	github.com/hashicorp/go-version v1.6.0
+	github.com/hashicorp/go-version v1.7.0
 	go.opentelemetry.io/auto v0.7.0-alpha
 	go.opentelemetry.io/build-tools/dbotconf v0.13.0
 	go.opentelemetry.io/build-tools/multimod v0.13.0
