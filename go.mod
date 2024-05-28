@@ -21,7 +21,7 @@ retract (
 
 require (
 	github.com/cilium/ebpf v0.15.0
-	github.com/go-logr/logr v1.4.1
+	github.com/go-logr/logr v1.4.2
 	github.com/go-logr/stdr v1.2.2
 	github.com/go-logr/zapr v1.3.0
 	github.com/hashicorp/go-version v1.7.0
