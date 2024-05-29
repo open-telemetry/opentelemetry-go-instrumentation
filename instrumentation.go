@@ -39,7 +39,6 @@ import (
 	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
 
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation"
-	internalLog "go.opentelemetry.io/auto/internal/pkg/log"
 	"go.opentelemetry.io/auto/internal/pkg/opentelemetry"
 	"go.opentelemetry.io/auto/internal/pkg/process"
 )
@@ -75,10 +74,10 @@ type Instrumentation struct {
 // binary or pid.
 var errUndefinedTarget = fmt.Errorf("undefined target Go binary, consider setting the %s environment variable pointing to the target binary to instrument", envTargetExeKey)
 
-func newLogger(logLevel internalLog.Level) logr.Logger {
+func newLogger(logLevel Level) logr.Logger {
 	level, err := zap.ParseAtomicLevel(logLevel.String())
 	if err != nil {
-		level, _ = zap.ParseAtomicLevel(internalLog.LevelInfo.String())
+		level, _ = zap.ParseAtomicLevel(LevelInfo.String())
 	}
 
 	config := zap.NewProductionConfig()
@@ -188,7 +187,7 @@ type instConfig struct {
 	additionalResAttrs []attribute.KeyValue
 	globalImpl         bool
 	loadIndicator      chan struct{}
-	logLevel           internalLog.Level
+	logLevel           Level
 }
 
 func newInstConfig(ctx context.Context, opts []InstrumentationOption) (instConfig, error) {
@@ -220,7 +219,7 @@ func newInstConfig(ctx context.Context, opts []InstrumentationOption) (instConfi
 	}
 
 	if c.logLevel == "" {
-		c.logLevel = internalLog.LevelInfo
+		c.logLevel = LevelInfo
 	}
 
 	return c, err
@@ -400,7 +399,7 @@ func WithEnv() InstrumentationOption {
 		}
 		if l, ok := lookupEnv(envLogLevelKey); ok {
 			var e error
-			c.logLevel, e = internalLog.ParseLevel(l)
+			c.logLevel, e = ParseLevel(l)
 			err = errors.Join(err, e)
 		}
 		return c, err
@@ -513,14 +512,13 @@ func WithLoadedIndicator(indicator chan struct{}) InstrumentationOption {
 
 // WithLogLevel returns an [InstrumentationOption] that will configure
 // an [Instrumentation] with the logger level visibility defined as inputed.
-func WithLogLevel(level string) InstrumentationOption {
+func WithLogLevel(level Level) InstrumentationOption {
 	return fnOpt(func(ctx context.Context, c instConfig) (instConfig, error) {
-		l, err := internalLog.ParseLevel(level)
-		if err != nil {
+		if err := level.UnmarshalText([]byte(level.String())); err != nil {
 			return c, err
 		}
 
-		c.logLevel = l
+		c.logLevel = level
 
 		return c, nil
 	})

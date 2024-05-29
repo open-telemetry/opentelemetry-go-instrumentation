@@ -12,40 +12,38 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package log_test
+package auto
 
 import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-
-	"go.opentelemetry.io/auto/internal/pkg/log"
 )
 
 func TestLevel(t *testing.T) {
 	testCases := []struct {
 		name  string
-		level log.Level
+		level Level
 		str   string
 	}{
 		{
 			name:  "LevelDebug",
-			level: log.LevelDebug,
+			level: LevelDebug,
 			str:   "debug",
 		},
 		{
 			name:  "LevelInfo",
-			level: log.LevelInfo,
+			level: LevelInfo,
 			str:   "info",
 		},
 		{
 			name:  "LevelWarn",
-			level: log.LevelWarn,
+			level: LevelWarn,
 			str:   "warn",
 		},
 		{
 			name:  "LevelError",
-			level: log.LevelError,
+			level: LevelError,
 			str:   "error",
 		},
 	}

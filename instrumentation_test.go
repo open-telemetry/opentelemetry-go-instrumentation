@@ -24,8 +24,6 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
-
-	"go.opentelemetry.io/auto/internal/pkg/log"
 )
 
 func TestWithServiceName(t *testing.T) {
@@ -91,7 +89,7 @@ func TestWithEnv(t *testing.T) {
 
 		c, err := newInstConfig(context.Background(), []InstrumentationOption{WithEnv()})
 		require.NoError(t, err)
-		assert.Equal(t, log.LevelDebug, c.logLevel)
+		assert.Equal(t, LevelDebug, c.logLevel)
 
 		const wrong = "invalid"
 
@@ -195,7 +193,13 @@ func TestWithLogLevel(t *testing.T) {
 
 		require.NoError(t, err)
 
-		assert.Equal(t, log.LevelError, c.logLevel)
+		assert.Equal(t, LevelError, c.logLevel)
+
+		c, err = newInstConfig(context.Background(), []InstrumentationOption{WithLogLevel(LevelInfo)})
+
+		require.NoError(t, err)
+
+		assert.Equal(t, LevelInfo, c.logLevel)
 	})
 
 	t.Run("Will Validate Input", func(t *testing.T) {

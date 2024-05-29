@@ -103,7 +103,15 @@ func main() {
 	}
 
 	if logLevel != "" {
-		instOptions = append(instOptions, auto.WithLogLevel(logLevel))
+		var level auto.Level
+
+		err := level.UnmarshalText([]byte(logLevel))
+		if err != nil {
+			logger.Error(err, "failed to parse log level")
+			return
+		}
+
+		instOptions = append(instOptions, auto.WithLogLevel(level))
 	}
 
 	inst, err := auto.NewInstrumentation(ctx, instOptions...)
