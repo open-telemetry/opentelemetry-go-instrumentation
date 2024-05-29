@@ -220,7 +220,7 @@ func newInstConfig(ctx context.Context, opts []InstrumentationOption) (instConfi
 	}
 
 	if c.logLevel == "" {
-		c.logLevel = "info"
+		c.logLevel = internalLog.LevelInfo
 	}
 
 	return c, err

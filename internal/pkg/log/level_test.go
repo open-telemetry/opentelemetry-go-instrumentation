@@ -48,21 +48,6 @@ func TestLevel(t *testing.T) {
 			level: log.LevelError,
 			str:   "error",
 		},
-		{
-			name:  "LevelDPanic",
-			level: log.LevelDPanic,
-			str:   "dpanic",
-		},
-		{
-			name:  "LevelPanic",
-			level: log.LevelPanic,
-			str:   "panic",
-		},
-		{
-			name:  "LevelFatal",
-			level: log.LevelFatal,
-			str:   "fatal",
-		},
 	}
 
 	for _, tc := range testCases {
