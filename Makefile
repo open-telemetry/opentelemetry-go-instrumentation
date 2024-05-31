@@ -208,3 +208,10 @@ check-clean-work-tree:
 		echo 'Working tree is not clean, did you forget to run "make precommit", "make generate" or "make offsets"?'; \
 		exit 1; \
 	fi
+
+# The python image to use for the virtual environment.
+IMG_CODESPELL := debian:stable-slim
+
+.PHONY: codespell
+codespell: docker-build-base
+	docker run --rm -it -v $(shell pwd):/app $(IMG_CODESPELL) /bin/sh -c "apt-get -y -qq update && apt-get -y -qq install codespell && cd /app && codespell"
