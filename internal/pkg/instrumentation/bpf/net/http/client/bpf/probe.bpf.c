@@ -44,13 +44,6 @@ struct {
 	__uint(max_entries, MAX_CONCURRENT);
 } http_events SEC(".maps");
 
-struct {
-	__uint(type, BPF_MAP_TYPE_PERCPU_ARRAY);
-	__uint(key_size, sizeof(u32));
-	__uint(value_size, sizeof(struct map_bucket));
-	__uint(max_entries, 1);
-} golang_mapbucket_storage_map SEC(".maps");
-
 struct
 {
     __uint(type, BPF_MAP_TYPE_PERCPU_ARRAY);
@@ -76,7 +69,6 @@ volatile const u64 url_ptr_pos;
 volatile const u64 path_ptr_pos;
 volatile const u64 headers_ptr_pos;
 volatile const u64 ctx_ptr_pos;
-volatile const u64 buckets_ptr_pos;
 volatile const u64 status_code_pos;
 volatile const u64 request_host_pos;
 volatile const u64 request_proto_pos;

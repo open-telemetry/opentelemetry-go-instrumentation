@@ -25,9 +25,10 @@ import (
 	kafka "github.com/segmentio/kafka-go"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
 )
 
-var tracer = otel.Tracer("trace-example")
+var tracer = otel.Tracer("trace-example-kafka-go", trace.WithInstrumentationVersion("v1.0.0-test"))
 
 type server struct {
 	kafkaWriter *kafka.Writer

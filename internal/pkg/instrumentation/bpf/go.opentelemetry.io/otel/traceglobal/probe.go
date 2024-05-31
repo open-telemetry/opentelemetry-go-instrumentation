@@ -98,6 +98,18 @@ func New(logger logr.Logger) probe.Probe {
 				Key: "tracer_name_pos",
 				Val: structfield.NewID("go.opentelemetry.io/otel", "go.opentelemetry.io/otel/internal/global", "tracer", "name"),
 			},
+			probe.StructFieldConst{
+				Key: "tracer_provider_pos",
+				Val: structfield.NewID("go.opentelemetry.io/otel", "go.opentelemetry.io/otel/internal/global", "tracer", "provider"),
+			},
+			probe.StructFieldConst{
+				Key: "tracer_provider_tracers_pos",
+				Val: structfield.NewID("go.opentelemetry.io/otel", "go.opentelemetry.io/otel/internal/global", "tracerProvider", "tracers"),
+			},
+			probe.StructFieldConst{
+				Key: "buckets_ptr_pos",
+				Val: structfield.NewID("std", "runtime", "hmap", "buckets"),
+			},
 		},
 		Uprobes: []probe.Uprobe[bpfObjects]{
 			{
@@ -250,13 +262,19 @@ type status struct {
 	Description [64]byte
 }
 
+type tracerID struct {
+	Name      [128]byte
+	Version   [32]byte
+	SchemaURL [128]byte
+}
+
 // event represents a manual span created by the user.
 type event struct {
 	context.BaseSpanProperties
 	SpanName   [64]byte
 	Status     status
 	Attributes attributesBuffer
-	TracerName [128]byte
+	TracerID   tracerID
 }
 
 func convertEvent(e *event) []*probe.SpanEvent {
@@ -293,7 +311,9 @@ func convertEvent(e *event) []*probe.SpanEvent {
 				Code:        codes.Code(e.Status.Code),
 				Description: string(unix.ByteSliceToString(e.Status.Description[:])),
 			},
-			TracerName: unix.ByteSliceToString(e.TracerName[:]),
+			TracerName:    unix.ByteSliceToString(e.TracerID.Name[:]),
+			TracerVersion: unix.ByteSliceToString(e.TracerID.Version[:]),
+			TracerSchema:  unix.ByteSliceToString(e.TracerID.SchemaURL[:]),
 		},
 	}
 }

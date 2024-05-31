@@ -9,6 +9,11 @@ SCOPE="trace-example"
   assert_equal "$result" '"sample-app"'
 }
 
+@test "go-auto :: include tracer version in scope" {
+  result=$(spans_received | jq ".scopeSpans[].scope.version")
+  assert_equal "$result" '"v1.23.42"'
+}
+
 @test "server :: valid int attribute" {
   result=$(span_attributes_for ${SCOPE} | jq "select(.key == \"int_key\").value.intValue")
   assert_equal "$result" '"42"'

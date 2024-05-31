@@ -31,28 +31,27 @@ type Controller struct {
 	logger         logr.Logger
 	version        string
 	tracerProvider trace.TracerProvider
-	tracersMap     map[string]trace.Tracer
+	tracersMap     map[tracerID]trace.Tracer
 	bootTime       int64
 }
 
-func (c *Controller) getTracer(pkg, tracerName string) trace.Tracer {
-	var (
-		newTracer trace.Tracer
-		tracerKey = pkg
-	)
+type tracerID struct{ name, version, schema string }
 
+func (c *Controller) getTracer(pkg, tracerName, version, schema string) trace.Tracer {
+	tID := tracerID{name: pkg, version: c.version}
 	if tracerName != "" {
-		tracerKey = tracerName
+		tID = tracerID{name: tracerName, version: version, schema: schema}
 	}
 
-	t, exists := c.tracersMap[tracerKey]
+	t, exists := c.tracersMap[tID]
 	if exists {
 		return t
 	}
 
+	var newTracer trace.Tracer
 	if tracerName != "" {
-		// If the user has provided a tracer name, use it.
-		newTracer = c.tracerProvider.Tracer(tracerName)
+		// If the user has provided a tracer, use it.
+		newTracer = c.tracerProvider.Tracer(tracerName, trace.WithInstrumentationVersion(version), trace.WithSchemaURL(schema))
 	} else {
 		newTracer = c.tracerProvider.Tracer(
 			"go.opentelemetry.io/auto/"+pkg,
@@ -60,7 +59,7 @@ func (c *Controller) getTracer(pkg, tracerName string) trace.Tracer {
 		)
 	}
 
-	c.tracersMap[tracerKey] = newTracer
+	c.tracersMap[tID] = newTracer
 	return newTracer
 }
 
@@ -81,7 +80,7 @@ func (c *Controller) Trace(event *probe.Event) {
 		}
 
 		ctx = ContextWithEBPFEvent(ctx, *se)
-		_, span := c.getTracer(event.Package, se.TracerName).
+		_, span := c.getTracer(event.Package, se.TracerName, se.TracerVersion, se.TracerSchema).
 			Start(ctx, se.SpanName,
 				trace.WithAttributes(se.Attributes...),
 				trace.WithSpanKind(event.Kind),
@@ -108,7 +107,7 @@ func NewController(logger logr.Logger, tracerProvider trace.TracerProvider, ver 
 		logger:         logger,
 		version:        ver,
 		tracerProvider: tracerProvider,
-		tracersMap:     make(map[string]trace.Tracer),
+		tracersMap:     make(map[tracerID]trace.Tracer),
 		bootTime:       bt,
 	}, nil
 }

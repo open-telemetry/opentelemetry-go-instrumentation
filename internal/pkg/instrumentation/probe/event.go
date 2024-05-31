@@ -41,4 +41,6 @@ type SpanEvent struct {
 	ParentSpanContext *trace.SpanContext
 	Status            Status
 	TracerName        string
+	TracerVersion     string
+	TracerSchema      string
 }

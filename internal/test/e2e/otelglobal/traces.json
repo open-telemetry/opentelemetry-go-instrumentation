@@ -45,7 +45,8 @@
       "scopeSpans": [
         {
           "scope": {
-            "name": "trace-example"
+            "name": "trace-example",
+            "version": "v1.23.42"
           },
           "spans": [
             {

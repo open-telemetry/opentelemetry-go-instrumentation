@@ -106,10 +106,6 @@ func New(logger logr.Logger) probe.Probe {
 				Val: structfield.NewID("std", "net/http", "Response", "StatusCode"),
 			},
 			probe.StructFieldConst{
-				Key: "buckets_ptr_pos",
-				Val: structfield.NewID("std", "runtime", "hmap", "buckets"),
-			},
-			probe.StructFieldConst{
 				Key: "request_host_pos",
 				Val: structfield.NewID("std", "net/http", "Request", "Host"),
 			},
