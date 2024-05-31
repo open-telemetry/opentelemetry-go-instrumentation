@@ -191,7 +191,7 @@ func fakeManager(t *testing.T) *Manager {
 	logger := stdr.New(log.New(os.Stderr, "", log.LstdFlags))
 	logger = logger.WithName("Instrumentation")
 
-	m, err := NewManager(logger, nil, true)
+	m, err := NewManager(logger, nil, true, nil)
 	assert.NoError(t, err)
 	assert.NotNil(t, m)
 

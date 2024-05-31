@@ -40,27 +40,29 @@ import (
 
 // Manager handles the management of [probe.Probe] instances.
 type Manager struct {
-	logger         logr.Logger
-	probes         map[probe.ID]probe.Probe
-	done           chan bool
-	incomingEvents chan *probe.Event
-	otelController *opentelemetry.Controller
-	globalImpl     bool
-	wg             sync.WaitGroup
-	closingErrors  chan error
+	logger          logr.Logger
+	probes          map[probe.ID]probe.Probe
+	done            chan bool
+	incomingEvents  chan *probe.Event
+	otelController  *opentelemetry.Controller
+	globalImpl      bool
+	wg              sync.WaitGroup
+	closingErrors   chan error
+	loadedIndicator chan struct{}
 }
 
 // NewManager returns a new [Manager].
-func NewManager(logger logr.Logger, otelController *opentelemetry.Controller, globalImpl bool) (*Manager, error) {
+func NewManager(logger logr.Logger, otelController *opentelemetry.Controller, globalImpl bool, loadIndicator chan struct{}) (*Manager, error) {
 	logger = logger.WithName("Manager")
 	m := &Manager{
-		logger:         logger,
-		probes:         make(map[probe.ID]probe.Probe),
-		done:           make(chan bool, 1),
-		incomingEvents: make(chan *probe.Event),
-		otelController: otelController,
-		globalImpl:     globalImpl,
-		closingErrors:  make(chan error, 1),
+		logger:          logger,
+		probes:          make(map[probe.ID]probe.Probe),
+		done:            make(chan bool, 1),
+		incomingEvents:  make(chan *probe.Event),
+		otelController:  otelController,
+		globalImpl:      globalImpl,
+		closingErrors:   make(chan error, 1),
+		loadedIndicator: loadIndicator,
 	}
 
 	err := m.registerProbes()
@@ -161,6 +163,10 @@ func (m *Manager) Run(ctx context.Context, target *process.TargetDetails) error 
 			defer m.wg.Done()
 			p.Run(m.incomingEvents)
 		}(i)
+	}
+
+	if m.loadedIndicator != nil {
+		close(m.loadedIndicator)
 	}
 
 	for {

@@ -23,6 +23,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strconv"
 	"strings"
 
 	"github.com/go-logr/logr"
@@ -54,6 +55,9 @@ const (
 	// envTracesExportersKey is the key for the environment variable value
 	// containing what OpenTelemetry trace exporter to use.
 	envTracesExportersKey = "OTEL_TRACES_EXPORTER"
+	// envOtelGlobalImplKey is the key for the environment variable value enabling to opt-in for the
+	// OpenTelemetry global implementation. It should be a boolean value.
+	envOtelGlobalImplKey = "OTEL_GO_AUTO_GLOBAL"
 )
 
 // Instrumentation manages and controls all OpenTelemetry Go
@@ -120,7 +124,7 @@ func NewInstrumentation(ctx context.Context, opts ...InstrumentationOption) (*In
 		return nil, err
 	}
 
-	mngr, err := instrumentation.NewManager(logger, ctrl, c.globalImpl)
+	mngr, err := instrumentation.NewManager(logger, ctrl, c.globalImpl, c.loadIndicator)
 	if err != nil {
 		return nil, err
 	}
@@ -174,6 +178,7 @@ type instConfig struct {
 	serviceName        string
 	additionalResAttrs []attribute.KeyValue
 	globalImpl         bool
+	loadIndicator      chan struct{}
 }
 
 func newInstConfig(ctx context.Context, opts []InstrumentationOption) (instConfig, error) {
@@ -341,9 +346,10 @@ var lookupEnv = os.LookupEnv
 //   - OTEL_GO_AUTO_TARGET_EXE: sets the target binary
 //   - OTEL_SERVICE_NAME (or OTEL_RESOURCE_ATTRIBUTES): sets the service name
 //   - OTEL_TRACES_EXPORTER: sets the trace exporter
+//   - OTEL_GO_AUTO_GLOBAL: enables the OpenTelemetry global implementation
 //
 // This option may conflict with [WithTarget], [WithPID], [WithTraceExporter],
-// and [WithServiceName] if their respective environment variable is defined.
+// [WithServiceName] and [WithGlobal] if their respective environment variable is defined.
 // If more than one of these options are used, the last one provided to an
 // [Instrumentation] will be used.
 //
@@ -370,6 +376,12 @@ func WithEnv() InstrumentationOption {
 		if name, attrs, ok := lookupResourceData(); ok {
 			c.serviceName = name
 			c.additionalResAttrs = append(c.additionalResAttrs, attrs...)
+		}
+		if val, ok := lookupEnv(envOtelGlobalImplKey); ok {
+			boolVal, err := strconv.ParseBool(val)
+			if err == nil {
+				c.globalImpl = boolVal
+			}
 		}
 		return c, err
 	})
@@ -447,6 +459,10 @@ func WithSampler(sampler trace.Sampler) InstrumentationOption {
 // The OpenTelemetry default global implementation is left unchanged (i.e. it
 // remains a no-op implementation) if this options is not used.
 //
+// If OTEL_GO_AUTO_GLOBAL is defined, this option will conflict with
+// [WithEnv]. If both are used, the last one provided to an [Instrumentation]
+// will be used.
+//
 // [OpenTelemetry default global implementation]: https://pkg.go.dev/go.opentelemetry.io/otel
 func WithGlobal() InstrumentationOption {
 	return fnOpt(func(_ context.Context, c instConfig) (instConfig, error) {
@@ -460,6 +476,17 @@ func WithGlobal() InstrumentationOption {
 func WithResourceAttributes(attrs ...attribute.KeyValue) InstrumentationOption {
 	return fnOpt(func(_ context.Context, c instConfig) (instConfig, error) {
 		c.additionalResAttrs = append(c.additionalResAttrs, attrs...)
+		return c, nil
+	})
+}
+
+// WithLoadedIndicator returns an [InstrumentationOption] that will configure an
+// [Instrumentation] to close the provided indicator channel when the target
+// process has been instrumented (i.e. all probes have been loaded).
+// The provided indicator channel needs to be initialized by the caller.
+func WithLoadedIndicator(indicator chan struct{}) InstrumentationOption {
+	return fnOpt(func(_ context.Context, c instConfig) (instConfig, error) {
+		c.loadIndicator = indicator
 		return c, nil
 	})
 }
