@@ -47,6 +47,7 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 - Update `net/http` instrumentation to comply with semantic conventions v1.25.0. ([#790](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/790))
 - Update existing 3rd party licenses. ([#864](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/864))
 - Add make target 'codespell'. ([#863](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/863))
+- Fix various spelling errors. ([#867](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/867))
 
 ## [v0.12.0-alpha] - 2024-04-10
 
