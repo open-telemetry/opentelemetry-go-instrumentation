@@ -236,12 +236,12 @@ $(PYTOOLS):
 	@$(DOCKERPY) bash -c "python3 -m venv $(VENVDIR) && $(PIP) install --upgrade pip"
 
 # Install python packages into the virtual environment.
-$(PYTOOLS)/%: | $(PYTOOLS)
+$(PYTOOLS)/%: $(PYTOOLS)
 	@$(DOCKERPY) $(PIP) install -r requirements.txt
 
 CODESPELL = $(PYTOOLS)/codespell
-$(CODESPELL): PACKAGE=codespell# The python image to use for the virtual environment.
+$(CODESPELL): PACKAGE=codespell
 
 .PHONY: codespell
-codespell: | $(CODESPELL)
-	@$(DOCKERPY) $(CODESPELL).PHONY: codespell
+codespell: $(CODESPELL)
+	@$(DOCKERPY) $(CODESPELL)
