@@ -25,4 +25,5 @@ excluded-modules:
   - go.opentelemetry.io/auto/examples/rolldice
   - go.opentelemetry.io/auto/internal/test/e2e/grpc
   - go.opentelemetry.io/auto/internal/test/e2e/nethttp_custom
+  - go.opentelemetry.io/auto/internal/test/e2e/otelglobal
   - go.opentelemetry.io/auto/internal/tools
