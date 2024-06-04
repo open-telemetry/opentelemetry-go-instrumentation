@@ -23,30 +23,36 @@
  Keep a power of 2 to help with masks */
 #define MAX_SLICE_ARRAY_SIZE 1024
 
-struct go_string
+typedef struct go_string
 {
     char *str;
     s64 len;
-};
+} go_string_t;
 
-struct go_slice
+typedef struct go_slice
 {
     void *array;
     s64 len;
     s64 cap;
-};
+} go_slice_t;
 
-struct go_iface
+typedef struct go_iface
 {
     void *tab;
     void *data;
-};
+} go_iface_t;
 
-struct map_bucket {
-    char tophash[8];
-    struct go_string keys[8];
-    struct go_slice values[8];
-    void *overflow;
+// a map bucket type with the given key and value types
+#define MAP_BUCKET_TYPE(key_type, value_type) struct map_bucket_##key_type##_##value_type##_t
+// a map bucket struct definition with the given key and value types
+// for more details about the structure of a map bucket see:
+// https://github.com/golang/go/blob/639cc0dcc0948dd02c9d5fc12fbed730a21ebebc/src/runtime/map.go#L143
+#define MAP_BUCKET_DEFINITION(key_type, value_type) \
+MAP_BUCKET_TYPE(key_type, value_type) { \
+    char tophash[8]; \
+    key_type keys[8]; \
+    value_type values[8]; \
+    void *overflow; \
 };
 
 struct slice_array_buff
