@@ -190,35 +190,17 @@ static __always_inline long extract_context_from_req_headers(void *headers_ptr_p
     return -1;
 }
 
-void read_go_string(void *base, int offset, char *output, int maxLen, const char *errorMsg) {
+static __always_inline void read_go_string(void *base, int offset, char *output, int maxLen, const char *errorMsg) {
     void *ptr = (void *)(base + offset);
     if (!get_go_string_from_user_ptr(ptr, output, maxLen)) {
         bpf_printk("Failed to get %s", errorMsg);
     }
 }
 
-void collect_http_server_attributes(void *req_ptr, struct http_server_span_t *http_server_span) {
-    void *url_ptr = 0;
-    bpf_probe_read(&url_ptr, sizeof(url_ptr), (void *)(req_ptr + url_ptr_pos));
-    // Collect fields from response
-    read_go_string(req_ptr, method_ptr_pos, http_server_span->method, sizeof(http_server_span->method), "method from request");
-    if (pattern_path_supported) {
-        void *pat_ptr = NULL;
-        bpf_probe_read(&pat_ptr, sizeof(pat_ptr), (void *)(req_ptr + req_pat_pos));
-        if (pat_ptr != NULL) {
-            read_go_string(pat_ptr, pat_str_pos, http_server_span->path_pattern, sizeof(http_server_span->path), "patterned path from Request");
-        }
-    }
-    read_go_string(url_ptr, path_ptr_pos, http_server_span->path, sizeof(http_server_span->path), "path from Request.URL");
-    read_go_string(req_ptr, remote_addr_pos, http_server_span->remote_addr, sizeof(http_server_span->remote_addr), "remote addr from Request.RemoteAddr");
-    read_go_string(req_ptr, host_pos, http_server_span->host, sizeof(http_server_span->host), "host from Request.Host");
-    read_go_string(req_ptr, proto_pos, http_server_span->proto, sizeof(http_server_span->proto), "proto from Request.Proto");
-}
-
 // This instrumentation attaches uprobe to the following function:
 // func (sh serverHandler) ServeHTTP(rw ResponseWriter, req *Request)
-SEC("uprobe/HandlerFunc_ServeHTTP")
-int uprobe_HandlerFunc_ServeHTTP(struct pt_regs *ctx)
+SEC("uprobe/serverHandler_ServeHTTP")
+int uprobe_serverHandler_ServeHTTP(struct pt_regs *ctx)
 {
     void *req_ctx_ptr = get_Go_context(ctx, 4, ctx_ptr_pos, false);
     void *key = get_consistent_key(ctx, req_ctx_ptr);
@@ -255,19 +237,12 @@ int uprobe_HandlerFunc_ServeHTTP(struct pt_regs *ctx)
         get_span_context_from_parent(&http_server_span->psc, &http_server_span->sc);
     }
 
-    if (!is_sampled(&http_server_span->sc)) {
-        goto track_span;
-    }
-
-    collect_http_server_attributes(req_ptr, http_server_span);
-
     if (req_ctx_ptr == NULL)
     {
         bpf_printk("uprobe/HandlerFunc_ServeHTTP: req_ctx_ptr is NULL");
         return 0;
     }
 
-track_span:
     bpf_map_update_elem(&http_server_uprobes, &key, uprobe_data, 0);
     start_tracking_span(req_ctx_ptr, &http_server_span->sc);
     return 0;
@@ -275,8 +250,8 @@ track_span:
 
 // This instrumentation attaches uprobe to the following function:
 // func (sh serverHandler) ServeHTTP(rw ResponseWriter, req *Request)
-SEC("uprobe/HandlerFunc_ServeHTTP")
-int uprobe_HandlerFunc_ServeHTTP_Returns(struct pt_regs *ctx) {
+SEC("uprobe/serverHandler_ServeHTTP")
+int uprobe_serverHandler_ServeHTTP_Returns(struct pt_regs *ctx) {
     u64 end_time = bpf_ktime_get_ns();
     void *req_ctx_ptr = get_Go_context(ctx, 4, ctx_ptr_pos, false);
     void *key = get_consistent_key(ctx, req_ctx_ptr);
@@ -297,6 +272,22 @@ int uprobe_HandlerFunc_ServeHTTP_Returns(struct pt_regs *ctx) {
     bpf_probe_read(&req_ptr, sizeof(req_ptr), (void *)(resp_ptr + req_ptr_pos));
 
     http_server_span->end_time = end_time;
+
+    void *url_ptr = 0;
+    bpf_probe_read(&url_ptr, sizeof(url_ptr), (void *)(req_ptr + url_ptr_pos));
+    // Collect fields from response
+    read_go_string(req_ptr, method_ptr_pos, http_server_span->method, sizeof(http_server_span->method), "method from request");
+    if (pattern_path_supported) {
+        void *pat_ptr = NULL;
+        bpf_probe_read(&pat_ptr, sizeof(pat_ptr), (void *)(req_ptr + req_pat_pos));
+        if (pat_ptr != NULL) {
+            read_go_string(pat_ptr, pat_str_pos, http_server_span->path_pattern, sizeof(http_server_span->path), "patterned path from Request");
+        }
+    }
+    read_go_string(url_ptr, path_ptr_pos, http_server_span->path, sizeof(http_server_span->path), "path from Request.URL");
+    read_go_string(req_ptr, remote_addr_pos, http_server_span->remote_addr, sizeof(http_server_span->remote_addr), "remote addr from Request.RemoteAddr");
+    read_go_string(req_ptr, host_pos, http_server_span->host, sizeof(http_server_span->host), "host from Request.Host");
+    read_go_string(req_ptr, proto_pos, http_server_span->proto, sizeof(http_server_span->proto), "proto from Request.Proto");
 
     // status code
     bpf_probe_read(&http_server_span->status_code, sizeof(http_server_span->status_code), (void *)(resp_ptr + status_code_pos));

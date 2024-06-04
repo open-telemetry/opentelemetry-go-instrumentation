@@ -37,14 +37,15 @@ struct span_context
     u8 padding[7];
 };
 
-// Fill the child span context based on the parent
+// Fill the child span context based on the parent span context,
+// generating a new span id and copying the trace id and trace flags
 static __always_inline void get_span_context_from_parent(struct span_context *parent, struct span_context *child) {
     copy_byte_arrays(parent->TraceID, child->TraceID, TRACE_ID_SIZE);
     generate_random_bytes(child->SpanID, SPAN_ID_SIZE);
     child->TraceFlags = parent->TraceFlags;
 }
 
-// Fill the passed span context as root
+// Fill the passed span context as root span context
 static __always_inline void get_root_span_context(struct span_context *sc) {
     generate_random_bytes(sc->TraceID, TRACE_ID_SIZE);
     generate_random_bytes(sc->SpanID, SPAN_ID_SIZE);

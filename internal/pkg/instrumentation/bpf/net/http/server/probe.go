@@ -148,7 +148,7 @@ func uprobeServeHTTP(name string, exec *link.Executable, target *process.TargetD
 	}
 
 	opts := &link.UprobeOptions{Address: offset, PID: target.PID}
-	l, err := exec.Uprobe("", obj.UprobeHandlerFuncServeHTTP, opts)
+	l, err := exec.Uprobe("", obj.UprobeServerHandlerServeHTTP, opts)
 	if err != nil {
 		return nil, err
 	}
@@ -161,7 +161,7 @@ func uprobeServeHTTP(name string, exec *link.Executable, target *process.TargetD
 
 	for _, ret := range retOffsets {
 		opts := &link.UprobeOptions{Address: ret}
-		l, err := exec.Uprobe("", obj.UprobeHandlerFuncServeHTTP_Returns, opts)
+		l, err := exec.Uprobe("", obj.UprobeServerHandlerServeHTTP_Returns, opts)
 		if err != nil {
 			return nil, err
 		}
