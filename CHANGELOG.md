@@ -22,6 +22,9 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 - `WithLoadedIndicator` `InstrumentationOption` to configure an Instrumentation to notify the caller once all the eBPF probes are loaded. ([#848](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/848))
 - Add env var equivalent to the WithGlobal InstrumentationOption. ([#849](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/849))
 - Support `go.opentelemetry.io/otel@v1.27.0`. ([#850](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/850))
+- Support `golang.org/x/net` v0.26.0. ([#871](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/871))
+- Support Go `v1.21.11`. ([#871](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/871))
+- Support Go `v1.22.4`. ([#871](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/871))
 
 ### Fixed
 
