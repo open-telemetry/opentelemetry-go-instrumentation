@@ -8,9 +8,11 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 
 ## [Unreleased]
 
+## [v0.13.0-alpha] - 2024-06-04
+
 ### Added
 
-- kafka-go instrumentation ([#709](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/709))
+- `github.com/segmentio/kafka-go` instrumentation. ([#709](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/709))
 - Support `go.opentelemetry.io/otel@v1.26.0`. ([#796](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/796))
 - Support HTTP server path template added in Go version 1.22.
 - The `http.route` attribute is included and the span name updated to use this information. ([#740](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/740))
@@ -22,15 +24,19 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 - `WithLoadedIndicator` `InstrumentationOption` to configure an Instrumentation to notify the caller once all the eBPF probes are loaded. ([#848](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/848))
 - Add env var equivalent to the WithGlobal InstrumentationOption. ([#849](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/849))
 - Support `go.opentelemetry.io/otel@v1.27.0`. ([#850](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/850))
+- Support `golang.org/x/net` v0.26.0. ([#871](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/871))
+- Support Go `v1.21.11`. ([#871](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/871))
+- Support Go `v1.22.4`. ([#871](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/871))
 
 ### Fixed
 
-- Change HTTP client span name to `{http.request.method}` ([#775](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/775))
+- Change HTTP client span name to `{http.request.method}`. ([#775](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/775))
 - Don't set empty URL path in HTTP client probe. ([#810](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/810))
 - Don't fail HTTP client probe attribute resolution on empty URL path. ([#810](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/810))
 - Extract `process.runtime.version` and `process.runtime.name` from instrumented process. ([#811](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/811))
 - Support Go versions from apps defining GOEXPERIMENT. ([#813](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/813))
 - Update `net/http` instrumentation to comply with semantic conventions v1.25.0. ([#790](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/790))
+- Update existing 3rd party licenses. ([#864](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/864))
 
 ## [v0.12.0-alpha] - 2024-04-10
 
@@ -337,7 +343,8 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 
 This is the first release of OpenTelemetry Go Automatic Instrumentation.
 
-[Unreleased]: https://github.com/open-telemetry/opentelemetry-go-instrumentation/compare/v0.12.0-alpha...HEAD
+[Unreleased]: https://github.com/open-telemetry/opentelemetry-go-instrumentation/compare/v0.13.0-alpha...HEAD
+[v0.13.0-alpha]: https://github.com/open-telemetry/opentelemetry-go-instrumentation/releases/tag/v0.13.0-alpha
 [v0.12.0-alpha]: https://github.com/open-telemetry/opentelemetry-go-instrumentation/releases/tag/v0.12.0-alpha
 [v0.11.0-alpha]: https://github.com/open-telemetry/opentelemetry-go-instrumentation/releases/tag/v0.11.0-alpha
 [v0.10.1-alpha]: https://github.com/open-telemetry/opentelemetry-go-instrumentation/releases/tag/v0.10.1-alpha
