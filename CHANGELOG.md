@@ -8,6 +8,10 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 
 ## [Unreleased]
 
+### Added
+
+- Initial support for `trace-flags`. ([#868](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/868))
+
 ## [v0.13.0-alpha] - 2024-06-04
 
 ### Added
