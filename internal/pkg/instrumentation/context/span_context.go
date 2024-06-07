@@ -27,6 +27,8 @@ type BaseSpanProperties struct {
 // EBPFSpanContext is the the span context representation within the eBPF
 // instrumentation system.
 type EBPFSpanContext struct {
-	TraceID trace.TraceID
-	SpanID  trace.SpanID
+	TraceID    trace.TraceID
+	SpanID     trace.SpanID
+	TraceFlags trace.TraceFlags
+	_          [7]byte // padding
 }

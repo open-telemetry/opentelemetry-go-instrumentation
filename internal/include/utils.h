@@ -17,10 +17,6 @@
 
 #include "bpf_helpers.h"
 
-#define TRACE_ID_SIZE 16
-#define TRACE_ID_STRING_SIZE 32
-#define SPAN_ID_SIZE 8
-#define SPAN_ID_STRING_SIZE 16
 
 static __always_inline bool bpf_memcmp(char *s1, char *s2, s32 size)
 {

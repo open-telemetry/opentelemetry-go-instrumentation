@@ -131,7 +131,7 @@ int uprobe_Transport_roundTrip(struct pt_regs *ctx) {
         copy_byte_arrays(httpReq->psc.TraceID, httpReq->sc.TraceID, TRACE_ID_SIZE);
         generate_random_bytes(httpReq->sc.SpanID, SPAN_ID_SIZE);
     } else {
-        httpReq->sc = generate_span_context();
+        get_root_span_context(&httpReq->sc);
     }
 
     if (!get_go_string_from_user_ptr((void *)(req_ptr+method_ptr_pos), httpReq->method, sizeof(httpReq->method))) {

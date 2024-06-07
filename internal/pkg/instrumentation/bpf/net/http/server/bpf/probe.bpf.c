@@ -69,14 +69,6 @@ struct
 {
     __uint(type, BPF_MAP_TYPE_PERCPU_ARRAY);
     __uint(key_size, sizeof(u32));
-    __uint(value_size, sizeof(struct span_context));
-    __uint(max_entries, 1);
-} parent_span_context_storage_map SEC(".maps");
-
-struct
-{
-    __uint(type, BPF_MAP_TYPE_PERCPU_ARRAY);
-    __uint(key_size, sizeof(u32));
     __uint(value_size, sizeof(struct uprobe_data_t));
     __uint(max_entries, 1);
 } http_server_uprobe_storage_map SEC(".maps");
@@ -105,43 +97,46 @@ volatile const bool pattern_path_supported;
 volatile const u64 req_pat_pos;
 volatile const u64 pat_str_pos;
 
-static __always_inline struct span_context *extract_context_from_req_headers(void *headers_ptr_ptr)
+// Extracts the span context from the request headers by looking for the 'traceparent' header.
+// Fills the parent_span_context with the extracted span context.
+// Returns 0 on success, negative value on error.
+static __always_inline long extract_context_from_req_headers(void *headers_ptr_ptr, struct span_context *parent_span_context)
 {
     void *headers_ptr;
     long res;
     res = bpf_probe_read(&headers_ptr, sizeof(headers_ptr), headers_ptr_ptr);
     if (res < 0)
     {
-        return NULL;
+        return res;
     }
     u64 headers_count = 0;
     res = bpf_probe_read(&headers_count, sizeof(headers_count), headers_ptr);
     if (res < 0)
     {
-        return NULL;
+        return res;
     }
     if (headers_count == 0)
     {
-        return NULL;
+        return -1;
     }
     unsigned char log_2_bucket_count;
     res = bpf_probe_read(&log_2_bucket_count, sizeof(log_2_bucket_count), headers_ptr + 9);
     if (res < 0)
     {
-        return NULL;
+        return -1;
     }
     u64 bucket_count = 1 << log_2_bucket_count;
     void *header_buckets;
     res = bpf_probe_read(&header_buckets, sizeof(header_buckets), (void*)(headers_ptr + buckets_ptr_pos));
     if (res < 0)
     {
-        return NULL;
+        return -1;
     }
     u32 map_id = 0;
     struct map_bucket *map_value = bpf_map_lookup_elem(&golang_mapbucket_storage_map, &map_id);
     if (!map_value)
     {
-        return NULL;
+        return -1;
     }
 
     for (u64 j = 0; j < MAX_BUCKETS; j++)
@@ -176,7 +171,7 @@ static __always_inline struct span_context *extract_context_from_req_headers(voi
             res = bpf_probe_read(&traceparent_header_value_go_str, sizeof(traceparent_header_value_go_str), traceparent_header_value_ptr);
             if (res < 0)
             {
-                return NULL;
+                return -1;
             }
             if (traceparent_header_value_go_str.len != W3C_VAL_LENGTH)
             {
@@ -186,24 +181,26 @@ static __always_inline struct span_context *extract_context_from_req_headers(voi
             res = bpf_probe_read(&traceparent_header_value, sizeof(traceparent_header_value), traceparent_header_value_go_str.str);
             if (res < 0)
             {
-                return NULL;
-            }
-            struct span_context *parent_span_context = bpf_map_lookup_elem(&parent_span_context_storage_map, &map_id);
-            if (!parent_span_context)
-            {
-                return NULL;
+                return res;
             }
             w3c_string_to_span_context(traceparent_header_value, parent_span_context);
-            return parent_span_context;
+            return 0;
         }
     }
-    return NULL;
+    return -1;
+}
+
+static __always_inline void read_go_string(void *base, int offset, char *output, int maxLen, const char *errorMsg) {
+    void *ptr = (void *)(base + offset);
+    if (!get_go_string_from_user_ptr(ptr, output, maxLen)) {
+        bpf_printk("Failed to get %s", errorMsg);
+    }
 }
 
 // This instrumentation attaches uprobe to the following function:
 // func (sh serverHandler) ServeHTTP(rw ResponseWriter, req *Request)
-SEC("uprobe/HandlerFunc_ServeHTTP")
-int uprobe_HandlerFunc_ServeHTTP(struct pt_regs *ctx)
+SEC("uprobe/serverHandler_ServeHTTP")
+int uprobe_serverHandler_ServeHTTP(struct pt_regs *ctx)
 {
     void *req_ctx_ptr = get_Go_context(ctx, 4, ctx_ptr_pos, false);
     void *key = get_consistent_key(ctx, req_ctx_ptr);
@@ -233,17 +230,11 @@ int uprobe_HandlerFunc_ServeHTTP(struct pt_regs *ctx)
 
     // Propagate context
     void *req_ptr = get_argument(ctx, 4);
-    struct span_context *parent_ctx = extract_context_from_req_headers((void*)(req_ptr + headers_ptr_pos));
-    if (parent_ctx != NULL)
-    {
-        // found parent context in http headers
-        http_server_span->psc = *parent_ctx;
-        copy_byte_arrays(http_server_span->psc.TraceID, http_server_span->sc.TraceID, TRACE_ID_SIZE);
-        generate_random_bytes(http_server_span->sc.SpanID, SPAN_ID_SIZE);
-    }
-    else
-    {
-        http_server_span->sc = generate_span_context();
+    long res = extract_context_from_req_headers((void*)(req_ptr + headers_ptr_pos), &http_server_span->psc);
+    if (res < 0) {
+        get_root_span_context(&http_server_span->sc);
+    } else {
+        get_span_context_from_parent(&http_server_span->psc, &http_server_span->sc);
     }
 
     if (req_ctx_ptr == NULL)
@@ -257,18 +248,10 @@ int uprobe_HandlerFunc_ServeHTTP(struct pt_regs *ctx)
     return 0;
 }
 
-void read_go_string(void *base, int offset, char *output, int maxLen, const char *errorMsg) {
-    void *ptr = (void *)(base + offset);
-    if (!get_go_string_from_user_ptr(ptr, output, maxLen)) {
-        bpf_printk("Failed to get %s", errorMsg);
-    }
-    
-}
-
 // This instrumentation attaches uprobe to the following function:
 // func (sh serverHandler) ServeHTTP(rw ResponseWriter, req *Request)
-SEC("uprobe/HandlerFunc_ServeHTTP")
-int uprobe_HandlerFunc_ServeHTTP_Returns(struct pt_regs *ctx) {
+SEC("uprobe/serverHandler_ServeHTTP")
+int uprobe_serverHandler_ServeHTTP_Returns(struct pt_regs *ctx) {
     u64 end_time = bpf_ktime_get_ns();
     void *req_ctx_ptr = get_Go_context(ctx, 4, ctx_ptr_pos, false);
     void *key = get_consistent_key(ctx, req_ctx_ptr);
@@ -278,9 +261,12 @@ int uprobe_HandlerFunc_ServeHTTP_Returns(struct pt_regs *ctx) {
         bpf_printk("uprobe/HandlerFunc_ServeHTTP_Returns: entry_state is NULL");
         return 0;
     }
-    bpf_map_delete_elem(&http_server_uprobes, &key);
 
     struct http_server_span_t *http_server_span = &uprobe_data->span;
+    if (!is_sampled(&http_server_span->sc)) {
+        goto done;
+    }
+
     void *resp_ptr = (void *)uprobe_data->resp_ptr;
     void *req_ptr = NULL;
     bpf_probe_read(&req_ptr, sizeof(req_ptr), (void *)(resp_ptr + req_ptr_pos));
@@ -307,6 +293,9 @@ int uprobe_HandlerFunc_ServeHTTP_Returns(struct pt_regs *ctx) {
     bpf_probe_read(&http_server_span->status_code, sizeof(http_server_span->status_code), (void *)(resp_ptr + status_code_pos));
 
     bpf_perf_event_output(ctx, &events, BPF_F_CURRENT_CPU, http_server_span, sizeof(*http_server_span));
+    
+done:
     stop_tracking_span(&http_server_span->sc, &http_server_span->psc);
+    bpf_map_delete_elem(&http_server_uprobes, &key);
     return 0;
 }
