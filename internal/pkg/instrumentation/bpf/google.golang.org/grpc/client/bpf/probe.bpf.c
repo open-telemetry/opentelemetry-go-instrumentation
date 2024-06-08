@@ -121,11 +121,10 @@ int uprobe_ClientConn_Invoke(struct pt_regs *ctx)
 
     // Write event
     bpf_map_update_elem(&grpc_events, &key, &grpcReq, 0);
-    start_tracking_span(context_ptr, &grpcReq.sc);
     return 0;
 }
 
-UPROBE_RETURN(ClientConn_Invoke, struct grpc_request_t, grpc_events, events, 3, 0, true)
+UPROBE_RETURN(ClientConn_Invoke, struct grpc_request_t, grpc_events, events, 3, 0, true, true)
 
 // func (l *loopyWriter) headerHandler(h *headerFrame) error
 SEC("uprobe/loopyWriter_headerHandler")

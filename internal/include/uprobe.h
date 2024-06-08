@@ -32,8 +32,8 @@
 // 3. Update the end time of the found span
 // 4. Submit the constructed event to the agent code using perf buffer events_map
 // 5. Delete the span from the uprobe_context_map
-// 6. Delete the span from the global active spans map
-#define UPROBE_RETURN(name, event_type, uprobe_context_map, events_map, context_pos, context_offset, passed_as_arg) \
+// 6. Delete the span from the global active spans map in case it is not an outgoing span (outgoing spans are not tracked using this map)
+#define UPROBE_RETURN(name, event_type, uprobe_context_map, events_map, context_pos, context_offset, passed_as_arg, outgoing) \
 SEC("uprobe/##name##")                                                                                              \
 int uprobe_##name##_Returns(struct pt_regs *ctx) {                                                                  \
     void *ctx_address = get_Go_context(ctx, context_pos, context_offset, passed_as_arg);                            \
@@ -47,7 +47,9 @@ int uprobe_##name##_Returns(struct pt_regs *ctx) {                              
     tmpReq.end_time = bpf_ktime_get_ns();                                                                           \
     bpf_perf_event_output(ctx, &events_map, BPF_F_CURRENT_CPU, &tmpReq, sizeof(tmpReq));                            \
     bpf_map_delete_elem(&uprobe_context_map, &key);                                                                 \
-    stop_tracking_span(&tmpReq.sc, &tmpReq.psc);                                                                    \
+    if (!outgoing) {                                                                                                \
+        stop_tracking_span(&tmpReq.sc, &tmpReq.psc);                                                                \
+    }                                                                                                               \
     return 0;                                                                                                       \
 } 
 
