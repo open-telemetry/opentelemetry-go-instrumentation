@@ -13,6 +13,10 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 - Initial support for `trace-flags`. ([#868](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/868))
 - Support `google.golang.org/grpc` `1.66.0-dev`. ([#872](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/872))
 
+### Fixed
+
+- HTTP client: Use Host field in URL if the Request Host is not present. ([#888](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/888))
+
 ## [v0.13.0-alpha] - 2024-06-04
 
 ### Added
