@@ -92,6 +92,7 @@ volatile const u64 raw_fragment_pos;
 volatile const u64 username_pos;
 volatile const u64 io_writer_buf_ptr_pos;
 volatile const u64 io_writer_n_pos;
+volatile const u64 url_host_pos;
 
 // This instrumentation attaches uprobe to the following function:
 // func net/http/transport.roundTrip(req *Request) (*Response, error)
@@ -191,7 +192,10 @@ int uprobe_Transport_roundTrip(struct pt_regs *ctx) {
 
     // get host from Request
     if (!get_go_string_from_user_ptr((void *)(req_ptr+request_host_pos), httpReq->host, sizeof(httpReq->host))) {
-        bpf_printk("uprobe_Transport_roundTrip: Failed to get host from Request");
+        // If host is not present in Request, get it from URL
+        if (!get_go_string_from_user_ptr((void *)(url_ptr+url_host_pos), httpReq->host, sizeof(httpReq->host))) {
+            bpf_printk("uprobe_Transport_roundTrip: Failed to get host from Request and URL");
+        }
     }
 
     // get proto from Request

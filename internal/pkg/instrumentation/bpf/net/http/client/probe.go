@@ -165,6 +165,10 @@ func New(logger logr.Logger) probe.Probe {
 				Key: "username_pos",
 				Val: structfield.NewID("std", "net/url", "Userinfo", "username"),
 			},
+			probe.StructFieldConst{
+				Key: "url_host_pos",
+				Val: structfield.NewID("std", "net/url", "URL", "Host"),
+			},
 		},
 		Uprobes: uprobes,
 		ReaderFn: func(obj bpfObjects) (*perf.Reader, error) {
