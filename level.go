@@ -46,6 +46,7 @@ func (l LogLevel) String() string {
 	}
 }
 
+// UnmarshalText applies the LogLevel type when inputted text is valid.
 func (l *LogLevel) UnmarshalText(text []byte) error {
 	if ok := l.unmarshalText(bytes.ToLower(text)); ok {
 		return nil
@@ -59,7 +60,7 @@ func (l *LogLevel) validate() error {
 		return errors.New("can't parse nil values")
 	}
 
-	if l.unmarshalText(bytes.ToLower([]byte(l.String()))) == false {
+	if !l.unmarshalText(bytes.ToLower([]byte(l.String()))) {
 		return errors.New("log level value is not accepted")
 	}
 
@@ -83,6 +84,7 @@ func (l *LogLevel) unmarshalText(text []byte) bool {
 	return true
 }
 
+// ParseLevel return a new LogLevel using text, and will return err if inputted text is not accepted.
 func ParseLevel(text string) (LogLevel, error) {
 	var level LogLevel
 
