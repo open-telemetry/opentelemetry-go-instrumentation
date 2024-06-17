@@ -89,7 +89,7 @@ func TestWithEnv(t *testing.T) {
 
 		c, err := newInstConfig(context.Background(), []InstrumentationOption{WithEnv()})
 		require.NoError(t, err)
-		assert.Equal(t, LevelDebug, c.logLevel)
+		assert.Equal(t, LogLevelDebug, c.logLevel)
 
 		const wrong = "invalid"
 
@@ -193,13 +193,13 @@ func TestWithLogLevel(t *testing.T) {
 
 		require.NoError(t, err)
 
-		assert.Equal(t, LevelError, c.logLevel)
+		assert.Equal(t, LogLevelError, c.logLevel)
 
-		c, err = newInstConfig(context.Background(), []InstrumentationOption{WithLogLevel(LevelInfo)})
+		c, err = newInstConfig(context.Background(), []InstrumentationOption{WithLogLevel(LogLevelInfo)})
 
 		require.NoError(t, err)
 
-		assert.Equal(t, LevelInfo, c.logLevel)
+		assert.Equal(t, LogLevelInfo, c.logLevel)
 	})
 
 	t.Run("Will Validate Input", func(t *testing.T) {

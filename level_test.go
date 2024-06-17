@@ -27,28 +27,28 @@ func TestLevel(t *testing.T) {
 		str   string
 	}{
 		{
-			name:  "LevelUndefined",
-			level: LevelUndefined,
+			name:  "LogLevelUndefined",
+			level: logLevelUndefined,
 			str:   "",
 		},
 		{
-			name:  "LevelDebug",
-			level: LevelDebug,
+			name:  "LogLevelDebug",
+			level: LogLevelDebug,
 			str:   "debug",
 		},
 		{
-			name:  "LevelInfo",
-			level: LevelInfo,
+			name:  "LogLevelInfo",
+			level: LogLevelInfo,
 			str:   "info",
 		},
 		{
-			name:  "LevelWarn",
-			level: LevelWarn,
+			name:  "LogLevelWarn",
+			level: LogLevelWarn,
 			str:   "warn",
 		},
 		{
-			name:  "LevelError",
-			level: LevelError,
+			name:  "LogLevelError",
+			level: LogLevelError,
 			str:   "error",
 		},
 	}
@@ -61,11 +61,6 @@ func TestLevel(t *testing.T) {
 }
 
 func TestValidate(t *testing.T) {
-	t.Run("can validate wrong log levels", func(t *testing.T) {
-		var l LogLevel
-
-		l.unmarshalText([]byte("notexist"))
-
-		assert.Equal(t, "log level value is not accepted", l.validate().Error(), "log level is not nil")
-	})
+	l := LogLevel("notexist")
+	assert.ErrorIs(t, l.validate(), errInvalidLogLevel)
 }

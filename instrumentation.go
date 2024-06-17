@@ -77,7 +77,7 @@ var errUndefinedTarget = fmt.Errorf("undefined target Go binary, consider settin
 func newLogger(logLevel LogLevel) logr.Logger {
 	level, logErr := zap.ParseAtomicLevel(logLevel.String())
 	if logErr != nil {
-		level, _ = zap.ParseAtomicLevel(LevelInfo.String())
+		level, _ = zap.ParseAtomicLevel(LogLevelInfo.String())
 	}
 
 	config := zap.NewProductionConfig()
@@ -222,8 +222,8 @@ func newInstConfig(ctx context.Context, opts []InstrumentationOption) (instConfi
 		c.sampler = trace.AlwaysSample()
 	}
 
-	if c.logLevel == LevelUndefined {
-		c.logLevel = LevelInfo
+	if c.logLevel == logLevelUndefined {
+		c.logLevel = LogLevelInfo
 	}
 
 	return c, err
@@ -403,7 +403,7 @@ func WithEnv() InstrumentationOption {
 		}
 		if l, ok := lookupEnv(envLogLevelKey); ok {
 			var e error
-			level, e := ParseLevel(l)
+			level, e := ParseLogLevel(l)
 
 			if err == nil {
 				c.logLevel = level

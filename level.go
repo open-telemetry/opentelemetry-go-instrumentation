@@ -20,26 +20,28 @@ import (
 	"fmt"
 )
 
-// Level defines the log level which instrumentation uses.
+// LogLevel defines the log level which instrumentation uses.
 type LogLevel string
 
 const (
 	// LevelUndefined is an unset log level, it should not be used.
-	LevelUndefined LogLevel = ""
-	// LevelDebug sets the logging level to log all messages.
-	LevelDebug LogLevel = "debug"
-	// LevelInfo sets the logging level to log only informational, warning, and error messages.
-	LevelInfo LogLevel = "info"
-	// LevelWarn sets the logging level to log only warning and error messages.
-	LevelWarn LogLevel = "warn"
-	// LevelError sets the logging level to log only error messages.
-	LevelError LogLevel = "error"
+	logLevelUndefined LogLevel = ""
+	// LogLevelDebug sets the logging level to log all messages.
+	LogLevelDebug LogLevel = "debug"
+	// LogLevelInfo sets the logging level to log only informational, warning, and error messages.
+	LogLevelInfo LogLevel = "info"
+	// LogLevelWarn sets the logging level to log only warning and error messages.
+	LogLevelWarn LogLevel = "warn"
+	// LogLevelError sets the logging level to log only error messages.
+	LogLevelError LogLevel = "error"
 )
 
-// String returns the string encoding of the Level l.
+var errInvalidLogLevel = errors.New("invalid LogLevel")
+
+// String returns the string encoding of the LogLevel l.
 func (l LogLevel) String() string {
 	switch l {
-	case LevelDebug, LevelInfo, LevelWarn, LevelError, LevelUndefined:
+	case LogLevelDebug, LogLevelInfo, LogLevelWarn, LogLevelError, logLevelUndefined:
 		return string(l)
 	default:
 		return fmt.Sprintf("Level(%s)", string(l))
@@ -48,44 +50,27 @@ func (l LogLevel) String() string {
 
 // UnmarshalText applies the LogLevel type when inputted text is valid.
 func (l *LogLevel) UnmarshalText(text []byte) error {
-	if ok := l.unmarshalText(bytes.ToLower(text)); ok {
-		return nil
-	}
+	*l = LogLevel(bytes.ToLower(text))
 
 	return l.validate()
 }
 
 func (l *LogLevel) validate() error {
 	if l == nil {
-		return errors.New("can't parse nil values")
+		return errors.New("nil LogLevel")
 	}
 
-	if !l.unmarshalText(bytes.ToLower([]byte(l.String()))) {
-		return errors.New("log level value is not accepted")
+	switch *l {
+	case LogLevelDebug, LogLevelInfo, LogLevelWarn, LogLevelError:
+		// Valid.
+	default:
+		return fmt.Errorf("%w: %s", errInvalidLogLevel, l.String())
 	}
-
 	return nil
 }
 
-func (l *LogLevel) unmarshalText(text []byte) bool {
-	switch string(text) {
-	case "debug":
-		*l = LevelDebug
-	case "info":
-		*l = LevelInfo
-	case "warn":
-		*l = LevelWarn
-	case "error":
-		*l = LevelError
-	default:
-		return false
-	}
-
-	return true
-}
-
-// ParseLevel return a new LogLevel using text, and will return err if inputted text is not accepted.
-func ParseLevel(text string) (LogLevel, error) {
+// ParseLogLevel return a new LogLevel parsed from text. A non-nil error is returned if text is not a valid LogLevel.
+func ParseLogLevel(text string) (LogLevel, error) {
 	var level LogLevel
 
 	err := level.UnmarshalText([]byte(text))
