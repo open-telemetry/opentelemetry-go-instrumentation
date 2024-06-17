@@ -23,9 +23,14 @@ import (
 func TestLevel(t *testing.T) {
 	testCases := []struct {
 		name  string
-		level Level
+		level LogLevel
 		str   string
 	}{
+		{
+			name:  "LevelUndefined",
+			level: LevelUndefined,
+			str:   "",
+		},
 		{
 			name:  "LevelDebug",
 			level: LevelDebug,
@@ -53,4 +58,14 @@ func TestLevel(t *testing.T) {
 			assert.Equal(t, tc.str, tc.level.String(), "string does not match")
 		})
 	}
+}
+
+func TestValidate(t *testing.T) {
+	t.Run("can validate wrong log levels", func(t *testing.T) {
+		var l LogLevel
+
+		l.unmarshalText([]byte("notexist"))
+
+		assert.Equal(t, "log level value is not accepted", l.validate().Error(), "log level is not nil")
+	})
 }

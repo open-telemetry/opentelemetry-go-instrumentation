@@ -74,9 +74,9 @@ type Instrumentation struct {
 // binary or pid.
 var errUndefinedTarget = fmt.Errorf("undefined target Go binary, consider setting the %s environment variable pointing to the target binary to instrument", envTargetExeKey)
 
-func newLogger(logLevel Level) logr.Logger {
-	level, err := zap.ParseAtomicLevel(logLevel.String())
-	if err != nil {
+func newLogger(logLevel LogLevel) logr.Logger {
+	level, logErr := zap.ParseAtomicLevel(logLevel.String())
+	if logErr != nil {
 		level, _ = zap.ParseAtomicLevel(LevelInfo.String())
 	}
 
@@ -92,6 +92,10 @@ func newLogger(logLevel Level) logr.Logger {
 		logger = stdr.New(log.New(os.Stderr, "", log.LstdFlags))
 	} else {
 		logger = zapr.NewLogger(zapLog)
+	}
+
+	if logErr != nil {
+		logger.V(2).Info("error to parse log level, changed to LevelInfo by default")
 	}
 
 	return logger
@@ -187,7 +191,7 @@ type instConfig struct {
 	additionalResAttrs []attribute.KeyValue
 	globalImpl         bool
 	loadIndicator      chan struct{}
-	logLevel           Level
+	logLevel           LogLevel
 }
 
 func newInstConfig(ctx context.Context, opts []InstrumentationOption) (instConfig, error) {
@@ -218,7 +222,7 @@ func newInstConfig(ctx context.Context, opts []InstrumentationOption) (instConfi
 		c.sampler = trace.AlwaysSample()
 	}
 
-	if c.logLevel == "" {
+	if c.logLevel == LevelUndefined {
 		c.logLevel = LevelInfo
 	}
 
@@ -399,7 +403,12 @@ func WithEnv() InstrumentationOption {
 		}
 		if l, ok := lookupEnv(envLogLevelKey); ok {
 			var e error
-			c.logLevel, e = ParseLevel(l)
+			level, e := ParseLevel(l)
+
+			if err == nil {
+				c.logLevel = level
+			}
+
 			err = errors.Join(err, e)
 		}
 		return c, err
@@ -512,9 +521,9 @@ func WithLoadedIndicator(indicator chan struct{}) InstrumentationOption {
 
 // WithLogLevel returns an [InstrumentationOption] that will configure
 // an [Instrumentation] with the logger level visibility defined as inputed.
-func WithLogLevel(level Level) InstrumentationOption {
+func WithLogLevel(level LogLevel) InstrumentationOption {
 	return fnOpt(func(ctx context.Context, c instConfig) (instConfig, error) {
-		if err := level.UnmarshalText([]byte(level.String())); err != nil {
+		if err := level.validate(); err != nil {
 			return c, err
 		}
 

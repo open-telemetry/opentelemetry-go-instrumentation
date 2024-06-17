@@ -103,7 +103,7 @@ func main() {
 	}
 
 	if logLevel != "" {
-		var level auto.Level
+		var level auto.LogLevel
 
 		err := level.UnmarshalText([]byte(logLevel))
 		if err != nil {
