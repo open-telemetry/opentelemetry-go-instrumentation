@@ -20,7 +20,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestLevel(t *testing.T) {
+func TestLevelString(t *testing.T) {
 	testCases := []struct {
 		name  string
 		level LogLevel
@@ -63,4 +63,47 @@ func TestLevel(t *testing.T) {
 func TestValidate(t *testing.T) {
 	l := LogLevel("notexist")
 	assert.ErrorIs(t, l.validate(), errInvalidLogLevel)
+}
+
+func TestParseLogLevel(t *testing.T) {
+	testCases := []struct {
+		name  string
+		str   string
+		level LogLevel
+	}{
+		{
+			name:  "ParseLogLevelDebug",
+			str:   "debug",
+			level: LogLevelDebug,
+		},
+		{
+			name:  "ParseLogLevelInfo",
+			str:   "info",
+			level: LogLevelInfo,
+		},
+		{
+			name:  "ParseLogLevelWarn",
+			str:   "warn",
+			level: LogLevelWarn,
+		},
+		{
+			name:  "ParseLogLevelError",
+			str:   "error",
+			level: LogLevelError,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			l, _ := ParseLogLevel(tc.str)
+
+			assert.Equal(t, tc.level, l, "LogLevel does not match")
+		})
+	}
+
+	t.Run("ParseNotExist", func(t *testing.T) {
+		_, err := ParseLogLevel("notexist")
+
+		assert.ErrorIs(t, err, errInvalidLogLevel)
+	})
 }

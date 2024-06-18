@@ -95,7 +95,7 @@ func newLogger(logLevel LogLevel) logr.Logger {
 	}
 
 	if logErr != nil {
-		logger.V(2).Info("error to parse log level, changed to LevelInfo by default")
+		logger.Error(logErr, "invalid log level; using LevelInfo instead", zap.Error(logErr), zap.String("input", logLevel.String()))
 	}
 
 	return logger
@@ -405,7 +405,7 @@ func WithEnv() InstrumentationOption {
 			var e error
 			level, e := ParseLogLevel(l)
 
-			if err == nil {
+			if e == nil {
 				c.logLevel = level
 			}
 
@@ -520,7 +520,7 @@ func WithLoadedIndicator(indicator chan struct{}) InstrumentationOption {
 }
 
 // WithLogLevel returns an [InstrumentationOption] that will configure
-// an [Instrumentation] with the logger level visibility defined as inputed.
+// an [Instrumentation] to use the provided logging level.
 func WithLogLevel(level LogLevel) InstrumentationOption {
 	return fnOpt(func(ctx context.Context, c instConfig) (instConfig, error) {
 		if err := level.validate(); err != nil {

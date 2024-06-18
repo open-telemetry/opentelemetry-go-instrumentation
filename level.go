@@ -24,7 +24,7 @@ import (
 type LogLevel string
 
 const (
-	// LevelUndefined is an unset log level, it should not be used.
+	// logLevelUndefined is an unset log level, it should not be used.
 	logLevelUndefined LogLevel = ""
 	// LogLevelDebug sets the logging level to log all messages.
 	LogLevelDebug LogLevel = "debug"
