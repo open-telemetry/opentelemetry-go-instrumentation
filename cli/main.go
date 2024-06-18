@@ -103,9 +103,7 @@ func main() {
 	}
 
 	if logLevel != "" {
-		var level auto.LogLevel
-
-		err := level.UnmarshalText([]byte(logLevel))
+		level, err := auto.ParseLogLevel(logLevel)
 		if err != nil {
 			logger.Error(err, "failed to parse log level")
 			return
