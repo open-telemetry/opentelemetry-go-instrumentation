@@ -119,7 +119,7 @@ int uprobe_server_handleStream(struct pt_regs *ctx)
     return 0;
 }
 
-UPROBE_RETURN(server_handleStream, struct grpc_request_t, grpc_events, events, 4, stream_ctx_pos, false, false)
+UPROBE_RETURN(server_handleStream, struct grpc_request_t, grpc_events, events, 4, stream_ctx_pos, false)
 
 // func (d *http2Server) operateHeader(frame *http2.MetaHeadersFrame) error
 // for version 1.60 and above:
