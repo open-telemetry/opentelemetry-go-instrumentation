@@ -1,4 +1,4 @@
-module go.opentelemetry.io/auto/examples/kafka-go
+module go.opentelemetry.io/auto/examples/kafka-go/consumer
 
 go 1.22.0
 
