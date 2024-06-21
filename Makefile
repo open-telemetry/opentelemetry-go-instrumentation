@@ -19,7 +19,7 @@ CGO_ENABLED=0
 .DEFAULT_GOAL := precommit
 
 .PHONY: precommit
-precommit: license-header-check dependabot-generate go-mod-tidy golangci-lint-fix
+precommit: license-header-check dependabot-generate go-mod-tidy golangci-lint-fix codespell
 
 # Tools
 $(TOOLS):
