@@ -28,11 +28,17 @@
             }
           },
           {
-            "key": "telemetry.auto.version",
+            "key": "telemetry.distro.version",
             "value": {
               "stringValue": "v0.13.0-alpha"
             }
           },
+          {
+            "key": "telemetry.distro.name",
+            "value": {
+              "stringValue": "opentelemetry-go-instrumentation"
+            }
+          },  
           {
             "key": "telemetry.sdk.language",
             "value": {
