@@ -38,7 +38,7 @@
             "value": {
               "stringValue": "v0.13.0-alpha"
             }
-          },  
+          },
           {
             "key": "telemetry.sdk.language",
             "value": {
