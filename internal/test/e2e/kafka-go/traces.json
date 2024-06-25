@@ -28,15 +28,15 @@
             }
           },
           {
-            "key": "telemetry.distro.version",
-            "value": {
-              "stringValue": "v0.13.0-alpha"
-            }
-          },
-          {
             "key": "telemetry.distro.name",
             "value": {
               "stringValue": "opentelemetry-go-instrumentation"
+            }
+          },
+          {
+            "key": "telemetry.distro.version",
+            "value": {
+              "stringValue": "v0.13.0-alpha"
             }
           },  
           {
@@ -47,7 +47,7 @@
           }
         ]
       },
-      "schemaUrl": "https://opentelemetry.io/schemas/1.21.0",
+      "schemaUrl": "https://opentelemetry.io/schemas/1.22.0",
       "scopeSpans": [
         {
           "scope": {
@@ -169,17 +169,17 @@
             }
           },
           {
+            "key": "telemetry.distro.name",
+            "value": {
+              "stringValue": "opentelemetry-go-instrumentation"
+            }
+          },
+          {
             "key": "telemetry.distro.version",
             "value": {
               "stringValue": "v0.13.0-alpha"
             }
           },
-          {
-            "key": "telemetry.distro.name",
-            "value": {
-              "stringValue": "opentelemetry-go-instrumentation"
-            }
-          },  
           {
             "key": "telemetry.sdk.language",
             "value": {
@@ -188,7 +188,7 @@
           }
         ]
       },
-      "schemaUrl": "https://opentelemetry.io/schemas/1.21.0",
+      "schemaUrl": "https://opentelemetry.io/schemas/1.22.0",
       "scopeSpans": [
         {
           "scope": {
