@@ -85,6 +85,11 @@ git commit
 git push <YOUR_FORK> <YOUR_BRANCH_NAME>
 ```
 
+Additionally, there is a `codespell` target that checks for common
+typos in the code. It is not run by default, but you can run it
+manually with `make codespell`. It will set up a virtual environment
+in `venv` and install `codespell` there.
+
 Open a pull request against the main `opentelemetry-go-instrumentation` repo. Be sure to add the pull
 request ID to the entry you added to `CHANGELOG.md`.
 

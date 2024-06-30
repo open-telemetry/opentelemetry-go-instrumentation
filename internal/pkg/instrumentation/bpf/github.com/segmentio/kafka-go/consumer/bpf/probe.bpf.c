@@ -146,7 +146,7 @@ int uprobe_FetchMessage(struct pt_regs *ctx) {
     3. Blocking wait for message
     4. internal kafka code after blocking
     5. Return from FetchMessage
-    Steps 2-4 are executed in a seperate goroutine from the one the user of the library.
+    Steps 2-4 are executed in a separate goroutine from the one the user of the library.
     */
     void *reader = get_argument(ctx, 1);
     void *context_data_ptr = get_Go_context(ctx, 3, 0, true);

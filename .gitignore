@@ -24,6 +24,9 @@
 # VSCode
 .vscode/
 
+# Installed by `make codespell`
+venv/
+
 otel-go-instrumentation
 launcher/
 opentelemetry-helm-charts/

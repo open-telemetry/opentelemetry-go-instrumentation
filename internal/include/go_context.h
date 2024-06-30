@@ -106,7 +106,7 @@ static __always_inline void stop_tracking_span(struct span_context *sc, struct s
     void *ctx = bpf_map_lookup_elem(&tracked_spans_by_sc, sc);
     if (ctx == NULL)
     {
-        bpf_printk("stop_tracking_span: cant find span context");
+        bpf_printk("stop_tracking_span: can't find span context");
         return;
     }
 
