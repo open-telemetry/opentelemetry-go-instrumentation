@@ -227,7 +227,7 @@ func (i *Base[BPFObj, BPFEvent]) Close() error {
 // shutdown to avoid leaking system resources.
 type UprobeFunc[BPFObj any] func(symbol string, exec *link.Executable, target *process.TargetDetails, obj *BPFObj) ([]link.Link, error)
 
-// Uprobe is an eBPF program that is attached in the entry point and/or the reutrn of a function.
+// Uprobe is an eBPF program that is attached in the entry point and/or the return of a function.
 type Uprobe[BPFObj any] struct {
 	// Sym is the symbol name of the function to attach the eBPF program to.
 	Sym string

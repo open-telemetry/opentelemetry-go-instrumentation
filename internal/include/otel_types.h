@@ -31,7 +31,7 @@ volatile const u64 attr_type_int64slice;
 volatile const u64 attr_type_float64slice;
 volatile const u64 attr_type_stringslice;
 
-/* Defintions should mimic structs defined in go.opentelemetry.io/otel/attribute */
+/* Definitions should mimic structs defined in go.opentelemetry.io/otel/attribute */
 
 typedef struct go_otel_attr_value {
 	u64              vtype;

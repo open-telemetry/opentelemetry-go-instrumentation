@@ -107,7 +107,7 @@ func find[T any](slice *[]*T, f func(*T) bool) *T {
 // mergeSorted merges the two sorted slices slice0 and slice1 using the cmp
 // function to compare elements.
 //
-// The cmp function needs to return negative values when a<b, possitive values
+// The cmp function needs to return negative values when a<b, positive values
 // when a>b, and 0 when a==b.
 func mergeSorted[T any](slice0, slice1 []T, cmp func(a, b T) int) []T {
 	merged := make([]T, 0, len(slice0)+len(slice1))
