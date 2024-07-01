@@ -12,6 +12,8 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 
 - Initial support for `trace-flags`. ([#868](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/868))
 - Support `google.golang.org/grpc` `1.66.0-dev`. ([#872](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/872))
+- Add support to log level through command line flag. ([#842](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/842))
+- The `WithLogLevel` function and `LogLevel` type are added to set the log level for `Instrumentation`. ([#842](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/842))
 
 ### Fixed
 

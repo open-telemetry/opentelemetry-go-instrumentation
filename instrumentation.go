@@ -58,6 +58,8 @@ const (
 	// envOtelGlobalImplKey is the key for the environment variable value enabling to opt-in for the
 	// OpenTelemetry global implementation. It should be a boolean value.
 	envOtelGlobalImplKey = "OTEL_GO_AUTO_GLOBAL"
+	// envLogLevelKey is the key for the environment variable value containing the log level.
+	envLogLevelKey = "OTEL_LOG_LEVEL"
 )
 
 // Instrumentation manages and controls all OpenTelemetry Go
@@ -72,8 +74,17 @@ type Instrumentation struct {
 // binary or pid.
 var errUndefinedTarget = fmt.Errorf("undefined target Go binary, consider setting the %s environment variable pointing to the target binary to instrument", envTargetExeKey)
 
-func newLogger() logr.Logger {
-	zapLog, err := zap.NewProduction()
+func newLogger(logLevel LogLevel) logr.Logger {
+	level, logErr := zap.ParseAtomicLevel(logLevel.String())
+	if logErr != nil {
+		level, _ = zap.ParseAtomicLevel(LogLevelInfo.String())
+	}
+
+	config := zap.NewProductionConfig()
+
+	config.Level.SetLevel(level.Level())
+
+	zapLog, err := config.Build()
 
 	var logger logr.Logger
 	if err != nil {
@@ -81,6 +92,10 @@ func newLogger() logr.Logger {
 		logger = stdr.New(log.New(os.Stderr, "", log.LstdFlags))
 	} else {
 		logger = zapr.NewLogger(zapLog)
+	}
+
+	if logErr != nil {
+		logger.Error(logErr, "invalid log level; using LevelInfo instead", zap.Error(logErr), zap.String("input", logLevel.String()))
 	}
 
 	return logger
@@ -92,14 +107,6 @@ func newLogger() logr.Logger {
 // If conflicting or duplicate options are provided, the last one will have
 // precedence and be used.
 func NewInstrumentation(ctx context.Context, opts ...InstrumentationOption) (*Instrumentation, error) {
-	// TODO: pass this in as an option.
-	//
-	// We likely want to use slog instead of logr in the longterm. Wait until
-	// that package has enough Go version support and then switch to that so we
-	// can expose it in an option.
-	logger := newLogger()
-	logger = logger.WithName("Instrumentation")
-
 	c, err := newInstConfig(ctx, opts)
 	if err != nil {
 		return nil, err
@@ -107,6 +114,11 @@ func NewInstrumentation(ctx context.Context, opts ...InstrumentationOption) (*In
 	if err := c.validate(); err != nil {
 		return nil, err
 	}
+
+	// We likely want to use slog instead of logr in the longterm. Wait until
+	// that package has enough Go version support
+	logger := newLogger(c.logLevel)
+	logger = logger.WithName("Instrumentation")
 
 	pa := process.NewAnalyzer(logger)
 	pid, err := pa.DiscoverProcessID(ctx, &c.target)
@@ -179,6 +191,7 @@ type instConfig struct {
 	additionalResAttrs []attribute.KeyValue
 	globalImpl         bool
 	loadIndicator      chan struct{}
+	logLevel           LogLevel
 }
 
 func newInstConfig(ctx context.Context, opts []InstrumentationOption) (instConfig, error) {
@@ -207,6 +220,10 @@ func newInstConfig(ctx context.Context, opts []InstrumentationOption) (instConfi
 
 	if c.sampler == nil {
 		c.sampler = trace.AlwaysSample()
+	}
+
+	if c.logLevel == logLevelUndefined {
+		c.logLevel = LogLevelInfo
 	}
 
 	return c, err
@@ -347,9 +364,10 @@ var lookupEnv = os.LookupEnv
 //   - OTEL_SERVICE_NAME (or OTEL_RESOURCE_ATTRIBUTES): sets the service name
 //   - OTEL_TRACES_EXPORTER: sets the trace exporter
 //   - OTEL_GO_AUTO_GLOBAL: enables the OpenTelemetry global implementation
+//   - OTEL_LOG_LEVEL: sets the log level
 //
 // This option may conflict with [WithTarget], [WithPID], [WithTraceExporter],
-// [WithServiceName] and [WithGlobal] if their respective environment variable is defined.
+// [WithServiceName], [WithGlobal] and [WithLogLevel] if their respective environment variable is defined.
 // If more than one of these options are used, the last one provided to an
 // [Instrumentation] will be used.
 //
@@ -382,6 +400,16 @@ func WithEnv() InstrumentationOption {
 			if err == nil {
 				c.globalImpl = boolVal
 			}
+		}
+		if l, ok := lookupEnv(envLogLevelKey); ok {
+			var e error
+			level, e := ParseLogLevel(l)
+
+			if e == nil {
+				c.logLevel = level
+			}
+
+			err = errors.Join(err, e)
 		}
 		return c, err
 	})
@@ -487,6 +515,20 @@ func WithResourceAttributes(attrs ...attribute.KeyValue) InstrumentationOption {
 func WithLoadedIndicator(indicator chan struct{}) InstrumentationOption {
 	return fnOpt(func(_ context.Context, c instConfig) (instConfig, error) {
 		c.loadIndicator = indicator
+		return c, nil
+	})
+}
+
+// WithLogLevel returns an [InstrumentationOption] that will configure
+// an [Instrumentation] to use the provided logging level.
+func WithLogLevel(level LogLevel) InstrumentationOption {
+	return fnOpt(func(ctx context.Context, c instConfig) (instConfig, error) {
+		if err := level.validate(); err != nil {
+			return c, err
+		}
+
+		c.logLevel = level
+
 		return c, nil
 	})
 }
