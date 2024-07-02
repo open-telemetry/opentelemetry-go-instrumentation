@@ -36,7 +36,7 @@ import (
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp"
 	"go.opentelemetry.io/otel/sdk/resource"
 	"go.opentelemetry.io/otel/sdk/trace"
-	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.22.0"
 
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation"
 	"go.opentelemetry.io/auto/internal/pkg/opentelemetry"
@@ -281,7 +281,8 @@ func (c instConfig) res(bi *buildinfo.BuildInfo) *resource.Resource {
 	attrs := []attribute.KeyValue{
 		semconv.ServiceNameKey.String(c.serviceName),
 		semconv.TelemetrySDKLanguageGo,
-		semconv.TelemetryAutoVersionKey.String(Version()),
+		semconv.TelemetryDistroVersionKey.String(Version()),
+		semconv.TelemetryDistroNameKey.String("opentelemetry-go-instrumentation"),
 		semconv.ProcessRuntimeName(runName),
 		semconv.ProcessRuntimeVersion(runVer),
 		semconv.ProcessRuntimeDescription(runDesc),
