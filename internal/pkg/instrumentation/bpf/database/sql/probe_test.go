@@ -21,7 +21,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"go.opentelemetry.io/otel/attribute"
-	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
 	"go.opentelemetry.io/otel/trace"
 
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/context"
@@ -56,7 +56,7 @@ func TestProbeConvertEvent(t *testing.T) {
 		EndTime:     int64(end.UnixNano()),
 		SpanContext: &sc,
 		Attributes: []attribute.KeyValue{
-			semconv.DBStatementKey.String("SELECT * FROM foo"),
+			semconv.DBQueryText("SELECT * FROM foo"),
 		},
 	}
 	assert.Equal(t, want, got[0])
