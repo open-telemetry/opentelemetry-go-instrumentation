@@ -58,7 +58,7 @@
             {
               "attributes": [
                 {
-                  "key": "db.statement",
+                  "key": "db.event.text",
                   "value": {
                     "stringValue": "SELECT * FROM contacts"
                   }
