@@ -17,12 +17,13 @@ package consumer
 import (
 	"fmt"
 	"os"
+	"strconv"
 
 	"github.com/cilium/ebpf/link"
 	"github.com/cilium/ebpf/perf"
 	"github.com/go-logr/logr"
 	"go.opentelemetry.io/otel/attribute"
-	semconv "go.opentelemetry.io/otel/semconv/v1.24.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
 	"go.opentelemetry.io/otel/trace"
 	"golang.org/x/sys/unix"
 
@@ -159,8 +160,8 @@ func convertEvent(e *event) []*probe.SpanEvent {
 
 	attributes := []attribute.KeyValue{
 		semconv.MessagingSystemKafka,
-		semconv.MessagingOperationReceive,
-		semconv.MessagingKafkaDestinationPartition(int(e.Partition)),
+		semconv.MessagingOperationTypeReceive,
+		semconv.MessagingDestinationPartitionID(strconv.Itoa(int(e.Partition))),
 		semconv.MessagingDestinationName(topic),
 		semconv.MessagingKafkaMessageOffset(int(e.Offset)),
 		semconv.MessagingKafkaMessageKey(unix.ByteSliceToString(e.Key[:])),
