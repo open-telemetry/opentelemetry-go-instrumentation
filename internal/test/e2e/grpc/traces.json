@@ -99,7 +99,7 @@
                   }
                 },
                 {
-                  "key": "net.peer.name",
+                  "key": "server.address",
                   "value": {
                     "stringValue": "localhost"
                   }
