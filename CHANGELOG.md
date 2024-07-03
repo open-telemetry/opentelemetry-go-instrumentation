@@ -15,6 +15,10 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 - Add support to log level through command line flag. ([#842](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/842))
 - The `WithLogLevel` function and `LogLevel` type are added to set the log level for `Instrumentation`. ([#842](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/842))
 - Add telemetry distro name & version resource attributes. ([#897](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/897))
+- Support `google.golang.org/grpc` `1.65.0`. ([#904](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/904))
+- Support Go `v1.21.12`. ([#905](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/905))
+- Support Go `v1.22.5`. ([#905](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/905))
+- Support `go.opentelemetry.io/otel@v1.28.0`. ([#904](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/904))
 
 ### Changed
 
@@ -24,6 +28,7 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 ### Fixed
 
 - HTTP client: Use Host field in URL if the Request Host is not present. ([#888](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/888))
+- Add make target 'codespell'. ([#863](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/863))
 
 ## [v0.13.0-alpha] - 2024-06-04
 
@@ -44,10 +49,6 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 - Support `golang.org/x/net` v0.26.0. ([#871](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/871))
 - Support Go `v1.21.11`. ([#871](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/871))
 - Support Go `v1.22.4`. ([#871](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/871))
-- Support `google.golang.org/grpc` `1.65.0`. ([#904](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/904))
-- Support Go `v1.21.12`. ([#905](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/905))
-- Support Go `v1.22.5`. ([#905](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/905))
-- Support `go.opentelemetry.io/otel@v1.28.0`. ([#904](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/904))
 
 ### Fixed
 
@@ -58,7 +59,6 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 - Support Go versions from apps defining GOEXPERIMENT. ([#813](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/813))
 - Update `net/http` instrumentation to comply with semantic conventions v1.25.0. ([#790](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/790))
 - Update existing 3rd party licenses. ([#864](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/864))
-- Add make target 'codespell'. ([#863](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/863))
 
 ## [v0.12.0-alpha] - 2024-04-10
 
