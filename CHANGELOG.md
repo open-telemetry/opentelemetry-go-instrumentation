@@ -16,6 +16,11 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 - The `WithLogLevel` function and `LogLevel` type are added to set the log level for `Instrumentation`. ([#842](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/842))
 - Add telemetry distro name & version resource attributes. ([#897](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/897))
 
+### Changed
+
+- Upgrade semconv from `v1.21.0` to `v1.26.0` in `database/sql` instrumentation. ([#911](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/911))
+  - The `db.statement` attribute key is renamed to `db.query.text`.
+
 ### Fixed
 
 - HTTP client: Use Host field in URL if the Request Host is not present. ([#888](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/888))
