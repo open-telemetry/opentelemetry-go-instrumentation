@@ -39,8 +39,10 @@ type bpfOtelSpanT struct {
 type bpfSliceArrayBuff struct{ Buff [1024]uint8 }
 
 type bpfSpanContext struct {
-	TraceID [16]uint8
-	SpanID  [8]uint8
+	TraceID    [16]uint8
+	SpanID     [8]uint8
+	TraceFlags uint8
+	Padding    [7]uint8
 }
 
 type bpfSpanNameT struct{ Buf [64]int8 }

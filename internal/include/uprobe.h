@@ -27,7 +27,7 @@
     struct span_context psc;
 
 // Common flow for uprobe return:
-// 1. Find consistend key for the current uprobe context
+// 1. Find consistent key for the current uprobe context
 // 2. Use the key to lookup for the uprobe context in the uprobe_context_map
 // 3. Update the end time of the found span
 // 4. Submit the constructed event to the agent code using perf buffer events_map

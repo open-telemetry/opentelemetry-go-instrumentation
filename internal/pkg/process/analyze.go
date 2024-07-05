@@ -103,7 +103,7 @@ func (a *Analyzer) Analyze(pid int, relevantFuncs map[string]interface{}) (*Targ
 		return nil, err
 	}
 	for _, fn := range funcs {
-		a.logger.Info("found function", "function_name", fn)
+		a.logger.V(1).Info("found function", "function_name", fn)
 	}
 
 	result.Functions = funcs
@@ -145,7 +145,7 @@ func (a *Analyzer) findFunctions(elfF *elf.File, relevantFuncs map[string]interf
 	result, err := binary.FindFunctionsUnStripped(elfF, relevantFuncs)
 	if err != nil {
 		if errors.Is(err, elf.ErrNoSymbols) {
-			a.logger.Info("No symbols found in binary, trying to find functions using .gosymtab")
+			a.logger.V(1).Info("No symbols found in binary, trying to find functions using .gosymtab")
 			return binary.FindFunctionsStripped(elfF, relevantFuncs)
 		}
 		return nil, err

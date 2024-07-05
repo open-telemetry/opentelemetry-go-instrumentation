@@ -15,11 +15,8 @@
 package server
 
 import (
-	"os"
 	"strings"
 
-	"github.com/cilium/ebpf/link"
-	"github.com/cilium/ebpf/perf"
 	"github.com/go-logr/logr"
 	"github.com/hashicorp/go-version"
 	"go.opentelemetry.io/otel/attribute"
@@ -114,15 +111,12 @@ func New(logger logr.Logger) probe.Probe {
 			},
 			patternPathSupportedConst{},
 		},
-		Uprobes: []probe.Uprobe[bpfObjects]{
+		Uprobes: []probe.Uprobe{
 			{
-				Sym: "net/http.serverHandler.ServeHTTP",
-				Fn:  uprobeServeHTTP,
+				Sym:         "net/http.serverHandler.ServeHTTP",
+				EntryProbe:  "uprobe_serverHandler_ServeHTTP",
+				ReturnProbe: "uprobe_serverHandler_ServeHTTP_Returns",
 			},
-		},
-
-		ReaderFn: func(obj bpfObjects) (*perf.Reader, error) {
-			return perf.NewReader(obj.Events, os.Getpagesize())
 		},
 		SpecFn:    loadBpf,
 		ProcessFn: convertEvent,
@@ -139,36 +133,6 @@ var (
 func (c patternPathSupportedConst) InjectOption(td *process.TargetDetails) (inject.Option, error) {
 	isPatternPathSupported = td.GoVersion.GreaterThanOrEqual(patternPathMinVersion)
 	return inject.WithKeyValue("pattern_path_supported", isPatternPathSupported), nil
-}
-
-func uprobeServeHTTP(name string, exec *link.Executable, target *process.TargetDetails, obj *bpfObjects) ([]link.Link, error) {
-	offset, err := target.GetFunctionOffset(name)
-	if err != nil {
-		return nil, err
-	}
-
-	opts := &link.UprobeOptions{Address: offset, PID: target.PID}
-	l, err := exec.Uprobe("", obj.UprobeHandlerFuncServeHTTP, opts)
-	if err != nil {
-		return nil, err
-	}
-	links := []link.Link{l}
-
-	retOffsets, err := target.GetFunctionReturns(name)
-	if err != nil {
-		return nil, err
-	}
-
-	for _, ret := range retOffsets {
-		opts := &link.UprobeOptions{Address: ret}
-		l, err := exec.Uprobe("", obj.UprobeHandlerFuncServeHTTP_Returns, opts)
-		if err != nil {
-			return nil, err
-		}
-		links = append(links, l)
-	}
-
-	return links, nil
 }
 
 // event represents an event in an HTTP server during an HTTP

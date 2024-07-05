@@ -134,6 +134,7 @@ func manifests() ([]inspect.Manifest, error) {
 				structfield.NewID("std", "net/url", "URL", "RawQuery"),
 				structfield.NewID("std", "net/url", "URL", "Fragment"),
 				structfield.NewID("std", "net/url", "URL", "RawFragment"),
+				structfield.NewID("std", "net/url", "URL", "Host"),
 				structfield.NewID("std", "net/url", "Userinfo", "username"),
 				structfield.NewID("std", "bufio", "Writer", "buf"),
 				structfield.NewID("std", "bufio", "Writer", "n"),

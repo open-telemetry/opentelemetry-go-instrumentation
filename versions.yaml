@@ -14,13 +14,19 @@
 
 module-sets:
   alpha:
-    version: v0.12.0-alpha
+    version: v0.13.0-alpha
     modules:
       - go.opentelemetry.io/auto
 excluded-modules:
   - github.com/hashicorp/go-version
   - go.opentelemetry.io/auto/examples
-  - go.opentelemetry.io/auto/examples/rolldice
   - go.opentelemetry.io/auto/examples/httpPlusdb
   - go.opentelemetry.io/auto/examples/kafka-go
+  - go.opentelemetry.io/auto/examples/rolldice
+  - go.opentelemetry.io/auto/internal/test/e2e/databasesql
+  - go.opentelemetry.io/auto/internal/test/e2e/gin
+  - go.opentelemetry.io/auto/internal/test/e2e/grpc
+  - go.opentelemetry.io/auto/internal/test/e2e/kafka-go
+  - go.opentelemetry.io/auto/internal/test/e2e/nethttp
+  - go.opentelemetry.io/auto/internal/test/e2e/otelglobal
   - go.opentelemetry.io/auto/internal/tools

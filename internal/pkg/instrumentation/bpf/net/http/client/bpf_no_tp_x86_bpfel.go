@@ -37,8 +37,10 @@ type bpf_no_tpHttpRequestT struct {
 type bpf_no_tpSliceArrayBuff struct{ Buff [1024]uint8 }
 
 type bpf_no_tpSpanContext struct {
-	TraceID [16]uint8
-	SpanID  [8]uint8
+	TraceID    [16]uint8
+	SpanID     [8]uint8
+	TraceFlags uint8
+	Padding    [7]uint8
 }
 
 // loadBpf_no_tp returns the embedded CollectionSpec for bpf_no_tp.

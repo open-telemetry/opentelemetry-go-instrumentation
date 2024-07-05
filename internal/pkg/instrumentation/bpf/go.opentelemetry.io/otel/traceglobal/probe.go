@@ -17,13 +17,10 @@ package global
 import (
 	"encoding/binary"
 	"math"
-	"os"
 
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/probe"
 	"go.opentelemetry.io/auto/internal/pkg/structfield"
 
-	"github.com/cilium/ebpf/link"
-	"github.com/cilium/ebpf/perf"
 	"github.com/go-logr/logr"
 	"golang.org/x/sys/unix"
 
@@ -32,7 +29,6 @@ import (
 	"go.opentelemetry.io/otel/trace"
 
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/context"
-	"go.opentelemetry.io/auto/internal/pkg/process"
 )
 
 //go:generate go run github.com/cilium/ebpf/cmd/bpf2go -target amd64,arm64 -cc clang -cflags $CFLAGS bpf ./bpf/probe.bpf.c
@@ -111,137 +107,35 @@ func New(logger logr.Logger) probe.Probe {
 				Val: structfield.NewID("std", "runtime", "hmap", "buckets"),
 			},
 		},
-		Uprobes: []probe.Uprobe[bpfObjects]{
+		Uprobes: []probe.Uprobe{
 			{
-				Sym: "go.opentelemetry.io/otel/internal/global.(*tracer).Start",
-				Fn:  uprobeTracerStart,
+				Sym:         "go.opentelemetry.io/otel/internal/global.(*tracer).Start",
+				EntryProbe:  "uprobe_Start",
+				ReturnProbe: "uprobe_Start_Returns",
 			},
 			{
-				Sym: "go.opentelemetry.io/otel/internal/global.(*nonRecordingSpan).End",
-				Fn:  uprobeSpanEnd,
+				Sym:        "go.opentelemetry.io/otel/internal/global.(*nonRecordingSpan).End",
+				EntryProbe: "uprobe_End",
 			},
 			{
-				Sym:      "go.opentelemetry.io/otel/internal/global.(*nonRecordingSpan).SetAttributes",
-				Fn:       uprobeSetAttributes,
-				Optional: true,
+				Sym:        "go.opentelemetry.io/otel/internal/global.(*nonRecordingSpan).SetAttributes",
+				EntryProbe: "uprobe_SetAttributes",
+				Optional:   true,
 			},
 			{
-				Sym:      "go.opentelemetry.io/otel/internal/global.(*nonRecordingSpan).SetStatus",
-				Fn:       uprobeSetStatus,
-				Optional: true,
+				Sym:        "go.opentelemetry.io/otel/internal/global.(*nonRecordingSpan).SetStatus",
+				EntryProbe: "uprobe_SetStatus",
+				Optional:   true,
 			},
 			{
-				Sym:      "go.opentelemetry.io/otel/internal/global.(*nonRecordingSpan).SetName",
-				Fn:       uprobeSpanSetName,
-				Optional: true,
+				Sym:        "go.opentelemetry.io/otel/internal/global.(*nonRecordingSpan).SetName",
+				EntryProbe: "uprobe_SetName",
+				Optional:   true,
 			},
-		},
-
-		ReaderFn: func(obj bpfObjects) (*perf.Reader, error) {
-			return perf.NewReader(obj.Events, os.Getpagesize()*8)
 		},
 		SpecFn:    loadBpf,
 		ProcessFn: convertEvent,
 	}
-}
-
-func uprobeTracerStart(name string, exec *link.Executable, target *process.TargetDetails, obj *bpfObjects) ([]link.Link, error) {
-	offset, err := target.GetFunctionOffset(name)
-	if err != nil {
-		return nil, err
-	}
-
-	opts := &link.UprobeOptions{Address: offset, PID: target.PID}
-	l, err := exec.Uprobe("", obj.UprobeStart, opts)
-	if err != nil {
-		return nil, err
-	}
-
-	links := []link.Link{l}
-
-	retOffsets, err := target.GetFunctionReturns(name)
-	if err != nil {
-		return nil, err
-	}
-
-	for _, ret := range retOffsets {
-		opts := &link.UprobeOptions{Address: ret}
-		l, err := exec.Uprobe("", obj.UprobeStartReturns, opts)
-		if err != nil {
-			return nil, err
-		}
-		links = append(links, l)
-	}
-
-	return links, nil
-}
-
-func uprobeSetAttributes(name string, exec *link.Executable, target *process.TargetDetails, obj *bpfObjects) ([]link.Link, error) {
-	offset, err := target.GetFunctionOffset(name)
-	if err != nil {
-		return nil, err
-	}
-
-	opts := &link.UprobeOptions{Address: offset, PID: target.PID}
-	l, err := exec.Uprobe("", obj.UprobeSetAttributes, opts)
-	if err != nil {
-		return nil, err
-	}
-
-	links := []link.Link{l}
-
-	return links, nil
-}
-
-func uprobeSpanSetName(name string, exec *link.Executable, target *process.TargetDetails, obj *bpfObjects) ([]link.Link, error) {
-	offset, err := target.GetFunctionOffset(name)
-	if err != nil {
-		return nil, err
-	}
-
-	opts := &link.UprobeOptions{Address: offset, PID: target.PID}
-	l, err := exec.Uprobe("", obj.UprobeSetName, opts)
-	if err != nil {
-		return nil, err
-	}
-
-	links := []link.Link{l}
-
-	return links, nil
-}
-
-func uprobeSetStatus(name string, exec *link.Executable, target *process.TargetDetails, obj *bpfObjects) ([]link.Link, error) {
-	offset, err := target.GetFunctionOffset(name)
-	if err != nil {
-		return nil, err
-	}
-
-	opts := &link.UprobeOptions{Address: offset, PID: target.PID}
-	l, err := exec.Uprobe("", obj.UprobeSetStatus, opts)
-	if err != nil {
-		return nil, err
-	}
-
-	links := []link.Link{l}
-
-	return links, nil
-}
-
-func uprobeSpanEnd(name string, exec *link.Executable, target *process.TargetDetails, obj *bpfObjects) ([]link.Link, error) {
-	offset, err := target.GetFunctionOffset(name)
-	if err != nil {
-		return nil, err
-	}
-
-	opts := &link.UprobeOptions{Address: offset, PID: target.PID}
-	l, err := exec.Uprobe("", obj.UprobeEnd, opts)
-	if err != nil {
-		return nil, err
-	}
-
-	links := []link.Link{l}
-
-	return links, nil
 }
 
 type attributeKeyVal struct {
