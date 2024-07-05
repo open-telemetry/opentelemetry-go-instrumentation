@@ -24,6 +24,7 @@ import (
 
 	kafka "github.com/segmentio/kafka-go"
 )
+
 type server struct {
 	kafkaWriter *kafka.Writer
 }
