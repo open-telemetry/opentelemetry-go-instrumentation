@@ -125,7 +125,7 @@ static __always_inline int inject_kafka_header(void *message, struct kafka_heade
 
 static __always_inline long collect_kafka_attributes(void *message, struct message_attributes_t *attrs, bool collect_topic) {
     if (collect_topic) {
-        // Topic might be globaly set for a writer, or per message
+        // Topic might be globally set for a writer, or per message
         get_go_string_from_user_ptr((void *)(message + message_topic_pos), attrs->topic, sizeof(attrs->topic));
     }
 
@@ -188,7 +188,7 @@ int uprobe_WriteMessages(struct pt_regs *ctx) {
     //      https://github.com/segmentio/kafka-go/blob/v0.2.3/message.go#L24C2-L24C6
     // 2. the time.Time struct is 24 bytes. This looks to be correct for all the reasnobaly latest versions according to
     //      https://github.com/golang/go/blame/master/src/time/time.go#L135
-    // In the future if more libraries will need to get structs sizes we probably want to have simillar
+    // In the future if more libraries will need to get structs sizes we probably want to have similar
     // mechanism to the one we have for the offsets
     u16 msg_size = message_time_pos + 8 + 8 + 8;
     __builtin_memcpy(current_sc.TraceID, kafka_request->TraceID, TRACE_ID_SIZE);
@@ -198,7 +198,7 @@ int uprobe_WriteMessages(struct pt_regs *ctx) {
         if (i >= msgs_array_len) {
             break;
         }
-        // Optionaly collect the topic, and always collect key
+        // Optionally collect the topic, and always collect key
         collect_kafka_attributes(msg_ptr, &kafka_request->msgs[i], !global_topic);
         // Generate span id for each message
         generate_random_bytes(kafka_request->msgs[i].SpanID, SPAN_ID_SIZE);
@@ -216,7 +216,7 @@ int uprobe_WriteMessages(struct pt_regs *ctx) {
 
 
     bpf_map_update_elem(&kafka_events, &key, kafka_request, 0);
-    // don't need to start tracking the span, as we don't have a context to propagate localy
+    // don't need to start tracking the span, as we don't have a context to propagate locally
     return 0;
 }
 
@@ -237,6 +237,6 @@ int uprobe_WriteMessages_Returns(struct pt_regs *ctx) {
 
     bpf_perf_event_output(ctx, &events, BPF_F_CURRENT_CPU, kafka_request, sizeof(*kafka_request));
     bpf_map_delete_elem(&kafka_events, &key);
-    // don't need to stop tracking the span, as we don't have a context to propagate localy
+    // don't need to stop tracking the span, as we don't have a context to propagate locally
     return 0;
 }

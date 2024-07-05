@@ -109,7 +109,7 @@ The offsets-tracker generates the [offset_results.json](../internal/pkg/inject/o
 
 ### Uretprobes
 
-One of the basic requirments of OpenTelemetry spans is to contain start timestamp and end timestamp. Getting those timestamps is possible by placing an eBPF code at the start and the end of the instrumented function. eBPF supports this requirement via uprobes and uretprobes. Uretprobes are used to invoke eBPF code at the end of the function. Unfortunately, uretprobes and Go [do not play well together](https://github.com/golang/go/issues/22008).
+One of the basic requirements of OpenTelemetry spans is to contain start timestamp and end timestamp. Getting those timestamps is possible by placing an eBPF code at the start and the end of the instrumented function. eBPF supports this requirement via uprobes and uretprobes. Uretprobes are used to invoke eBPF code at the end of the function. Unfortunately, uretprobes and Go [do not play well together](https://github.com/golang/go/issues/22008).
 
 We overcome this issue by analyzing the target binary and detecting all the return statements in the instrumented functions. We then place a uprobe at the end of each return statement. This uprobe invokes the eBPF code that collects the end timestamp.
 
