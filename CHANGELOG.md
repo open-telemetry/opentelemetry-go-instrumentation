@@ -22,6 +22,7 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 - Support `google.golang.org/grpc` `1.63.3`. ([#916](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/916))
 - Support `google.golang.org/grpc` `1.64.1`. ([#916](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/916))
 - Support `golang.org/x/net` `v0.27.0`. ([#917](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/917))
+- The `otelglobal` probe now collects the user provided tracer name, version and schemaURL. ([#844](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/844))
 
 ### Fixed
 
