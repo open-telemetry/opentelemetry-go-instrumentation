@@ -50,6 +50,7 @@
       "schemaUrl": "https://opentelemetry.io/schemas/1.22.0",
       "scopeSpans": [
         {
+          "schemaUrl": "https://some_shcema",
           "scope": {
             "name": "trace-example",
             "version": "v1.23.42"

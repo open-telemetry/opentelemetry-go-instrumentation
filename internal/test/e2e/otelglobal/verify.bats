@@ -14,6 +14,11 @@ SCOPE="trace-example"
   assert_equal "$result" '"v1.23.42"'
 }
 
+@test "go-auto :: include schema url" {
+  result=$(spans_received | jq ".scopeSpans[].schemaUrl")
+  assert_equal "$result" '"https://some_shcema"'
+}
+
 @test "server :: valid int attribute" {
   result=$(span_attributes_for ${SCOPE} | jq "select(.key == \"int_key\").value.intValue")
   assert_equal "$result" '"42"'

@@ -24,7 +24,11 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
-var tracer = otel.Tracer("trace-example", trace.WithInstrumentationVersion("v1.23.42"))
+var tracer = otel.Tracer(
+	"trace-example",
+	trace.WithInstrumentationVersion("v1.23.42"),
+	trace.WithSchemaURL("https://some_shcema"),
+)
 
 func innerFunction(ctx context.Context) {
 	_, span := tracer.Start(ctx, "child")

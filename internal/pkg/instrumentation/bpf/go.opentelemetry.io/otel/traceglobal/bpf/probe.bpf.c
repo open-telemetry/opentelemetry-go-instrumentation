@@ -59,16 +59,22 @@ struct otel_span_t {
     tracer_id_t tracer_id;
 };
 
-typedef struct go_tracer_id {
+typedef struct go_tracer_id_partial {
     struct go_string name;
     struct go_string version;
-    // struct go_string schema_url;
-} go_tracer_id_t;
+} go_tracer_id_partial_t;
+
+typedef struct go_tracer_id_full {
+    struct go_string name;
+    struct go_string version;
+    struct go_string schema_url;
+} go_tracer_id_full_t;
 
 typedef void* go_tracer_ptr; 
 
 // tracerProvider contains a map of tracers
-MAP_BUCKET_DEFINITION(go_tracer_id_t, go_tracer_ptr)
+MAP_BUCKET_DEFINITION(go_tracer_id_partial_t, go_tracer_ptr)
+MAP_BUCKET_DEFINITION(go_tracer_id_full_t, go_tracer_ptr)
 
 struct {
 	__uint(type, BPF_MAP_TYPE_HASH);
@@ -103,7 +109,7 @@ struct
 {
     __uint(type, BPF_MAP_TYPE_PERCPU_ARRAY);
     __uint(key_size, sizeof(u32));
-    __uint(value_size, sizeof(MAP_BUCKET_TYPE(go_tracer_id_t, go_tracer_ptr)));
+    __uint(value_size, sizeof(MAP_BUCKET_TYPE(go_tracer_id_full_t, go_tracer_ptr)));
     __uint(max_entries, 1);
 } golang_mapbucket_storage_map SEC(".maps");
 
@@ -136,6 +142,8 @@ volatile const u64 tracer_provider_pos;
 volatile const u64 tracer_provider_tracers_pos;
 volatile const u64 buckets_ptr_pos;
 
+volatile const bool tracer_id_contains_schemaURL;
+
 // read_span_name reads the span name from the provided span_name_ptr and stores the result in
 // span_name.buf.
 static __always_inline void read_span_name(struct span_name_t *span_name, const u64 span_name_len, void *span_name_ptr) {
@@ -143,7 +151,7 @@ static __always_inline void read_span_name(struct span_name_t *span_name, const 
     bpf_probe_read(span_name->buf, span_name_size, span_name_ptr);
 }
 
-static __always_inline long fill_tracer_id_from_tracers_map(void *tracers_map, go_tracer_ptr tracer, tracer_id_t *tracer_id) {
+static __always_inline long fill_partial_tracer_id_from_tracers_map(void *tracers_map, go_tracer_ptr tracer, tracer_id_t *tracer_id) {
     u64 tracers_count = 0;
     long res = 0;
     res = bpf_probe_read(&tracers_count, sizeof(tracers_count), tracers_map);
@@ -169,7 +177,7 @@ static __always_inline long fill_tracer_id_from_tracers_map(void *tracers_map, g
         return -1;
     }
     u32 map_id = 0;
-    MAP_BUCKET_TYPE(go_tracer_id_t, go_tracer_ptr) *map_bucket = bpf_map_lookup_elem(&golang_mapbucket_storage_map, &map_id);
+    MAP_BUCKET_TYPE(go_tracer_id_partial_t, go_tracer_ptr) *map_bucket = bpf_map_lookup_elem(&golang_mapbucket_storage_map, &map_id);
     if (!map_bucket)
     {
         return -1;
@@ -181,7 +189,7 @@ static __always_inline long fill_tracer_id_from_tracers_map(void *tracers_map, g
         {
             break;
         }
-        res = bpf_probe_read(map_bucket, sizeof(MAP_BUCKET_TYPE(go_tracer_id_t, go_tracer_ptr)), buckets_array + (j * sizeof(MAP_BUCKET_TYPE(go_tracer_id_t, go_tracer_ptr))));
+        res = bpf_probe_read(map_bucket, sizeof(MAP_BUCKET_TYPE(go_tracer_id_partial_t, go_tracer_ptr)), buckets_array + (j * sizeof(MAP_BUCKET_TYPE(go_tracer_id_partial_t, go_tracer_ptr))));
         if (res < 0)
         {
             continue;
@@ -201,6 +209,71 @@ static __always_inline long fill_tracer_id_from_tracers_map(void *tracers_map, g
                 continue;
             }
             get_go_string_from_user_ptr(&map_bucket->keys[i].version, tracer_id->version, MAX_TRACER_VERSION_LEN);
+            return 0;
+        }
+    }
+    return 0;
+}
+
+static __always_inline long fill_full_tracer_id_from_tracers_map(void *tracers_map, go_tracer_ptr tracer, tracer_id_t *tracer_id) {
+    u64 tracers_count = 0;
+    long res = 0;
+    res = bpf_probe_read(&tracers_count, sizeof(tracers_count), tracers_map);
+    if (res < 0)
+    {
+        return -1;
+    }
+    if (tracers_count == 0)
+    {
+        return -1;
+    }
+    unsigned char log_2_bucket_count;
+    res = bpf_probe_read(&log_2_bucket_count, sizeof(log_2_bucket_count), tracers_map + 9);
+    if (res < 0)
+    {
+        return -1;
+    }
+    u64 bucket_count = 1 << log_2_bucket_count;
+    void *buckets_array;
+    res = bpf_probe_read(&buckets_array, sizeof(buckets_array), (void*)(tracers_map + buckets_ptr_pos));
+    if (res < 0)
+    {
+        return -1;
+    }
+    u32 map_id = 0;
+    MAP_BUCKET_TYPE(go_tracer_id_full_t, go_tracer_ptr) *map_bucket = bpf_map_lookup_elem(&golang_mapbucket_storage_map, &map_id);
+    if (!map_bucket)
+    {
+        return -1;
+    }
+
+    for (u64 j = 0; j < MAX_BUCKETS; j++)
+    {
+        if (j >= bucket_count)
+        {
+            break;
+        }
+        res = bpf_probe_read(map_bucket, sizeof(MAP_BUCKET_TYPE(go_tracer_id_full_t, go_tracer_ptr)), buckets_array + (j * sizeof(MAP_BUCKET_TYPE(go_tracer_id_full_t, go_tracer_ptr))));
+        if (res < 0)
+        {
+            continue;
+        }
+        for (u64 i = 0; i < 8; i++)
+        {
+            if (map_bucket->tophash[i] == 0)
+            {
+                continue;
+            }
+            if (map_bucket->values[i] == NULL)
+            {
+                continue;
+            }
+            if (map_bucket->values[i] != tracer)
+            {
+                continue;
+            }
+            get_go_string_from_user_ptr(&map_bucket->keys[i].version, tracer_id->version, MAX_TRACER_VERSION_LEN);
+            get_go_string_from_user_ptr(&map_bucket->keys[i].schema_url, tracer_id->schema_url, MAX_TRACER_SCHEMA_URL_LEN);
             return 0;
         }
     }
@@ -232,7 +305,11 @@ static __always_inline long fill_tracer_id(tracer_id_t *tracer_id, go_tracer_ptr
         return res;
     }
 
-    res = fill_tracer_id_from_tracers_map(tracers_map, tracer, tracer_id);
+    if (tracer_id_contains_schemaURL) {
+        res = fill_full_tracer_id_from_tracers_map(tracers_map, tracer, tracer_id);
+    } else {
+        res = fill_partial_tracer_id_from_tracers_map(tracers_map, tracer, tracer_id);
+    }
     if (res < 0) {
         return res;
     }

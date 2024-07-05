@@ -16,12 +16,16 @@ package global
 
 import (
 	"encoding/binary"
+	"fmt"
 	"math"
 
+	"go.opentelemetry.io/auto/internal/pkg/inject"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/probe"
+	"go.opentelemetry.io/auto/internal/pkg/process"
 	"go.opentelemetry.io/auto/internal/pkg/structfield"
 
 	"github.com/go-logr/logr"
+	"github.com/hashicorp/go-version"
 	"golang.org/x/sys/unix"
 
 	"go.opentelemetry.io/otel/attribute"
@@ -106,6 +110,7 @@ func New(logger logr.Logger) probe.Probe {
 				Key: "buckets_ptr_pos",
 				Val: structfield.NewID("std", "runtime", "hmap", "buckets"),
 			},
+			tracerIDContainsSchemaURL{},
 		},
 		Uprobes: []probe.Uprobe{
 			{
@@ -136,6 +141,23 @@ func New(logger logr.Logger) probe.Probe {
 		SpecFn:    loadBpf,
 		ProcessFn: convertEvent,
 	}
+}
+
+// framePosConst is a Probe Const defining whether the tracer key contains schemaURL.
+type tracerIDContainsSchemaURL struct{}
+
+// Prior to v1.28 the tracer key did not contain schemaURL. However, in that version a
+// change was made to include it.
+// https://github.com/open-telemetry/opentelemetry-go/pull/5426/files
+var paramChangeVer = version.Must(version.NewVersion("1.28.0"))
+
+func (c tracerIDContainsSchemaURL) InjectOption(td *process.TargetDetails) (inject.Option, error) {
+	ver, ok := td.Libraries["go.opentelemetry.io/otel"]
+	if !ok {
+		return nil, fmt.Errorf("unknown module version: %s", pkg)
+	}
+
+	return inject.WithKeyValue("tracer_id_contains_schemaURL", ver.GreaterThanOrEqual(paramChangeVer)), nil
 }
 
 type attributeKeyVal struct {
