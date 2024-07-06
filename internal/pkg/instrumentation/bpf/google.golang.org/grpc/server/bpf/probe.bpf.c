@@ -49,8 +49,11 @@ struct
 
 struct
 {
-    __uint(type, BPF_MAP_TYPE_PERF_EVENT_ARRAY);
-} events SEC(".maps");
+    __uint(type, BPF_MAP_TYPE_PERCPU_ARRAY);
+    __uint(key_size, sizeof(u32));
+    __uint(value_size, sizeof(struct grpc_request_t));
+    __uint(max_entries, 1);
+} grpc_storage_map SEC(".maps");
 
 struct hpack_header_field
 {
@@ -91,31 +94,33 @@ int uprobe_server_handleStream(struct pt_regs *ctx)
     // Get parent context if exists
     u32 stream_id = 0;
     bpf_probe_read(&stream_id, sizeof(stream_id), (void *)(stream_ptr + stream_id_pos));
-    void *grpcReq_ptr = bpf_map_lookup_elem(&streamid_to_grpc_events, &stream_id);
-    struct grpc_request_t grpcReq = {};
-    if (grpcReq_ptr != NULL)
-    {
-        bpf_probe_read(&grpcReq, sizeof(grpcReq), grpcReq_ptr);
+    struct grpc_request_t *grpcReq = bpf_map_lookup_elem(&streamid_to_grpc_events, &stream_id);
+    if (grpcReq == NULL) {
+        // No parent span context, generate new span context
+        u32 map_id = 0;
+        grpcReq = bpf_map_lookup_elem(&grpc_storage_map, &map_id);
+        if (grpcReq == NULL) {
+            bpf_printk("failed to get grpcReq from storage map");
+            return 0;
+        }
+        get_root_span_context(&grpcReq->sc);
+    } else {
+        // found parent span context
+        get_span_context_from_parent(&grpcReq->psc, &grpcReq->sc);
         bpf_map_delete_elem(&streamid_to_grpc_events, &stream_id);
-        copy_byte_arrays(grpcReq.psc.TraceID, grpcReq.sc.TraceID, TRACE_ID_SIZE);
-        generate_random_bytes(grpcReq.sc.SpanID, SPAN_ID_SIZE);
-    }
-    else
-    {
-        grpcReq.sc = generate_span_context();
     }
 
-    grpcReq.start_time = bpf_ktime_get_ns();
+    grpcReq->start_time = bpf_ktime_get_ns();
     // Set attributes
-    if (!get_go_string_from_user_ptr((void *)(stream_ptr + stream_method_ptr_pos), grpcReq.method, sizeof(grpcReq.method)))
+    if (!get_go_string_from_user_ptr((void *)(stream_ptr + stream_method_ptr_pos), grpcReq->method, sizeof(grpcReq->method)))
     {
         bpf_printk("method write failed, aborting ebpf probe");
         return 0;
     }
 
     // Write event
-    bpf_map_update_elem(&grpc_events, &key, &grpcReq, 0);
-    start_tracking_span(ctx_iface, &grpcReq.sc);
+    bpf_map_update_elem(&grpc_events, &key, grpcReq, 0);
+    start_tracking_span(ctx_iface, &grpcReq->sc);
     return 0;
 }
 

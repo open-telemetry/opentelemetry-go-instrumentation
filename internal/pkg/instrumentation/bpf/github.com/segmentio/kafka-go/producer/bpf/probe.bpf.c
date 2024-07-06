@@ -17,6 +17,7 @@
 #include "go_context.h"
 #include "go_types.h"
 #include "uprobe.h"
+#include "span_output.h"
 
 char __license[] SEC("license") = "Dual MIT/GPL";
 
@@ -33,7 +34,7 @@ char __license[] SEC("license") = "Dual MIT/GPL";
 #define MAX_KEY_SIZE 256
 
 struct message_attributes_t {
-    unsigned char SpanID[SPAN_ID_SIZE];
+    struct span_context sc;
     char topic[MAX_TOPIC_SIZE];
     char key[MAX_KEY_SIZE];
 };
@@ -43,7 +44,6 @@ struct kafka_request_t {
     u64 start_time;
     u64 end_time;
     struct span_context psc;
-    unsigned char TraceID[TRACE_ID_SIZE];
     // attributes per message
     struct message_attributes_t msgs[MAX_BATCH_SIZE];
     char global_topic[MAX_TOPIC_SIZE];
@@ -64,10 +64,6 @@ struct
     __uint(value_size, sizeof(struct kafka_request_t));
     __uint(max_entries, 1);
 } kafka_request_storage_map SEC(".maps");
-
-struct {
-	__uint(type, BPF_MAP_TYPE_PERF_EVENT_ARRAY);
-} events SEC(".maps");
 
 // https://github.com/segmentio/kafka-go/blob/main/protocol/record.go#L48
 struct kafka_header_t {
@@ -170,11 +166,9 @@ int uprobe_WriteMessages(struct pt_regs *ctx) {
     // Get parent if exists
     struct span_context *parent_span_ctx = get_parent_span_context(context_data_ptr);
     if (parent_span_ctx != NULL) {
-        // Set the parent context
-        bpf_probe_read(&kafka_request->psc, sizeof(kafka_request->psc), parent_span_ctx);
-        copy_byte_arrays(kafka_request->psc.TraceID, kafka_request->TraceID, TRACE_ID_SIZE);
+        get_span_context_from_parent(parent_span_ctx, &kafka_request->msgs[0].sc);
     } else {
-        generate_random_bytes(kafka_request->TraceID, TRACE_ID_SIZE);
+        get_root_span_context(&kafka_request->msgs[0].sc);
     }
 
     // Try to get a global topic from Writer
@@ -182,7 +176,6 @@ int uprobe_WriteMessages(struct pt_regs *ctx) {
 
     void *msg_ptr = msgs_array;
     struct kafka_header_t header = {0};
-    struct span_context current_sc = {0};
     // This is hack to get the message size. This calculation is based on the following assumptions:
     // 1. "Time" is the last field in the message struct. This looks to be correct for all the versions according to
     //      https://github.com/segmentio/kafka-go/blob/v0.2.3/message.go#L24C2-L24C6
@@ -191,7 +184,6 @@ int uprobe_WriteMessages(struct pt_regs *ctx) {
     // In the future if more libraries will need to get structs sizes we probably want to have similar
     // mechanism to the one we have for the offsets
     u16 msg_size = message_time_pos + 8 + 8 + 8;
-    __builtin_memcpy(current_sc.TraceID, kafka_request->TraceID, TRACE_ID_SIZE);
     kafka_request->valid_messages = 0;
     // Iterate over the messages
     for (u64 i = 0; i < MAX_BATCH_SIZE; i++) {
@@ -201,10 +193,16 @@ int uprobe_WriteMessages(struct pt_regs *ctx) {
         // Optionally collect the topic, and always collect key
         collect_kafka_attributes(msg_ptr, &kafka_request->msgs[i], !global_topic);
         // Generate span id for each message
-        generate_random_bytes(kafka_request->msgs[i].SpanID, SPAN_ID_SIZE);
-        __builtin_memcpy(current_sc.SpanID, kafka_request->msgs[i].SpanID, SPAN_ID_SIZE);
+        if (i > 0) {
+            generate_random_bytes(kafka_request->msgs[i].sc.SpanID, SPAN_ID_SIZE);
+            // Copy the trace id and trace flags from the first message. This means the sampling decision is done on the first message,
+            // and all the messages in the batch will have the same trace id and trace flags.
+            kafka_request->msgs[i].sc.TraceFlags = kafka_request->msgs[0].sc.TraceFlags;
+            __builtin_memcpy(kafka_request->msgs[i].sc.TraceID, kafka_request->msgs[0].sc.TraceID, TRACE_ID_SIZE);
+        }
+
         // Build the header
-        if (build_contxet_header(&header, &current_sc) != 0) {
+        if (build_contxet_header(&header, &kafka_request->msgs[i].sc) != 0) {
             bpf_printk("uprobe/WriteMessages: Failed to build header");
             return 0;
         }
@@ -235,7 +233,7 @@ int uprobe_WriteMessages_Returns(struct pt_regs *ctx) {
     }
     kafka_request->end_time = end_time;
 
-    bpf_perf_event_output(ctx, &events, BPF_F_CURRENT_CPU, kafka_request, sizeof(*kafka_request));
+    output_span_event(ctx, kafka_request, sizeof(*kafka_request), &kafka_request->msgs[0].sc);
     bpf_map_delete_elem(&kafka_events, &key);
     // don't need to stop tracking the span, as we don't have a context to propagate locally
     return 0;

@@ -96,9 +96,14 @@ static __always_inline void w3c_string_to_span_context(char *str, struct span_co
     hex_string_to_bytes(str + trace_flags_start_pos, TRACE_FLAGS_STRING_SIZE, &ctx->TraceFlags);
 }
 
+static __always_inline bool trace_flags_is_sampled(u8 flags)
+{
+    return ((flags & FLAG_SAMPLED) == FLAG_SAMPLED);
+}
+
 static __always_inline bool is_sampled(struct span_context *ctx)
 {
-    return ((ctx->TraceFlags & FLAG_SAMPLED) == FLAG_SAMPLED);
+    return trace_flags_is_sampled(ctx->TraceFlags);
 }
 
 #endif
