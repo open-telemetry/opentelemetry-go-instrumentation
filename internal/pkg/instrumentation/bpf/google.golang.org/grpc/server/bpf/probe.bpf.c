@@ -107,20 +107,21 @@ int uprobe_server_handleStream(struct pt_regs *ctx)
     } else {
         // found parent span context
         get_span_context_from_parent(&grpcReq->psc, &grpcReq->sc);
-        bpf_map_delete_elem(&streamid_to_grpc_events, &stream_id);
     }
 
     grpcReq->start_time = bpf_ktime_get_ns();
     // Set attributes
     if (!get_go_string_from_user_ptr((void *)(stream_ptr + stream_method_ptr_pos), grpcReq->method, sizeof(grpcReq->method)))
     {
-        bpf_printk("method write failed, aborting ebpf probe");
-        return 0;
+        bpf_printk("Failed to read gRPC method from stream");
+        goto done;
     }
 
     // Write event
     bpf_map_update_elem(&grpc_events, &key, grpcReq, 0);
     start_tracking_span(ctx_iface, &grpcReq->sc);
+done:
+    bpf_map_delete_elem(&streamid_to_grpc_events, &stream_id);
     return 0;
 }
 

@@ -166,7 +166,8 @@ int uprobe_WriteMessages(struct pt_regs *ctx) {
     // Get parent if exists
     struct span_context *parent_span_ctx = get_parent_span_context(context_data_ptr);
     if (parent_span_ctx != NULL) {
-        get_span_context_from_parent(parent_span_ctx, &kafka_request->msgs[0].sc);
+        kafka_request->psc = *parent_span_ctx;
+        get_span_context_from_parent(&kafka_request->psc, &kafka_request->msgs[0].sc);
     } else {
         get_root_span_context(&kafka_request->msgs[0].sc);
     }
