@@ -1,11 +1,11 @@
 # Instrumented Library Compatibility
 
-Instrumentation is provided for the following Go packages.
+Instrumentation is provided for the following Go libraries.
 
-- [database/sql](#database/sql)
-- [github.com/segmentio/kafka-go](#github.com/segmentio/kafka-go)
-- [google.golang.org/grpc](#google.golang.org/grpc)
-- [net/http](#net/http)
+- [`database/sql`](#database/sql)
+- [`github.com/segmentio/kafka-go`](#github.com/segmentio/kafka-go)
+- [`google.golang.org/grpc`](#google.golang.org/grpc)
+- [`net/http`](#net/http)
 
 ## database/sql
 
@@ -13,7 +13,7 @@ Instrumentation is provided for the following Go packages.
 
 Supported version ranges: 
 
-- 1.12.0 to 1.22.5
+- `go1.12` to `go1.22.5`
 
 ## github.com/segmentio/kafka-go
 
@@ -21,7 +21,7 @@ Supported version ranges:
 
 Supported version ranges: 
 
-- v0.4.1 to v0.4.47
+- `v0.4.1` to `v0.4.47`
 
 ## google.golang.org/grpc
 
@@ -29,7 +29,7 @@ Supported version ranges:
 
 Supported version ranges: 
 
-- v1.14.0 to v1.66.0
+- `v1.14.0` to `v1.66.0`
 
 ## net/http
 
@@ -37,4 +37,4 @@ Supported version ranges:
 
 Supported version ranges: 
 
-- 1.12. to 1.22.5
+- `go1.12 to `go1.22.5`
