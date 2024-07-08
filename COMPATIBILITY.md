@@ -37,4 +37,4 @@ Supported version ranges:
 
 Supported version ranges: 
 
-- `go1.12 to `go1.22.5`
+- `go1.12` to `go1.22.5`
