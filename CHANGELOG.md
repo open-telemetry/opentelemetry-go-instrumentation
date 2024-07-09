@@ -28,6 +28,7 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 - Upgrade semconv from `v1.24.0` to `v1.26.0` in `github.com/segmentio/kafka-go` instrumentation. ([#909](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/909))
   - The `messaging.operation` attribute key is renamed to `messaging.operation.type`.
   - The `messaging.kafka.destination.partition` key is renamed to `messaging.destination.partition.id`
+- Upgrade semconv to `v1.26.0` in `net/http` instrumentation. ([#913](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/913))
 
 ### Fixed
 
