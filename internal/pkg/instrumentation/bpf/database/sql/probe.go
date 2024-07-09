@@ -9,7 +9,7 @@ import (
 
 	"github.com/go-logr/logr"
 	"go.opentelemetry.io/otel/attribute"
-	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
 	"go.opentelemetry.io/otel/trace"
 	"golang.org/x/sys/unix"
 
@@ -100,7 +100,7 @@ func convertEvent(e *event) []*probe.SpanEvent {
 			EndTime:     int64(e.EndTime),
 			SpanContext: &sc,
 			Attributes: []attribute.KeyValue{
-				semconv.DBStatementKey.String(query),
+				semconv.DBQueryText(query),
 			},
 			ParentSpanContext: pscPtr,
 		},
