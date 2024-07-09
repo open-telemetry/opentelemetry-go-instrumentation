@@ -76,7 +76,7 @@
                   }
                 },
                 {
-                  "key": "messaging.operation",
+                  "key": "messaging.operation.type",
                   "value": {
                     "stringValue": "publish"
                   }
@@ -117,7 +117,7 @@
                   }
                 },
                 {
-                  "key": "messaging.operation",
+                  "key": "messaging.operation.type",
                   "value": {
                     "stringValue": "publish"
                   }
@@ -205,15 +205,15 @@
                   }
                 },
                 {
-                  "key": "messaging.operation",
+                  "key": "messaging.operation.type",
                   "value": {
                     "stringValue": "receive"
                   }
                 },
                 {
-                  "key": "messaging.kafka.destination.partition",
+                  "key": "messaging.destination.partition.id",
                   "value": {
-                    "intValue": "0"
+                    "stringValue": "0"
                   }
                 },
                 {
