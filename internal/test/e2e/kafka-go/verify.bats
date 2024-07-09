@@ -44,8 +44,8 @@ SCOPE="go.opentelemetry.io/auto/github.com/segmentio/kafka-go"
   assert_equal "$topics" '"key1"'
 }
 
-@test "consumer :: valid {messaging.kafka.destination.partition}" {
-  partition=$(consumer_span_attributes_for ${SCOPE} | jq "select(.key == \"messaging.kafka.destination.partition\").value.intValue" | sort )
+@test "consumer :: valid {messaging.destination.partition.id}" {
+  partition=$(consumer_span_attributes_for ${SCOPE} | jq "select(.key == \"messaging.destination.partition.id\").value.stringValue" | sort )
   assert_equal "$partition" '"0"'
 }
 
