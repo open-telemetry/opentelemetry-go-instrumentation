@@ -45,9 +45,13 @@ in `versions.yaml`.  Commit this change to a new branch.
    - Move all the `Unreleased` changes into a new section following the title scheme (`[<new tag>] - <date of release>`).
    - Update all the appropriate links at the bottom.
    
-4. Update [`version.go`](version.go) with the latest release version.
+4. Update [`CONTRIBUTING.md`](./CONTRIBUTING.md).
+   - Ensure all supported instrumentation libraries have the correct versions listed.
+     If the integration tests are still succeeding, the upper bound of the supported instrumentation version should be at least that tested version.
 
-5. Push the changes to your branch and create a Pull Request on GitHub.
+5. Update [`version.go`](version.go) with the latest release version.
+
+6. Push the changes to your branch and create a Pull Request on GitHub.
     Be sure to include the curated changes from the [Changelog](./CHANGELOG.md) in the description.
 
 ## Tag
