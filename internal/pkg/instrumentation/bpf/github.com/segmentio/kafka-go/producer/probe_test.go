@@ -13,6 +13,7 @@ import (
 	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
 	"go.opentelemetry.io/otel/trace"
 
+	"go.opentelemetry.io/auto/internal/pkg/instrumentation/context"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/probe"
 )
 
@@ -25,21 +26,26 @@ func TestProbeConvertEvent(t *testing.T) {
 	got := convertEvent(&event{
 		StartTime: uint64(start.UnixNano()),
 		EndTime:   uint64(end.UnixNano()),
-		TraceID:   traceID,
 		Messages: [10]messageAttributes{
 			{
 				// topic1
 				Topic: [256]byte{0x74, 0x6f, 0x70, 0x69, 0x63, 0x31},
 				// key1
-				Key:   [256]byte{0x6b, 0x65, 0x79, 0x31},
-				SpaID: trace.SpanID{1},
+				Key: [256]byte{0x6b, 0x65, 0x79, 0x31},
+				SpanContext: context.EBPFSpanContext{
+					TraceID: traceID,
+					SpanID:  trace.SpanID{1},
+				},
 			},
 			{
 				// topic2
 				Topic: [256]byte{0x74, 0x6f, 0x70, 0x69, 0x63, 0x32},
 				// key2
-				Key:   [256]byte{0x6b, 0x65, 0x79, 0x32},
-				SpaID: trace.SpanID{2},
+				Key: [256]byte{0x6b, 0x65, 0x79, 0x32},
+				SpanContext: context.EBPFSpanContext{
+					TraceID: traceID,
+					SpanID:  trace.SpanID{2},
+				},
 			},
 		},
 		ValidMessages: 2,

@@ -17,6 +17,7 @@
 #include "go_context.h"
 #include "go_types.h"
 #include "uprobe.h"
+#include "span_output.h"
 
 char __license[] SEC("license") = "Dual MIT/GPL";
 
@@ -72,10 +73,6 @@ struct
     __uint(value_size, sizeof(struct span_context));
     __uint(max_entries, 1);
 } parent_span_context_storage_map SEC(".maps");
-
-struct {
-	__uint(type, BPF_MAP_TYPE_PERF_EVENT_ARRAY);
-} events SEC(".maps");
 
 // https://github.com/segmentio/kafka-go/blob/main/protocol/record.go#L48
 struct kafka_header_t {
@@ -163,7 +160,7 @@ int uprobe_FetchMessage(struct pt_regs *ctx) {
     get_go_string_from_user_ptr((void *)(reader + reader_config_pos + reader_config_group_id_pos), kafka_request->consumer_group, sizeof(kafka_request->consumer_group));
     kafka_request->end_time = bpf_ktime_get_ns();
 
-    bpf_perf_event_output(ctx, &events, BPF_F_CURRENT_CPU, kafka_request, sizeof(*kafka_request));
+    output_span_event(ctx, kafka_request, sizeof(*kafka_request), &kafka_request->sc);
     stop_tracking_span(&kafka_request->sc, &kafka_request->psc);
     bpf_map_delete_elem(&kafka_events, &goroutine);
 
@@ -198,10 +195,9 @@ int uprobe_FetchMessage_Returns(struct pt_regs *ctx) {
     if (parent_span_ctx != NULL) {
         // Set the parent context
         bpf_probe_read(&kafka_request->psc, sizeof(kafka_request->psc), parent_span_ctx);
-        copy_byte_arrays(kafka_request->psc.TraceID, kafka_request->sc.TraceID, TRACE_ID_SIZE);
-        generate_random_bytes(kafka_request->sc.SpanID, SPAN_ID_SIZE);
+        get_span_context_from_parent(parent_span_ctx, &kafka_request->sc);
     } else {
-        kafka_request->sc = generate_span_context();
+        get_root_span_context(&kafka_request->sc);
     }
 
     // Collecting message attributes
