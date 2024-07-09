@@ -8,7 +8,7 @@ import (
 
 	"github.com/go-logr/logr"
 	"go.opentelemetry.io/otel/attribute"
-	semconv "go.opentelemetry.io/otel/semconv/v1.24.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
 	"go.opentelemetry.io/otel/trace"
 	"golang.org/x/sys/unix"
 
@@ -107,7 +107,7 @@ func convertEvent(e *event) []*probe.SpanEvent {
 
 	globalTopic := unix.ByteSliceToString(e.GlobalTopic[:])
 
-	var commonAttrs []attribute.KeyValue = []attribute.KeyValue{semconv.MessagingSystemKafka, semconv.MessagingOperationPublish}
+	commonAttrs := []attribute.KeyValue{semconv.MessagingSystemKafka, semconv.MessagingOperationTypePublish}
 	if len(globalTopic) > 0 {
 		commonAttrs = append(commonAttrs, semconv.MessagingDestinationName(globalTopic))
 	}

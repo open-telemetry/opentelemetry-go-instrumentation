@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"go.opentelemetry.io/otel/attribute"
-	semconv "go.opentelemetry.io/otel/semconv/v1.24.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
 	"go.opentelemetry.io/otel/trace"
 
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/context"
@@ -52,8 +52,8 @@ func TestProbeConvertEvent(t *testing.T) {
 		SpanContext: &sc,
 		Attributes: []attribute.KeyValue{
 			semconv.MessagingSystemKafka,
-			semconv.MessagingOperationReceive,
-			semconv.MessagingKafkaDestinationPartition(12),
+			semconv.MessagingOperationTypeReceive,
+			semconv.MessagingDestinationPartitionID("12"),
 			semconv.MessagingDestinationName("topic1"),
 			semconv.MessagingKafkaMessageOffset(42),
 			semconv.MessagingKafkaMessageKey("key1"),
