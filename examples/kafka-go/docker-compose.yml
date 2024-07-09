@@ -57,22 +57,37 @@ services:
     ports:
       - 2181:2181
 
-  kafkaapp:
+  kafkaproducer:
     depends_on:
       kafka:
         condition: service_healthy
     build:
-      context: .
-      dockerfile: ./Dockerfile
+      context: ./producer
+      dockerfile: ../Dockerfile
+      args:
+        BINARY_NAME: producer
     pid: "host"
     ports:
       - "8080:8080"
     volumes:
       - /proc:/host/proc
 
-  go-auto:
+  kafkaconsumer:
     depends_on:
-      - kafkaapp
+      kafka:
+        condition: service_healthy
+    build:
+      context: ./consumer
+      dockerfile: ../Dockerfile
+      args:
+        BINARY_NAME: consumer
+    pid: "host"
+    volumes:
+      - /proc:/host/proc
+
+  go-auto-producer:
+    depends_on:
+      - kafkaproducer
     build:
       context: ../..
       dockerfile: Dockerfile
@@ -80,8 +95,27 @@ services:
     pid: "host"
     environment:
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://jaeger:4318
-      - OTEL_GO_AUTO_TARGET_EXE=/app/main
-      - OTEL_SERVICE_NAME=kafkaapp
+      - OTEL_GO_AUTO_TARGET_EXE=/app/producer
+      - OTEL_SERVICE_NAME=kafkaproducer
+      - OTEL_PROPAGATORS=tracecontext,baggage
+      - OTEL_GO_AUTO_SHOW_VERIFIER_LOG=true
+    volumes:
+      - /proc:/host/proc
+      - debugfs:/sys/kernel/debug
+    command: ["/otel-go-instrumentation", "-global-impl"]
+
+  go-auto-consumer:
+    depends_on:
+      - kafkaconsumer
+    build:
+      context: ../..
+      dockerfile: Dockerfile
+    privileged: true
+    pid: "host"
+    environment:
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://jaeger:4318
+      - OTEL_GO_AUTO_TARGET_EXE=/app/consumer
+      - OTEL_SERVICE_NAME=kkafkaconsumer
       - OTEL_PROPAGATORS=tracecontext,baggage
       - OTEL_GO_AUTO_SHOW_VERIFIER_LOG=true
     volumes:

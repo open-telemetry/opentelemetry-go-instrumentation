@@ -1,16 +1,5 @@
 // Copyright The OpenTelemetry Authors
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// SPDX-License-Identifier: Apache-2.0
 
 package consumer
 
@@ -21,7 +10,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"go.opentelemetry.io/otel/attribute"
-	semconv "go.opentelemetry.io/otel/semconv/v1.24.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
 	"go.opentelemetry.io/otel/trace"
 
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/context"
@@ -63,8 +52,8 @@ func TestProbeConvertEvent(t *testing.T) {
 		SpanContext: &sc,
 		Attributes: []attribute.KeyValue{
 			semconv.MessagingSystemKafka,
-			semconv.MessagingOperationReceive,
-			semconv.MessagingKafkaDestinationPartition(12),
+			semconv.MessagingOperationTypeReceive,
+			semconv.MessagingDestinationPartitionID("12"),
 			semconv.MessagingDestinationName("topic1"),
 			semconv.MessagingKafkaMessageOffset(42),
 			semconv.MessagingKafkaMessageKey("key1"),
