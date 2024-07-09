@@ -16,10 +16,7 @@ package producer
 
 import (
 	"fmt"
-	"os"
 
-	"github.com/cilium/ebpf/link"
-	"github.com/cilium/ebpf/perf"
 	"github.com/go-logr/logr"
 	"go.opentelemetry.io/otel/attribute"
 	semconv "go.opentelemetry.io/otel/semconv/v1.24.0"
@@ -28,7 +25,6 @@ import (
 
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/context"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/probe"
-	"go.opentelemetry.io/auto/internal/pkg/process"
 	"go.opentelemetry.io/auto/internal/pkg/structfield"
 )
 
@@ -68,49 +64,16 @@ func New(logger logr.Logger) probe.Probe {
 				Val: structfield.NewID("github.com/segmentio/kafka-go", "github.com/segmentio/kafka-go", "Message", "Time"),
 			},
 		},
-		Uprobes: []probe.Uprobe[bpfObjects]{
+		Uprobes: []probe.Uprobe{
 			{
-				Sym: "github.com/segmentio/kafka-go.(*Writer).WriteMessages",
-				Fn:  uprobeWriteMessages,
+				Sym:         "github.com/segmentio/kafka-go.(*Writer).WriteMessages",
+				EntryProbe:  "uprobe_WriteMessages",
+				ReturnProbe: "uprobe_WriteMessages_Returns",
 			},
-		},
-		ReaderFn: func(obj bpfObjects) (*perf.Reader, error) {
-			return perf.NewReader(obj.Events, os.Getpagesize()*100)
 		},
 		SpecFn:    loadBpf,
 		ProcessFn: convertEvent,
 	}
-}
-
-func uprobeWriteMessages(name string, exec *link.Executable, target *process.TargetDetails, obj *bpfObjects) ([]link.Link, error) {
-	offset, err := target.GetFunctionOffset(name)
-	if err != nil {
-		return nil, err
-	}
-
-	opts := &link.UprobeOptions{Address: offset}
-	l, err := exec.Uprobe("", obj.UprobeWriteMessages, opts)
-	if err != nil {
-		return nil, err
-	}
-
-	links := []link.Link{l}
-
-	retOffsets, err := target.GetFunctionReturns(name)
-	if err != nil {
-		return nil, err
-	}
-
-	for _, ret := range retOffsets {
-		opts := &link.UprobeOptions{Address: ret}
-		l, err := exec.Uprobe("", obj.UprobeWriteMessagesReturns, opts)
-		if err != nil {
-			return nil, err
-		}
-		links = append(links, l)
-	}
-
-	return links, nil
 }
 
 type messageAttributes struct {
