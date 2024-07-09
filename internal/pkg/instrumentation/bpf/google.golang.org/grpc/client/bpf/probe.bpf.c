@@ -53,11 +53,6 @@ struct
     __uint(max_entries, MAX_CONCURRENT);
 } streamid_to_span_contexts SEC(".maps");
 
-struct
-{
-    __uint(type, BPF_MAP_TYPE_PERF_EVENT_ARRAY);
-} events SEC(".maps");
-
 // Injected in init
 volatile const u64 clientconn_target_ptr_pos;
 volatile const u64 httpclient_nextid_pos;
@@ -111,12 +106,11 @@ int uprobe_ClientConn_Invoke(struct pt_regs *ctx)
     if (parent_span_ctx != NULL)
     {
         bpf_probe_read(&grpcReq.psc, sizeof(grpcReq.psc), parent_span_ctx);
-        copy_byte_arrays(grpcReq.psc.TraceID, grpcReq.sc.TraceID, TRACE_ID_SIZE);
-        generate_random_bytes(grpcReq.sc.SpanID, SPAN_ID_SIZE);
+        get_span_context_from_parent(parent_span_ctx, &grpcReq.sc);
     }
     else
     {
-        grpcReq.sc = generate_span_context();
+        get_root_span_context(&grpcReq.sc);
     }
 
     // Write event
