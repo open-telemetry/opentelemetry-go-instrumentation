@@ -21,7 +21,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"go.opentelemetry.io/otel/attribute"
-	semconv "go.opentelemetry.io/otel/semconv/v1.24.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
 	"go.opentelemetry.io/otel/trace"
 
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/probe"
@@ -75,7 +75,7 @@ func TestProbeConvertEvent(t *testing.T) {
 			semconv.MessagingKafkaMessageKey("key1"),
 			semconv.MessagingDestinationName("topic1"),
 			semconv.MessagingSystemKafka,
-			semconv.MessagingOperationPublish,
+			semconv.MessagingOperationTypePublish,
 			semconv.MessagingBatchMessageCount(2),
 		},
 	}
@@ -89,7 +89,7 @@ func TestProbeConvertEvent(t *testing.T) {
 			semconv.MessagingKafkaMessageKey("key2"),
 			semconv.MessagingDestinationName("topic2"),
 			semconv.MessagingSystemKafka,
-			semconv.MessagingOperationPublish,
+			semconv.MessagingOperationTypePublish,
 			semconv.MessagingBatchMessageCount(2),
 		},
 	}
