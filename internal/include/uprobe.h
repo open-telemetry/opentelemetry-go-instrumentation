@@ -19,6 +19,7 @@
 #include "span_context.h"
 #include "go_context.h"
 #include "go_types.h"
+#include "span_output.h"
 
 #define BASE_SPAN_PROPERTIES \
     u64 start_time;          \
@@ -38,16 +39,15 @@ SEC("uprobe/##name##")                                                          
 int uprobe_##name##_Returns(struct pt_regs *ctx) {                                                                  \
     void *ctx_address = get_Go_context(ctx, context_pos, context_offset, passed_as_arg);                            \
     void *key = get_consistent_key(ctx, ctx_address);                                                               \
-    void *req_ptr_map = bpf_map_lookup_elem(&uprobe_context_map, &key);                                             \
-    if (req_ptr_map == NULL) {                                                                                      \
+    event_type *event = bpf_map_lookup_elem(&uprobe_context_map, &key);                                             \
+    if (event == NULL) {                                                                                            \
+        bpf_printk("event is NULL in ret probe");                                                                   \
         return 0;                                                                                                   \
     }                                                                                                               \
-    event_type tmpReq = {0};                                                                                        \
-    bpf_probe_read(&tmpReq, sizeof(tmpReq), req_ptr_map);                                                           \
-    tmpReq.end_time = bpf_ktime_get_ns();                                                                           \
-    bpf_perf_event_output(ctx, &events_map, BPF_F_CURRENT_CPU, &tmpReq, sizeof(tmpReq));                            \
+    event->end_time = bpf_ktime_get_ns();                                                                           \
+    output_span_event(ctx, event, sizeof(event_type), &event->sc);                                                  \
     bpf_map_delete_elem(&uprobe_context_map, &key);                                                                 \
-    stop_tracking_span(&tmpReq.sc, &tmpReq.psc);                                                                    \
+    stop_tracking_span(&event->sc, &event->psc);                                                                    \
     return 0;                                                                                                       \
 } 
 

@@ -66,9 +66,9 @@ func New(logger logr.Logger) probe.Probe {
 }
 
 type messageAttributes struct {
-	SpaID trace.SpanID
-	Topic [256]byte
-	Key   [256]byte
+	SpanContext context.EBPFSpanContext
+	Topic       [256]byte
+	Key         [256]byte
 }
 
 // event represents a batch of kafka messages being sent.
@@ -76,8 +76,6 @@ type event struct {
 	StartTime         uint64
 	EndTime           uint64
 	ParentSpanContext context.EBPFSpanContext
-	// Same trace id for all the batch
-	TraceID trace.TraceID
 	// Message specific attributes
 	Messages [10]messageAttributes
 	// Global topic for the batch
@@ -88,7 +86,7 @@ type event struct {
 
 func convertEvent(e *event) []*probe.SpanEvent {
 	tsc := trace.SpanContextConfig{
-		TraceID:    e.TraceID,
+		TraceID:    e.Messages[0].SpanContext.TraceID,
 		TraceFlags: trace.FlagsSampled,
 	}
 
@@ -119,7 +117,7 @@ func convertEvent(e *event) []*probe.SpanEvent {
 	var res []*probe.SpanEvent
 	var msgTopic string
 	for i := uint64(0); i < e.ValidMessages; i++ {
-		tsc.SpanID = e.Messages[i].SpaID
+		tsc.SpanID = e.Messages[i].SpanContext.SpanID
 		sc := trace.NewSpanContext(tsc)
 		key := unix.ByteSliceToString(e.Messages[i].Key[:])
 
