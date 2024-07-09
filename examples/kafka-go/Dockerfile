@@ -1,5 +1,7 @@
 FROM golang:1.22.5
 WORKDIR /app
 COPY . .
-RUN go build -o main
-ENTRYPOINT ["/app/main"]
+ARG BINARY_NAME
+ENV BINARY_NAME=$BINARY_NAME
+RUN go build -o $BINARY_NAME
+ENTRYPOINT ["sh", "-c", "/app/$BINARY_NAME"]
