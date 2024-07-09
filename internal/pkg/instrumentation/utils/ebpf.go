@@ -17,9 +17,9 @@ const (
 	showVerifierLogEnvVar = "OTEL_GO_AUTO_SHOW_VERIFIER_LOG"
 )
 
-// LoadEBPFObjects loads eBPF objects from the given spec into the given interface.
+// InitializeEBPFCollection loads eBPF objects from the given spec and returns a collection corresponding to the spec.
 // If the environment variable OTEL_GO_AUTO_SHOW_VERIFIER_LOG is set to true, the verifier log will be printed.
-func LoadEBPFObjects(spec *ebpf.CollectionSpec, to interface{}, opts *ebpf.CollectionOptions) error {
+func InitializeEBPFCollection(spec *ebpf.CollectionSpec, opts *ebpf.CollectionOptions) (*ebpf.Collection, error) {
 	// Getting full verifier log is expensive, so we only do it if the user explicitly asks for it.
 	showVerifierLogs := shouldShowVerifierLogs()
 	if showVerifierLogs {
@@ -27,7 +27,7 @@ func LoadEBPFObjects(spec *ebpf.CollectionSpec, to interface{}, opts *ebpf.Colle
 		opts.Programs.LogLevel = ebpf.LogLevelInstruction | ebpf.LogLevelBranch | ebpf.LogLevelStats
 	}
 
-	err := spec.LoadAndAssign(to, opts)
+	c, err := ebpf.NewCollectionWithOptions(spec, *opts)
 	if err != nil && showVerifierLogs {
 		var ve *ebpf.VerifierError
 		if errors.As(err, &ve) {
@@ -35,7 +35,7 @@ func LoadEBPFObjects(spec *ebpf.CollectionSpec, to interface{}, opts *ebpf.Colle
 		}
 	}
 
-	return err
+	return c, err
 }
 
 // shouldShowVerifierLogs returns if the user has configured verifier logs to be emitted.

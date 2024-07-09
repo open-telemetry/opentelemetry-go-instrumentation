@@ -5,10 +5,7 @@ package server
 
 import (
 	"fmt"
-	"os"
 
-	"github.com/cilium/ebpf/link"
-	"github.com/cilium/ebpf/perf"
 	"github.com/go-logr/logr"
 	"github.com/hashicorp/go-version"
 	"go.opentelemetry.io/otel/attribute"
@@ -64,19 +61,16 @@ func New(logger logr.Logger) probe.Probe {
 			},
 			framePosConst{},
 		},
-		Uprobes: []probe.Uprobe[bpfObjects]{
+		Uprobes: []probe.Uprobe{
 			{
-				Sym: "google.golang.org/grpc.(*Server).handleStream",
-				Fn:  uprobeHandleStream,
+				Sym:         "google.golang.org/grpc.(*Server).handleStream",
+				EntryProbe:  "uprobe_server_handleStream",
+				ReturnProbe: "uprobe_server_handleStream_Returns",
 			},
 			{
-				Sym: "google.golang.org/grpc/internal/transport.(*http2Server).operateHeaders",
-				Fn:  uprobeOperateHeaders,
+				Sym:        "google.golang.org/grpc/internal/transport.(*http2Server).operateHeaders",
+				EntryProbe: "uprobe_http2Server_operateHeader",
 			},
-		},
-
-		ReaderFn: func(obj bpfObjects) (*perf.Reader, error) {
-			return perf.NewReader(obj.Events, os.Getpagesize())
 		},
 		SpecFn:    loadBpf,
 		ProcessFn: convertEvent,
@@ -100,50 +94,6 @@ func (c framePosConst) InjectOption(td *process.TargetDetails) (inject.Option, e
 	}
 
 	return inject.WithKeyValue("is_new_frame_pos", ver.GreaterThanOrEqual(paramChangeVer)), nil
-}
-
-func uprobeHandleStream(name string, exec *link.Executable, target *process.TargetDetails, obj *bpfObjects) ([]link.Link, error) {
-	offset, err := target.GetFunctionOffset(name)
-	if err != nil {
-		return nil, err
-	}
-
-	opts := &link.UprobeOptions{Address: offset, PID: target.PID}
-	l, err := exec.Uprobe("", obj.UprobeServerHandleStream, opts)
-	if err != nil {
-		return nil, err
-	}
-	links := []link.Link{l}
-
-	retOffsets, err := target.GetFunctionReturns(name)
-	if err != nil {
-		return nil, err
-	}
-
-	for _, ret := range retOffsets {
-		opts := &link.UprobeOptions{Address: ret}
-		l, err := exec.Uprobe("", obj.UprobeServerHandleStreamReturns, opts)
-		if err != nil {
-			return nil, err
-		}
-		links = append(links, l)
-	}
-
-	return links, nil
-}
-
-func uprobeOperateHeaders(name string, exec *link.Executable, target *process.TargetDetails, obj *bpfObjects) ([]link.Link, error) {
-	offset, err := target.GetFunctionOffset(name)
-	if err != nil {
-		return nil, err
-	}
-
-	opts := &link.UprobeOptions{Address: offset, PID: target.PID}
-	l, err := exec.Uprobe("", obj.UprobeHttp2ServerOperateHeader, opts)
-	if err != nil {
-		return nil, err
-	}
-	return []link.Link{l}, nil
 }
 
 // event represents an event in the gRPC server during a gRPC request.
