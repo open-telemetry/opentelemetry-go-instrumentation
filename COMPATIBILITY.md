@@ -1,4 +1,17 @@
-# Instrumented Library Compatibility
+# Compatibility
+
+## Default `otel` Global Providers Compatibility
+
+Auto-instrumentation can be configured to capture the telemetry sent to the
+[`otel`] default global providers.
+
+Supported versions of [`otel`]:
+
+- `v0.14.0` to `v1.28.0`
+
+[`otel`]: https://pkg.go.dev/go.opentelemetry.io/otel
+
+## Instrumented Library Compatibility
 
 Instrumentation is provided for the following Go libraries.
 
@@ -7,7 +20,7 @@ Instrumentation is provided for the following Go libraries.
 - [`google.golang.org/grpc`](#google.golang.org/grpc)
 - [`net/http`](#net/http)
 
-## database/sql
+### database/sql
 
 [Package documentation](https://pkg.go.dev/database/sql)
 
@@ -15,7 +28,7 @@ Supported version ranges:
 
 - `go1.12` to `go1.22.5`
 
-## github.com/segmentio/kafka-go
+### github.com/segmentio/kafka-go
 
 [Package documentation](https://pkg.go.dev/github.com/segmentio/kafka-go)
 
@@ -23,7 +36,7 @@ Supported version ranges:
 
 - `v0.4.1` to `v0.4.47`
 
-## google.golang.org/grpc
+### google.golang.org/grpc
 
 [Package documentation](https://pkg.go.dev/google.golang.org/grpc)
 
@@ -31,7 +44,7 @@ Supported version ranges:
 
 - `v1.14.0` to `v1.66.0`
 
-## net/http
+### net/http
 
 [Package documentation](https://pkg.go.dev/net/http)
 
