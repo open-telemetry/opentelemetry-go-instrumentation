@@ -1,34 +1,22 @@
 // Copyright The OpenTelemetry Authors
- //
- // Licensed under the Apache License, Version 2.0 (the "License");
- // you may not use this file except in compliance with the License.
- // You may obtain a copy of the License at
- //
- //     http://www.apache.org/licenses/LICENSE-2.0
- //
- // Unless required by applicable law or agreed to in writing, software
- // distributed under the License is distributed on an "AS IS" BASIS,
- // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- // See the License for the specific language governing permissions and
- // limitations under the License.
- 
- //go:build !linux
+// SPDX-License-Identifier: Apache-2.0
 
- package bpffs
+//go:build !linux
 
- import "go.opentelemetry.io/auto/internal/pkg/process"
+package bpffs
 
- // Stubs for non-linux systems
+import "go.opentelemetry.io/auto/internal/pkg/process"
 
- func PathForTargetApplication(target *process.TargetDetails) string {
- 	return ""
- }
+// Stubs for non-linux systems
 
- func Mount(target *process.TargetDetails) error {
- 	return nil
- }
+func PathForTargetApplication(target *process.TargetDetails) string {
+	return ""
+}
 
- func Cleanup(target *process.TargetDetails) error {
- 	return nil
- }
- 
+func Mount(target *process.TargetDetails) error {
+	return nil
+}
+
+func Cleanup(target *process.TargetDetails) error {
+	return nil
+}
