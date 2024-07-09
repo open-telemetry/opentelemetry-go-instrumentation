@@ -16,13 +16,10 @@ package grpc
 
 import (
 	"fmt"
-	"os"
 	"strconv"
 	"strings"
 
 	"github.com/cilium/ebpf"
-	"github.com/cilium/ebpf/link"
-	"github.com/cilium/ebpf/perf"
 	"github.com/go-logr/logr"
 	"go.opentelemetry.io/otel/attribute"
 	semconv "go.opentelemetry.io/otel/semconv/v1.24.0"
@@ -32,7 +29,6 @@ import (
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/context"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/probe"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/utils"
-	"go.opentelemetry.io/auto/internal/pkg/process"
 	"go.opentelemetry.io/auto/internal/pkg/structfield"
 )
 
@@ -72,27 +68,20 @@ func New(logger logr.Logger) probe.Probe {
 				Val: structfield.NewID("google.golang.org/grpc", "google.golang.org/grpc/internal/transport", "headerFrame", "streamID"),
 			},
 		},
-		Uprobes: []probe.Uprobe[bpfObjects]{
+		Uprobes: []probe.Uprobe{
 			{
-				Sym: "google.golang.org/grpc.(*ClientConn).Invoke",
-				Fn:  uprobeInvoke,
-			}, {
-				Sym: "google.golang.org/grpc/internal/transport.(*http2Client).NewStream",
-				Fn: func(name string, exec *link.Executable, target *process.TargetDetails, obj *bpfObjects) ([]link.Link, error) {
-					prog := obj.UprobeHttp2ClientNewStream
-					return uprobeFn(name, exec, target, prog)
-				},
-			}, {
-				Sym: "google.golang.org/grpc/internal/transport.(*loopyWriter).headerHandler",
-				Fn: func(name string, exec *link.Executable, target *process.TargetDetails, obj *bpfObjects) ([]link.Link, error) {
-					prog := obj.UprobeLoopyWriterHeaderHandler
-					return uprobeFn(name, exec, target, prog)
-				},
+				Sym:         "google.golang.org/grpc.(*ClientConn).Invoke",
+				EntryProbe:  "uprobe_ClientConn_Invoke",
+				ReturnProbe: "uprobe_ClientConn_Invoke_Returns",
 			},
-		},
-
-		ReaderFn: func(obj bpfObjects) (*perf.Reader, error) {
-			return perf.NewReader(obj.Events, os.Getpagesize())
+			{
+				Sym:        "google.golang.org/grpc/internal/transport.(*http2Client).NewStream",
+				EntryProbe: "uprobe_http2Client_NewStream",
+			},
+			{
+				Sym:        "google.golang.org/grpc/internal/transport.(*loopyWriter).headerHandler",
+				EntryProbe: "uprobe_LoopyWriter_HeaderHandler",
+			},
 		},
 		SpecFn:    verifyAndLoadBpf,
 		ProcessFn: convertEvent,
@@ -105,43 +94,6 @@ func verifyAndLoadBpf() (*ebpf.CollectionSpec, error) {
 	}
 
 	return loadBpf()
-}
-
-func uprobeFn(name string, exec *link.Executable, target *process.TargetDetails, prog *ebpf.Program) ([]link.Link, error) {
-	offset, err := target.GetFunctionOffset(name)
-	if err != nil {
-		return nil, err
-	}
-
-	opts := &link.UprobeOptions{Address: offset, PID: target.PID}
-	l, err := exec.Uprobe("", prog, opts)
-	if err != nil {
-		return nil, err
-	}
-	return []link.Link{l}, nil
-}
-
-func uprobeInvoke(name string, exec *link.Executable, target *process.TargetDetails, obj *bpfObjects) ([]link.Link, error) {
-	links, err := uprobeFn(name, exec, target, obj.UprobeClientConnInvoke)
-	if err != nil {
-		return nil, err
-	}
-
-	retOffsets, err := target.GetFunctionReturns(name)
-	if err != nil {
-		return nil, err
-	}
-
-	for _, ret := range retOffsets {
-		opts := &link.UprobeOptions{Address: ret}
-		l, err := exec.Uprobe("", obj.UprobeClientConnInvokeReturns, opts)
-		if err != nil {
-			return nil, err
-		}
-		links = append(links, l)
-	}
-
-	return links, nil
 }
 
 // event represents an event in the gRPC client during a gRPC request.
