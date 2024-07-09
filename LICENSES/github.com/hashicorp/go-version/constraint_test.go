@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package version
 
 import (
@@ -96,6 +99,34 @@ func TestConstraintCheck(t *testing.T) {
 		if actual != expected {
 			t.Fatalf("Version: %s\nConstraint: %s\nExpected: %#v",
 				tc.version, tc.constraint, expected)
+		}
+	}
+}
+
+func TestConstraintPrerelease(t *testing.T) {
+	cases := []struct {
+		constraint string
+		prerelease bool
+	}{
+		{"= 1.0", false},
+		{"= 1.0-beta", true},
+		{"~> 2.1.0", false},
+		{"~> 2.1.0-dev", true},
+		{"> 2.0", false},
+		{">= 2.1.0-a", true},
+	}
+
+	for _, tc := range cases {
+		c, err := parseSingle(tc.constraint)
+		if err != nil {
+			t.Fatalf("err: %s", err)
+		}
+
+		actual := c.Prerelease()
+		expected := tc.prerelease
+		if actual != expected {
+			t.Fatalf("Constraint: %s\nExpected: %#v",
+				tc.constraint, expected)
 		}
 	}
 }
