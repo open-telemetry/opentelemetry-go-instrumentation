@@ -4,8 +4,8 @@ load ../../test_helpers/utilities
 
 SCOPE="go.opentelemetry.io/auto/database/sql"
 
-@test "${SCOPE} :: includes db.statement attribute" {
-  result=$(span_attributes_for ${SCOPE} | jq "select(.key == \"db.statement\").value.stringValue")
+@test "${SCOPE} :: includes db.query.text attribute" {
+  result=$(span_attributes_for ${SCOPE} | jq "select(.key == \"db.query.text\").value.stringValue")
   assert_equal "$result" '"SELECT * FROM contacts"'
 }
 

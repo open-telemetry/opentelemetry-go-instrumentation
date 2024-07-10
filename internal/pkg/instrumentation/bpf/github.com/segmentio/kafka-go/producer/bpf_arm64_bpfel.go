@@ -16,11 +16,10 @@ type bpfKafkaRequestT struct {
 	StartTime uint64
 	EndTime   uint64
 	Psc       bpfSpanContext
-	TraceID   [16]uint8
 	Msgs      [10]struct {
-		SpanID [8]uint8
-		Topic  [256]int8
-		Key    [256]int8
+		Sc    bpfSpanContext
+		Topic [256]int8
+		Key   [256]int8
 	}
 	GlobalTopic   [256]int8
 	ValidMessages uint64

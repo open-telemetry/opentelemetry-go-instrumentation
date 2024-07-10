@@ -18,6 +18,7 @@
 #include "go_types.h"
 #include "uprobe.h"
 #include "otel_types.h"
+#include "span_output.h"
 
 char __license[] SEC("license") = "Dual MIT/GPL";
 
@@ -67,10 +68,6 @@ struct
     __uint(value_size, sizeof(struct otel_span_t));
     __uint(max_entries, 2);
 } otel_span_storage_map SEC(".maps");
-
-struct {
-	__uint(type, BPF_MAP_TYPE_PERF_EVENT_ARRAY);
-} events SEC(".maps");
 
 // Injected in init
 volatile const u64 tracer_delegate_pos;
@@ -147,10 +144,9 @@ int uprobe_Start_Returns(struct pt_regs *ctx) {
     if (span_ctx != NULL) {
         // Set the parent context
         bpf_probe_read(&otel_span->psc, sizeof(otel_span->psc), span_ctx);
-        copy_byte_arrays(otel_span->psc.TraceID, otel_span->sc.TraceID, TRACE_ID_SIZE);
-        generate_random_bytes(otel_span->sc.SpanID, SPAN_ID_SIZE);
+        get_span_context_from_parent(&otel_span->psc, &otel_span->sc);
     } else {
-        otel_span->sc = generate_span_context();
+        get_root_span_context(&otel_span->sc);
     }
 
     bpf_map_update_elem(&active_spans_by_span_ptr, &span_ptr_val, otel_span, 0);
@@ -257,7 +253,7 @@ int uprobe_End(struct pt_regs *ctx) {
     span->end_time = bpf_ktime_get_ns();
     stop_tracking_span(&span->sc, &span->psc);
 
-    bpf_perf_event_output(ctx, &events, BPF_F_CURRENT_CPU, span, sizeof(*span));
+    output_span_event(ctx, span, sizeof(*span), &span->sc);
 
     bpf_map_delete_elem(&active_spans_by_span_ptr, &non_recording_span_ptr);
     return 0;
