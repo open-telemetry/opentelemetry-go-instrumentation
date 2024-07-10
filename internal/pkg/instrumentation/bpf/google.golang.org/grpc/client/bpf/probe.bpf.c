@@ -170,6 +170,8 @@ int uprobe_http2Client_NewStream(struct pt_regs *ctx)
     void *httpclient_ptr = get_argument(ctx, 1);
     u32 nextid = 0;
     bpf_probe_read(&nextid, sizeof(nextid), (void *)(httpclient_ptr + (httpclient_nextid_pos)));
+    // Get the span context from go context. The mapping is created in the Invoke probe,
+    // the context here is derived from the Invoke context.
     struct span_context *current_span_context = get_parent_span_context(context_ptr);
     if (current_span_context != NULL) {
         bpf_map_update_elem(&streamid_to_span_contexts, &nextid, current_span_context, 0);
