@@ -47,7 +47,7 @@
           }
         ]
       },
-      "schemaUrl": "https://opentelemetry.io/schemas/1.22.0",
+      "schemaUrl": "https://opentelemetry.io/schemas/1.26.0",
       "scopeSpans": [
         {
           "scope": {
@@ -58,7 +58,7 @@
             {
               "attributes": [
                 {
-                  "key": "db.statement",
+                  "key": "db.query.text",
                   "value": {
                     "stringValue": "SELECT * FROM contacts"
                   }

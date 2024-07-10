@@ -3,6 +3,7 @@
 #include "go_context.h"
 #include "go_types.h"
 #include "uprobe.h"
+#include "span_output.h"
 
 char __license[] SEC("license") = "Dual MIT/GPL";
 
@@ -58,10 +59,6 @@ struct {
 	__type(value, void*); // request key, goroutine or context ptr
 	__uint(max_entries, MAX_CONCURRENT);
 } http_headers SEC(".maps");
-
-struct {
-	__uint(type, BPF_MAP_TYPE_PERF_EVENT_ARRAY);
-} events SEC(".maps");
 
 // Injected in init
 volatile const u64 method_ptr_pos;
@@ -231,7 +228,7 @@ int uprobe_Transport_roundTrip_Returns(struct pt_regs *ctx) {
 
     http_req_span->end_time = end_time;
 
-    bpf_perf_event_output(ctx, &events, BPF_F_CURRENT_CPU, http_req_span, sizeof(*http_req_span));
+    output_span_event(ctx, http_req_span, sizeof(*http_req_span), &http_req_span->sc);
     stop_tracking_span(&http_req_span->sc, &http_req_span->psc);
 
     bpf_map_delete_elem(&http_events, &key);

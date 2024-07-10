@@ -17,6 +17,7 @@
 #include "go_context.h"
 #include "go_types.h"
 #include "uprobe.h"
+#include "span_output.h"
 
 char __license[] SEC("license") = "Dual MIT/GPL";
 
@@ -74,11 +75,6 @@ struct
     __uint(value_size, sizeof(struct uprobe_data_t));
     __uint(max_entries, 1);
 } http_server_uprobe_storage_map SEC(".maps");
-
-struct
-{
-    __uint(type, BPF_MAP_TYPE_PERF_EVENT_ARRAY);
-} events SEC(".maps");
 
 // Injected in init
 volatile const u64 method_ptr_pos;
@@ -265,9 +261,6 @@ int uprobe_serverHandler_ServeHTTP_Returns(struct pt_regs *ctx) {
     }
 
     struct http_server_span_t *http_server_span = &uprobe_data->span;
-    if (!is_sampled(&http_server_span->sc)) {
-        goto done;
-    }
 
     void *resp_ptr = (void *)uprobe_data->resp_ptr;
     void *req_ptr = NULL;
@@ -294,9 +287,8 @@ int uprobe_serverHandler_ServeHTTP_Returns(struct pt_regs *ctx) {
     // status code
     bpf_probe_read(&http_server_span->status_code, sizeof(http_server_span->status_code), (void *)(resp_ptr + status_code_pos));
 
-    bpf_perf_event_output(ctx, &events, BPF_F_CURRENT_CPU, http_server_span, sizeof(*http_server_span));
-    
-done:
+    output_span_event(ctx, http_server_span, sizeof(*http_server_span), &http_server_span->sc);
+
     stop_tracking_span(&http_server_span->sc, &http_server_span->psc);
     bpf_map_delete_elem(&http_server_uprobes, &key);
     return 0;
