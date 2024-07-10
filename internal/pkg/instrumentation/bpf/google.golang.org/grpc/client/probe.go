@@ -11,7 +11,7 @@ import (
 	"github.com/cilium/ebpf"
 	"github.com/go-logr/logr"
 	"go.opentelemetry.io/otel/attribute"
-	semconv "go.opentelemetry.io/otel/semconv/v1.24.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
 	"go.opentelemetry.io/otel/trace"
 	"golang.org/x/sys/unix"
 
@@ -108,7 +108,7 @@ func convertEvent(e *event) []*probe.SpanEvent {
 
 	attrs = append(attrs, semconv.RPCSystemKey.String("grpc"),
 		semconv.RPCServiceKey.String(method),
-		semconv.NetPeerNameKey.String(target))
+		semconv.ServerAddress(target))
 
 	sc := trace.NewSpanContext(trace.SpanContextConfig{
 		TraceID:    e.SpanContext.TraceID,
