@@ -5,7 +5,6 @@ package opentelemetry
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"github.com/go-logr/logr"
