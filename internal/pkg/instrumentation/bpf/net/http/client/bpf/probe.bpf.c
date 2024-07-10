@@ -1,9 +1,10 @@
 #include "arguments.h"
-#include "span_context.h"
+#include "trace/span_context.h"
 #include "go_context.h"
 #include "go_types.h"
 #include "uprobe.h"
-#include "span_output.h"
+#include "trace/span_output.h"
+#include "trace/start_span.h"
 
 char __license[] SEC("license") = "Dual MIT/GPL";
 
@@ -98,13 +99,10 @@ int uprobe_Transport_roundTrip(struct pt_regs *ctx) {
     u64 request_pos = 2;
     void *req_ptr = get_argument(ctx, request_pos);
 
-    // Get parent if exists
-    void *context_ptr_val = get_Go_context(ctx, 2, ctx_ptr_pos, false);
-    if (context_ptr_val == NULL)
-    {
-        return 0;
-    }
-    void *key = get_consistent_key(ctx, context_ptr_val);
+    struct go_iface go_context = {0};
+    get_Go_context(ctx, 2, ctx_ptr_pos, false, &go_context);
+
+    void *key = get_consistent_key(ctx, go_context.data);
     void *httpReq_ptr = bpf_map_lookup_elem(&http_events, &key);
     if (httpReq_ptr != NULL)
     {
@@ -123,14 +121,15 @@ int uprobe_Transport_roundTrip(struct pt_regs *ctx) {
     __builtin_memset(httpReq, 0, sizeof(struct http_request_t));
     httpReq->start_time = bpf_ktime_get_ns();
 
-    struct span_context *parent_span_ctx = get_parent_span_context(context_ptr_val);
-    if (parent_span_ctx != NULL) {
-        bpf_probe_read(&httpReq->psc, sizeof(httpReq->psc), parent_span_ctx);
-        copy_byte_arrays(httpReq->psc.TraceID, httpReq->sc.TraceID, TRACE_ID_SIZE);
-        generate_random_bytes(httpReq->sc.SpanID, SPAN_ID_SIZE);
-    } else {
-        get_root_span_context(&httpReq->sc);
-    }
+    start_span_params_t start_span_params = {
+        .ctx = ctx,
+        .go_context = &go_context,
+        .psc = &httpReq->psc,
+        .sc = &httpReq->sc,
+        .get_parent_span_context_fn = NULL,
+        .get_parent_span_context_arg = NULL,
+    };
+    start_span(&start_span_params);
 
     if (!get_go_string_from_user_ptr((void *)(req_ptr+method_ptr_pos), httpReq->method, sizeof(httpReq->method))) {
         bpf_printk("uprobe_Transport_roundTrip: Failed to get method from request");
@@ -209,7 +208,7 @@ int uprobe_Transport_roundTrip(struct pt_regs *ctx) {
 
     // Write event
     bpf_map_update_elem(&http_events, &key, httpReq, 0);
-    start_tracking_span(context_ptr_val, &httpReq->sc);
+    start_tracking_span(go_context.data, &httpReq->sc);
     return 0;
 }
 
@@ -218,8 +217,9 @@ int uprobe_Transport_roundTrip(struct pt_regs *ctx) {
 SEC("uprobe/Transport_roundTrip")
 int uprobe_Transport_roundTrip_Returns(struct pt_regs *ctx) {
     u64 end_time = bpf_ktime_get_ns();
-    void *req_ctx_ptr = get_Go_context(ctx, 2, ctx_ptr_pos, false);
-    void *key = get_consistent_key(ctx, req_ctx_ptr);
+    struct go_iface go_context = {0};
+    get_Go_context(ctx, 2, ctx_ptr_pos, false, &go_context);
+    void *key = get_consistent_key(ctx, go_context.data);
 
     struct http_request_t *http_req_span = bpf_map_lookup_elem(&http_events, &key);
     if (http_req_span == NULL) {

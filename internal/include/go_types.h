@@ -38,7 +38,7 @@ struct go_slice
 
 struct go_iface
 {
-    void *tab;
+    void *type;
     void *data;
 };
 

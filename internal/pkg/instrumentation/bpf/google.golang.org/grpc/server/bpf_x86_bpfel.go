@@ -82,11 +82,11 @@ type bpfProgramSpecs struct {
 type bpfMapSpecs struct {
 	AllocMap             *ebpf.MapSpec `ebpf:"alloc_map"`
 	Events               *ebpf.MapSpec `ebpf:"events"`
+	GoContextToSc        *ebpf.MapSpec `ebpf:"go_context_to_sc"`
 	GrpcEvents           *ebpf.MapSpec `ebpf:"grpc_events"`
 	GrpcStorageMap       *ebpf.MapSpec `ebpf:"grpc_storage_map"`
 	SliceArrayBuffMap    *ebpf.MapSpec `ebpf:"slice_array_buff_map"`
 	StreamidToGrpcEvents *ebpf.MapSpec `ebpf:"streamid_to_grpc_events"`
-	TrackedSpans         *ebpf.MapSpec `ebpf:"tracked_spans"`
 	TrackedSpansBySc     *ebpf.MapSpec `ebpf:"tracked_spans_by_sc"`
 }
 
@@ -111,11 +111,11 @@ func (o *bpfObjects) Close() error {
 type bpfMaps struct {
 	AllocMap             *ebpf.Map `ebpf:"alloc_map"`
 	Events               *ebpf.Map `ebpf:"events"`
+	GoContextToSc        *ebpf.Map `ebpf:"go_context_to_sc"`
 	GrpcEvents           *ebpf.Map `ebpf:"grpc_events"`
 	GrpcStorageMap       *ebpf.Map `ebpf:"grpc_storage_map"`
 	SliceArrayBuffMap    *ebpf.Map `ebpf:"slice_array_buff_map"`
 	StreamidToGrpcEvents *ebpf.Map `ebpf:"streamid_to_grpc_events"`
-	TrackedSpans         *ebpf.Map `ebpf:"tracked_spans"`
 	TrackedSpansBySc     *ebpf.Map `ebpf:"tracked_spans_by_sc"`
 }
 
@@ -123,11 +123,11 @@ func (m *bpfMaps) Close() error {
 	return _BpfClose(
 		m.AllocMap,
 		m.Events,
+		m.GoContextToSc,
 		m.GrpcEvents,
 		m.GrpcStorageMap,
 		m.SliceArrayBuffMap,
 		m.StreamidToGrpcEvents,
-		m.TrackedSpans,
 		m.TrackedSpansBySc,
 	)
 }

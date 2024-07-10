@@ -13,12 +13,13 @@
 // limitations under the License.
 
 #include "arguments.h"
-#include "span_context.h"
+#include "trace/span_context.h"
 #include "go_context.h"
 #include "go_types.h"
 #include "uprobe.h"
 #include "otel_types.h"
-#include "span_output.h"
+#include "trace/span_output.h"
+#include "trace/start_span.h"
 
 char __license[] SEC("license") = "Dual MIT/GPL";
 
@@ -99,8 +100,9 @@ int uprobe_Start(struct pt_regs *ctx) {
     read_span_name(&span_name, span_name_len, span_name_ptr);
 
     // Save the span name in map to be read once the Start function returns
-    void *context_ptr_val = get_Go_context(ctx, 3, 0, true);
-    void *key = get_consistent_key(ctx, context_ptr_val);
+    struct go_iface go_context = {0};
+    get_Go_context(ctx, 2, 0, true, &go_context);
+    void *key = get_consistent_key(ctx, go_context.data);
     bpf_map_update_elem(&span_name_by_context, &key, &span_name, 0);
     return 0;
 }
@@ -111,8 +113,10 @@ int uprobe_Start(struct pt_regs *ctx) {
 SEC("uprobe/Start")
 int uprobe_Start_Returns(struct pt_regs *ctx) {
     // Get the span name passed to the Start function
-    void *context_ptr_val = get_Go_context(ctx, 3, 0, true);
-    void *key = get_consistent_key(ctx, context_ptr_val);
+    struct go_iface go_context = {0};
+    // In return probe, the context is the first return value
+    get_Go_context(ctx, 1, 0, true, &go_context);
+    void *key = get_consistent_key(ctx, go_context.data);
     struct span_name_t *span_name = bpf_map_lookup_elem(&span_name_by_context, &key); 
     if (span_name == NULL) {
         return 0;
@@ -136,21 +140,21 @@ int uprobe_Start_Returns(struct pt_regs *ctx) {
     otel_span->start_time = bpf_ktime_get_ns();
     copy_byte_arrays((unsigned char*)span_name->buf, (unsigned char*)otel_span->span_name.buf, MAX_SPAN_NAME_LEN);
 
-    // Get the ** returned ** context and Span (concrete type of the interfaces)
-    void *ret_context_ptr_val = get_argument(ctx, 2);
+    // Get the ** returned ** Span (concrete type of the interfaces)
     void *span_ptr_val = get_argument(ctx, 4);
 
-    struct span_context *span_ctx = get_parent_span_context(ret_context_ptr_val);
-    if (span_ctx != NULL) {
-        // Set the parent context
-        bpf_probe_read(&otel_span->psc, sizeof(otel_span->psc), span_ctx);
-        get_span_context_from_parent(&otel_span->psc, &otel_span->sc);
-    } else {
-        get_root_span_context(&otel_span->sc);
-    }
+    start_span_params_t start_span_params = {
+        .ctx = ctx,
+        .go_context = &go_context,
+        .psc = &otel_span->psc,
+        .sc = &otel_span->sc,
+        .get_parent_span_context_fn = NULL,
+        .get_parent_span_context_arg = NULL,
+    };
+    start_span(&start_span_params);
 
     bpf_map_update_elem(&active_spans_by_span_ptr, &span_ptr_val, otel_span, 0);
-    start_tracking_span(ret_context_ptr_val, &otel_span->sc);
+    start_tracking_span(go_context.data, &otel_span->sc);
 
 done:
     bpf_map_delete_elem(&span_name_by_context, &key);

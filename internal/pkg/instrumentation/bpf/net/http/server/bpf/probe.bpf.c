@@ -13,11 +13,12 @@
 // limitations under the License.
 
 #include "arguments.h"
-#include "span_context.h"
+#include "trace/span_context.h"
 #include "go_context.h"
 #include "go_types.h"
 #include "uprobe.h"
-#include "span_output.h"
+#include "trace/span_output.h"
+#include "trace/start_span.h"
 
 char __license[] SEC("license") = "Dual MIT/GPL";
 
@@ -198,8 +199,9 @@ static __always_inline void read_go_string(void *base, int offset, char *output,
 SEC("uprobe/serverHandler_ServeHTTP")
 int uprobe_serverHandler_ServeHTTP(struct pt_regs *ctx)
 {
-    void *req_ctx_ptr = get_Go_context(ctx, 4, ctx_ptr_pos, false);
-    void *key = get_consistent_key(ctx, req_ctx_ptr);
+    struct go_iface go_context = {0};
+    get_Go_context(ctx, 4, ctx_ptr_pos, false, &go_context);
+    void *key = get_consistent_key(ctx, go_context.data);
     void *httpReq_ptr = bpf_map_lookup_elem(&http_server_uprobes, &key);
     if (httpReq_ptr != NULL)
     {
@@ -226,21 +228,18 @@ int uprobe_serverHandler_ServeHTTP(struct pt_regs *ctx)
 
     // Propagate context
     void *req_ptr = get_argument(ctx, 4);
-    long res = extract_context_from_req_headers((void*)(req_ptr + headers_ptr_pos), &http_server_span->psc);
-    if (res < 0) {
-        get_root_span_context(&http_server_span->sc);
-    } else {
-        get_span_context_from_parent(&http_server_span->psc, &http_server_span->sc);
-    }
-
-    if (req_ctx_ptr == NULL)
-    {
-        bpf_printk("uprobe/HandlerFunc_ServeHTTP: req_ctx_ptr is NULL");
-        return 0;
-    }
+    start_span_params_t start_span_params = {
+        .ctx = ctx,
+        .go_context = &go_context,
+        .psc = &http_server_span->psc,
+        .sc = &http_server_span->sc,
+        .get_parent_span_context_fn = extract_context_from_req_headers,
+        .get_parent_span_context_arg = (void*)(req_ptr + headers_ptr_pos),
+    };
+    start_span(&start_span_params);
 
     bpf_map_update_elem(&http_server_uprobes, &key, uprobe_data, 0);
-    start_tracking_span(req_ctx_ptr, &http_server_span->sc);
+    start_tracking_span(go_context.data, &http_server_span->sc);
     return 0;
 }
 
@@ -249,8 +248,9 @@ int uprobe_serverHandler_ServeHTTP(struct pt_regs *ctx)
 SEC("uprobe/serverHandler_ServeHTTP")
 int uprobe_serverHandler_ServeHTTP_Returns(struct pt_regs *ctx) {
     u64 end_time = bpf_ktime_get_ns();
-    void *req_ctx_ptr = get_Go_context(ctx, 4, ctx_ptr_pos, false);
-    void *key = get_consistent_key(ctx, req_ctx_ptr);
+    struct go_iface go_context = {0};
+    get_Go_context(ctx, 4, ctx_ptr_pos, false, &go_context);
+    void *key = get_consistent_key(ctx, go_context.data);
 
     struct uprobe_data_t *uprobe_data = bpf_map_lookup_elem(&http_server_uprobes, &key);
     if (uprobe_data == NULL) {

@@ -16,10 +16,10 @@
 #define _UPROBE_H_
 
 #include "common.h"
-#include "span_context.h"
+#include "trace/span_context.h"
 #include "go_context.h"
 #include "go_types.h"
-#include "span_output.h"
+#include "trace/span_output.h"
 
 #define BASE_SPAN_PROPERTIES \
     u64 start_time;          \
@@ -37,8 +37,9 @@
 #define UPROBE_RETURN(name, event_type, uprobe_context_map, events_map, context_pos, context_offset, passed_as_arg) \
 SEC("uprobe/##name##")                                                                                              \
 int uprobe_##name##_Returns(struct pt_regs *ctx) {                                                                  \
-    void *ctx_address = get_Go_context(ctx, context_pos, context_offset, passed_as_arg);                            \
-    void *key = get_consistent_key(ctx, ctx_address);                                                               \
+    struct go_iface go_context = {0};                                                                               \
+    get_Go_context(ctx, context_pos, context_offset, passed_as_arg, &go_context);                                   \
+    void *key = get_consistent_key(ctx, go_context.data);                                                           \
     event_type *event = bpf_map_lookup_elem(&uprobe_context_map, &key);                                             \
     if (event == NULL) {                                                                                            \
         bpf_printk("event is NULL in ret probe");                                                                   \

@@ -102,10 +102,10 @@ type bpfMapSpecs struct {
 	ActiveSpansBySpanPtr *ebpf.MapSpec `ebpf:"active_spans_by_span_ptr"`
 	AllocMap             *ebpf.MapSpec `ebpf:"alloc_map"`
 	Events               *ebpf.MapSpec `ebpf:"events"`
+	GoContextToSc        *ebpf.MapSpec `ebpf:"go_context_to_sc"`
 	OtelSpanStorageMap   *ebpf.MapSpec `ebpf:"otel_span_storage_map"`
 	SliceArrayBuffMap    *ebpf.MapSpec `ebpf:"slice_array_buff_map"`
 	SpanNameByContext    *ebpf.MapSpec `ebpf:"span_name_by_context"`
-	TrackedSpans         *ebpf.MapSpec `ebpf:"tracked_spans"`
 	TrackedSpansBySc     *ebpf.MapSpec `ebpf:"tracked_spans_by_sc"`
 }
 
@@ -131,10 +131,10 @@ type bpfMaps struct {
 	ActiveSpansBySpanPtr *ebpf.Map `ebpf:"active_spans_by_span_ptr"`
 	AllocMap             *ebpf.Map `ebpf:"alloc_map"`
 	Events               *ebpf.Map `ebpf:"events"`
+	GoContextToSc        *ebpf.Map `ebpf:"go_context_to_sc"`
 	OtelSpanStorageMap   *ebpf.Map `ebpf:"otel_span_storage_map"`
 	SliceArrayBuffMap    *ebpf.Map `ebpf:"slice_array_buff_map"`
 	SpanNameByContext    *ebpf.Map `ebpf:"span_name_by_context"`
-	TrackedSpans         *ebpf.Map `ebpf:"tracked_spans"`
 	TrackedSpansBySc     *ebpf.Map `ebpf:"tracked_spans_by_sc"`
 }
 
@@ -143,10 +143,10 @@ func (m *bpfMaps) Close() error {
 		m.ActiveSpansBySpanPtr,
 		m.AllocMap,
 		m.Events,
+		m.GoContextToSc,
 		m.OtelSpanStorageMap,
 		m.SliceArrayBuffMap,
 		m.SpanNameByContext,
-		m.TrackedSpans,
 		m.TrackedSpansBySc,
 	)
 }

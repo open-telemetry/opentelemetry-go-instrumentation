@@ -13,11 +13,12 @@
 // limitations under the License.
 
 #include "arguments.h"
-#include "span_context.h"
+#include "trace/span_context.h"
 #include "go_context.h"
 #include "go_types.h"
 #include "uprobe.h"
-#include "span_output.h"
+#include "trace/span_output.h"
+#include "trace/start_span.h"
 
 char __license[] SEC("license") = "Dual MIT/GPL";
 
@@ -143,9 +144,9 @@ int uprobe_WriteMessages(struct pt_regs *ctx) {
     void *msgs_array = get_argument(ctx, 4);
     u64 msgs_array_len = (u64)get_argument(ctx, 5);
 
-    // Get key
-    void *context_data_ptr = get_Go_context(ctx, 3, 0, true);
-    void *key = get_consistent_key(ctx, context_data_ptr);
+    struct go_iface go_context = {0};
+    get_Go_context(ctx, 2, 0, true, &go_context);
+    void *key = get_consistent_key(ctx, go_context.data);
 
     void *kafka_request_ptr = bpf_map_lookup_elem(&kafka_events, &key);
     if (kafka_request_ptr != NULL)
@@ -163,14 +164,15 @@ int uprobe_WriteMessages(struct pt_regs *ctx) {
     }
     kafka_request->start_time = bpf_ktime_get_ns();
 
-    // Get parent if exists
-    struct span_context *parent_span_ctx = get_parent_span_context(context_data_ptr);
-    if (parent_span_ctx != NULL) {
-        kafka_request->psc = *parent_span_ctx;
-        get_span_context_from_parent(&kafka_request->psc, &kafka_request->msgs[0].sc);
-    } else {
-        get_root_span_context(&kafka_request->msgs[0].sc);
-    }
+    start_span_params_t start_span_params = {
+        .ctx = ctx,
+        .go_context = &go_context,
+        .psc = &kafka_request->psc,
+        .sc = &kafka_request->msgs[0].sc,
+        .get_parent_span_context_fn = NULL,
+        .get_parent_span_context_arg = NULL,
+    };
+    start_span(&start_span_params);
 
     // Try to get a global topic from Writer
     bool global_topic = get_go_string_from_user_ptr((void *)(writer + writer_topic_pos), kafka_request->global_topic, sizeof(kafka_request->global_topic));
@@ -224,8 +226,9 @@ int uprobe_WriteMessages(struct pt_regs *ctx) {
 SEC("uprobe/WriteMessages")
 int uprobe_WriteMessages_Returns(struct pt_regs *ctx) {
     u64 end_time = bpf_ktime_get_ns();
-    void *context_data_ptr = get_Go_context(ctx, 3, 0, true);
-    void *key = get_consistent_key(ctx, context_data_ptr);
+    struct go_iface go_context = {0};
+    get_Go_context(ctx, 2, 0, true, &go_context);
+    void *key = get_consistent_key(ctx, go_context.data);
 
     struct kafka_request_t *kafka_request = bpf_map_lookup_elem(&kafka_events, &key);
     if (kafka_request == NULL) {

@@ -14,9 +14,10 @@
 
 #include "arguments.h"
 #include "go_types.h"
-#include "span_context.h"
+#include "trace/span_context.h"
 #include "go_context.h"
 #include "uprobe.h"
+#include "trace/start_span.h"
 
 char __license[] SEC("license") = "Dual MIT/GPL";
 
@@ -69,13 +70,11 @@ int uprobe_ClientConn_Invoke(struct pt_regs *ctx)
     u64 method_ptr_pos = 4;
     u64 method_len_pos = 5;
 
-    void *context_ptr = get_Go_context(ctx, 3, 0, true);
-    if (context_ptr == NULL)
-    {
-        return 0;
-    }
+    struct go_iface go_context = {0};
+    get_Go_context(ctx, 2, 0, true, &go_context);
+
     // Get key
-    void *key = get_consistent_key(ctx, context_ptr);
+    void *key = get_consistent_key(ctx, go_context.data);
     void *grpcReq_ptr = bpf_map_lookup_elem(&grpc_events, &key);
     if (grpcReq_ptr != NULL)
     {
@@ -101,21 +100,19 @@ int uprobe_ClientConn_Invoke(struct pt_regs *ctx)
         return 0;
     }
 
-    // Get parent if exists 
-    struct span_context *parent_span_ctx = get_parent_span_context(context_ptr);
-    if (parent_span_ctx != NULL)
-    {
-        bpf_probe_read(&grpcReq.psc, sizeof(grpcReq.psc), parent_span_ctx);
-        get_span_context_from_parent(parent_span_ctx, &grpcReq.sc);
-    }
-    else
-    {
-        get_root_span_context(&grpcReq.sc);
-    }
+    start_span_params_t start_span_params = {
+        .ctx = ctx,
+        .go_context = &go_context,
+        .psc = &grpcReq.psc,
+        .sc = &grpcReq.sc,
+        .get_parent_span_context_fn = NULL,
+        .get_parent_span_context_arg = NULL,
+    };
+    start_span(&start_span_params);
 
     // Write event
     bpf_map_update_elem(&grpc_events, &key, &grpcReq, 0);
-    start_tracking_span(context_ptr, &grpcReq.sc);
+    start_tracking_span(go_context.data, &grpcReq.sc);
     return 0;
 }
 
@@ -166,11 +163,12 @@ SEC("uprobe/http2Client_NewStream")
 // func (t *http2Client) NewStream(ctx context.Context, callHdr *CallHdr) (*Stream, error)
 int uprobe_http2Client_NewStream(struct pt_regs *ctx)
 {
-    void *context_ptr = get_argument(ctx, 3);
+    struct go_iface go_context = {0};
+    get_Go_context(ctx, 2, 0, true, &go_context);
     void *httpclient_ptr = get_argument(ctx, 1);
     u32 nextid = 0;
     bpf_probe_read(&nextid, sizeof(nextid), (void *)(httpclient_ptr + (httpclient_nextid_pos)));
-    struct span_context *current_span_context = get_parent_span_context(context_ptr);
+    struct span_context *current_span_context = get_parent_span_context(&go_context);
     if (current_span_context != NULL) {
         bpf_map_update_elem(&streamid_to_span_contexts, &nextid, current_span_context, 0);
     }
