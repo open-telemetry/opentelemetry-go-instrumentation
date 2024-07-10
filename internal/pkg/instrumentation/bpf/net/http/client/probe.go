@@ -1,16 +1,5 @@
 // Copyright The OpenTelemetry Authors
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// SPDX-License-Identifier: Apache-2.0
 
 package client
 
@@ -21,12 +10,10 @@ import (
 	"strings"
 
 	"github.com/cilium/ebpf"
-	"github.com/cilium/ebpf/link"
-	"github.com/cilium/ebpf/perf"
 	"github.com/go-logr/logr"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
-	semconv "go.opentelemetry.io/otel/semconv/v1.25.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
 	"go.opentelemetry.io/otel/trace"
 	"golang.org/x/sys/unix"
 
@@ -34,7 +21,6 @@ import (
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/context"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/probe"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/utils"
-	"go.opentelemetry.io/auto/internal/pkg/process"
 	"go.opentelemetry.io/auto/internal/pkg/structfield"
 )
 
@@ -53,10 +39,11 @@ func New(logger logr.Logger) probe.Probe {
 		InstrumentedPkg: pkg,
 	}
 
-	uprobes := []probe.Uprobe[bpfObjects]{
+	uprobes := []probe.Uprobe{
 		{
-			Sym: "net/http.(*Transport).roundTrip",
-			Fn:  uprobeRoundTrip,
+			Sym:         "net/http.(*Transport).roundTrip",
+			EntryProbe:  "uprobe_Transport_roundTrip",
+			ReturnProbe: "uprobe_Transport_roundTrip_Returns",
 		},
 	}
 
@@ -64,9 +51,9 @@ func New(logger logr.Logger) probe.Probe {
 	// probe which writes the data in the outgoing buffer.
 	if utils.SupportsContextPropagation() {
 		uprobes = append(uprobes,
-			probe.Uprobe[bpfObjects]{
-				Sym: "net/http.Header.writeSubset",
-				Fn:  uprobeWriteSubset,
+			probe.Uprobe{
+				Sym:        "net/http.Header.writeSubset",
+				EntryProbe: "uprobe_writeSubset",
 				// We mark this probe as dependent on roundTrip, so we don't accidentally
 				// enable this bpf program, if the executable has compiled in writeSubset,
 				// but doesn't have any http roundTrip.
@@ -170,10 +157,7 @@ func New(logger logr.Logger) probe.Probe {
 				Val: structfield.NewID("std", "net/url", "URL", "Host"),
 			},
 		},
-		Uprobes: uprobes,
-		ReaderFn: func(obj bpfObjects) (*perf.Reader, error) {
-			return perf.NewReader(obj.Events, os.Getpagesize())
-		},
+		Uprobes:   uprobes,
 		SpecFn:    verifyAndLoadBpf,
 		ProcessFn: convertEvent,
 	}
@@ -188,53 +172,6 @@ func verifyAndLoadBpf() (*ebpf.CollectionSpec, error) {
 	return loadBpf()
 }
 
-func uprobeRoundTrip(name string, exec *link.Executable, target *process.TargetDetails, obj *bpfObjects) ([]link.Link, error) {
-	offset, err := target.GetFunctionOffset(name)
-	if err != nil {
-		return nil, err
-	}
-
-	opts := &link.UprobeOptions{Address: offset, PID: target.PID}
-	l, err := exec.Uprobe("", obj.UprobeTransportRoundTrip, opts)
-	if err != nil {
-		return nil, err
-	}
-	links := []link.Link{l}
-
-	retOffsets, err := target.GetFunctionReturns(name)
-	if err != nil {
-		return nil, err
-	}
-
-	for _, ret := range retOffsets {
-		opts := &link.UprobeOptions{Address: ret}
-		l, err := exec.Uprobe("", obj.UprobeTransportRoundTripReturns, opts)
-		if err != nil {
-			return nil, err
-		}
-		links = append(links, l)
-	}
-
-	return links, nil
-}
-
-func uprobeWriteSubset(name string, exec *link.Executable, target *process.TargetDetails, obj *bpfObjects) ([]link.Link, error) {
-	offset, err := target.GetFunctionOffset(name)
-	if err != nil {
-		return nil, err
-	}
-
-	opts := &link.UprobeOptions{Address: offset}
-	l, err := exec.Uprobe("", obj.UprobeWriteSubset, opts)
-	if err != nil {
-		return nil, err
-	}
-
-	return []link.Link{l}, nil
-}
-
-// event represents an event in an HTTP server during an HTTP
-// request-response.
 type event struct {
 	context.BaseSpanProperties
 	Host        [128]byte

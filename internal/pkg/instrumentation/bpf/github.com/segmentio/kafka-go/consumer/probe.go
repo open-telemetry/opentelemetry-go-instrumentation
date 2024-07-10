@@ -1,34 +1,20 @@
 // Copyright The OpenTelemetry Authors
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// SPDX-License-Identifier: Apache-2.0
 
 package consumer
 
 import (
 	"fmt"
-	"os"
+	"strconv"
 
-	"github.com/cilium/ebpf/link"
-	"github.com/cilium/ebpf/perf"
 	"github.com/go-logr/logr"
 	"go.opentelemetry.io/otel/attribute"
-	semconv "go.opentelemetry.io/otel/semconv/v1.24.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
 	"go.opentelemetry.io/otel/trace"
 	"golang.org/x/sys/unix"
 
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/context"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/probe"
-	"go.opentelemetry.io/auto/internal/pkg/process"
 	"go.opentelemetry.io/auto/internal/pkg/structfield"
 )
 
@@ -80,49 +66,16 @@ func New(logger logr.Logger) probe.Probe {
 				Val: structfield.NewID("github.com/segmentio/kafka-go", "github.com/segmentio/kafka-go", "ReaderConfig", "GroupID"),
 			},
 		},
-		Uprobes: []probe.Uprobe[bpfObjects]{
+		Uprobes: []probe.Uprobe{
 			{
-				Sym: "github.com/segmentio/kafka-go.(*Reader).FetchMessage",
-				Fn:  uprobeFetchMessage,
+				Sym:         "github.com/segmentio/kafka-go.(*Reader).FetchMessage",
+				EntryProbe:  "uprobe_FetchMessage",
+				ReturnProbe: "uprobe_FetchMessage_Returns",
 			},
-		},
-		ReaderFn: func(obj bpfObjects) (*perf.Reader, error) {
-			return perf.NewReader(obj.Events, os.Getpagesize()*100)
 		},
 		SpecFn:    loadBpf,
 		ProcessFn: convertEvent,
 	}
-}
-
-func uprobeFetchMessage(name string, exec *link.Executable, target *process.TargetDetails, obj *bpfObjects) ([]link.Link, error) {
-	offset, err := target.GetFunctionOffset(name)
-	if err != nil {
-		return nil, err
-	}
-
-	opts := &link.UprobeOptions{Address: offset}
-	l, err := exec.Uprobe("", obj.UprobeFetchMessage, opts)
-	if err != nil {
-		return nil, err
-	}
-
-	links := []link.Link{l}
-
-	retOffsets, err := target.GetFunctionReturns(name)
-	if err != nil {
-		return nil, err
-	}
-
-	for _, ret := range retOffsets {
-		opts := &link.UprobeOptions{Address: ret}
-		l, err := exec.Uprobe("", obj.UprobeFetchMessageReturns, opts)
-		if err != nil {
-			return nil, err
-		}
-		links = append(links, l)
-	}
-
-	return links, nil
 }
 
 // event represents a kafka message received by the consumer.
@@ -159,8 +112,8 @@ func convertEvent(e *event) []*probe.SpanEvent {
 
 	attributes := []attribute.KeyValue{
 		semconv.MessagingSystemKafka,
-		semconv.MessagingOperationReceive,
-		semconv.MessagingKafkaDestinationPartition(int(e.Partition)),
+		semconv.MessagingOperationTypeReceive,
+		semconv.MessagingDestinationPartitionID(strconv.Itoa(int(e.Partition))),
 		semconv.MessagingDestinationName(topic),
 		semconv.MessagingKafkaMessageOffset(int(e.Offset)),
 		semconv.MessagingKafkaMessageKey(unix.ByteSliceToString(e.Key[:])),

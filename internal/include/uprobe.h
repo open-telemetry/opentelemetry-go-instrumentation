@@ -19,6 +19,7 @@
 #include "span_context.h"
 #include "go_context.h"
 #include "go_types.h"
+#include "span_output.h"
 
 #define BASE_SPAN_PROPERTIES \
     u64 start_time;          \
@@ -40,10 +41,11 @@ int uprobe_##name##_Returns(struct pt_regs *ctx) {                              
     void *key = get_consistent_key(ctx, ctx_address);                                                               \
     event_type *event = bpf_map_lookup_elem(&uprobe_context_map, &key);                                             \
     if (event == NULL) {                                                                                            \
+        bpf_printk("event is NULL in ret probe");                                                                   \
         return 0;                                                                                                   \
     }                                                                                                               \
     event->end_time = bpf_ktime_get_ns();                                                                           \
-    bpf_perf_event_output(ctx, &events_map, BPF_F_CURRENT_CPU, event, sizeof(event_type));                          \
+    output_span_event(ctx, event, sizeof(event_type), &event->sc);                                                  \
     stop_tracking_span(&event->sc, &event->psc);                                                                    \
     bpf_map_delete_elem(&uprobe_context_map, &key);                                                                 \
     return 0;                                                                                                       \

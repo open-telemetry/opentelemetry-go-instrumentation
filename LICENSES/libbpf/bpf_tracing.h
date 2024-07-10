@@ -24,6 +24,9 @@
 #elif defined(__TARGET_ARCH_sparc)
 	#define bpf_target_sparc
 	#define bpf_target_defined
+#elif defined(__TARGET_ARCH_riscv)
+	#define bpf_target_riscv
+	#define bpf_target_defined
 #else
 
 /* Fall back to what the compiler says */
@@ -48,6 +51,9 @@
 #elif defined(__sparc__)
 	#define bpf_target_sparc
 	#define bpf_target_defined
+#elif defined(__riscv) && __riscv_xlen == 64
+	#define bpf_target_riscv
+	#define bpf_target_defined
 #endif /* no compiler target */
 
 #endif
@@ -59,6 +65,17 @@
 #if defined(bpf_target_x86)
 
 #if defined(__KERNEL__) || defined(__VMLINUX_H__)
+
+#define GO_PARAM1(x) ((x)->ax)
+#define GO_PARAM2(x) ((x)->bx)
+#define GO_PARAM3(x) ((x)->cx)
+#define GO_PARAM4(x) ((x)->di)
+#define GO_PARAM5(x) ((x)->si)
+#define GO_PARAM6(x) ((x)->r8)
+#define GO_PARAM7(x) ((x)->r9)
+#define GO_PARAM8(x) ((x)->r10)
+#define GO_PARAM9(x) ((x)->r11)
+#define GOROUTINE(x) ((x)->r14)
 
 #define PT_REGS_PARM1(x) ((x)->di)
 #define PT_REGS_PARM2(x) ((x)->si)
@@ -192,6 +209,18 @@ struct pt_regs;
 /* arm64 provides struct user_pt_regs instead of struct pt_regs to userspace */
 struct pt_regs;
 #define PT_REGS_ARM64 const volatile struct user_pt_regs
+
+#define GO_PARAM1(x) (((PT_REGS_ARM64 *)(x))->regs[0])
+#define GO_PARAM2(x) (((PT_REGS_ARM64 *)(x))->regs[1])
+#define GO_PARAM3(x) (((PT_REGS_ARM64 *)(x))->regs[2])
+#define GO_PARAM4(x) (((PT_REGS_ARM64 *)(x))->regs[3])
+#define GO_PARAM5(x) (((PT_REGS_ARM64 *)(x))->regs[4])
+#define GO_PARAM6(x) (((PT_REGS_ARM64 *)(x))->regs[5])
+#define GO_PARAM7(x) (((PT_REGS_ARM64 *)(x))->regs[6])
+#define GO_PARAM8(x) (((PT_REGS_ARM64 *)(x))->regs[7])
+#define GO_PARAM9(x) (((PT_REGS_ARM64 *)(x))->regs[8])
+#define GOROUTINE(x) (((PT_REGS_ARM64 *)(x))->regs[28])
+
 #define PT_REGS_PARM1(x) (((PT_REGS_ARM64 *)(x))->regs[0])
 #define PT_REGS_PARM2(x) (((PT_REGS_ARM64 *)(x))->regs[1])
 #define PT_REGS_PARM3(x) (((PT_REGS_ARM64 *)(x))->regs[2])
@@ -287,6 +316,32 @@ struct pt_regs;
 #define PT_REGS_IP(x) ((x)->pc)
 #define PT_REGS_IP_CORE(x) BPF_CORE_READ((x), pc)
 #endif
+
+#elif defined(bpf_target_riscv)
+
+struct pt_regs;
+#define PT_REGS_RV const volatile struct user_regs_struct
+#define PT_REGS_PARM1(x) (((PT_REGS_RV *)(x))->a0)
+#define PT_REGS_PARM2(x) (((PT_REGS_RV *)(x))->a1)
+#define PT_REGS_PARM3(x) (((PT_REGS_RV *)(x))->a2)
+#define PT_REGS_PARM4(x) (((PT_REGS_RV *)(x))->a3)
+#define PT_REGS_PARM5(x) (((PT_REGS_RV *)(x))->a4)
+#define PT_REGS_RET(x) (((PT_REGS_RV *)(x))->ra)
+#define PT_REGS_FP(x) (((PT_REGS_RV *)(x))->s5)
+#define PT_REGS_RC(x) (((PT_REGS_RV *)(x))->a5)
+#define PT_REGS_SP(x) (((PT_REGS_RV *)(x))->sp)
+#define PT_REGS_IP(x) (((PT_REGS_RV *)(x))->epc)
+
+#define PT_REGS_PARM1_CORE(x) BPF_CORE_READ((PT_REGS_RV *)(x), a0)
+#define PT_REGS_PARM2_CORE(x) BPF_CORE_READ((PT_REGS_RV *)(x), a1)
+#define PT_REGS_PARM3_CORE(x) BPF_CORE_READ((PT_REGS_RV *)(x), a2)
+#define PT_REGS_PARM4_CORE(x) BPF_CORE_READ((PT_REGS_RV *)(x), a3)
+#define PT_REGS_PARM5_CORE(x) BPF_CORE_READ((PT_REGS_RV *)(x), a4)
+#define PT_REGS_RET_CORE(x) BPF_CORE_READ((PT_REGS_RV *)(x), ra)
+#define PT_REGS_FP_CORE(x) BPF_CORE_READ((PT_REGS_RV *)(x), fp)
+#define PT_REGS_RC_CORE(x) BPF_CORE_READ((PT_REGS_RV *)(x), a5)
+#define PT_REGS_SP_CORE(x) BPF_CORE_READ((PT_REGS_RV *)(x), sp)
+#define PT_REGS_IP_CORE(x) BPF_CORE_READ((PT_REGS_RV *)(x), epc)
 
 #endif
 

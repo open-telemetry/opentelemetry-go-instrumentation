@@ -37,6 +37,8 @@ Users of non-Linux operating systems can use
 [the Docker images](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pkgs/container/opentelemetry-go-instrumentation%2Fautoinstrumentation-go)
 or create a virtual machine to compile and run OpenTelemetry Go Automatic Instrumentation.
 
+See [COMPATIBILITY.md](./COMPATIBILITY.md) for information about what Go packages this project provides instrumentation for.
+
 ## Get started
 
 See [Getting started](docs/getting-started.md) for setup, deployment, and configuration steps.

@@ -1,30 +1,16 @@
 // Copyright The OpenTelemetry Authors
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// SPDX-License-Identifier: Apache-2.0
 
 package server
 
 import (
-	"os"
 	"strings"
 
-	"github.com/cilium/ebpf/link"
-	"github.com/cilium/ebpf/perf"
 	"github.com/go-logr/logr"
 	"github.com/hashicorp/go-version"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
-	semconv "go.opentelemetry.io/otel/semconv/v1.25.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
 	"go.opentelemetry.io/otel/trace"
 	"golang.org/x/sys/unix"
 
@@ -114,15 +100,12 @@ func New(logger logr.Logger) probe.Probe {
 			},
 			patternPathSupportedConst{},
 		},
-		Uprobes: []probe.Uprobe[bpfObjects]{
+		Uprobes: []probe.Uprobe{
 			{
-				Sym: "net/http.serverHandler.ServeHTTP",
-				Fn:  uprobeServeHTTP,
+				Sym:         "net/http.serverHandler.ServeHTTP",
+				EntryProbe:  "uprobe_serverHandler_ServeHTTP",
+				ReturnProbe: "uprobe_serverHandler_ServeHTTP_Returns",
 			},
-		},
-
-		ReaderFn: func(obj bpfObjects) (*perf.Reader, error) {
-			return perf.NewReader(obj.Events, os.Getpagesize())
 		},
 		SpecFn:    loadBpf,
 		ProcessFn: convertEvent,
@@ -139,36 +122,6 @@ var (
 func (c patternPathSupportedConst) InjectOption(td *process.TargetDetails) (inject.Option, error) {
 	isPatternPathSupported = td.GoVersion.GreaterThanOrEqual(patternPathMinVersion)
 	return inject.WithKeyValue("pattern_path_supported", isPatternPathSupported), nil
-}
-
-func uprobeServeHTTP(name string, exec *link.Executable, target *process.TargetDetails, obj *bpfObjects) ([]link.Link, error) {
-	offset, err := target.GetFunctionOffset(name)
-	if err != nil {
-		return nil, err
-	}
-
-	opts := &link.UprobeOptions{Address: offset, PID: target.PID}
-	l, err := exec.Uprobe("", obj.UprobeServerHandlerServeHTTP, opts)
-	if err != nil {
-		return nil, err
-	}
-	links := []link.Link{l}
-
-	retOffsets, err := target.GetFunctionReturns(name)
-	if err != nil {
-		return nil, err
-	}
-
-	for _, ret := range retOffsets {
-		opts := &link.UprobeOptions{Address: ret}
-		l, err := exec.Uprobe("", obj.UprobeServerHandlerServeHTTP_Returns, opts)
-		if err != nil {
-			return nil, err
-		}
-		links = append(links, l)
-	}
-
-	return links, nil
 }
 
 // event represents an event in an HTTP server during an HTTP

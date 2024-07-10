@@ -6,7 +6,7 @@
           {
             "key": "process.runtime.description",
             "value": {
-              "stringValue": "go version 1.22.4 linux/amd64"
+              "stringValue": "go version 1.22.5 linux/amd64"
             }
           },
           {
@@ -18,7 +18,7 @@
           {
             "key": "process.runtime.version",
             "value": {
-              "stringValue": "1.22.4"
+              "stringValue": "1.22.5"
             }
           },
           {
@@ -28,7 +28,13 @@
             }
           },
           {
-            "key": "telemetry.auto.version",
+            "key": "telemetry.distro.name",
+            "value": {
+              "stringValue": "opentelemetry-go-instrumentation"
+            }
+          },
+          {
+            "key": "telemetry.distro.version",
             "value": {
               "stringValue": "v0.13.0-alpha"
             }
@@ -41,7 +47,7 @@
           }
         ]
       },
-      "schemaUrl": "https://opentelemetry.io/schemas/1.21.0",
+      "schemaUrl": "https://opentelemetry.io/schemas/1.26.0",
       "scopeSpans": [
         {
           "scope": {
@@ -70,7 +76,7 @@
                   }
                 },
                 {
-                  "key": "messaging.operation",
+                  "key": "messaging.operation.type",
                   "value": {
                     "stringValue": "publish"
                   }
@@ -111,7 +117,7 @@
                   }
                 },
                 {
-                  "key": "messaging.operation",
+                  "key": "messaging.operation.type",
                   "value": {
                     "stringValue": "publish"
                   }
@@ -141,7 +147,7 @@
           {
             "key": "process.runtime.description",
             "value": {
-              "stringValue": "go version 1.22.4 linux/amd64"
+              "stringValue": "go version 1.22.5 linux/amd64"
             }
           },
           {
@@ -153,7 +159,7 @@
           {
             "key": "process.runtime.version",
             "value": {
-              "stringValue": "1.22.4"
+              "stringValue": "1.22.5"
             }
           },
           {
@@ -163,7 +169,13 @@
             }
           },
           {
-            "key": "telemetry.auto.version",
+            "key": "telemetry.distro.name",
+            "value": {
+              "stringValue": "opentelemetry-go-instrumentation"
+            }
+          },
+          {
+            "key": "telemetry.distro.version",
             "value": {
               "stringValue": "v0.13.0-alpha"
             }
@@ -176,7 +188,7 @@
           }
         ]
       },
-      "schemaUrl": "https://opentelemetry.io/schemas/1.21.0",
+      "schemaUrl": "https://opentelemetry.io/schemas/1.26.0",
       "scopeSpans": [
         {
           "scope": {
@@ -193,15 +205,15 @@
                   }
                 },
                 {
-                  "key": "messaging.operation",
+                  "key": "messaging.operation.type",
                   "value": {
                     "stringValue": "receive"
                   }
                 },
                 {
-                  "key": "messaging.kafka.destination.partition",
+                  "key": "messaging.destination.partition.id",
                   "value": {
-                    "intValue": "0"
+                    "stringValue": "0"
                   }
                 },
                 {

@@ -12,10 +12,31 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 
 - Initial support for `trace-flags`. ([#868](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/868))
 - Support `google.golang.org/grpc` `1.66.0-dev`. ([#872](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/872))
+- Add support to log level through command line flag. ([#842](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/842))
+- The `WithLogLevel` function and `LogLevel` type are added to set the log level for `Instrumentation`. ([#842](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/842))
+- Add telemetry distro name & version resource attributes. ([#897](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/897))
+- Support `google.golang.org/grpc` `1.65.0`. ([#904](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/904))
+- Support Go `v1.21.12`. ([#905](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/905))
+- Support Go `v1.22.5`. ([#905](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/905))
+- Support `go.opentelemetry.io/otel@v1.28.0`. ([#904](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/904))
+- Support `google.golang.org/grpc` `1.63.3`. ([#916](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/916))
+- Support `google.golang.org/grpc` `1.64.1`. ([#916](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/916))
+- Support `golang.org/x/net` `v0.27.0`. ([#917](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/917))
+
+### Changed
+
+- Upgrade semconv from `v1.24.0` to `v1.26.0` in `github.com/segmentio/kafka-go` instrumentation. ([#909](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/909))
+  - The `messaging.operation` attribute key is renamed to `messaging.operation.type`.
+  - The `messaging.kafka.destination.partition` key is renamed to `messaging.destination.partition.id`
+- Upgrade semconv from `v1.21.0` to `v1.26.0` in `database/sql` instrumentation. ([#911](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/911))
+  - The `db.statement` attribute key is renamed to `db.query.text`.
+- Upgrade semconv to `v1.26.0` in `net/http` instrumentation. ([#913](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/913))
+- Upgrade `go.opentelemetry.io/auto` semconv to `v1.26.0`. ([#914](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/914))
 
 ### Fixed
 
 - HTTP client: Use Host field in URL if the Request Host is not present. ([#888](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/888))
+- Add make target 'codespell'. ([#863](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/863))
 
 ## [v0.13.0-alpha] - 2024-06-04
 
@@ -46,7 +67,6 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 - Support Go versions from apps defining GOEXPERIMENT. ([#813](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/813))
 - Update `net/http` instrumentation to comply with semantic conventions v1.25.0. ([#790](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/790))
 - Update existing 3rd party licenses. ([#864](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/864))
-- Add make target 'codespell'. ([#863](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/863))
 
 ## [v0.12.0-alpha] - 2024-04-10
 

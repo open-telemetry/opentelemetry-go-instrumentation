@@ -1,16 +1,5 @@
 // Copyright The OpenTelemetry Authors
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// SPDX-License-Identifier: Apache-2.0
 
 package instrumentation
 
@@ -137,7 +126,7 @@ func (m *Manager) FilterUnusedProbes(target *process.TargetDetails) {
 		}
 
 		if !funcsFound {
-			m.logger.Info("no functions found for probe, removing", "name", name)
+			m.logger.V(1).Info("no functions found for probe, removing", "name", name)
 			delete(m.probes, name)
 		}
 	}
@@ -172,13 +161,13 @@ func (m *Manager) Run(ctx context.Context, target *process.TargetDetails) error 
 	for {
 		select {
 		case <-ctx.Done():
-			m.logger.Info("shutting down all probes due to context cancellation")
+			m.logger.V(1).Info("shutting down all probes due to context cancellation")
 			err := m.cleanup(target)
 			err = errors.Join(err, ctx.Err())
 			m.closingErrors <- err
 			return nil
 		case <-m.done:
-			m.logger.Info("shutting down all probes due to signal")
+			m.logger.V(1).Info("shutting down all probes due to signal")
 			err := m.cleanup(target)
 			m.closingErrors <- err
 			return nil
@@ -205,7 +194,7 @@ func (m *Manager) load(target *process.TargetDetails) error {
 
 	// Load probes
 	for name, i := range m.probes {
-		m.logger.Info("loading probe", "name", name)
+		m.logger.V(0).Info("loading probe", "name", name)
 		err := i.Load(exe, target)
 		if err != nil {
 			m.logger.Error(err, "error while loading probes, cleaning up", "name", name)
@@ -213,15 +202,15 @@ func (m *Manager) load(target *process.TargetDetails) error {
 		}
 	}
 
-	m.logger.Info("loaded probes to memory", "total_probes", len(m.probes))
+	m.logger.V(1).Info("loaded probes to memory", "total_probes", len(m.probes))
 	return nil
 }
 
 func (m *Manager) mount(target *process.TargetDetails) error {
 	if target.AllocationDetails != nil {
-		m.logger.Info("Mounting bpffs", "allocations_details", target.AllocationDetails)
+		m.logger.V(1).Info("Mounting bpffs", "allocations_details", target.AllocationDetails)
 	} else {
-		m.logger.Info("Mounting bpffs")
+		m.logger.V(1).Info("Mounting bpffs")
 	}
 	return bpffs.Mount(target)
 }
@@ -233,7 +222,7 @@ func (m *Manager) cleanup(target *process.TargetDetails) error {
 		err = errors.Join(err, i.Close())
 	}
 
-	m.logger.Info("Cleaning bpffs")
+	m.logger.V(1).Info("Cleaning bpffs")
 	return errors.Join(err, bpffs.Cleanup(target))
 }
 

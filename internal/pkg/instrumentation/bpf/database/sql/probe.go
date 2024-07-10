@@ -1,16 +1,5 @@
 // Copyright The OpenTelemetry Authors
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// SPDX-License-Identifier: Apache-2.0
 
 package sql
 
@@ -18,17 +7,14 @@ import (
 	"os"
 	"strconv"
 
-	"github.com/cilium/ebpf/link"
-	"github.com/cilium/ebpf/perf"
 	"github.com/go-logr/logr"
 	"go.opentelemetry.io/otel/attribute"
-	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
 	"go.opentelemetry.io/otel/trace"
 	"golang.org/x/sys/unix"
 
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/context"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/probe"
-	"go.opentelemetry.io/auto/internal/pkg/process"
 )
 
 //go:generate go run github.com/cilium/ebpf/cmd/bpf2go -target amd64,arm64 -cc clang -cflags $CFLAGS bpf ./bpf/probe.bpf.c
@@ -58,87 +44,24 @@ func New(logger logr.Logger) probe.Probe {
 				Val: shouldIncludeDBStatement(),
 			},
 		},
-		Uprobes: []probe.Uprobe[bpfObjects]{
+		Uprobes: []probe.Uprobe{
 			{
-				Sym:      "database/sql.(*DB).queryDC",
-				Fn:       uprobeQueryDC,
-				Optional: true,
+				Sym:         "database/sql.(*DB).queryDC",
+				EntryProbe:  "uprobe_queryDC",
+				ReturnProbe: "uprobe_queryDC_Returns",
+				Optional:    true,
 			},
 			{
-				Sym:      "database/sql.(*DB).execDC",
-				Fn:       uprobeExecDC,
-				Optional: true,
+				Sym:         "database/sql.(*DB).execDC",
+				EntryProbe:  "uprobe_execDC",
+				ReturnProbe: "uprobe_execDC_Returns",
+				Optional:    true,
 			},
 		},
 
-		ReaderFn: func(obj bpfObjects) (*perf.Reader, error) {
-			return perf.NewReader(obj.Events, os.Getpagesize())
-		},
 		SpecFn:    loadBpf,
 		ProcessFn: convertEvent,
 	}
-}
-
-func uprobeQueryDC(name string, exec *link.Executable, target *process.TargetDetails, obj *bpfObjects) ([]link.Link, error) {
-	offset, err := target.GetFunctionOffset(name)
-	if err != nil {
-		return nil, err
-	}
-
-	opts := &link.UprobeOptions{Address: offset, PID: target.PID}
-	l, err := exec.Uprobe("", obj.UprobeQueryDC, opts)
-	if err != nil {
-		return nil, err
-	}
-
-	links := []link.Link{l}
-
-	retOffsets, err := target.GetFunctionReturns(name)
-	if err != nil {
-		return nil, err
-	}
-
-	for _, ret := range retOffsets {
-		opts := &link.UprobeOptions{Address: ret}
-		l, err := exec.Uprobe("", obj.UprobeQueryDC_Returns, opts)
-		if err != nil {
-			return nil, err
-		}
-		links = append(links, l)
-	}
-
-	return links, nil
-}
-
-func uprobeExecDC(name string, exec *link.Executable, target *process.TargetDetails, obj *bpfObjects) ([]link.Link, error) {
-	offset, err := target.GetFunctionOffset(name)
-	if err != nil {
-		return nil, err
-	}
-
-	opts := &link.UprobeOptions{Address: offset, PID: target.PID}
-	l, err := exec.Uprobe("", obj.UprobeExecDC, opts)
-	if err != nil {
-		return nil, err
-	}
-
-	links := []link.Link{l}
-
-	retOffsets, err := target.GetFunctionReturns(name)
-	if err != nil {
-		return nil, err
-	}
-
-	for _, ret := range retOffsets {
-		opts := &link.UprobeOptions{Address: ret}
-		l, err := exec.Uprobe("", obj.UprobeExecDC_Returns, opts)
-		if err != nil {
-			return nil, err
-		}
-		links = append(links, l)
-	}
-
-	return links, nil
 }
 
 // event represents an event in an SQL database
@@ -177,7 +100,7 @@ func convertEvent(e *event) []*probe.SpanEvent {
 			EndTime:     int64(e.EndTime),
 			SpanContext: &sc,
 			Attributes: []attribute.KeyValue{
-				semconv.DBStatementKey.String(query),
+				semconv.DBQueryText(query),
 			},
 			ParentSpanContext: pscPtr,
 		},

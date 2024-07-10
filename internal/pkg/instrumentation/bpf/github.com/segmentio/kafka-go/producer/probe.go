@@ -1,34 +1,19 @@
 // Copyright The OpenTelemetry Authors
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// SPDX-License-Identifier: Apache-2.0
 
 package producer
 
 import (
 	"fmt"
-	"os"
 
-	"github.com/cilium/ebpf/link"
-	"github.com/cilium/ebpf/perf"
 	"github.com/go-logr/logr"
 	"go.opentelemetry.io/otel/attribute"
-	semconv "go.opentelemetry.io/otel/semconv/v1.24.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
 	"go.opentelemetry.io/otel/trace"
 	"golang.org/x/sys/unix"
 
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/context"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/probe"
-	"go.opentelemetry.io/auto/internal/pkg/process"
 	"go.opentelemetry.io/auto/internal/pkg/structfield"
 )
 
@@ -68,55 +53,22 @@ func New(logger logr.Logger) probe.Probe {
 				Val: structfield.NewID("github.com/segmentio/kafka-go", "github.com/segmentio/kafka-go", "Message", "Time"),
 			},
 		},
-		Uprobes: []probe.Uprobe[bpfObjects]{
+		Uprobes: []probe.Uprobe{
 			{
-				Sym: "github.com/segmentio/kafka-go.(*Writer).WriteMessages",
-				Fn:  uprobeWriteMessages,
+				Sym:         "github.com/segmentio/kafka-go.(*Writer).WriteMessages",
+				EntryProbe:  "uprobe_WriteMessages",
+				ReturnProbe: "uprobe_WriteMessages_Returns",
 			},
-		},
-		ReaderFn: func(obj bpfObjects) (*perf.Reader, error) {
-			return perf.NewReader(obj.Events, os.Getpagesize()*100)
 		},
 		SpecFn:    loadBpf,
 		ProcessFn: convertEvent,
 	}
 }
 
-func uprobeWriteMessages(name string, exec *link.Executable, target *process.TargetDetails, obj *bpfObjects) ([]link.Link, error) {
-	offset, err := target.GetFunctionOffset(name)
-	if err != nil {
-		return nil, err
-	}
-
-	opts := &link.UprobeOptions{Address: offset}
-	l, err := exec.Uprobe("", obj.UprobeWriteMessages, opts)
-	if err != nil {
-		return nil, err
-	}
-
-	links := []link.Link{l}
-
-	retOffsets, err := target.GetFunctionReturns(name)
-	if err != nil {
-		return nil, err
-	}
-
-	for _, ret := range retOffsets {
-		opts := &link.UprobeOptions{Address: ret}
-		l, err := exec.Uprobe("", obj.UprobeWriteMessagesReturns, opts)
-		if err != nil {
-			return nil, err
-		}
-		links = append(links, l)
-	}
-
-	return links, nil
-}
-
 type messageAttributes struct {
-	SpaID trace.SpanID
-	Topic [256]byte
-	Key   [256]byte
+	SpanContext context.EBPFSpanContext
+	Topic       [256]byte
+	Key         [256]byte
 }
 
 // event represents a batch of kafka messages being sent.
@@ -124,8 +76,6 @@ type event struct {
 	StartTime         uint64
 	EndTime           uint64
 	ParentSpanContext context.EBPFSpanContext
-	// Same trace id for all the batch
-	TraceID trace.TraceID
 	// Message specific attributes
 	Messages [10]messageAttributes
 	// Global topic for the batch
@@ -136,7 +86,7 @@ type event struct {
 
 func convertEvent(e *event) []*probe.SpanEvent {
 	tsc := trace.SpanContextConfig{
-		TraceID:    e.TraceID,
+		TraceID:    e.Messages[0].SpanContext.TraceID,
 		TraceFlags: trace.FlagsSampled,
 	}
 
@@ -155,7 +105,7 @@ func convertEvent(e *event) []*probe.SpanEvent {
 
 	globalTopic := unix.ByteSliceToString(e.GlobalTopic[:])
 
-	var commonAttrs []attribute.KeyValue = []attribute.KeyValue{semconv.MessagingSystemKafka, semconv.MessagingOperationPublish}
+	commonAttrs := []attribute.KeyValue{semconv.MessagingSystemKafka, semconv.MessagingOperationTypePublish}
 	if len(globalTopic) > 0 {
 		commonAttrs = append(commonAttrs, semconv.MessagingDestinationName(globalTopic))
 	}
@@ -167,7 +117,7 @@ func convertEvent(e *event) []*probe.SpanEvent {
 	var res []*probe.SpanEvent
 	var msgTopic string
 	for i := uint64(0); i < e.ValidMessages; i++ {
-		tsc.SpanID = e.Messages[i].SpaID
+		tsc.SpanID = e.Messages[i].SpanContext.SpanID
 		sc := trace.NewSpanContext(tsc)
 		key := unix.ByteSliceToString(e.Messages[i].Key[:])
 

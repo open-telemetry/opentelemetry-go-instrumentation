@@ -1,16 +1,5 @@
 // Copyright The OpenTelemetry Authors
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// SPDX-License-Identifier: Apache-2.0
 
 package main
 
@@ -68,8 +57,11 @@ func newLogger() logr.Logger {
 
 func main() {
 	var globalImpl bool
+	var logLevel string
 
 	flag.BoolVar(&globalImpl, "global-impl", false, "Record telemetry from the OpenTelemetry default global implementation")
+	flag.StringVar(&logLevel, "log-level", "", "Define log visibility level, default is `info`")
+
 	flag.Usage = usage
 	flag.Parse()
 
@@ -97,6 +89,16 @@ func main() {
 	instOptions := []auto.InstrumentationOption{auto.WithEnv(), auto.WithLoadedIndicator(loadedIndicator)}
 	if globalImpl {
 		instOptions = append(instOptions, auto.WithGlobal())
+	}
+
+	if logLevel != "" {
+		level, err := auto.ParseLogLevel(logLevel)
+		if err != nil {
+			logger.Error(err, "failed to parse log level")
+			return
+		}
+
+		instOptions = append(instOptions, auto.WithLogLevel(level))
 	}
 
 	inst, err := auto.NewInstrumentation(ctx, instOptions...)

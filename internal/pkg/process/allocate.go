@@ -1,16 +1,5 @@
 // Copyright The OpenTelemetry Authors
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// SPDX-License-Identifier: Apache-2.0
 
 package process
 
@@ -48,7 +37,7 @@ func Allocate(logger logr.Logger, pid int) (*AllocationDetails, error) {
 	}
 
 	mapSize := uint64(os.Getpagesize() * nCPU * 8)
-	logger.Info(
+	logger.V(1).Info(
 		"Requesting memory allocation",
 		"size", mapSize,
 		"page size", os.Getpagesize(),
@@ -59,7 +48,7 @@ func Allocate(logger logr.Logger, pid int) (*AllocationDetails, error) {
 		return nil, err
 	}
 
-	logger.Info(
+	logger.V(1).Info(
 		"mmaped remote memory",
 		"start_addr", fmt.Sprintf("0x%x", addr),
 		"end_addr", fmt.Sprintf("0x%x", addr+mapSize),
@@ -81,7 +70,7 @@ func remoteAllocate(logger logr.Logger, pid int, mapSize uint64) (uint64, error)
 	}
 
 	defer func() {
-		logger.Info("Detaching from process", "pid", pid)
+		logger.V(0).Info("Detaching from process", "pid", pid)
 		err := program.Detach()
 		if err != nil {
 			logger.Error(err, "Failed to detach ptrace", "pid", pid)
@@ -91,7 +80,7 @@ func remoteAllocate(logger logr.Logger, pid int, mapSize uint64) (uint64, error)
 	if err := program.SetMemLockInfinity(); err != nil {
 		logger.Error(err, "Failed to set memlock on process")
 	} else {
-		logger.Info("Set memlock on process successfully")
+		logger.V(1).Info("Set memlock on process successfully")
 	}
 
 	fd := -1

@@ -1,16 +1,5 @@
 // Copyright The OpenTelemetry Authors
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// SPDX-License-Identifier: Apache-2.0
 
 package process
 
@@ -70,16 +59,16 @@ func (a *Analyzer) DiscoverProcessID(ctx context.Context, target *TargetArgs) (i
 	for {
 		select {
 		case <-ctx.Done():
-			a.logger.Info("stopping process id discovery due to kill signal")
+			a.logger.V(1).Info("stopping process id discovery due to kill signal")
 			return 0, ErrInterrupted
 		case <-t.C:
 			pid, err := a.findProcessID(target, proc)
 			if err == nil {
-				a.logger.Info("found process", "pid", pid)
+				a.logger.V(0).Info("found process", "pid", pid)
 				return pid, nil
 			}
 			if err == ErrProcessNotFound {
-				a.logger.Info("process not found yet, trying again soon", "exe_path", target.ExePath)
+				a.logger.V(1).Info("process not found yet, trying again soon", "exe_path", target.ExePath)
 			} else {
 				a.logger.Error(err, "error while searching for process", "exe_path", target.ExePath)
 			}

@@ -1,0 +1,36 @@
+// Copyright The OpenTelemetry Authors
+// SPDX-License-Identifier: Apache-2.0
+
+//go:build !linux
+
+package ptrace
+
+import "github.com/go-logr/logr"
+
+// Stubs for non-linux systems
+
+type TracedProgram struct{}
+
+func NewTracedProgram(pid int, logger logr.Logger) (*TracedProgram, error) {
+	return nil, nil
+}
+
+func (p *TracedProgram) Detach() error {
+	return nil
+}
+
+func (p *TracedProgram) SetMemLockInfinity() error {
+	return nil
+}
+
+func (p *TracedProgram) Mmap(length uint64, fd uint64) (uint64, error) {
+	return 0, nil
+}
+
+func (p *TracedProgram) Madvise(addr uint64, length uint64) error {
+	return nil
+}
+
+func (p *TracedProgram) Mlock(addr uint64, length uint64) error {
+	return nil
+}

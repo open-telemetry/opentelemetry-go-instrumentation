@@ -1,16 +1,5 @@
 // Copyright The OpenTelemetry Authors
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// SPDX-License-Identifier: Apache-2.0
 
 package process
 
@@ -103,7 +92,7 @@ func (a *Analyzer) Analyze(pid int, relevantFuncs map[string]interface{}) (*Targ
 		return nil, err
 	}
 	for _, fn := range funcs {
-		a.logger.Info("found function", "function_name", fn)
+		a.logger.V(1).Info("found function", "function_name", fn)
 	}
 
 	result.Functions = funcs
@@ -145,7 +134,7 @@ func (a *Analyzer) findFunctions(elfF *elf.File, relevantFuncs map[string]interf
 	result, err := binary.FindFunctionsUnStripped(elfF, relevantFuncs)
 	if err != nil {
 		if errors.Is(err, elf.ErrNoSymbols) {
-			a.logger.Info("No symbols found in binary, trying to find functions using .gosymtab")
+			a.logger.V(1).Info("No symbols found in binary, trying to find functions using .gosymtab")
 			return binary.FindFunctionsStripped(elfF, relevantFuncs)
 		}
 		return nil, err

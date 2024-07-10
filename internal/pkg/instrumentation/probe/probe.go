@@ -1,16 +1,5 @@
 // Copyright The OpenTelemetry Authors
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// SPDX-License-Identifier: Apache-2.0
 
 // Package probe provides instrumentation probe types and definitions.
 package probe
@@ -21,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"os"
 
 	"github.com/cilium/ebpf"
 	"github.com/cilium/ebpf/link"
@@ -68,20 +58,27 @@ type Base[BPFObj any, BPFEvent any] struct {
 	Consts []Const
 	// Uprobes is a the collection of eBPF programs that need to be attached to
 	// the target process.
-	Uprobes []Uprobe[BPFObj]
+	Uprobes []Uprobe
 
-	// ReaderFn is a creation function for a perf.Reader based on the passed
-	// BPFObj related to the probe.
-	ReaderFn func(BPFObj) (*perf.Reader, error)
 	// SpecFn is a creation function for an eBPF CollectionSpec related to the
 	// probe.
 	SpecFn func() (*ebpf.CollectionSpec, error)
 	// ProcessFn processes probe events into a uniform Event type.
 	ProcessFn func(*BPFEvent) []*SpanEvent
 
-	reader  *perf.Reader
-	closers []io.Closer
+	reader     *perf.Reader
+	collection *ebpf.Collection
+	closers    []io.Closer
 }
+
+const (
+	// The default size of the perf buffer in pages.
+	// We will need to make this configurable in the future.
+	PerfBufferDefaultSizeInPages = 128
+	// The default name of the eBPF map used to pass events from the eBPF program
+	// to userspace.
+	DefaultBufferMapName = "events"
+)
 
 // Manifest returns the Probe's instrumentation Manifest.
 func (i *Base[BPFObj, BPFEvent]) Manifest() Manifest {
@@ -107,12 +104,17 @@ func (i *Base[BPFObj, BPFEvent]) Load(exec *link.Executable, td *process.TargetD
 		return err
 	}
 
-	obj, err := i.buildObj(exec, td, spec)
+	i.collection, err = i.buildEBPFCollection(td, spec)
 	if err != nil {
 		return err
 	}
 
-	i.reader, err = i.ReaderFn(*obj)
+	err = i.loadUprobes(exec, td)
+	if err != nil {
+		return err
+	}
+
+	err = i.initReader()
 	if err != nil {
 		return err
 	}
@@ -129,7 +131,38 @@ func (i *Base[BPFObj, BPFEvent]) injectConsts(td *process.TargetDetails, spec *e
 	return inject.Constants(spec, opts...)
 }
 
-func (i *Base[BPFObj, BPFEvent]) buildObj(exec *link.Executable, td *process.TargetDetails, spec *ebpf.CollectionSpec) (*BPFObj, error) {
+func (i *Base[BPFObj, BPFEvent]) loadUprobes(exec *link.Executable, td *process.TargetDetails) error {
+	for _, up := range i.Uprobes {
+		links, err := up.load(exec, td, i.collection)
+		if err != nil {
+			if up.Optional {
+				i.Logger.V(1).Info("failed to attach optional uprobe", "probe", i.ID, "symbol", up.Sym, "error", err)
+				continue
+			}
+			return err
+		}
+		for _, l := range links {
+			i.closers = append(i.closers, l)
+		}
+	}
+	return nil
+}
+
+func (i *Base[BPFObj, BPFEvent]) initReader() error {
+	buf, ok := i.collection.Maps[DefaultBufferMapName]
+	if !ok {
+		return fmt.Errorf("%s map not found", DefaultBufferMapName)
+	}
+	var err error
+	i.reader, err = perf.NewReader(buf, PerfBufferDefaultSizeInPages*os.Getpagesize())
+	if err != nil {
+		return err
+	}
+	i.closers = append(i.closers, i.reader)
+	return nil
+}
+
+func (i *Base[BPFObj, BPFEvent]) buildEBPFCollection(td *process.TargetDetails, spec *ebpf.CollectionSpec) (*ebpf.Collection, error) {
 	obj := new(BPFObj)
 	if c, ok := ((interface{})(obj)).(io.Closer); ok {
 		i.closers = append(i.closers, c)
@@ -140,26 +173,12 @@ func (i *Base[BPFObj, BPFEvent]) buildObj(exec *link.Executable, td *process.Tar
 			PinPath: bpffs.PathForTargetApplication(td),
 		},
 	}
-	err := utils.LoadEBPFObjects(spec, obj, sOpts)
+	c, err := utils.InitializeEBPFCollection(spec, sOpts)
 	if err != nil {
 		return nil, err
 	}
 
-	for _, up := range i.Uprobes {
-		links, err := up.Fn(up.Sym, exec, td, obj)
-		if err != nil {
-			if up.Optional {
-				i.Logger.Info("failed to attach optional uprobe", "probe", i.ID, "symbol", up.Sym, "error", err)
-				continue
-			}
-			return nil, err
-		}
-		for _, l := range links {
-			i.closers = append(i.closers, l)
-		}
-	}
-
-	return obj, nil
+	return c, nil
 }
 
 // Run runs the events processing loop.
@@ -175,7 +194,7 @@ func (i *Base[BPFObj, BPFEvent]) Run(dest chan<- *Event) {
 		}
 
 		if record.LostSamples != 0 {
-			i.Logger.Info("perf event ring buffer full", "dropped", record.LostSamples)
+			i.Logger.V(1).Info("perf event ring buffer full", "dropped", record.LostSamples)
 			continue
 		}
 
@@ -206,38 +225,78 @@ func (i *Base[BPFObj, BPFEvent]) processRecord(record perf.Record) ([]*SpanEvent
 
 // Close stops the Probe.
 func (i *Base[BPFObj, BPFEvent]) Close() error {
+	if i.collection != nil {
+		i.collection.Close()
+	}
 	var err error
 	for _, c := range i.closers {
 		err = errors.Join(err, c.Close())
 	}
 	if err == nil {
-		i.Logger.Info("Closed", "Probe", i.ID)
+		i.Logger.V(1).Info("Closed", "Probe", i.ID)
 	}
 	return err
 }
 
-// UprobeFunc is a function that will attach a eBPF program to a perf event
-// that fires when the given symbol starts executing in exec.
-//
-// It is expected the symbol belongs to are shared library and its offset can
-// be determined using target.
-//
-// Losing the reference to the resulting Link (up) will close the Uprobe and
-// prevent further execution of prog. The Link must be Closed during program
-// shutdown to avoid leaking system resources.
-type UprobeFunc[BPFObj any] func(symbol string, exec *link.Executable, target *process.TargetDetails, obj *BPFObj) ([]link.Link, error)
-
 // Uprobe is an eBPF program that is attached in the entry point and/or the return of a function.
-type Uprobe[BPFObj any] struct {
+type Uprobe struct {
 	// Sym is the symbol name of the function to attach the eBPF program to.
 	Sym string
-	// Fn is the function that will attach the eBPF program to the function.
-	Fn UprobeFunc[BPFObj]
 	// Optional is a boolean flag informing if the Uprobe is optional. If the
 	// Uprobe is optional and fails to attach, the error is logged and
 	// processing continues.
-	Optional  bool
-	DependsOn []string
+	Optional bool
+	// EntryProbe is the name of the eBPF program to attach to the entry of the
+	// function specified by Sym. If EntryProbe is empty, no eBPF program will be attached to the entry of the function.
+	EntryProbe string
+	// ReturnProbe is the name of the eBPF program to attach to the return of the
+	// function specified by Sym. If ReturnProbe is empty, no eBPF program will be attached to the return of the function.
+	ReturnProbe string
+	DependsOn   []string
+}
+
+func (u *Uprobe) load(exec *link.Executable, target *process.TargetDetails, c *ebpf.Collection) ([]link.Link, error) {
+	offset, err := target.GetFunctionOffset(u.Sym)
+	if err != nil {
+		return nil, err
+	}
+
+	var links []link.Link
+
+	if u.EntryProbe != "" {
+		entryProg, ok := c.Programs[u.EntryProbe]
+		if !ok {
+			return nil, fmt.Errorf("entry probe %s not found", u.EntryProbe)
+		}
+		opts := &link.UprobeOptions{Address: offset, PID: target.PID}
+		l, err := exec.Uprobe("", entryProg, opts)
+		if err != nil {
+			return nil, err
+		}
+		links = append(links, l)
+	}
+
+	if u.ReturnProbe != "" {
+		retProg, ok := c.Programs[u.ReturnProbe]
+		if !ok {
+			return nil, fmt.Errorf("return probe %s not found", u.ReturnProbe)
+		}
+		retOffsets, err := target.GetFunctionReturns(u.Sym)
+		if err != nil {
+			return nil, err
+		}
+
+		for _, ret := range retOffsets {
+			opts := &link.UprobeOptions{Address: ret, PID: target.PID}
+			l, err := exec.Uprobe("", retProg, opts)
+			if err != nil {
+				return nil, err
+			}
+			links = append(links, l)
+		}
+	}
+
+	return links, nil
 }
 
 // Const is an constant that needs to be injected into an eBPF program.

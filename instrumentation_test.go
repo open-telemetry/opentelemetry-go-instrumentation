@@ -1,16 +1,5 @@
 // Copyright The OpenTelemetry Authors
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// SPDX-License-Identifier: Apache-2.0
 
 package auto
 
@@ -23,7 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel/attribute"
-	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
 )
 
 func TestWithServiceName(t *testing.T) {
@@ -81,6 +70,21 @@ func TestWithEnv(t *testing.T) {
 		c, err := newInstConfig(context.Background(), []InstrumentationOption{WithEnv()})
 		require.NoError(t, err)
 		assert.Equal(t, name, c.serviceName)
+	})
+
+	t.Run("OTEL_LOG_LEVEL", func(t *testing.T) {
+		const name = "debug"
+		mockEnv(t, map[string]string{"OTEL_LOG_LEVEL": name})
+
+		c, err := newInstConfig(context.Background(), []InstrumentationOption{WithEnv()})
+		require.NoError(t, err)
+		assert.Equal(t, LogLevelDebug, c.logLevel)
+
+		const wrong = "invalid"
+
+		mockEnv(t, map[string]string{"OTEL_LOG_LEVEL": wrong})
+		_, err = newInstConfig(context.Background(), []InstrumentationOption{WithEnv()})
+		require.Error(t, err)
 	})
 }
 
@@ -169,6 +173,28 @@ func TestWithResourceAttributes(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, nameAttr.Value.AsString(), c.serviceName)
 		assert.Equal(t, []attribute.KeyValue{attr2, attr3}, c.additionalResAttrs)
+	})
+}
+
+func TestWithLogLevel(t *testing.T) {
+	t.Run("With Valid Input", func(t *testing.T) {
+		c, err := newInstConfig(context.Background(), []InstrumentationOption{WithLogLevel("error")})
+
+		require.NoError(t, err)
+
+		assert.Equal(t, LogLevelError, c.logLevel)
+
+		c, err = newInstConfig(context.Background(), []InstrumentationOption{WithLogLevel(LogLevelInfo)})
+
+		require.NoError(t, err)
+
+		assert.Equal(t, LogLevelInfo, c.logLevel)
+	})
+
+	t.Run("Will Validate Input", func(t *testing.T) {
+		_, err := newInstConfig(context.Background(), []InstrumentationOption{WithLogLevel("invalid")})
+
+		require.Error(t, err)
 	})
 }
 
