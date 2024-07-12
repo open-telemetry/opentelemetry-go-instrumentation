@@ -16,7 +16,7 @@ import (
 var tracer = otel.Tracer(
 	"trace-example",
 	trace.WithInstrumentationVersion("v1.23.42"),
-	trace.WithSchemaURL("https://some_shcema"),
+	trace.WithSchemaURL("https://some_schema"),
 )
 
 func innerFunction(ctx context.Context) {

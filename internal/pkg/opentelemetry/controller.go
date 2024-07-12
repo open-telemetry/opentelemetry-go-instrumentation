@@ -26,6 +26,7 @@ type Controller struct {
 type tracerID struct{ name, version, schema string }
 
 func (c *Controller) getTracer(pkg, tracerName, version, schema string) trace.Tracer {
+	// Default Tracer ID, if the user does not provide one.
 	tID := tracerID{name: pkg, version: c.version}
 	if tracerName != "" {
 		tID = tracerID{name: tracerName, version: version, schema: schema}
