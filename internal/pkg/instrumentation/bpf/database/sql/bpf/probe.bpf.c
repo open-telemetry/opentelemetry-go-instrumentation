@@ -75,7 +75,6 @@ int uprobe_queryDC(struct pt_regs *ctx) {
     void *key = get_consistent_key(ctx, go_context.data);
 
     bpf_map_update_elem(&sql_events, &key, &sql_request, 0);
-    start_tracking_span(go_context.data, &sql_request.sc);
     return 0;
 }
 
@@ -119,7 +118,6 @@ int uprobe_execDC(struct pt_regs *ctx) {
     void *key = get_consistent_key(ctx, go_context.data);
 
     bpf_map_update_elem(&sql_events, &key, &sql_request, 0);
-    start_tracking_span(go_context.data, &sql_request.sc);
     return 0;
 }
 

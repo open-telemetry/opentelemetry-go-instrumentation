@@ -208,7 +208,6 @@ int uprobe_Transport_roundTrip(struct pt_regs *ctx) {
 
     // Write event
     bpf_map_update_elem(&http_events, &key, httpReq, 0);
-    start_tracking_span(go_context.data, &httpReq->sc);
     return 0;
 }
 
@@ -237,7 +236,6 @@ int uprobe_Transport_roundTrip_Returns(struct pt_regs *ctx) {
     http_req_span->end_time = end_time;
 
     output_span_event(ctx, http_req_span, sizeof(*http_req_span), &http_req_span->sc);
-    stop_tracking_span(&http_req_span->sc, &http_req_span->psc);
 
     bpf_map_delete_elem(&http_events, &key);
     return 0;
