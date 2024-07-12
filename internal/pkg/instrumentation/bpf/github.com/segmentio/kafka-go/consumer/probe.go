@@ -127,6 +127,7 @@ func convertEvent(e *event) []*probe.SpanEvent {
 			SpanContext:       &sc,
 			ParentSpanContext: pscPtr,
 			Attributes:        attributes,
+			TracerSchema:      semconv.SchemaURL,
 		},
 	}
 }

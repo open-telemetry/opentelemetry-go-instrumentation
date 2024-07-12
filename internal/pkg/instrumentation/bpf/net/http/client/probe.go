@@ -279,6 +279,7 @@ func convertEvent(e *event) []*probe.SpanEvent {
 		SpanContext:       &sc,
 		Attributes:        attrs,
 		ParentSpanContext: pscPtr,
+		TracerSchema:      semconv.SchemaURL,
 	}
 
 	if int(e.StatusCode) >= 400 && int(e.StatusCode) < 600 {

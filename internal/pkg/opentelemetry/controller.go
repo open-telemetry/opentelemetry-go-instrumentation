@@ -44,6 +44,7 @@ func (c *Controller) getTracer(pkg, tracerName, version, schema string) trace.Tr
 		newTracer = c.tracerProvider.Tracer(
 			"go.opentelemetry.io/auto/"+pkg,
 			trace.WithInstrumentationVersion(c.version),
+			trace.WithSchemaURL(schema),
 		)
 	}
 
