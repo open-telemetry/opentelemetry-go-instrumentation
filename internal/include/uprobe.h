@@ -32,8 +32,8 @@
 // 2. Use the key to lookup for the uprobe context in the uprobe_context_map
 // 3. Update the end time of the found span
 // 4. Submit the constructed event to the agent code using perf buffer events_map
-// 5. Delete the span from the uprobe_context_map
-// 6. Delete the span from the global active spans map
+// 5. Delete the span from the global active spans map (in case the span is not tracked in the active spans map, this will be a no-op)
+// 6. Delete the span from the uprobe_context_map
 #define UPROBE_RETURN(name, event_type, uprobe_context_map, events_map, context_pos, context_offset, passed_as_arg) \
 SEC("uprobe/##name##")                                                                                              \
 int uprobe_##name##_Returns(struct pt_regs *ctx) {                                                                  \
@@ -46,8 +46,8 @@ int uprobe_##name##_Returns(struct pt_regs *ctx) {                              
     }                                                                                                               \
     event->end_time = bpf_ktime_get_ns();                                                                           \
     output_span_event(ctx, event, sizeof(event_type), &event->sc);                                                  \
-    bpf_map_delete_elem(&uprobe_context_map, &key);                                                                 \
     stop_tracking_span(&event->sc, &event->psc);                                                                    \
+    bpf_map_delete_elem(&uprobe_context_map, &key);                                                                 \
     return 0;                                                                                                       \
 } 
 

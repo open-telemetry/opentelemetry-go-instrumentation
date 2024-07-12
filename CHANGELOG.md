@@ -31,6 +31,8 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
   - The `messaging.kafka.destination.partition` key is renamed to `messaging.destination.partition.id`
 - Upgrade semconv from `v1.21.0` to `v1.26.0` in `database/sql` instrumentation. ([#911](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/911))
   - The `db.statement` attribute key is renamed to `db.query.text`.
+- Upgrade semconv from `v1.24.0` to `v1.26.0` in `google.golang.org/grpc` instrumentation. ([#912](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/912))
+  - The `net.peer.name` attribute key in client instrumentation is renamed to `server.address`.
 - Upgrade semconv to `v1.26.0` in `net/http` instrumentation. ([#913](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/913))
 - Upgrade `go.opentelemetry.io/auto` semconv to `v1.26.0`. ([#914](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/914))
 
