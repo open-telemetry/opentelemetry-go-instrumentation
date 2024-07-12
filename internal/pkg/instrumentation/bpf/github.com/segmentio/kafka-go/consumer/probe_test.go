@@ -59,6 +59,7 @@ func TestProbeConvertEvent(t *testing.T) {
 			semconv.MessagingKafkaMessageKey("key1"),
 			semconv.MessagingKafkaConsumerGroup("test consumer group"),
 		},
+		TracerSchema: semconv.SchemaURL,
 	}
 	assert.Equal(t, want, got[0])
 }

@@ -29,4 +29,7 @@ type SpanEvent struct {
 	SpanContext       *trace.SpanContext
 	ParentSpanContext *trace.SpanContext
 	Status            Status
+	TracerName        string
+	TracerVersion     string
+	TracerSchema      string
 }

@@ -103,6 +103,7 @@ func convertEvent(e *event) []*probe.SpanEvent {
 				semconv.DBQueryText(query),
 			},
 			ParentSpanContext: pscPtr,
+			TracerSchema:      semconv.SchemaURL,
 		},
 	}
 }

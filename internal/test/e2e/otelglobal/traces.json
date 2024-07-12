@@ -50,9 +50,10 @@
       "schemaUrl": "https://opentelemetry.io/schemas/1.26.0",
       "scopeSpans": [
         {
+          "schemaUrl": "https://some_schema",
           "scope": {
-            "name": "go.opentelemetry.io/auto/go.opentelemetry.io/otel/internal/global",
-            "version": "v0.13.0-alpha"
+            "name": "trace-example",
+            "version": "v1.23.42"
           },
           "spans": [
             {

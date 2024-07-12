@@ -95,7 +95,6 @@ type bpfProgramSpecs struct {
 type bpfMapSpecs struct {
 	AllocMap                   *ebpf.MapSpec `ebpf:"alloc_map"`
 	Events                     *ebpf.MapSpec `ebpf:"events"`
-	GolangMapbucketStorageMap  *ebpf.MapSpec `ebpf:"golang_mapbucket_storage_map"`
 	HttpClientUprobeStorageMap *ebpf.MapSpec `ebpf:"http_client_uprobe_storage_map"`
 	HttpEvents                 *ebpf.MapSpec `ebpf:"http_events"`
 	HttpHeaders                *ebpf.MapSpec `ebpf:"http_headers"`
@@ -125,7 +124,6 @@ func (o *bpfObjects) Close() error {
 type bpfMaps struct {
 	AllocMap                   *ebpf.Map `ebpf:"alloc_map"`
 	Events                     *ebpf.Map `ebpf:"events"`
-	GolangMapbucketStorageMap  *ebpf.Map `ebpf:"golang_mapbucket_storage_map"`
 	HttpClientUprobeStorageMap *ebpf.Map `ebpf:"http_client_uprobe_storage_map"`
 	HttpEvents                 *ebpf.Map `ebpf:"http_events"`
 	HttpHeaders                *ebpf.Map `ebpf:"http_headers"`
@@ -138,7 +136,6 @@ func (m *bpfMaps) Close() error {
 	return _BpfClose(
 		m.AllocMap,
 		m.Events,
-		m.GolangMapbucketStorageMap,
 		m.HttpClientUprobeStorageMap,
 		m.HttpEvents,
 		m.HttpHeaders,

@@ -32,7 +32,8 @@ type bpfOtelSpanT struct {
 		}
 		ValidAttrs uint8
 	}
-	_ [3]byte
+	TracerId bpfTracerIdT
+	_        [3]byte
 }
 
 type bpfSliceArrayBuff struct{ Buff [1024]uint8 }
@@ -45,6 +46,12 @@ type bpfSpanContext struct {
 }
 
 type bpfSpanNameT struct{ Buf [64]int8 }
+
+type bpfTracerIdT struct {
+	Name      [128]int8
+	Version   [32]int8
+	SchemaUrl [128]int8
+}
 
 // loadBpf returns the embedded CollectionSpec for bpf.
 func loadBpf() (*ebpf.CollectionSpec, error) {
@@ -99,14 +106,18 @@ type bpfProgramSpecs struct {
 //
 // It can be passed ebpf.CollectionSpec.Assign.
 type bpfMapSpecs struct {
-	ActiveSpansBySpanPtr *ebpf.MapSpec `ebpf:"active_spans_by_span_ptr"`
-	AllocMap             *ebpf.MapSpec `ebpf:"alloc_map"`
-	Events               *ebpf.MapSpec `ebpf:"events"`
-	OtelSpanStorageMap   *ebpf.MapSpec `ebpf:"otel_span_storage_map"`
-	SliceArrayBuffMap    *ebpf.MapSpec `ebpf:"slice_array_buff_map"`
-	SpanNameByContext    *ebpf.MapSpec `ebpf:"span_name_by_context"`
-	TrackedSpans         *ebpf.MapSpec `ebpf:"tracked_spans"`
-	TrackedSpansBySc     *ebpf.MapSpec `ebpf:"tracked_spans_by_sc"`
+	ActiveSpansBySpanPtr      *ebpf.MapSpec `ebpf:"active_spans_by_span_ptr"`
+	AllocMap                  *ebpf.MapSpec `ebpf:"alloc_map"`
+	Events                    *ebpf.MapSpec `ebpf:"events"`
+	GolangMapbucketStorageMap *ebpf.MapSpec `ebpf:"golang_mapbucket_storage_map"`
+	OtelSpanStorageMap        *ebpf.MapSpec `ebpf:"otel_span_storage_map"`
+	SliceArrayBuffMap         *ebpf.MapSpec `ebpf:"slice_array_buff_map"`
+	SpanNameByContext         *ebpf.MapSpec `ebpf:"span_name_by_context"`
+	TracerIdByContext         *ebpf.MapSpec `ebpf:"tracer_id_by_context"`
+	TracerIdStorageMap        *ebpf.MapSpec `ebpf:"tracer_id_storage_map"`
+	TracerPtrToIdMap          *ebpf.MapSpec `ebpf:"tracer_ptr_to_id_map"`
+	TrackedSpans              *ebpf.MapSpec `ebpf:"tracked_spans"`
+	TrackedSpansBySc          *ebpf.MapSpec `ebpf:"tracked_spans_by_sc"`
 }
 
 // bpfObjects contains all objects after they have been loaded into the kernel.
@@ -128,14 +139,18 @@ func (o *bpfObjects) Close() error {
 //
 // It can be passed to loadBpfObjects or ebpf.CollectionSpec.LoadAndAssign.
 type bpfMaps struct {
-	ActiveSpansBySpanPtr *ebpf.Map `ebpf:"active_spans_by_span_ptr"`
-	AllocMap             *ebpf.Map `ebpf:"alloc_map"`
-	Events               *ebpf.Map `ebpf:"events"`
-	OtelSpanStorageMap   *ebpf.Map `ebpf:"otel_span_storage_map"`
-	SliceArrayBuffMap    *ebpf.Map `ebpf:"slice_array_buff_map"`
-	SpanNameByContext    *ebpf.Map `ebpf:"span_name_by_context"`
-	TrackedSpans         *ebpf.Map `ebpf:"tracked_spans"`
-	TrackedSpansBySc     *ebpf.Map `ebpf:"tracked_spans_by_sc"`
+	ActiveSpansBySpanPtr      *ebpf.Map `ebpf:"active_spans_by_span_ptr"`
+	AllocMap                  *ebpf.Map `ebpf:"alloc_map"`
+	Events                    *ebpf.Map `ebpf:"events"`
+	GolangMapbucketStorageMap *ebpf.Map `ebpf:"golang_mapbucket_storage_map"`
+	OtelSpanStorageMap        *ebpf.Map `ebpf:"otel_span_storage_map"`
+	SliceArrayBuffMap         *ebpf.Map `ebpf:"slice_array_buff_map"`
+	SpanNameByContext         *ebpf.Map `ebpf:"span_name_by_context"`
+	TracerIdByContext         *ebpf.Map `ebpf:"tracer_id_by_context"`
+	TracerIdStorageMap        *ebpf.Map `ebpf:"tracer_id_storage_map"`
+	TracerPtrToIdMap          *ebpf.Map `ebpf:"tracer_ptr_to_id_map"`
+	TrackedSpans              *ebpf.Map `ebpf:"tracked_spans"`
+	TrackedSpansBySc          *ebpf.Map `ebpf:"tracked_spans_by_sc"`
 }
 
 func (m *bpfMaps) Close() error {
@@ -143,9 +158,13 @@ func (m *bpfMaps) Close() error {
 		m.ActiveSpansBySpanPtr,
 		m.AllocMap,
 		m.Events,
+		m.GolangMapbucketStorageMap,
 		m.OtelSpanStorageMap,
 		m.SliceArrayBuffMap,
 		m.SpanNameByContext,
+		m.TracerIdByContext,
+		m.TracerIdStorageMap,
+		m.TracerPtrToIdMap,
 		m.TrackedSpans,
 		m.TrackedSpansBySc,
 	)
