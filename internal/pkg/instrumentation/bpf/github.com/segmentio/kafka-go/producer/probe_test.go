@@ -73,6 +73,7 @@ func TestProbeConvertEvent(t *testing.T) {
 			semconv.MessagingOperationTypePublish,
 			semconv.MessagingBatchMessageCount(2),
 		},
+		TracerSchema: semconv.SchemaURL,
 	}
 
 	want2 := &probe.SpanEvent{
@@ -87,6 +88,7 @@ func TestProbeConvertEvent(t *testing.T) {
 			semconv.MessagingOperationTypePublish,
 			semconv.MessagingBatchMessageCount(2),
 		},
+		TracerSchema: semconv.SchemaURL,
 	}
 	assert.Equal(t, want1, got[0])
 	assert.Equal(t, want2, got[1])
