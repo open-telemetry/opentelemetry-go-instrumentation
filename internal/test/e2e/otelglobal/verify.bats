@@ -16,7 +16,7 @@ SCOPE="trace-example"
 
 @test "go-auto :: include schema url" {
   result=$(spans_received | jq ".scopeSpans[].schemaUrl")
-  assert_equal "$result" '"https://some_shcema"'
+  assert_equal "$result" '"https://some_schema"'
 }
 
 @test "server :: valid int attribute" {
