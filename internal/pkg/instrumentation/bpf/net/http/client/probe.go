@@ -93,10 +93,6 @@ func New(logger logr.Logger) probe.Probe {
 				Val: structfield.NewID("std", "net/http", "Response", "StatusCode"),
 			},
 			probe.StructFieldConst{
-				Key: "buckets_ptr_pos",
-				Val: structfield.NewID("std", "runtime", "hmap", "buckets"),
-			},
-			probe.StructFieldConst{
 				Key: "request_host_pos",
 				Val: structfield.NewID("std", "net/http", "Request", "Host"),
 			},
@@ -283,6 +279,7 @@ func convertEvent(e *event) []*probe.SpanEvent {
 		SpanContext:       &sc,
 		Attributes:        attrs,
 		ParentSpanContext: pscPtr,
+		TracerSchema:      semconv.SchemaURL,
 	}
 
 	if int(e.StatusCode) >= 400 && int(e.StatusCode) < 600 {

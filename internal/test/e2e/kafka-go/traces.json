@@ -50,6 +50,7 @@
       "schemaUrl": "https://opentelemetry.io/schemas/1.26.0",
       "scopeSpans": [
         {
+          "schemaUrl": "https://opentelemetry.io/schemas/1.26.0",
           "scope": {
             "name": "go.opentelemetry.io/auto/github.com/segmentio/kafka-go",
             "version": "v0.13.0-alpha"
@@ -191,6 +192,7 @@
       "schemaUrl": "https://opentelemetry.io/schemas/1.26.0",
       "scopeSpans": [
         {
+          "schemaUrl": "https://opentelemetry.io/schemas/1.26.0",
           "scope": {
             "name": "go.opentelemetry.io/auto/github.com/segmentio/kafka-go",
             "version": "v0.13.0-alpha"

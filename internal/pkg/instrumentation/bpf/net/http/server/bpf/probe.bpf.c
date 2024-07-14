@@ -51,6 +51,8 @@ struct uprobe_data_t
     u64 resp_ptr;
 };
 
+MAP_BUCKET_DEFINITION(go_string_t, go_slice_t)
+
 struct
 {
     __uint(type, BPF_MAP_TYPE_HASH);
@@ -63,7 +65,7 @@ struct
 {
     __uint(type, BPF_MAP_TYPE_PERCPU_ARRAY);
     __uint(key_size, sizeof(u32));
-    __uint(value_size, sizeof(struct map_bucket));
+    __uint(value_size, sizeof(MAP_BUCKET_TYPE(go_string_t, go_slice_t)));
     __uint(max_entries, 1);
 } golang_mapbucket_storage_map SEC(".maps");
 
@@ -130,7 +132,7 @@ static __always_inline long extract_context_from_req_headers(void *headers_ptr_p
         return -1;
     }
     u32 map_id = 0;
-    struct map_bucket *map_value = bpf_map_lookup_elem(&golang_mapbucket_storage_map, &map_id);
+    MAP_BUCKET_TYPE(go_string_t, go_slice_t) *map_value = bpf_map_lookup_elem(&golang_mapbucket_storage_map, &map_id);
     if (!map_value)
     {
         return -1;
@@ -142,7 +144,7 @@ static __always_inline long extract_context_from_req_headers(void *headers_ptr_p
         {
             break;
         }
-        res = bpf_probe_read(map_value, sizeof(struct map_bucket), header_buckets + (j * sizeof(struct map_bucket)));
+        res = bpf_probe_read(map_value, sizeof(MAP_BUCKET_TYPE(go_string_t, go_slice_t)), header_buckets + (j * sizeof(MAP_BUCKET_TYPE(go_string_t, go_slice_t))));
         if (res < 0)
         {
             continue;

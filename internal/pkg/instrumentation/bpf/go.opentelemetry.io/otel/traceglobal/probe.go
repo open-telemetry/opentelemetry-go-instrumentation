@@ -5,12 +5,16 @@ package global
 
 import (
 	"encoding/binary"
+	"fmt"
 	"math"
 
+	"go.opentelemetry.io/auto/internal/pkg/inject"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/probe"
+	"go.opentelemetry.io/auto/internal/pkg/process"
 	"go.opentelemetry.io/auto/internal/pkg/structfield"
 
 	"github.com/go-logr/logr"
+	"github.com/hashicorp/go-version"
 	"golang.org/x/sys/unix"
 
 	"go.opentelemetry.io/otel/attribute"
@@ -79,6 +83,23 @@ func New(logger logr.Logger) probe.Probe {
 				Key: "tracer_delegate_pos",
 				Val: structfield.NewID("go.opentelemetry.io/otel", "go.opentelemetry.io/otel/internal/global", "tracer", "delegate"),
 			},
+			probe.StructFieldConst{
+				Key: "tracer_name_pos",
+				Val: structfield.NewID("go.opentelemetry.io/otel", "go.opentelemetry.io/otel/internal/global", "tracer", "name"),
+			},
+			probe.StructFieldConst{
+				Key: "tracer_provider_pos",
+				Val: structfield.NewID("go.opentelemetry.io/otel", "go.opentelemetry.io/otel/internal/global", "tracer", "provider"),
+			},
+			probe.StructFieldConst{
+				Key: "tracer_provider_tracers_pos",
+				Val: structfield.NewID("go.opentelemetry.io/otel", "go.opentelemetry.io/otel/internal/global", "tracerProvider", "tracers"),
+			},
+			probe.StructFieldConst{
+				Key: "buckets_ptr_pos",
+				Val: structfield.NewID("std", "runtime", "hmap", "buckets"),
+			},
+			tracerIDContainsSchemaURL{},
 		},
 		Uprobes: []probe.Uprobe{
 			{
@@ -111,6 +132,23 @@ func New(logger logr.Logger) probe.Probe {
 	}
 }
 
+// framePosConst is a Probe Const defining whether the tracer key contains schemaURL.
+type tracerIDContainsSchemaURL struct{}
+
+// Prior to v1.28 the tracer key did not contain schemaURL. However, in that version a
+// change was made to include it.
+// https://github.com/open-telemetry/opentelemetry-go/pull/5426/files
+var paramChangeVer = version.Must(version.NewVersion("1.28.0"))
+
+func (c tracerIDContainsSchemaURL) InjectOption(td *process.TargetDetails) (inject.Option, error) {
+	ver, ok := td.Libraries["go.opentelemetry.io/otel"]
+	if !ok {
+		return nil, fmt.Errorf("unknown module version: %s", pkg)
+	}
+
+	return inject.WithKeyValue("tracer_id_contains_schemaURL", ver.GreaterThanOrEqual(paramChangeVer)), nil
+}
+
 type attributeKeyVal struct {
 	ValLength uint16
 	Vtype     uint8
@@ -129,12 +167,19 @@ type status struct {
 	Description [64]byte
 }
 
+type tracerID struct {
+	Name      [128]byte
+	Version   [32]byte
+	SchemaURL [128]byte
+}
+
 // event represents a manual span created by the user.
 type event struct {
 	context.BaseSpanProperties
 	SpanName   [64]byte
 	Status     status
 	Attributes attributesBuffer
+	TracerID   tracerID
 }
 
 func convertEvent(e *event) []*probe.SpanEvent {
@@ -171,6 +216,9 @@ func convertEvent(e *event) []*probe.SpanEvent {
 				Code:        codes.Code(e.Status.Code),
 				Description: string(unix.ByteSliceToString(e.Status.Description[:])),
 			},
+			TracerName:    unix.ByteSliceToString(e.TracerID.Name[:]),
+			TracerVersion: unix.ByteSliceToString(e.TracerID.Version[:]),
+			TracerSchema:  unix.ByteSliceToString(e.TracerID.SchemaURL[:]),
 		},
 	}
 }

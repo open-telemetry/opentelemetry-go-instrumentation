@@ -50,6 +50,7 @@
       "schemaUrl": "https://opentelemetry.io/schemas/1.26.0",
       "scopeSpans": [
         {
+          "schemaUrl": "https://opentelemetry.io/schemas/1.26.0",
           "scope": {
             "name": "go.opentelemetry.io/auto/database/sql",
             "version": "v0.13.0-alpha"
@@ -75,6 +76,7 @@
           ]
         },
         {
+          "schemaUrl": "https://opentelemetry.io/schemas/1.26.0",
           "scope": {
             "name": "go.opentelemetry.io/auto/net/http",
             "version": "v0.13.0-alpha"

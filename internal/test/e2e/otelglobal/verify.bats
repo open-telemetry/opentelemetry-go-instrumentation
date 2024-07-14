@@ -2,11 +2,21 @@
 
 load ../../test_helpers/utilities
 
-SCOPE="go.opentelemetry.io/auto/go.opentelemetry.io/otel/internal/global"
+SCOPE="trace-example"
 
 @test "go-auto :: includes service.name in resource attributes" {
   result=$(resource_attributes_received | jq "select(.key == \"service.name\").value.stringValue")
   assert_equal "$result" '"sample-app"'
+}
+
+@test "go-auto :: include tracer version in scope" {
+  result=$(spans_received | jq ".scopeSpans[].scope.version")
+  assert_equal "$result" '"v1.23.42"'
+}
+
+@test "go-auto :: include schema url" {
+  result=$(spans_received | jq ".scopeSpans[].schemaUrl")
+  assert_equal "$result" '"https://some_schema"'
 }
 
 @test "server :: valid int attribute" {

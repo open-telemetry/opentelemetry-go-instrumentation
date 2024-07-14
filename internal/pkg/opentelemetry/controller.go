@@ -19,21 +19,37 @@ type Controller struct {
 	logger         logr.Logger
 	version        string
 	tracerProvider trace.TracerProvider
-	tracersMap     map[string]trace.Tracer
+	tracersMap     map[tracerID]trace.Tracer
 	bootTime       int64
 }
 
-func (c *Controller) getTracer(pkg string) trace.Tracer {
-	t, exists := c.tracersMap[pkg]
+type tracerID struct{ name, version, schema string }
+
+func (c *Controller) getTracer(pkg, tracerName, version, schema string) trace.Tracer {
+	// Default Tracer ID, if the user does not provide one.
+	tID := tracerID{name: pkg, version: c.version}
+	if tracerName != "" {
+		tID = tracerID{name: tracerName, version: version, schema: schema}
+	}
+
+	t, exists := c.tracersMap[tID]
 	if exists {
 		return t
 	}
 
-	newTracer := c.tracerProvider.Tracer(
-		"go.opentelemetry.io/auto/"+pkg,
-		trace.WithInstrumentationVersion(c.version),
-	)
-	c.tracersMap[pkg] = newTracer
+	var newTracer trace.Tracer
+	if tracerName != "" {
+		// If the user has provided a tracer, use it.
+		newTracer = c.tracerProvider.Tracer(tracerName, trace.WithInstrumentationVersion(version), trace.WithSchemaURL(schema))
+	} else {
+		newTracer = c.tracerProvider.Tracer(
+			"go.opentelemetry.io/auto/"+pkg,
+			trace.WithInstrumentationVersion(c.version),
+			trace.WithSchemaURL(schema),
+		)
+	}
+
+	c.tracersMap[tID] = newTracer
 	return newTracer
 }
 
@@ -54,7 +70,8 @@ func (c *Controller) Trace(event *probe.Event) {
 		}
 
 		ctx = ContextWithEBPFEvent(ctx, *se)
-		_, span := c.getTracer(event.Package).
+		c.logger.V(1).Info("getting tracer", "name", se.TracerName, "version", se.TracerVersion, "schema", se.TracerSchema)
+		_, span := c.getTracer(event.Package, se.TracerName, se.TracerVersion, se.TracerSchema).
 			Start(ctx, se.SpanName,
 				trace.WithAttributes(se.Attributes...),
 				trace.WithSpanKind(event.Kind),
@@ -81,7 +98,7 @@ func NewController(logger logr.Logger, tracerProvider trace.TracerProvider, ver 
 		logger:         logger,
 		version:        ver,
 		tracerProvider: tracerProvider,
-		tracersMap:     make(map[string]trace.Tracer),
+		tracersMap:     make(map[tracerID]trace.Tracer),
 		bootTime:       bt,
 	}, nil
 }

@@ -87,6 +87,14 @@ func TestProbeConvertEvent(t *testing.T) {
 			},
 			ValidAttrs: 5,
 		},
+		TracerID: tracerID{
+			// "user-tracer"
+			Name: [128]byte{0x75, 0x73, 0x65, 0x72, 0x2d, 0x74, 0x72, 0x61, 0x63, 0x65, 0x72},
+			// "v1"
+			Version: [32]byte{0x76, 0x31},
+			// "user-schema"
+			SchemaURL: [128]byte{0x75, 0x73, 0x65, 0x72, 0x2d, 0x73, 0x63, 0x68, 0x65, 0x6d, 0x61},
+		},
 	})
 
 	sc := trace.NewSpanContext(trace.SpanContextConfig{
@@ -106,6 +114,9 @@ func TestProbeConvertEvent(t *testing.T) {
 			attribute.Int64("int_key", 42),
 			attribute.String("string_key2", "string value 2"),
 		},
+		TracerName:    "user-tracer",
+		TracerVersion: "v1",
+		TracerSchema:  "user-schema",
 	}
 	assert.Equal(t, want, got[0])
 }

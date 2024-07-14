@@ -47,6 +47,7 @@ func TestProbeConvertEvent(t *testing.T) {
 		Attributes: []attribute.KeyValue{
 			semconv.DBQueryText("SELECT * FROM foo"),
 		},
+		TracerSchema: semconv.SchemaURL,
 	}
 	assert.Equal(t, want, got[0])
 }

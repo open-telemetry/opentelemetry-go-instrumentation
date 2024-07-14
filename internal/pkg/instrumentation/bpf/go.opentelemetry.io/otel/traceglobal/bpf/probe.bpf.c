@@ -27,6 +27,12 @@ char __license[] SEC("license") = "Dual MIT/GPL";
 #define MAX_CONCURRENT 50
 #define MAX_SPAN_NAME_LEN 64
 #define MAX_STATUS_DESCRIPTION_LEN 64
+#define MAX_TRACER_NAME_LEN 128
+#define MAX_TRACER_VERSION_LEN 32
+#define MAX_TRACER_SCHEMA_URL_LEN 128
+
+#define MAX_BUCKETS 8
+#define MAX_TRACERS 64
 
 struct span_description_t {
     char buf[MAX_STATUS_DESCRIPTION_LEN];
@@ -41,12 +47,36 @@ struct span_name_t {
     char buf[MAX_SPAN_NAME_LEN];
 };
 
+typedef struct tracer_id {
+    char name[MAX_TRACER_NAME_LEN];
+    char version[MAX_TRACER_VERSION_LEN];
+    char schema_url[MAX_TRACER_SCHEMA_URL_LEN];
+} tracer_id_t;
+
 struct otel_span_t {
     BASE_SPAN_PROPERTIES
     struct span_name_t span_name;
     otel_status_t status;
     otel_attributes_t attributes;
+    tracer_id_t tracer_id;
 };
+
+typedef struct go_tracer_id_partial {
+    struct go_string name;
+    struct go_string version;
+} go_tracer_id_partial_t;
+
+typedef struct go_tracer_id_full {
+    struct go_string name;
+    struct go_string version;
+    struct go_string schema_url;
+} go_tracer_id_full_t;
+
+typedef void* go_tracer_ptr; 
+
+// tracerProvider contains a map of tracers
+MAP_BUCKET_DEFINITION(go_tracer_id_partial_t, go_tracer_ptr)
+MAP_BUCKET_DEFINITION(go_tracer_id_full_t, go_tracer_ptr)
 
 struct {
 	__uint(type, BPF_MAP_TYPE_HASH);
@@ -62,6 +92,13 @@ struct {
 	__uint(max_entries, MAX_CONCURRENT);
 } span_name_by_context SEC(".maps");
 
+struct {
+	__uint(type, BPF_MAP_TYPE_HASH);
+	__type(key, void*);
+	__type(value, tracer_id_t);
+	__uint(max_entries, MAX_CONCURRENT);
+} tracer_id_by_context SEC(".maps");
+
 struct
 {
     __uint(type, BPF_MAP_TYPE_PERCPU_ARRAY);
@@ -70,14 +107,213 @@ struct
     __uint(max_entries, 2);
 } otel_span_storage_map SEC(".maps");
 
+struct
+{
+    __uint(type, BPF_MAP_TYPE_PERCPU_ARRAY);
+    __uint(key_size, sizeof(u32));
+    __uint(value_size, sizeof(MAP_BUCKET_TYPE(go_tracer_id_full_t, go_tracer_ptr)));
+    __uint(max_entries, 1);
+} golang_mapbucket_storage_map SEC(".maps");
+
+struct
+{
+    __uint(type, BPF_MAP_TYPE_PERCPU_ARRAY);
+    __uint(key_size, sizeof(u32));
+    __uint(value_size, sizeof(tracer_id_t));
+    __uint(max_entries, 1);
+} tracer_id_storage_map SEC(".maps");
+
+
+struct
+{
+   	__uint(type, BPF_MAP_TYPE_HASH);
+	__type(key, void*);
+	__type(value, tracer_id_t);
+	__uint(max_entries, MAX_TRACERS);
+} tracer_ptr_to_id_map SEC(".maps");
+
+
 // Injected in init
 volatile const u64 tracer_delegate_pos;
+volatile const u64 tracer_name_pos;
+volatile const u64 tracer_provider_pos;
+volatile const u64 tracer_provider_tracers_pos;
+volatile const u64 buckets_ptr_pos;
+
+volatile const bool tracer_id_contains_schemaURL;
 
 // read_span_name reads the span name from the provided span_name_ptr and stores the result in
 // span_name.buf.
 static __always_inline void read_span_name(struct span_name_t *span_name, const u64 span_name_len, void *span_name_ptr) {
     const u64 span_name_size = MAX_SPAN_NAME_LEN < span_name_len ? MAX_SPAN_NAME_LEN : span_name_len;
     bpf_probe_read(span_name->buf, span_name_size, span_name_ptr);
+}
+
+static __always_inline long fill_partial_tracer_id_from_tracers_map(void *tracers_map, go_tracer_ptr tracer, tracer_id_t *tracer_id) {
+    u64 tracers_count = 0;
+    long res = 0;
+    res = bpf_probe_read(&tracers_count, sizeof(tracers_count), tracers_map);
+    if (res < 0)
+    {
+        return -1;
+    }
+    if (tracers_count == 0)
+    {
+        return -1;
+    }
+    unsigned char log_2_bucket_count;
+    res = bpf_probe_read(&log_2_bucket_count, sizeof(log_2_bucket_count), tracers_map + 9);
+    if (res < 0)
+    {
+        return -1;
+    }
+    u64 bucket_count = 1 << log_2_bucket_count;
+    void *buckets_array;
+    res = bpf_probe_read(&buckets_array, sizeof(buckets_array), (void*)(tracers_map + buckets_ptr_pos));
+    if (res < 0)
+    {
+        return -1;
+    }
+    u32 map_id = 0;
+    MAP_BUCKET_TYPE(go_tracer_id_partial_t, go_tracer_ptr) *map_bucket = bpf_map_lookup_elem(&golang_mapbucket_storage_map, &map_id);
+    if (!map_bucket)
+    {
+        return -1;
+    }
+
+    for (u64 j = 0; j < MAX_BUCKETS; j++)
+    {
+        if (j >= bucket_count)
+        {
+            break;
+        }
+        res = bpf_probe_read(map_bucket, sizeof(MAP_BUCKET_TYPE(go_tracer_id_partial_t, go_tracer_ptr)), buckets_array + (j * sizeof(MAP_BUCKET_TYPE(go_tracer_id_partial_t, go_tracer_ptr))));
+        if (res < 0)
+        {
+            continue;
+        }
+        for (u64 i = 0; i < 8; i++)
+        {
+            if (map_bucket->tophash[i] == 0)
+            {
+                continue;
+            }
+            if (map_bucket->values[i] == NULL)
+            {
+                continue;
+            }
+            if (map_bucket->values[i] != tracer)
+            {
+                continue;
+            }
+            get_go_string_from_user_ptr(&map_bucket->keys[i].version, tracer_id->version, MAX_TRACER_VERSION_LEN);
+            return 0;
+        }
+    }
+    return 0;
+}
+
+static __always_inline long fill_full_tracer_id_from_tracers_map(void *tracers_map, go_tracer_ptr tracer, tracer_id_t *tracer_id) {
+    u64 tracers_count = 0;
+    long res = 0;
+    res = bpf_probe_read(&tracers_count, sizeof(tracers_count), tracers_map);
+    if (res < 0)
+    {
+        return -1;
+    }
+    if (tracers_count == 0)
+    {
+        return -1;
+    }
+    unsigned char log_2_bucket_count;
+    res = bpf_probe_read(&log_2_bucket_count, sizeof(log_2_bucket_count), tracers_map + 9);
+    if (res < 0)
+    {
+        return -1;
+    }
+    u64 bucket_count = 1 << log_2_bucket_count;
+    void *buckets_array;
+    res = bpf_probe_read(&buckets_array, sizeof(buckets_array), (void*)(tracers_map + buckets_ptr_pos));
+    if (res < 0)
+    {
+        return -1;
+    }
+    u32 map_id = 0;
+    MAP_BUCKET_TYPE(go_tracer_id_full_t, go_tracer_ptr) *map_bucket = bpf_map_lookup_elem(&golang_mapbucket_storage_map, &map_id);
+    if (!map_bucket)
+    {
+        return -1;
+    }
+
+    for (u64 j = 0; j < MAX_BUCKETS; j++)
+    {
+        if (j >= bucket_count)
+        {
+            break;
+        }
+        res = bpf_probe_read(map_bucket, sizeof(MAP_BUCKET_TYPE(go_tracer_id_full_t, go_tracer_ptr)), buckets_array + (j * sizeof(MAP_BUCKET_TYPE(go_tracer_id_full_t, go_tracer_ptr))));
+        if (res < 0)
+        {
+            continue;
+        }
+        for (u64 i = 0; i < 8; i++)
+        {
+            if (map_bucket->tophash[i] == 0)
+            {
+                continue;
+            }
+            if (map_bucket->values[i] == NULL)
+            {
+                continue;
+            }
+            if (map_bucket->values[i] != tracer)
+            {
+                continue;
+            }
+            get_go_string_from_user_ptr(&map_bucket->keys[i].version, tracer_id->version, MAX_TRACER_VERSION_LEN);
+            get_go_string_from_user_ptr(&map_bucket->keys[i].schema_url, tracer_id->schema_url, MAX_TRACER_SCHEMA_URL_LEN);
+            return 0;
+        }
+    }
+    return 0;
+}
+
+static __always_inline long fill_tracer_id(tracer_id_t *tracer_id, go_tracer_ptr tracer) {
+    // Check if the tracer id is already cached
+    tracer_id_t *cached_tracer_id = bpf_map_lookup_elem(&tracer_ptr_to_id_map, &tracer);
+    if (cached_tracer_id != NULL) {
+        *tracer_id = *cached_tracer_id;
+        return 0;
+    }
+
+    if (!get_go_string_from_user_ptr((void*)(tracer + tracer_name_pos), tracer_id->name, MAX_TRACER_NAME_LEN)) {
+        return -1;
+    }
+
+    long res = 0;
+    void *tracer_provider = NULL;
+    res = bpf_probe_read(&tracer_provider, sizeof(tracer_provider), (void*)(tracer + tracer_provider_pos));
+    if (res < 0) {
+        return res;
+    }
+
+    void *tracers_map = NULL;
+    res = bpf_probe_read(&tracers_map, sizeof(tracers_map), (void*)(tracer_provider + tracer_provider_tracers_pos));
+    if (res < 0) {
+        return res;
+    }
+
+    if (tracer_id_contains_schemaURL) {
+        res = fill_full_tracer_id_from_tracers_map(tracers_map, tracer, tracer_id);
+    } else {
+        res = fill_partial_tracer_id_from_tracers_map(tracers_map, tracer, tracer_id);
+    }
+    if (res < 0) {
+        return res;
+    }
+
+    bpf_map_update_elem(&tracer_ptr_to_id_map, &tracer, tracer_id, 0);
+    return 0;
 }
 
 // This instrumentation attaches uprobe to the following function:
@@ -104,6 +340,20 @@ int uprobe_Start(struct pt_regs *ctx) {
     get_Go_context(ctx, 2, 0, true, &go_context);
     void *key = get_consistent_key(ctx, go_context.data);
     bpf_map_update_elem(&span_name_by_context, &key, &span_name, 0);
+
+    // Get the tracer id
+    u32 map_id = 0;
+    tracer_id_t *tracer_id = bpf_map_lookup_elem(&tracer_id_storage_map, &map_id);
+    if (tracer_id == NULL) {
+        return 0;
+    }
+    __builtin_memset(tracer_id, 0, sizeof(tracer_id_t));
+
+    long res = fill_tracer_id(tracer_id, tracer_ptr);
+    if (res < 0) {
+        return 0;
+    }
+    bpf_map_update_elem(&tracer_id_by_context, &key, tracer_id, 0);
     return 0;
 }
 
@@ -122,6 +372,11 @@ int uprobe_Start_Returns(struct pt_regs *ctx) {
         return 0;
     }
 
+    tracer_id_t *tracer_id = bpf_map_lookup_elem(&tracer_id_by_context, &key);
+    if (tracer_id == NULL) {
+        goto done_without_tracer_id;
+    }
+
     u32 zero_span_key = 0;
     struct otel_span_t *zero_span = bpf_map_lookup_elem(&otel_span_storage_map, &zero_span_key);
     if (zero_span == NULL) {
@@ -138,7 +393,8 @@ int uprobe_Start_Returns(struct pt_regs *ctx) {
     }
 
     otel_span->start_time = bpf_ktime_get_ns();
-    copy_byte_arrays((unsigned char*)span_name->buf, (unsigned char*)otel_span->span_name.buf, MAX_SPAN_NAME_LEN);
+    otel_span->span_name = *span_name;
+    otel_span->tracer_id = *tracer_id;
 
     // Get the ** returned ** Span (concrete type of the interfaces)
     void *span_ptr_val = get_argument(ctx, 4);
@@ -157,6 +413,8 @@ int uprobe_Start_Returns(struct pt_regs *ctx) {
     start_tracking_span(go_context.data, &otel_span->sc);
 
 done:
+    bpf_map_delete_elem(&tracer_id_by_context, &key);
+done_without_tracer_id:
     bpf_map_delete_elem(&span_name_by_context, &key);
     return 0;
 }

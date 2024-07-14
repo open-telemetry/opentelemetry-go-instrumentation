@@ -143,6 +143,7 @@ func convertEvent(e *event) []*probe.SpanEvent {
 			SpanContext:       &sc,
 			Attributes:        msgAttrs,
 			ParentSpanContext: pscPtr,
+			TracerSchema:      semconv.SchemaURL,
 		})
 	}
 
