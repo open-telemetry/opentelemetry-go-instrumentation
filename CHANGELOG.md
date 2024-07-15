@@ -8,21 +8,24 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 
 ## [Unreleased]
 
+## [v0.14.0-alpha] - 2024-07-15
+
 ### Added
 
-- Initial support for `trace-flags`. ([#868](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/868))
-- Support `google.golang.org/grpc` `1.66.0-dev`. ([#872](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/872))
 - Add support to log level through command line flag. ([#842](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/842))
 - The `WithLogLevel` function and `LogLevel` type are added to set the log level for `Instrumentation`. ([#842](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/842))
+- The `otelglobal` probe now collects the user provided tracer name, version and schemaURL. ([#844](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/844))
+- Add `codespell` make target. ([#863](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/863))
+- Initial support for `trace-flags`. ([#868](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/868))
+- Support `google.golang.org/grpc` `1.66.0-dev`. ([#872](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/872))
 - Add telemetry distro name & version resource attributes. ([#897](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/897))
 - Support `google.golang.org/grpc` `1.65.0`. ([#904](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/904))
 - Support Go `v1.21.12`. ([#905](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/905))
 - Support Go `v1.22.5`. ([#905](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/905))
-- Support `go.opentelemetry.io/otel@v1.28.0`. ([#904](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/904))
+- Support `go.opentelemetry.io/otel@v1.28.0`. ([#905](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/905))
 - Support `google.golang.org/grpc` `1.63.3`. ([#916](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/916))
 - Support `google.golang.org/grpc` `1.64.1`. ([#916](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/916))
 - Support `golang.org/x/net` `v0.27.0`. ([#917](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/917))
-- The `otelglobal` probe now collects the user provided tracer name, version and schemaURL. ([#844](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/844))
 
 ### Changed
 
@@ -38,8 +41,7 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 
 ### Fixed
 
-- HTTP client: Use Host field in URL if the Request Host is not present. ([#888](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/888))
-- Add make target 'codespell'. ([#863](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/863))
+- The HTTP client now uses the `Host` field from the URL if the `Request.Host` is not present. ([#888](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/888))
 
 ## [v0.13.0-alpha] - 2024-06-04
 
@@ -376,7 +378,8 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 
 This is the first release of OpenTelemetry Go Automatic Instrumentation.
 
-[Unreleased]: https://github.com/open-telemetry/opentelemetry-go-instrumentation/compare/v0.13.0-alpha...HEAD
+[Unreleased]: https://github.com/open-telemetry/opentelemetry-go-instrumentation/compare/v0.14.0-alpha...HEAD
+[v0.14.0-alpha]: https://github.com/open-telemetry/opentelemetry-go-instrumentation/releases/tag/v0.14.0-alpha
 [v0.13.0-alpha]: https://github.com/open-telemetry/opentelemetry-go-instrumentation/releases/tag/v0.13.0-alpha
 [v0.12.0-alpha]: https://github.com/open-telemetry/opentelemetry-go-instrumentation/releases/tag/v0.12.0-alpha
 [v0.11.0-alpha]: https://github.com/open-telemetry/opentelemetry-go-instrumentation/releases/tag/v0.11.0-alpha
