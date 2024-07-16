@@ -3,7 +3,7 @@
 
 module-sets:
   alpha:
-    version: v0.13.0-alpha
+    version: v0.14.0-alpha
     modules:
       - go.opentelemetry.io/auto
 excluded-modules:
