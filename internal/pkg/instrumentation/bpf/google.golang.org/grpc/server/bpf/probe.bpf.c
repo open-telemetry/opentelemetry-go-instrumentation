@@ -14,9 +14,10 @@
 
 #include "arguments.h"
 #include "go_types.h"
-#include "span_context.h"
+#include "trace/span_context.h"
 #include "go_context.h"
 #include "uprobe.h"
+#include "trace/start_span.h"
 
 char __license[] SEC("license") = "Dual MIT/GPL";
 
@@ -70,6 +71,10 @@ volatile const u64 stream_id_pos;
 volatile const u64 stream_ctx_pos;
 volatile const bool is_new_frame_pos;
 
+static __always_inline long dummy_extract_span_context_from_headers(void *stream_id, struct span_context *parent_span_context) {
+    return 0;
+}
+
 // This instrumentation attaches uprobe to the following function:
 // func (s *Server) handleStream(t transport.ServerTransport, stream *transport.Stream, trInfo *traceInfo)
 SEC("uprobe/server_handleStream")
@@ -78,12 +83,9 @@ int uprobe_server_handleStream(struct pt_regs *ctx)
     u64 stream_pos = 4;
     void *stream_ptr = get_argument(ctx, stream_pos);
     // Get key
-    void *ctx_iface = get_Go_context(ctx, 4, stream_ctx_pos, false);
-    if (ctx_iface == NULL)
-    {
-        return 0;
-    }
-    void *key = get_consistent_key(ctx, ctx_iface);
+    struct go_iface go_context = {0};
+    get_Go_context(ctx, 4, stream_ctx_pos, false, &go_context);
+    void *key = get_consistent_key(ctx, go_context.data);
     void *grpcReq_event_ptr = bpf_map_lookup_elem(&grpc_events, &key);
     if (grpcReq_event_ptr != NULL)
     {
@@ -97,19 +99,27 @@ int uprobe_server_handleStream(struct pt_regs *ctx)
     struct grpc_request_t *grpcReq = bpf_map_lookup_elem(&streamid_to_grpc_events, &stream_id);
     if (grpcReq == NULL) {
         // No parent span context, generate new span context
-        u32 map_id = 0;
-        grpcReq = bpf_map_lookup_elem(&grpc_storage_map, &map_id);
+        u32 zero = 0;
+        grpcReq = bpf_map_lookup_elem(&grpc_storage_map, &zero);
         if (grpcReq == NULL) {
             bpf_printk("failed to get grpcReq from storage map");
             return 0;
         }
-        get_root_span_context(&grpcReq->sc);
-    } else {
-        // found parent span context
-        get_span_context_from_parent(&grpcReq->psc, &grpcReq->sc);
     }
 
     grpcReq->start_time = bpf_ktime_get_ns();
+
+    start_span_params_t start_span_params = {
+        .ctx = ctx,
+        .sc = &grpcReq->sc,
+        .psc = &grpcReq->psc,
+        .go_context = &go_context,
+        // The parent span context is set by operateHeader probe
+        .get_parent_span_context_fn = dummy_extract_span_context_from_headers,
+        .get_parent_span_context_arg = NULL,
+    };
+    start_span(&start_span_params);
+
     // Set attributes
     if (!get_go_string_from_user_ptr((void *)(stream_ptr + stream_method_ptr_pos), grpcReq->method, sizeof(grpcReq->method)))
     {
@@ -119,7 +129,7 @@ int uprobe_server_handleStream(struct pt_regs *ctx)
 
     // Write event
     bpf_map_update_elem(&grpc_events, &key, grpcReq, 0);
-    start_tracking_span(ctx_iface, &grpcReq->sc);
+    start_tracking_span(go_context.data, &grpcReq->sc);
 done:
     bpf_map_delete_elem(&streamid_to_grpc_events, &stream_id);
     return 0;

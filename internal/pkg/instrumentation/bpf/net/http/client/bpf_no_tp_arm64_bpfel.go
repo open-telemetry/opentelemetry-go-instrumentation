@@ -95,11 +95,11 @@ type bpf_no_tpProgramSpecs struct {
 type bpf_no_tpMapSpecs struct {
 	AllocMap                   *ebpf.MapSpec `ebpf:"alloc_map"`
 	Events                     *ebpf.MapSpec `ebpf:"events"`
+	GoContextToSc              *ebpf.MapSpec `ebpf:"go_context_to_sc"`
 	HttpClientUprobeStorageMap *ebpf.MapSpec `ebpf:"http_client_uprobe_storage_map"`
 	HttpEvents                 *ebpf.MapSpec `ebpf:"http_events"`
 	HttpHeaders                *ebpf.MapSpec `ebpf:"http_headers"`
 	SliceArrayBuffMap          *ebpf.MapSpec `ebpf:"slice_array_buff_map"`
-	TrackedSpans               *ebpf.MapSpec `ebpf:"tracked_spans"`
 	TrackedSpansBySc           *ebpf.MapSpec `ebpf:"tracked_spans_by_sc"`
 }
 
@@ -124,11 +124,11 @@ func (o *bpf_no_tpObjects) Close() error {
 type bpf_no_tpMaps struct {
 	AllocMap                   *ebpf.Map `ebpf:"alloc_map"`
 	Events                     *ebpf.Map `ebpf:"events"`
+	GoContextToSc              *ebpf.Map `ebpf:"go_context_to_sc"`
 	HttpClientUprobeStorageMap *ebpf.Map `ebpf:"http_client_uprobe_storage_map"`
 	HttpEvents                 *ebpf.Map `ebpf:"http_events"`
 	HttpHeaders                *ebpf.Map `ebpf:"http_headers"`
 	SliceArrayBuffMap          *ebpf.Map `ebpf:"slice_array_buff_map"`
-	TrackedSpans               *ebpf.Map `ebpf:"tracked_spans"`
 	TrackedSpansBySc           *ebpf.Map `ebpf:"tracked_spans_by_sc"`
 }
 
@@ -136,11 +136,11 @@ func (m *bpf_no_tpMaps) Close() error {
 	return _Bpf_no_tpClose(
 		m.AllocMap,
 		m.Events,
+		m.GoContextToSc,
 		m.HttpClientUprobeStorageMap,
 		m.HttpEvents,
 		m.HttpHeaders,
 		m.SliceArrayBuffMap,
-		m.TrackedSpans,
 		m.TrackedSpansBySc,
 	)
 }

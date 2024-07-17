@@ -89,11 +89,11 @@ type bpfProgramSpecs struct {
 type bpfMapSpecs struct {
 	AllocMap                   *ebpf.MapSpec `ebpf:"alloc_map"`
 	Events                     *ebpf.MapSpec `ebpf:"events"`
+	GoContextToSc              *ebpf.MapSpec `ebpf:"go_context_to_sc"`
 	GolangMapbucketStorageMap  *ebpf.MapSpec `ebpf:"golang_mapbucket_storage_map"`
 	HttpServerUprobeStorageMap *ebpf.MapSpec `ebpf:"http_server_uprobe_storage_map"`
 	HttpServerUprobes          *ebpf.MapSpec `ebpf:"http_server_uprobes"`
 	SliceArrayBuffMap          *ebpf.MapSpec `ebpf:"slice_array_buff_map"`
-	TrackedSpans               *ebpf.MapSpec `ebpf:"tracked_spans"`
 	TrackedSpansBySc           *ebpf.MapSpec `ebpf:"tracked_spans_by_sc"`
 }
 
@@ -118,11 +118,11 @@ func (o *bpfObjects) Close() error {
 type bpfMaps struct {
 	AllocMap                   *ebpf.Map `ebpf:"alloc_map"`
 	Events                     *ebpf.Map `ebpf:"events"`
+	GoContextToSc              *ebpf.Map `ebpf:"go_context_to_sc"`
 	GolangMapbucketStorageMap  *ebpf.Map `ebpf:"golang_mapbucket_storage_map"`
 	HttpServerUprobeStorageMap *ebpf.Map `ebpf:"http_server_uprobe_storage_map"`
 	HttpServerUprobes          *ebpf.Map `ebpf:"http_server_uprobes"`
 	SliceArrayBuffMap          *ebpf.Map `ebpf:"slice_array_buff_map"`
-	TrackedSpans               *ebpf.Map `ebpf:"tracked_spans"`
 	TrackedSpansBySc           *ebpf.Map `ebpf:"tracked_spans_by_sc"`
 }
 
@@ -130,11 +130,11 @@ func (m *bpfMaps) Close() error {
 	return _BpfClose(
 		m.AllocMap,
 		m.Events,
+		m.GoContextToSc,
 		m.GolangMapbucketStorageMap,
 		m.HttpServerUprobeStorageMap,
 		m.HttpServerUprobes,
 		m.SliceArrayBuffMap,
-		m.TrackedSpans,
 		m.TrackedSpansBySc,
 	)
 }

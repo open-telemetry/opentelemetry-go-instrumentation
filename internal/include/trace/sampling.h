@@ -12,26 +12,21 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "span_context.h"
+#ifndef _SAMPLING_H_
+#define _SAMPLING_H_
+
 #include "common.h"
 #include "span_context.h"
 
-#ifndef _SPAN_OUTPUT_H_
-#define _SPAN_OUTPUT_H_
+typedef struct sampling_parameters {
+    struct span_context *psc;
+    u8 *trace_id;
+    // TODO: add more fields
+} sampling_parameters_t;
 
-struct
-{
-    __uint(type, BPF_MAP_TYPE_PERF_EVENT_ARRAY);
-} events SEC(".maps");
-
-// Output a record to the perf buffer. If the span context is sampled, the record is outputted.
-// Returns 0 on success, negative error code on failure.
-static __always_inline long output_span_event(void *ctx, void *data, u64 size, struct span_context *sc) {
-    bool sampled = (sc != NULL && is_sampled(sc));
-    if (sampled) {
-        return bpf_perf_event_output(ctx, &events, BPF_F_CURRENT_CPU, data, size);
-    }
-    return 0;
+static __always_inline bool should_sample(sampling_parameters_t *params) {
+    // TODO
+    return true;
 }
 
 #endif

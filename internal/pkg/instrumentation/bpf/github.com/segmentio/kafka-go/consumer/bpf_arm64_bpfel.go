@@ -82,16 +82,15 @@ type bpfProgramSpecs struct {
 //
 // It can be passed ebpf.CollectionSpec.Assign.
 type bpfMapSpecs struct {
-	AllocMap                    *ebpf.MapSpec `ebpf:"alloc_map"`
-	Events                      *ebpf.MapSpec `ebpf:"events"`
-	GoroutineToGoContext        *ebpf.MapSpec `ebpf:"goroutine_to_go_context"`
-	KafkaEvents                 *ebpf.MapSpec `ebpf:"kafka_events"`
-	KafkaReaderToConn           *ebpf.MapSpec `ebpf:"kafka_reader_to_conn"`
-	KafkaRequestStorageMap      *ebpf.MapSpec `ebpf:"kafka_request_storage_map"`
-	ParentSpanContextStorageMap *ebpf.MapSpec `ebpf:"parent_span_context_storage_map"`
-	SliceArrayBuffMap           *ebpf.MapSpec `ebpf:"slice_array_buff_map"`
-	TrackedSpans                *ebpf.MapSpec `ebpf:"tracked_spans"`
-	TrackedSpansBySc            *ebpf.MapSpec `ebpf:"tracked_spans_by_sc"`
+	AllocMap               *ebpf.MapSpec `ebpf:"alloc_map"`
+	Events                 *ebpf.MapSpec `ebpf:"events"`
+	GoContextToSc          *ebpf.MapSpec `ebpf:"go_context_to_sc"`
+	GoroutineToGoContext   *ebpf.MapSpec `ebpf:"goroutine_to_go_context"`
+	KafkaEvents            *ebpf.MapSpec `ebpf:"kafka_events"`
+	KafkaReaderToConn      *ebpf.MapSpec `ebpf:"kafka_reader_to_conn"`
+	KafkaRequestStorageMap *ebpf.MapSpec `ebpf:"kafka_request_storage_map"`
+	SliceArrayBuffMap      *ebpf.MapSpec `ebpf:"slice_array_buff_map"`
+	TrackedSpansBySc       *ebpf.MapSpec `ebpf:"tracked_spans_by_sc"`
 }
 
 // bpfObjects contains all objects after they have been loaded into the kernel.
@@ -113,29 +112,27 @@ func (o *bpfObjects) Close() error {
 //
 // It can be passed to loadBpfObjects or ebpf.CollectionSpec.LoadAndAssign.
 type bpfMaps struct {
-	AllocMap                    *ebpf.Map `ebpf:"alloc_map"`
-	Events                      *ebpf.Map `ebpf:"events"`
-	GoroutineToGoContext        *ebpf.Map `ebpf:"goroutine_to_go_context"`
-	KafkaEvents                 *ebpf.Map `ebpf:"kafka_events"`
-	KafkaReaderToConn           *ebpf.Map `ebpf:"kafka_reader_to_conn"`
-	KafkaRequestStorageMap      *ebpf.Map `ebpf:"kafka_request_storage_map"`
-	ParentSpanContextStorageMap *ebpf.Map `ebpf:"parent_span_context_storage_map"`
-	SliceArrayBuffMap           *ebpf.Map `ebpf:"slice_array_buff_map"`
-	TrackedSpans                *ebpf.Map `ebpf:"tracked_spans"`
-	TrackedSpansBySc            *ebpf.Map `ebpf:"tracked_spans_by_sc"`
+	AllocMap               *ebpf.Map `ebpf:"alloc_map"`
+	Events                 *ebpf.Map `ebpf:"events"`
+	GoContextToSc          *ebpf.Map `ebpf:"go_context_to_sc"`
+	GoroutineToGoContext   *ebpf.Map `ebpf:"goroutine_to_go_context"`
+	KafkaEvents            *ebpf.Map `ebpf:"kafka_events"`
+	KafkaReaderToConn      *ebpf.Map `ebpf:"kafka_reader_to_conn"`
+	KafkaRequestStorageMap *ebpf.Map `ebpf:"kafka_request_storage_map"`
+	SliceArrayBuffMap      *ebpf.Map `ebpf:"slice_array_buff_map"`
+	TrackedSpansBySc       *ebpf.Map `ebpf:"tracked_spans_by_sc"`
 }
 
 func (m *bpfMaps) Close() error {
 	return _BpfClose(
 		m.AllocMap,
 		m.Events,
+		m.GoContextToSc,
 		m.GoroutineToGoContext,
 		m.KafkaEvents,
 		m.KafkaReaderToConn,
 		m.KafkaRequestStorageMap,
-		m.ParentSpanContextStorageMap,
 		m.SliceArrayBuffMap,
-		m.TrackedSpans,
 		m.TrackedSpansBySc,
 	)
 }

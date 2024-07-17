@@ -13,10 +13,11 @@
 // limitations under the License.
 
 #include "arguments.h"
-#include "span_context.h"
+#include "trace/span_context.h"
 #include "go_context.h"
 #include "go_types.h"
 #include "uprobe.h"
+#include "trace/start_span.h"
 
 char __license[] SEC("license") = "Dual MIT/GPL";
 
@@ -58,19 +59,20 @@ int uprobe_queryDC(struct pt_regs *ctx) {
         bpf_probe_read(sql_request.query, query_size, query_str_ptr);
     }
 
-    // Get parent if exists
-    void *context_ptr_val = get_Go_context(ctx, 3, 0, true);
-    struct span_context *span_ctx = get_parent_span_context(context_ptr_val);
-    if (span_ctx != NULL) {
-        // Set the parent context
-        bpf_probe_read(&sql_request.psc, sizeof(sql_request.psc), span_ctx);
-        get_span_context_from_parent(&sql_request.psc, &sql_request.sc);
-    } else {
-       get_root_span_context(&sql_request.sc);
-    }
+    struct go_iface go_context = {0};
+    get_Go_context(ctx, 2, 0, true, &go_context);
+    start_span_params_t start_span_params = {
+        .ctx = ctx,
+        .go_context = &go_context,
+        .psc = &sql_request.psc,
+        .sc = &sql_request.sc,
+        .get_parent_span_context_fn = NULL,
+        .get_parent_span_context_arg = NULL,
+    };
+    start_span(&start_span_params);
 
     // Get key
-    void *key = get_consistent_key(ctx, context_ptr_val);
+    void *key = get_consistent_key(ctx, go_context.data);
 
     bpf_map_update_elem(&sql_events, &key, &sql_request, 0);
     return 0;
@@ -100,19 +102,20 @@ int uprobe_execDC(struct pt_regs *ctx) {
         bpf_probe_read(sql_request.query, query_size, query_str_ptr);
     }
 
-    // Get parent if exists
-    void *context_ptr_val = get_Go_context(ctx, 3, 0, true);
-    struct span_context *span_ctx = get_parent_span_context(context_ptr_val);
-    if (span_ctx != NULL) {
-        // Set the parent context
-        bpf_probe_read(&sql_request.psc, sizeof(sql_request.psc), span_ctx);
-        get_span_context_from_parent(&sql_request.psc, &sql_request.sc);
-    } else {
-        get_root_span_context(&sql_request.sc);
-    }
+    struct go_iface go_context = {0};
+    get_Go_context(ctx, 2, 0, true, &go_context);
+    start_span_params_t start_span_params = {
+        .ctx = ctx,
+        .go_context = &go_context,
+        .psc = &sql_request.psc,
+        .sc = &sql_request.sc,
+        .get_parent_span_context_fn = NULL,
+        .get_parent_span_context_arg = NULL,
+    };
+    start_span(&start_span_params);
 
     // Get key
-    void *key = get_consistent_key(ctx, context_ptr_val);
+    void *key = get_consistent_key(ctx, go_context.data);
 
     bpf_map_update_elem(&sql_events, &key, &sql_request, 0);
     return 0;

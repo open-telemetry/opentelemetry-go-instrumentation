@@ -13,11 +13,12 @@
 // limitations under the License.
 
 #include "arguments.h"
-#include "span_context.h"
+#include "trace/span_context.h"
 #include "go_context.h"
 #include "go_types.h"
 #include "uprobe.h"
-#include "span_output.h"
+#include "trace/span_output.h"
+#include "trace/start_span.h"
 
 char __license[] SEC("license") = "Dual MIT/GPL";
 
@@ -66,14 +67,6 @@ struct
     __uint(max_entries, 1);
 } kafka_request_storage_map SEC(".maps");
 
-struct
-{
-    __uint(type, BPF_MAP_TYPE_PERCPU_ARRAY);
-    __uint(key_size, sizeof(u32));
-    __uint(value_size, sizeof(struct span_context));
-    __uint(max_entries, 1);
-} parent_span_context_storage_map SEC(".maps");
-
 // https://github.com/segmentio/kafka-go/blob/main/protocol/record.go#L48
 struct kafka_header_t {
     struct go_string key;
@@ -92,7 +85,7 @@ volatile const u64 reader_config_group_id_pos;
 
 #define MAX_HEADERS 20
 
-static __always_inline struct span_context *extract_span_context_from_headers(void *message) {
+static __always_inline long extract_span_context_from_headers(void *message, struct span_context *parent_span_context) {
     // Read the headers slice descriptor
     void *headers = (void *)(message + message_headers_pos);
     struct go_slice headers_slice = {0};
@@ -100,13 +93,6 @@ static __always_inline struct span_context *extract_span_context_from_headers(vo
 
     char key[W3C_KEY_LENGTH] = "traceparent";
     char current_key[W3C_KEY_LENGTH];
-
-    u32 map_id = 0;
-    struct span_context *parent_span_context = bpf_map_lookup_elem(&parent_span_context_storage_map, &map_id);
-    if (!parent_span_context)
-    {
-        return NULL;
-    }
 
     for (u64 i = 0; i < headers_slice.len; i++) {
         if (i >= MAX_HEADERS) {
@@ -123,12 +109,12 @@ static __always_inline struct span_context *extract_span_context_from_headers(vo
                 char val[W3C_VAL_LENGTH];
                 bpf_probe_read(val, W3C_VAL_LENGTH, header.value.array);
                 w3c_string_to_span_context(val, parent_span_context);
-                return parent_span_context;
+                return 0;
             }
         }
     }
 
-    return NULL;
+    return -1;
 }
 
 // This instrumentation attaches uprobe to the following function:
@@ -146,7 +132,8 @@ int uprobe_FetchMessage(struct pt_regs *ctx) {
     Steps 2-4 are executed in a separate goroutine from the one the user of the library.
     */
     void *reader = get_argument(ctx, 1);
-    void *context_data_ptr = get_Go_context(ctx, 3, 0, true);
+    struct go_iface go_context = {0};
+    get_Go_context(ctx, 2, 0, true, &go_context);
     void *goroutine = (void *)GOROUTINE(ctx);
     struct kafka_request_t *kafka_request = bpf_map_lookup_elem(&kafka_events, &goroutine);
     if (kafka_request == NULL)
@@ -166,7 +153,7 @@ int uprobe_FetchMessage(struct pt_regs *ctx) {
 
 save_context:
     // Save the context for the return probe
-    bpf_map_update_elem(&goroutine_to_go_context, &goroutine, &context_data_ptr, 0);
+    bpf_map_update_elem(&goroutine_to_go_context, &goroutine, &go_context.data, 0);
     return 0;
 }
 
@@ -190,15 +177,19 @@ int uprobe_FetchMessage_Returns(struct pt_regs *ctx) {
     // The message returned on the stack since it returned as a struct and not a pointer
     void *message = (void *)(PT_REGS_SP(ctx) + 8);
 
+    struct go_iface go_context = {0};
+    get_Go_context(ctx, 2, 0, true, &go_context);
+
     // Get the parent span context from the message headers
-    struct span_context *parent_span_ctx = extract_span_context_from_headers(message);
-    if (parent_span_ctx != NULL) {
-        // Set the parent context
-        bpf_probe_read(&kafka_request->psc, sizeof(kafka_request->psc), parent_span_ctx);
-        get_span_context_from_parent(parent_span_ctx, &kafka_request->sc);
-    } else {
-        get_root_span_context(&kafka_request->sc);
-    }
+    start_span_params_t start_span_params = {
+        .ctx = ctx,
+        .sc = &kafka_request->sc,
+        .psc = &kafka_request->psc,
+        .go_context = &go_context,
+        .get_parent_span_context_fn = extract_span_context_from_headers,
+        .get_parent_span_context_arg = message,
+    };
+    start_span(&start_span_params);
 
     // Collecting message attributes
     // topic

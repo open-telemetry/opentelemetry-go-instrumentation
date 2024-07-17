@@ -109,6 +109,7 @@ type bpfMapSpecs struct {
 	ActiveSpansBySpanPtr      *ebpf.MapSpec `ebpf:"active_spans_by_span_ptr"`
 	AllocMap                  *ebpf.MapSpec `ebpf:"alloc_map"`
 	Events                    *ebpf.MapSpec `ebpf:"events"`
+	GoContextToSc             *ebpf.MapSpec `ebpf:"go_context_to_sc"`
 	GolangMapbucketStorageMap *ebpf.MapSpec `ebpf:"golang_mapbucket_storage_map"`
 	OtelSpanStorageMap        *ebpf.MapSpec `ebpf:"otel_span_storage_map"`
 	SliceArrayBuffMap         *ebpf.MapSpec `ebpf:"slice_array_buff_map"`
@@ -116,7 +117,6 @@ type bpfMapSpecs struct {
 	TracerIdByContext         *ebpf.MapSpec `ebpf:"tracer_id_by_context"`
 	TracerIdStorageMap        *ebpf.MapSpec `ebpf:"tracer_id_storage_map"`
 	TracerPtrToIdMap          *ebpf.MapSpec `ebpf:"tracer_ptr_to_id_map"`
-	TrackedSpans              *ebpf.MapSpec `ebpf:"tracked_spans"`
 	TrackedSpansBySc          *ebpf.MapSpec `ebpf:"tracked_spans_by_sc"`
 }
 
@@ -142,6 +142,7 @@ type bpfMaps struct {
 	ActiveSpansBySpanPtr      *ebpf.Map `ebpf:"active_spans_by_span_ptr"`
 	AllocMap                  *ebpf.Map `ebpf:"alloc_map"`
 	Events                    *ebpf.Map `ebpf:"events"`
+	GoContextToSc             *ebpf.Map `ebpf:"go_context_to_sc"`
 	GolangMapbucketStorageMap *ebpf.Map `ebpf:"golang_mapbucket_storage_map"`
 	OtelSpanStorageMap        *ebpf.Map `ebpf:"otel_span_storage_map"`
 	SliceArrayBuffMap         *ebpf.Map `ebpf:"slice_array_buff_map"`
@@ -149,7 +150,6 @@ type bpfMaps struct {
 	TracerIdByContext         *ebpf.Map `ebpf:"tracer_id_by_context"`
 	TracerIdStorageMap        *ebpf.Map `ebpf:"tracer_id_storage_map"`
 	TracerPtrToIdMap          *ebpf.Map `ebpf:"tracer_ptr_to_id_map"`
-	TrackedSpans              *ebpf.Map `ebpf:"tracked_spans"`
 	TrackedSpansBySc          *ebpf.Map `ebpf:"tracked_spans_by_sc"`
 }
 
@@ -158,6 +158,7 @@ func (m *bpfMaps) Close() error {
 		m.ActiveSpansBySpanPtr,
 		m.AllocMap,
 		m.Events,
+		m.GoContextToSc,
 		m.GolangMapbucketStorageMap,
 		m.OtelSpanStorageMap,
 		m.SliceArrayBuffMap,
@@ -165,7 +166,6 @@ func (m *bpfMaps) Close() error {
 		m.TracerIdByContext,
 		m.TracerIdStorageMap,
 		m.TracerPtrToIdMap,
-		m.TrackedSpans,
 		m.TrackedSpansBySc,
 	)
 }
