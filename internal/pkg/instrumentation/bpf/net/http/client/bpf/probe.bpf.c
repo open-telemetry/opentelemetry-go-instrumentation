@@ -1,3 +1,6 @@
+// Copyright The OpenTelemetry Authors
+// SPDX-License-Identifier: Apache-2.0
+
 #include "arguments.h"
 #include "trace/span_context.h"
 #include "go_context.h"
