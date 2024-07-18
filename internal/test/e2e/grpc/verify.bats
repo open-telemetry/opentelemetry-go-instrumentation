@@ -1,6 +1,6 @@
 #!/usr/bin/env bats
 
-load ../../test_helpers/utilities
+load ../../test_helpers/utilities.sh
 
 SCOPE="go.opentelemetry.io/auto/google.golang.org/grpc"
 
