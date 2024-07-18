@@ -178,7 +178,7 @@ func (m *Manager) Run(ctx context.Context, target *process.TargetDetails) error 
 }
 
 func (m *Manager) load(target *process.TargetDetails) error {
-	// Allow the current process to lock memory for eBPF resources.
+	// Remove resource limits for kernels <5.11.
 	if err := rlimit.RemoveMemlock(); err != nil {
 		return err
 	}
