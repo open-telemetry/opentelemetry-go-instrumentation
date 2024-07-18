@@ -1,3 +1,8 @@
+#!/usr/bin/env bash
+
+# Copyright The OpenTelemetry Authors
+# SPDX-License-Identifier: Apache-2.0
+
 # DATA RETRIEVERS
 
 # Returns a list of span names emitted by a given library/scope
