@@ -2,7 +2,7 @@
 
 [![PkgGoDev](https://pkg.go.dev/badge/go.opentelemetry.io/auto)](https://pkg.go.dev/go.opentelemetry.io/auto)
 
-This repository provides [OpenTelemetry] instrumentation for [Go] libraries using [eBPF].
+This repository provides [OpenTelemetry] tracing instrumentation for [Go] libraries using [eBPF].
 
 :construction: This project is currently work in progress.
 

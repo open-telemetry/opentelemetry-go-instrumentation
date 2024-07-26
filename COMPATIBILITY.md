@@ -3,7 +3,7 @@
 ## Default `otel` Global Providers Compatibility
 
 Auto-instrumentation can be configured to capture the telemetry sent to the
-[`otel`] default global providers.
+[`otel`] default global tracer provider.
 
 Supported versions of [`otel`]:
 
@@ -13,18 +13,18 @@ Supported versions of [`otel`]:
 
 ## Instrumented Library Compatibility
 
-Instrumentation is provided for the following Go libraries.
+Tracing instrumentation is provided for the following Go libraries.
 
-- [`database/sql`](#database/sql)
-- [`github.com/segmentio/kafka-go`](#github.com/segmentio/kafka-go)
-- [`google.golang.org/grpc`](#google.golang.org/grpc)
-- [`net/http`](#net/http)
+- [`database/sql`](#databasesql)
+- [`github.com/segmentio/kafka-go`](#githubcomsegmentiokafka-go)
+- [`google.golang.org/grpc`](#googlegolangorggrpc)
+- [`net/http`](#nethttp)
 
 ### database/sql
 
 [Package documentation](https://pkg.go.dev/database/sql)
 
-Supported version ranges: 
+Supported version ranges:
 
 - `go1.12` to `go1.22.5`
 
@@ -32,7 +32,7 @@ Supported version ranges:
 
 [Package documentation](https://pkg.go.dev/github.com/segmentio/kafka-go)
 
-Supported version ranges: 
+Supported version ranges:
 
 - `v0.4.1` to `v0.4.47`
 
@@ -40,7 +40,7 @@ Supported version ranges:
 
 [Package documentation](https://pkg.go.dev/google.golang.org/grpc)
 
-Supported version ranges: 
+Supported version ranges:
 
 - `v1.14.0` to `v1.66.0`
 
@@ -48,6 +48,6 @@ Supported version ranges:
 
 [Package documentation](https://pkg.go.dev/net/http)
 
-Supported version ranges: 
+Supported version ranges:
 
 - `go1.12` to `go1.22.5`
