@@ -7,10 +7,15 @@ import (
 	"testing"
 
 	"github.com/cilium/ebpf"
+	"github.com/cilium/ebpf/rlimit"
 	"github.com/stretchr/testify/assert"
 )
 
 func mockEbpfCollectionForSampling() (*ebpf.Collection, error) {
+	err := rlimit.RemoveMemlock()
+	if err != nil {
+		return nil, err
+	}
 	samplersConfigMapSpec := &ebpf.MapSpec{
 		Name:       samplersConfigMapName,
 		Type:       ebpf.Hash,

@@ -8,6 +8,9 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 
 ## [Unreleased]
 
+### Added
+-- Add support for spec-defined samplers which can be configured using the `OTEL_TRACES_SAMPLER` and `OTEL_TRACES_SAMPLER_ARG` environment variables. ([#971](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/971))
+
 ## [v0.14.0-alpha] - 2024-07-15
 
 ### Added
