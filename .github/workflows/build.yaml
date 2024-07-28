@@ -26,7 +26,7 @@ jobs:
         run: |
           uname -p;
           clang --version;
-      - run: make test
+      - run: sudo make test
       - run: make check-clean-work-tree
   generate-and-test-arm64:
     runs-on: macos-latest
