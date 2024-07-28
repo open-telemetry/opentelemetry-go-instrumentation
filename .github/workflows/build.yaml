@@ -26,7 +26,8 @@ jobs:
         run: |
           uname -p;
           clang --version;
-      - run: sudo make test
+      - run: sudo prlimit --pid $$ --nproc=unlimited
+      - run: make test
       - run: make check-clean-work-tree
   generate-and-test-arm64:
     runs-on: macos-latest
