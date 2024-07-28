@@ -20,6 +20,7 @@ import (
 
 	"go.opentelemetry.io/auto/internal/pkg/inject"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/bpffs"
+	"go.opentelemetry.io/auto/internal/pkg/instrumentation/probe/sampling"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/utils"
 	"go.opentelemetry.io/auto/internal/pkg/process"
 	"go.opentelemetry.io/auto/internal/pkg/structfield"
@@ -68,6 +69,7 @@ type Base[BPFObj any, BPFEvent any] struct {
 
 	reader     *perf.Reader
 	collection *ebpf.Collection
+	samplingConfig *sampling.SamplingConfig
 	closers    []io.Closer
 }
 
@@ -118,6 +120,12 @@ func (i *Base[BPFObj, BPFEvent]) Load(exec *link.Executable, td *process.TargetD
 	if err != nil {
 		return err
 	}
+
+	i.samplingConfig, err = sampling.NewSamplingConfig(i.collection)
+	if err != nil {
+		return err
+	}
+
 	i.closers = append(i.closers, i.reader)
 
 	return nil
