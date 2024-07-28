@@ -234,6 +234,9 @@ func (c instConfig) validate() error {
 
 func (c instConfig) tracerProvider(bi *buildinfo.BuildInfo) *trace.TracerProvider {
 	return trace.NewTracerProvider(
+		// the actual sampling is done in the eBPF probes.
+		// this is just to make sure that we export all spans we get from the probes
+		trace.WithSampler(trace.AlwaysSample()),
 		trace.WithResource(c.res(bi)),
 		trace.WithBatcher(c.traceExp),
 		trace.WithIDGenerator(opentelemetry.NewEBPFSourceIDGenerator()),

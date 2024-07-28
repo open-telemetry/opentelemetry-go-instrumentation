@@ -11,66 +11,66 @@ import (
 
 func TestFloat64ToNumerator(t *testing.T) {
 	tests := []struct {
-		name            string
-		f               float64
-		maxDenominator  uint64
+		name              string
+		f                 float64
+		maxDenominator    uint64
 		expectedNumerator uint64
-		expectedError   error
+		expectedError     error
 	}{
 		{
-			name:            "50 = 0.5 * 100",
-			f:               0.5,
-			maxDenominator:  100,
+			name:              "50 = 0.5 * 100",
+			f:                 0.5,
+			maxDenominator:    100,
 			expectedNumerator: 50,
-			expectedError:   nil,
+			expectedError:     nil,
 		},
 		{
-			name:            "invalid input",
-			f:               1.5,
-			maxDenominator:  100,
+			name:              "invalid input",
+			f:                 1.5,
+			maxDenominator:    100,
 			expectedNumerator: 0,
-			expectedError:   errInvalidFraction,
+			expectedError:     errInvalidFraction,
 		},
 		{
-			name:            "1 = 0.01 * 100",
-			f:               0.01,
-			maxDenominator:  100,
+			name:              "1 = 0.01 * 100",
+			f:                 0.01,
+			maxDenominator:    100,
 			expectedNumerator: 1,
-			expectedError:   nil,
+			expectedError:     nil,
 		},
 		{
-			name:            "precision loss",
-			f:               0.00001,
-			maxDenominator:  100,
-			expectedError:   errPrecisionLoss,
+			name:           "precision loss",
+			f:              0.00001,
+			maxDenominator: 100,
+			expectedError:  errPrecisionLoss,
 		},
 		{
-			name:            "0 = 0 * 100",
-			f:               0,
-			maxDenominator:  100,
+			name:              "0 = 0 * 100",
+			f:                 0,
+			maxDenominator:    100,
 			expectedNumerator: 0,
-			expectedError:   nil,
+			expectedError:     nil,
 		},
 		{
-			name:            "100 = 1 * 100",
-			f:               1,
-			maxDenominator:  100,
+			name:              "100 = 1 * 100",
+			f:                 1,
+			maxDenominator:    100,
 			expectedNumerator: 100,
-			expectedError:   nil,
+			expectedError:     nil,
 		},
 		{
-			name: "1 = 0.00001 * 100000",
-			f: 0.00001,
-			maxDenominator: 100000,
+			name:              "1 = 0.00001 * 100000",
+			f:                 0.00001,
+			maxDenominator:    100000,
 			expectedNumerator: 1,
-			expectedError: nil,
+			expectedError:     nil,
 		},
 		{
-			name: "99999 = 0.99999 * 100000",
-			f: 0.99999,
-			maxDenominator: 100000,
+			name:              "99999 = 0.99999 * 100000",
+			f:                 0.99999,
+			maxDenominator:    100000,
 			expectedNumerator: 99999,
-			expectedError: nil,
+			expectedError:     nil,
 		},
 	}
 

@@ -74,7 +74,6 @@ static __always_inline bool is_sampled(struct span_context *ctx)
 // This value should be in sync with user-space code which configures the sampler
 static const u64 sampling_rate_denominator = 1000000000ULL;
 
-// TODO: rename sampling_rate to sampling_rate_numerator?
 static __always_inline bool _traceIDRatioSampler_should_sample(u64 sampling_rate_numerator, u8 *trace_id) {
     if (sampling_rate_numerator == 0) {
         return false;
@@ -86,47 +85,39 @@ static __always_inline bool _traceIDRatioSampler_should_sample(u64 sampling_rate
 
     u64 trace_id_num = 0;
     __builtin_memcpy(&trace_id_num, &trace_id[8], 8);
-
     u64 trace_id_upper_bound = ((1ULL << 63) / sampling_rate_denominator) * sampling_rate_numerator;
-
     return (trace_id_num >> 1) < trace_id_upper_bound;
 }
 
 static __always_inline bool traceIDRatioSampler_should_sample(struct sampling_config* config, sampling_parameters_t *params) {
-    bpf_printk("### ratio sampler with rate %d\n", config->config_data.sampling_rate_numerator);
     return _traceIDRatioSampler_should_sample(config->config_data.sampling_rate_numerator, params->trace_id);
 }
 
 static __always_inline bool alwaysOnSampler_should_sample(struct sampling_config* config, sampling_parameters_t *params) {
-    bpf_printk("### always on sampler\n");
     return true;
 }
 
 static __always_inline bool alwaysOffSampler_should_sample(struct sampling_config* config, sampling_parameters_t *params) {
-    bpf_printk("### always off sampler\n");
     return false;
 }
 
 static __always_inline bool parentBasedSampler_should_sample(struct sampling_config* config, sampling_parameters_t *params) {
     sampler_id_t sampler_id; 
     if (params->psc == NULL) {
-        bpf_printk("### parent based sampler with root span\n");
         sampler_id = config->config_data.parent_based.root;
     } else {
         // TODO: once we add remote parent field to span context, we should check if it's remote or local
         // currently assuming local parent
         if (trace_flags_is_sampled(params->psc->TraceFlags)) {
-            bpf_printk("### parent based sampler with parent sampled\n");
             sampler_id = config->config_data.parent_based.local_parent_sampled;
         } else {
-            bpf_printk("### parent based sampler with parent not sampled\n");
             sampler_id = config->config_data.parent_based.local_parent_not_sampled;
         }
     }
 
     struct sampling_config *base_config = bpf_map_lookup_elem(&samplers_config_map, &sampler_id);
     if (base_config == NULL) {
-        bpf_printk("### No sampler config found for parent based sampler\n");
+        bpf_printk("No sampler config found for parent based sampler\n");
         return false;
     }
 
@@ -151,13 +142,13 @@ static __always_inline bool should_sample(sampling_parameters_t *params) {
     u32 active_sampler_map_key = 0;
     sampler_id_t *active_sampler_id = bpf_map_lookup_elem(&probe_active_sampler_map, &active_sampler_map_key);
     if (active_sampler_id == NULL) {
-        bpf_printk("### No active sampler found\n");
+        bpf_printk("No active sampler found\n");
         return false;
     }
 
     struct sampling_config *config = bpf_map_lookup_elem(&samplers_config_map, active_sampler_id);
     if (config == NULL) {
-        bpf_printk("### No sampler config found\n");
+        bpf_printk("No sampler config found\n");
         return false;
     }
 

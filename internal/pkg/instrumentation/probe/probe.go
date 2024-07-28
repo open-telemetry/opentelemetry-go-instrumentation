@@ -67,10 +67,10 @@ type Base[BPFObj any, BPFEvent any] struct {
 	// ProcessFn processes probe events into a uniform Event type.
 	ProcessFn func(*BPFEvent) []*SpanEvent
 
-	reader     *perf.Reader
-	collection *ebpf.Collection
-	samplingConfig *sampling.SamplingConfig
-	closers    []io.Closer
+	reader         *perf.Reader
+	collection     *ebpf.Collection
+	samplingConfig *sampling.Config
+	closers        []io.Closer
 }
 
 const (
