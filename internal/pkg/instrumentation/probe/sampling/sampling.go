@@ -20,7 +20,7 @@ const (
 	probeActiveSamplerMapName = "probe_active_sampler_map"
 )
 
-// SamplingConfig is used to configure the samplers used by the eBPF probe.
+// SamplingConfig is used to configure the samplers used by eBPF.
 type SamplingConfig struct {
 	samplersConfig     *ebpf.Map
 	probeActiveSampler *ebpf.Map
