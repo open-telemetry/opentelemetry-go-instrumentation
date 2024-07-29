@@ -26,8 +26,8 @@ jobs:
         run: |
           uname -p;
           clang --version;
-      - run: sudo prlimit --pid $$ --nproc=unlimited
       - run: make test
+      - run: sudo make test_ebpf
       - run: make check-clean-work-tree
   generate-and-test-arm64:
     runs-on: macos-latest

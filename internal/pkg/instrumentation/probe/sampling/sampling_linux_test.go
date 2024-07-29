@@ -1,3 +1,4 @@
+//go:build ebpf_test
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
@@ -7,10 +8,16 @@ import (
 	"testing"
 
 	"github.com/cilium/ebpf"
+	"github.com/cilium/ebpf/rlimit"
 	"github.com/stretchr/testify/assert"
 )
 
 func mockEbpfCollectionForSampling() (*ebpf.Collection, error) {
+	err := rlimit.RemoveMemlock()
+	if err != nil {
+		return nil, err
+	}
+
 	samplersConfigMapSpec := &ebpf.MapSpec{
 		Name:       samplersConfigMapName,
 		Type:       ebpf.Hash,
@@ -45,7 +52,7 @@ func mockEbpfCollectionForSampling() (*ebpf.Collection, error) {
 	}, nil
 }
 
-func TestNewSamplingConfigDefault(t *testing.T) {
+func TestEbpfNewSamplingConfigDefault(t *testing.T) {
 	c, err := mockEbpfCollectionForSampling()
 	if !assert.NoError(t, err) {
 		return
@@ -75,7 +82,7 @@ func TestNewSamplingConfigDefault(t *testing.T) {
 	assert.Equal(t, samplersConfigInMap.config, defaultParentBasedSampler())
 }
 
-func TestNewSamplingConfigFromEnv(t *testing.T) {
+func TestEbpfNewSamplingConfigFromEnv(t *testing.T) {
 	col, err := mockEbpfCollectionForSampling()
 	if !assert.NoError(t, err) {
 		return
