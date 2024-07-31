@@ -166,13 +166,19 @@ func (m *Manager) Run(ctx context.Context, target *process.TargetDetails) error 
 	}
 }
 
+// Used for testing.
+var (
+	openExecutable      = link.OpenExecutable
+	rlimitRemoveMemlock = rlimit.RemoveMemlock
+)
+
 func (m *Manager) load(target *process.TargetDetails) error {
 	// Remove resource limits for kernels <5.11.
-	if err := rlimit.RemoveMemlock(); err != nil {
+	if err := rlimitRemoveMemlock(); err != nil {
 		return err
 	}
 
-	exe, err := link.OpenExecutable(fmt.Sprintf("/proc/%d/exe", target.PID))
+	exe, err := openExecutable(fmt.Sprintf("/proc/%d/exe", target.PID))
 	if err != nil {
 		return err
 	}
@@ -195,14 +201,20 @@ func (m *Manager) load(target *process.TargetDetails) error {
 	return nil
 }
 
+// bpffsMount is used for testing.
+var bpffsMount = bpffs.Mount
+
 func (m *Manager) mount(target *process.TargetDetails) error {
 	if target.AllocationDetails != nil {
 		m.logger.V(1).Info("Mounting bpffs", "allocations_details", target.AllocationDetails)
 	} else {
 		m.logger.V(1).Info("Mounting bpffs")
 	}
-	return bpffs.Mount(target)
+	return bpffsMount(target)
 }
+
+// bpffsCleanup is used for testing.
+var bpffsCleanup = bpffs.Cleanup
 
 func (m *Manager) cleanup(target *process.TargetDetails) error {
 	var err error
@@ -211,7 +223,7 @@ func (m *Manager) cleanup(target *process.TargetDetails) error {
 	}
 
 	m.logger.V(1).Info("Cleaning bpffs")
-	return errors.Join(err, bpffs.Cleanup(target))
+	return errors.Join(err, bpffsCleanup(target))
 }
 
 func (m *Manager) registerProbes() error {
