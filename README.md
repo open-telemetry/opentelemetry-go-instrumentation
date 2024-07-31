@@ -47,6 +47,10 @@ You can also try the [Tutorial](docs/tutorial) for a guide on setting up a sampl
 
 For technical and design info, see [How it works](docs/how-it-works.md).
 
+## Configuration
+
+For a list of supported environment variables that you can use to configure your Go automatic instrumentation, see [Configuration](docs/configuration.md).
+
 ## Contributing
 
 See the [contributing documentation](./CONTRIBUTING.md).
