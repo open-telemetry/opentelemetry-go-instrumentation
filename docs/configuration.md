@@ -4,124 +4,50 @@
 
 ## Global settings
 
-* `OTEL_GO_AUTO_TARGET_EXE`
-* Sets the binary for the Go application to be instrumented.
-* N/A
+| Environment variable        | Description                                                                | Default value |
+|-----------------------------|----------------------------------------------------------------------------|---------------|
+| `OTEL_GO_AUTO_TARGET_EXE`   | Sets the binary for the Go application to be instrumented.                 |               |
+| `OTEL_GO_AUTO_GLOBAL`       | Enables the OpenTelemetry global implementation.                          |               |
+| `OTEL_LOG_LEVEL`            | Sets the log level. Supported values: `none`, `error`, `warn`, `info`, `debug`. | `info`        |
 
-* `OTEL_GO_AUTO_GLOBAL`
-* Enables the OpenTelemetry global implementation.
-* N/A
-
-* `OTEL_LOG_LEVEL`
-* Set the log level. Supported values: `none`, `error`, `warn`, `info`, `debug`.
-* `info`
 
 ## Resources
 
-* `OTEL_SERVICE_NAME`
-* Sets the value of the service.name resource attribute. If [service.name](https://github.com/open-telemetry/semantic-conventions/blob/main/docs/resource/README.md#service) is provided in `OTEL_RESOURCE_ATTRIBUTES`, the value of `OTEL_SERVICE_NAME` takes precedence.
-* N/A
-
-* `OTEL_RESOURCE_ATTRIBUTES`
-* Key-value pairs to be used as resource attributes. See [Resource SDK](https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/resource/sdk.md#specifying-resource-information-via-an-environment-variable) for details.
-* See [Resource semantic conventions](https://github.com/open-telemetry/semantic-conventions/blob/main/docs/resource/README.md#semantic-attributes-with-sdk-provided-default-value) for details.
+| Environment variable        | Description                                                                                                                                                                            | Default value |
+|-----------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|---------------|
+| `OTEL_SERVICE_NAME`         | Sets the value of the [service.name](https://github.com/open-telemetry/semantic-conventions/blob/main/docs/resource/README.md#service) resource attribute. If `service.name` is provided in `OTEL_RESOURCE_ATTRIBUTES`, the value of `OTEL_SERVICE_NAME` takes precedence. |               |
+| `OTEL_RESOURCE_ATTRIBUTES`  | Key-value pairs to be used as resource attributes. See [Resource SDK](https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/resource/sdk.md#specifying-resource-information-via-an-environment-variable) for details. | See [Resource semantic conventions](https://github.com/open-telemetry/semantic-conventions/blob/main/docs/resource/README.md#semantic-attributes-with-sdk-provided-default-value) for details. |
 
 ## Traces exporter
 
-* `OTEL_TRACES_EXPORTER`
-* Comma-separated list of propagators. Supported values: `otlp`, `zipkin`, `console`, `logging`, `none`. See [the OpenTelemetry specification](https://github.com/open-telemetry/opentelemetry-specification/blob/v1.35.0/specification/configuration/sdk-environment-variables.md#exporter-selection) for details.
-* `otlp`
-
-* `OTEL_GO_AUTO_INCLUDE_DB_STATEMENT`
-* Sets whether to include SQL queries in the trace data.
-* N/A
-
-* `OTEL_SPAN_ATTRIBUTE_VALUE_LENGTH_LIMIT`
-* Maximum allowed attribute value size.
-* No limit
-
-* `OTEL_SPAN_ATTRIBUTE_COUNT_LIMIT`
-* Maximum allowed span attribute count.
-* `128`
-
-* `OTEL_SPAN_LINK_COUNT_LIMIT
-* Maximum allowed span link count.
-* `128`
-
-* `OTEL_LINK_ATTRIBUTE_COUNT_LIMIT`
-* Maximum allowed attribute per span link count`
-* `128`
+| Environment variable                     | Description                                                                                                                                                                                                 | Default value |
+|------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|---------------|
+| `OTEL_TRACES_EXPORTER`                   | Comma-separated list of propagators. Supported values: `otlp`, `zipkin`, `console`, `logging`, `none`. See [the OpenTelemetry specification](https://github.com/open-telemetry/opentelemetry-specification/blob/v1.35.0/specification/configuration/sdk-environment-variables.md#exporter-selection) for details. | `otlp`        |
+| `OTEL_GO_AUTO_INCLUDE_DB_STATEMENT`      | Sets whether to include SQL queries in the trace data.                                                                                                                                                       |               |
+| `OTEL_SPAN_ATTRIBUTE_VALUE_LENGTH_LIMIT` | Maximum allowed attribute value size.                                                                                                                                                                        | No limit      |
+| `OTEL_SPAN_ATTRIBUTE_COUNT_LIMIT`        | Maximum allowed span attribute count.                                                                                                                                                                        | `128`         |
+| `OTEL_SPAN_LINK_COUNT_LIMIT`             | Maximum allowed span link count.                                                                                                                                                                             | `128`         |
+| `OTEL_LINK_ATTRIBUTE_COUNT_LIMIT`        | Maximum allowed attribute per span link count.                                                                                                                                                               | `128`         |
 
 ## OTLP exporter
 
-* `OTEL_EXPORTER_OTLP_PROTOCOL`
-* Defines the OTLP exporter's transport protocol. Supported values: `grpc`, `http/protobuf`.
-* `http/protobuf`
-
-* `OTEL_EXPORTER_OTLP_TRACES_PROTOCOL`
-* Defines the OTLP exporter's transport protocol for the traces signal. Supported values: `grpc`, `http/protobuf`.
-* `http/protobuf`
-
-* `OTEL_EXPORTER_OTLP_ENDPOINT`
-* The endpoint where the exporter sends the telemetry data. The value must contain a host, and can additionally include a port, scheme, and path. You can use either `http` or `https`. The value must not contain a query string or fragment.
-* `https://localhost:4317`
-
-* `OTEL_EXPORTER_OTLP_TRACES_ENDPOINT`
-* The endpoint where the exporter sends the telemetry data. The value must contain a host, and can additionally include a port, scheme, and path. You can use either `http` or `https`. The value must not contain a query string or fragment. The value of this environment variable takes precedence over `OTEL_EXPORTER_OTLP_ENDPOINT`.
-* `https://localhost:4317`
-
-* `OTEL_EXPORTER_OTLP_INSECURE`
-* Disables client transport security for the exporter's gRPC connection. You can use this only when an endpoint is provided without the http or https scheme.
-* `false`
-
-* `OTEL_EXPORTER_OTLP_TRACES_INSECURE`
-* Disables client transport security for the exporter's gRPC connection. You can use this only when an endpoint is provided without the http or https scheme. The value of this variable takes precedence over `OTEL_EXPORTER_OTLP_INSECURE`.
-* `false`
-
-* `OTEL_EXPORTER_OTLP_HEADERS`
-* Key-value pairs used as gRPC metadata associated with gRPC requests. The value must be represented in a format matching the W3C Baggage HTTP Header Content Format, except that additional semi-colon delimited metadata is not supported. Example value: `"key1=value1,key2=value2"`.
-* `none`
-
-* `OTEL_EXPORTER_OTLP_TRACES_HEADERS`
-* Key-value pairs used as gRPC metadata associated with gRPC requests. The value must be represented in a format matching the W3C Baggage HTTP Header Content Format, except that additional semi-colon delimited metadata is not supported. Example value: `"key1=value1,key2=value2"`. The value of this variable takes precedence over `OTEL_EXPORTER_OTLP_HEADERS`.
-* `none`
-
-* `OTEL_EXPORTER_OTLP_TIMEOUT`
-* Maximum time in milliseconds the OTLP exporter waits for each batch export.
-* `"10000"`
-
-* `OTEL_EXPORTER_OTLP_TRACES_TIMEOUT`
-* Maximum time in milliseconds the OTLP exporter waits for each batch export. The value of this variable takes precedence over `OTEL_EXPORTER_OTLP_TIMEOUT`.
-* `"10000"`
-
-* `OTEL_EXPORTER_OTLP_COMPRESSION`
-* The gRPC compressor that the exporter uses. Supported values: `gzip`, `none`.
-* `none`
-
-* `OTEL_EXPORTER_OTLP_TRACES_COMPRESSION`
-* The gRPC compressor that the exporter uses. Supported values: `gzip`, `none`. The value of this variable takes precedence over `OTEL_EXPORTER_OTLP_COMPRESSION`.
-* `none`
-
-* `OTEL_EXPORTER_OTLP_CERTIFICATE`
-* The filepath to the trusted certificate to be used when verifying a server's TLS credentials.
-* `none`
-
-* `OTEL_EXPORTER_OTLP_TRACES_CERTIFICATE`
-* The filepath to the trusted certificate to be used when verifying a server's TLS credentials. The value of this variable takes precedence over `OTEL_EXPORTER_OTLP_CERTIFICATE`.
-* `none`
-
-* `OTEL_EXPORTER_OTLP_CLIENT_CERTIFICATE`
-* The filepath to the client certificate or chain of trust for the client's private key to use for mTLS communication in the PEM format.
-* `none`
-
-* `OTEL_EXPORTER_OTLP_TRACES_CLIENT_CERTIFICATE`
-* The filepath to the client certificate or chain of trust for the client's private key to use for mTLS communication in the PEM format. The value of this variable takes precedence over `OTEL_EXPORTER_OTLP_CLIENT_CERTIFICATE`.
-* `none`
-
-* `OTEL_EXPORTER_OTLP_CLIENT_KEY`
-* The filepath to the client's private key to use for mTLS communication in PEM format.
-* `none`
-
-* `OTEL_EXPORTER_OTLP_TRACES_CLIENT_KEY`
-* The filepath to the client's private key to use for mTLS communication in PEM format. The value of this variable takes precedence over `OTEL_EXPORTER_OTLP_CLIENT_KEY`.
-* `none`
+| Environment variable                        | Description                                                                                                                                                                                                                                                                                                                                                                  | Default value               |
+|---------------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-----------------------------|
+| `OTEL_EXPORTER_OTLP_PROTOCOL`               | Defines the OTLP exporter's transport protocol. Supported values: `grpc`, `http/protobuf`.                                                                                                                                                                                                                                                                                   | `http/protobuf`             |
+| `OTEL_EXPORTER_OTLP_TRACES_PROTOCOL`        | Defines the OTLP exporter's transport protocol for the traces signal. Supported values: `grpc`, `http/protobuf`. The value of this environment variable takes precedence over `OTEL_EXPORTER_OTLP_PROTOCOL`.                                                                                                                                                                                                                                                             | `http/protobuf`             |
+| `OTEL_EXPORTER_OTLP_ENDPOINT`               | The endpoint where the exporter sends the telemetry data. The value must contain a host, and can additionally include a port, scheme, and path. You can use either `http` or `https`. The value must not contain a query string or fragment.                                                                                                                                | `https://localhost:4317`    |
+| `OTEL_EXPORTER_OTLP_TRACES_ENDPOINT`        | The endpoint where the exporter sends the telemetry data. The value must contain a host, and can additionally include a port, scheme, and path. You can use either `http` or `https`. The value must not contain a query string or fragment. The value of this environment variable takes precedence over `OTEL_EXPORTER_OTLP_ENDPOINT`.                                  | `https://localhost:4317`    |
+| `OTEL_EXPORTER_OTLP_INSECURE`               | Disables client transport security for the exporter's gRPC connection. You can use this only when an endpoint is provided without the `http` or `https` scheme.                                                                                                                                                                                                                  | `false`                     |
+| `OTEL_EXPORTER_OTLP_TRACES_INSECURE`        | Disables client transport security for the exporter's gRPC connection. You can use this only when an endpoint is provided without the `http or https` scheme. The value of this variable takes precedence over `OTEL_EXPORTER_OTLP_INSECURE`.                                                                                                                                  | `false`                     |
+| `OTEL_EXPORTER_OTLP_HEADERS`                | Key-value pairs used as gRPC metadata associated with gRPC requests. The value must be represented in a format matching the W3C Baggage HTTP Header Content Format, except that additional semi-colon delimited metadata is not supported. Example value: `"key1=value1,key2=value2"`.                                                                                       | `none`                      |
+| `OTEL_EXPORTER_OTLP_TRACES_HEADERS`         | Key-value pairs used as gRPC metadata associated with gRPC requests. The value must be represented in a format matching the W3C Baggage HTTP Header Content Format, except that additional semi-colon delimited metadata is not supported. Example value: `"key1=value1,key2=value2"`. The value of this variable takes precedence over `OTEL_EXPORTER_OTLP_HEADERS`.           | `none`                      |
+| `OTEL_EXPORTER_OTLP_TIMEOUT`                | Maximum time in milliseconds the OTLP exporter waits for each batch export.                                                                                                                                                                                                                                                                                                  | `"10000"`                   |
+| `OTEL_EXPORTER_OTLP_TRACES_TIMEOUT`         | Maximum time in milliseconds the OTLP exporter waits for each batch export. The value of this variable takes precedence over `OTEL_EXPORTER_OTLP_TIMEOUT`.                                                                                                                                                                                                                   | `"10000"`                   |
+| `OTEL_EXPORTER_OTLP_COMPRESSION`            | The gRPC compressor that the exporter uses. Supported values: `gzip`, `none`.                                                                                                                                                                                                                                                                                               | `none`                      |
+| `OTEL_EXPORTER_OTLP_TRACES_COMPRESSION`     | The gRPC compressor that the exporter uses. Supported values: `gzip`, `none`. The value of this variable takes precedence over `OTEL_EXPORTER_OTLP_COMPRESSION`.                                                                                                                                                                                                             | `none`                      |
+| `OTEL_EXPORTER_OTLP_CERTIFICATE`            | The filepath to the trusted certificate to be used when verifying a server's TLS credentials.                                                                                                                                                                                                                                                                               | `none`                      |
+| `OTEL_EXPORTER_OTLP_TRACES_CERTIFICATE`     | The filepath to the trusted certificate to be used when verifying a server's TLS credentials. The value of this variable takes precedence over `OTEL_EXPORTER_OTLP_CERTIFICATE`.                                                                                                                                                                                             | `none`                      |
+| `OTEL_EXPORTER_OTLP_CLIENT_CERTIFICATE`     | The filepath to the client certificate or chain of trust for the client's private key to use for mTLS communication in the PEM format.                                                                                                                                                                                                                                      | `none`                      |
+| `OTEL_EXPORTER_OTLP_TRACES_CLIENT_CERTIFICATE` | The filepath to the client certificate or chain of trust for the client's private key to use for mTLS communication in the PEM format. The value of this variable takes precedence over `OTEL_EXPORTER_OTLP_CLIENT_CERTIFICATE`.                                                                                                                                             | `none`                      |
+| `OTEL_EXPORTER_OTLP_CLIENT_KEY`             | The filepath to the client's private key to use for mTLS communication in PEM format.                                                                                                                                                                                                                                                                                       | `none`                      |
+| `OTEL_EXPORTER_OTLP_TRACES_CLIENT_KEY`      | The filepath to the client's private key to use for mTLS communication in PEM format. The value of this variable takes precedence over `OTEL_EXPORTER_OTLP_CLIENT_KEY`.                                                                                                                                                                                                     | `none`                      |
