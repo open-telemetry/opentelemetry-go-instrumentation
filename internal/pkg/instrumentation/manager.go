@@ -27,6 +27,14 @@ import (
 	"go.opentelemetry.io/auto/internal/pkg/process"
 )
 
+// Function variables overridden in testing.
+var (
+	openExecutable      = link.OpenExecutable
+	rlimitRemoveMemlock = rlimit.RemoveMemlock
+	bpffsMount          = bpffs.Mount
+	bpffsCleanup        = bpffs.Cleanup
+)
+
 // Manager handles the management of [probe.Probe] instances.
 type Manager struct {
 	logger          logr.Logger
@@ -166,12 +174,6 @@ func (m *Manager) Run(ctx context.Context, target *process.TargetDetails) error 
 	}
 }
 
-// Used for testing.
-var (
-	openExecutable      = link.OpenExecutable
-	rlimitRemoveMemlock = rlimit.RemoveMemlock
-)
-
 func (m *Manager) load(target *process.TargetDetails) error {
 	// Remove resource limits for kernels <5.11.
 	if err := rlimitRemoveMemlock(); err != nil {
@@ -201,9 +203,6 @@ func (m *Manager) load(target *process.TargetDetails) error {
 	return nil
 }
 
-// bpffsMount is used for testing.
-var bpffsMount = bpffs.Mount
-
 func (m *Manager) mount(target *process.TargetDetails) error {
 	if target.AllocationDetails != nil {
 		m.logger.V(1).Info("Mounting bpffs", "allocations_details", target.AllocationDetails)
@@ -212,9 +211,6 @@ func (m *Manager) mount(target *process.TargetDetails) error {
 	}
 	return bpffsMount(target)
 }
-
-// bpffsCleanup is used for testing.
-var bpffsCleanup = bpffs.Cleanup
 
 func (m *Manager) cleanup(target *process.TargetDetails) error {
 	var err error
