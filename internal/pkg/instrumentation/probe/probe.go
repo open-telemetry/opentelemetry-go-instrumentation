@@ -67,10 +67,11 @@ type Base[BPFObj any, BPFEvent any] struct {
 	// ProcessFn processes probe events into a uniform Event type.
 	ProcessFn func(*BPFEvent) []*SpanEvent
 
-	reader         *perf.Reader
-	collection     *ebpf.Collection
-	samplingConfig *sampling.Config
-	closers        []io.Closer
+	reader          *perf.Reader
+	collection      *ebpf.Collection
+	samplingManager *sampling.Manager
+	SamplingConfig  sampling.Config
+	closers         []io.Closer
 }
 
 const (
@@ -121,7 +122,7 @@ func (i *Base[BPFObj, BPFEvent]) Load(exec *link.Executable, td *process.TargetD
 		return err
 	}
 
-	i.samplingConfig, err = sampling.NewSamplingConfig(i.collection)
+	i.samplingManager, err = sampling.NewSamplingManager(i.collection, i.SamplingConfig)
 	if err != nil {
 		return err
 	}

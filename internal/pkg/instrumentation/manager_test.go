@@ -13,6 +13,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/probe"
+	"go.opentelemetry.io/auto/internal/pkg/instrumentation/probe/sampling"
 	"go.opentelemetry.io/auto/internal/pkg/process"
 	"go.opentelemetry.io/auto/internal/pkg/process/binary"
 )
@@ -180,7 +181,7 @@ func fakeManager(t *testing.T) *Manager {
 	logger := stdr.New(log.New(os.Stderr, "", log.LstdFlags))
 	logger = logger.WithName("Instrumentation")
 
-	m, err := NewManager(logger, nil, true, nil)
+	m, err := NewManager(logger, nil, true, nil, sampling.Config{})
 	assert.NoError(t, err)
 	assert.NotNil(t, m)
 

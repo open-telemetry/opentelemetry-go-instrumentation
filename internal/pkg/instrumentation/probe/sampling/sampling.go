@@ -8,9 +8,6 @@ import (
 	"encoding"
 	"encoding/binary"
 	"fmt"
-	"os"
-	"strconv"
-	"strings"
 
 	"github.com/cilium/ebpf"
 )
@@ -20,42 +17,70 @@ const (
 	probeActiveSamplerMapName = "probe_active_sampler_map"
 )
 
-// Config is used to configure the samplers used by eBPF.
-type Config struct {
-	samplersConfig     *ebpf.Map
-	probeActiveSampler *ebpf.Map
+// Manager is used to configure the samplers used by eBPF.
+type Manager struct {
+	samplersConfigMap *ebpf.Map
+	ActiveSamplerMap  *ebpf.Map
 
-	currentSamplerID samplerID
+	currentSamplerID SamplerID
 }
 
-type samplerType uint64
+type SamplerType uint64
 
 const (
 	// OpenTelemetry spec-defined samplers.
-	samplerAlwaysOn samplerType = iota
-	samplerAlwaysOff
-	samplerTraceIDRatio
-	samplerParentBased
+	SamplerAlwaysOn SamplerType = iota
+	SamplerAlwaysOff
+	SamplerTraceIDRatio
+	SamplerParentBased
 	// Custom samplers.
 )
 
-type traceIDRatioConfig struct {
+type TraceIDRatioConfig struct {
 	// samplingRateNumerator is the numerator of the sampling rate.
 	// see samplingRateDenominator for more information.
 	samplingRateNumerator uint64
 }
 
-// samplerID is a unique identifier for a sampler. It is used as a key in the samplers config map,
-// and as a value in the active sampler map. In addition samplers can reference other samplers in their configuration by their ID.
-type samplerID uint32
+func NewTraceIDRationConfig(ratio float64) (TraceIDRatioConfig, error) {
+	numerator, err := floatToNumerator(ratio, samplingRateDenominator)
+	if err != nil {
+		return TraceIDRatioConfig{}, err
+	}
+	return TraceIDRatioConfig{numerator}, nil
+}
 
-type parentBasedConfig struct {
-	Root             samplerID
-	RemoteSampled    samplerID
-	RemoteNotSampled samplerID
-	LocalSampled     samplerID
-	LocalNotSampled  samplerID
-	_                [4]byte
+// SamplerID is a unique identifier for a sampler. It is used as a key in the samplers config map,
+// and as a value in the active sampler map. In addition samplers can reference other samplers in their configuration by their ID.
+type SamplerID uint32
+
+type Config struct {
+	Samplers      map[SamplerID]SamplerConfig
+	ActiveSampler SamplerID
+}
+
+func (c Config) IsZero() bool {
+	return len(c.Samplers) == 0
+}
+
+func DefaultConfig() Config {
+	return Config{
+		Samplers: map[SamplerID]SamplerConfig{
+			ParentBasedID: {
+				SamplerType: SamplerParentBased,
+				Config:      DefaultParentBasedSampler(),
+			},
+		},
+		ActiveSampler: ParentBasedID,
+	}
+}
+
+type ParentBasedConfig struct {
+	Root             SamplerID
+	RemoteSampled    SamplerID
+	RemoteNotSampled SamplerID
+	LocalSampled     SamplerID
+	LocalNotSampled  SamplerID
 }
 
 // the following are constants which are used by the eBPF code.
@@ -70,54 +95,38 @@ const (
 	maxSamplers             = 32
 )
 
-const (
-	tracesSamplerKey    = "OTEL_TRACES_SAMPLER"
-	tracesSamplerArgKey = "OTEL_TRACES_SAMPLER_ARG"
-
-	samplerNameAlwaysOn                = "always_on"
-	samplerNameAlwaysOff               = "always_off"
-	samplerNameTraceIDRatio            = "traceidratio"
-	samplerNameParentBasedAlwaysOn     = "parentbased_always_on"
-	samplerNameParsedBasedAlwaysOff    = "parentbased_always_off"
-	samplerNameParentBasedTraceIDRatio = "parentbased_traceidratio"
-)
-
 // config data for samplers is a union of all possible sampler configurations.
 // the size of the data is fixed, and the actual configuration is stored in the first part of the data.
 // the rest of the data is padding to make sure the size is fixed.
 
 // The spec-defined samplers have a constant ID, and are always available.
 const (
-	alwaysOnID     samplerID = 0
-	alwaysOffID    samplerID = 1
-	traceIDRatioID samplerID = 2
-	parentBasedID  samplerID = 3
+	AlwaysOnID     SamplerID = 0
+	AlwaysOffID    SamplerID = 1
+	TraceIDRatioID SamplerID = 2
+	ParentBasedID  SamplerID = 3
 )
 
-type samplerConfig struct {
-	samplerType samplerType
-	config      any
-}
-
-func traceIDRationDefaultConfig() traceIDRatioConfig {
-	return traceIDRatioConfig{samplingRateNumerator: samplingRateDenominator}
+type SamplerConfig struct {
+	SamplerType SamplerType
+	Config      any
 }
 
 var (
-	_ encoding.BinaryMarshaler   = &samplerConfig{}
-	_ encoding.BinaryUnmarshaler = &samplerConfig{}
+	_ encoding.BinaryMarshaler   = &SamplerConfig{}
+	_ encoding.BinaryUnmarshaler = &SamplerConfig{}
 )
 
-func (sc *samplerConfig) MarshalBinary() ([]byte, error) {
+func (sc *SamplerConfig) MarshalBinary() ([]byte, error) {
 	buf := make([]byte, 0, sampleConfigSize)
 	writingBuffer := bytes.NewBuffer(buf)
 
-	err := binary.Write(writingBuffer, binary.NativeEndian, sc.samplerType)
+	err := binary.Write(writingBuffer, binary.NativeEndian, sc.SamplerType)
 	if err != nil {
 		return nil, err
 	}
 
-	err = binary.Write(writingBuffer, binary.NativeEndian, sc.config)
+	err = binary.Write(writingBuffer, binary.NativeEndian, sc.Config)
 	if err != nil {
 		return nil, err
 	}
@@ -129,42 +138,42 @@ func (sc *samplerConfig) MarshalBinary() ([]byte, error) {
 	return writingBuffer.Bytes(), nil
 }
 
-func (sc *samplerConfig) UnmarshalBinary(data []byte) error {
+func (sc *SamplerConfig) UnmarshalBinary(data []byte) error {
 	if len(data) != sampleConfigSize {
 		return fmt.Errorf("invalid data size for sampler config: %d", len(data))
 	}
 	readingBuffer := bytes.NewReader(data)
 
-	err := binary.Read(readingBuffer, binary.NativeEndian, &sc.samplerType)
+	err := binary.Read(readingBuffer, binary.NativeEndian, &sc.SamplerType)
 	if err != nil {
 		return err
 	}
 
-	switch sc.samplerType {
-	case samplerAlwaysOn, samplerAlwaysOff:
+	switch sc.SamplerType {
+	case SamplerAlwaysOn, SamplerAlwaysOff:
 		return nil
-	case samplerTraceIDRatio:
+	case SamplerTraceIDRatio:
 		var numerator uint64
 		err := binary.Read(readingBuffer, binary.NativeEndian, &numerator)
 		if err != nil {
 			return err
 		}
-		sc.config = traceIDRatioConfig{numerator}
-	case samplerParentBased:
-		var parentBased parentBasedConfig
+		sc.Config = TraceIDRatioConfig{numerator}
+	case SamplerParentBased:
+		var parentBased ParentBasedConfig
 		err := binary.Read(readingBuffer, binary.NativeEndian, &parentBased)
 		if err != nil {
 			return err
 		}
-		sc.config = parentBased
+		sc.Config = parentBased
 	}
 
 	return nil
 }
 
-// NewSamplingConfig creates a new SamplingConfig from the given eBPF collection.
+// NewSamplingManager creates a new SamplingConfig from the given eBPF collection.
 // It applies the sampler configuration from the environment variables.
-func NewSamplingConfig(c *ebpf.Collection) (*Config, error) {
+func NewSamplingManager(c *ebpf.Collection, conf Config) (*Manager, error) {
 	samplersConfig, ok := c.Maps[samplersConfigMapName]
 	if !ok {
 		return nil, fmt.Errorf("map %s not found", samplersConfigMapName)
@@ -175,131 +184,73 @@ func NewSamplingConfig(c *ebpf.Collection) (*Config, error) {
 		return nil, fmt.Errorf("map %s not found", probeActiveSamplerMapName)
 	}
 
-	sc := &Config{
-		samplersConfig:     samplersConfig,
-		probeActiveSampler: probeActiveSampler,
+	m := &Manager{
+		samplersConfigMap: samplersConfig,
+		ActiveSamplerMap:  probeActiveSampler,
 	}
 
-	err := sc.applySamplerFromEnv()
+	err := m.applyConfig(conf)
 	if err != nil {
 		return nil, err
 	}
 
-	return sc, nil
+	return m, nil
 }
 
-func defaultParentBasedSampler() parentBasedConfig {
-	return parentBasedConfig{
-		Root:             alwaysOnID,
-		RemoteSampled:    alwaysOnID,
-		RemoteNotSampled: alwaysOffID,
-		LocalSampled:     alwaysOnID,
-		LocalNotSampled:  alwaysOffID,
-	}
-}
+func (m *Manager) applyConfig(conf Config) error {
+	samplerIDs := make([]SamplerID, len(conf.Samplers))
+	configs := make([]SamplerConfig, len(conf.Samplers))
 
-// taken from go.opentelemetry.io/otel/sdk/trace and adapted to work with eBPF.
-func (sc *Config) applySamplerFromEnv() error {
-	defaultParentBased := defaultParentBasedSampler()
-	defaultTraceIDRatio := samplerConfig{
-		samplerType: samplerTraceIDRatio,
-		config:      traceIDRationDefaultConfig(),
+	i := 0
+	for id, samplerConfig := range conf.Samplers {
+		samplerIDs[i] = id
+		configs[i] = samplerConfig
+		i++
 	}
 
-	sampler, ok := os.LookupEnv(tracesSamplerKey)
-	if !ok {
-		// default to parent-based sampler with always_on root
-		err := sc.setSamplerConfig(&samplerConfig{samplerType: samplerParentBased, config: defaultParentBased}, parentBasedID)
+	configsBytes := make([][sampleConfigSize]byte, len(configs))
+	for i, config := range configs {
+		b, err := config.MarshalBinary()
 		if err != nil {
 			return err
 		}
-		return sc.setActiveSampler(parentBasedID)
+		if len(b) != sampleConfigSize {
+			return fmt.Errorf("unexpected sampler config size, expected %d, got %d", sampleConfigSize, len(b))
+		}
+		copy(configsBytes[i][:], b)
 	}
 
-	sampler = strings.ToLower(strings.TrimSpace(sampler))
-	samplerArg, hasSamplerArg := os.LookupEnv(tracesSamplerArgKey)
-	samplerArg = strings.TrimSpace(samplerArg)
-
-	var samplerID samplerID
-	var err error
-
-	switch sampler {
-	case samplerNameAlwaysOn:
-		samplerID = alwaysOnID
-	case samplerNameAlwaysOff:
-		samplerID = alwaysOffID
-	case samplerNameTraceIDRatio:
-		if hasSamplerArg {
-			if defaultTraceIDRatio.config, err = parseTraceIDRatio(samplerArg); err != nil {
-				break
-			}
-		}
-		err = sc.setSamplerConfig(&defaultTraceIDRatio, traceIDRatioID)
-		samplerID = traceIDRatioID
-	case samplerNameParentBasedAlwaysOn:
-		defaultParentBased.Root = alwaysOnID
-		err = sc.setSamplerConfig(&samplerConfig{samplerType: samplerParentBased, config: defaultParentBased}, parentBasedID)
-		samplerID = parentBasedID
-	case samplerNameParsedBasedAlwaysOff:
-		defaultParentBased.Root = alwaysOffID
-		err = sc.setSamplerConfig(&samplerConfig{samplerType: samplerParentBased, config: defaultParentBased}, parentBasedID)
-		samplerID = parentBasedID
-	case samplerNameParentBasedTraceIDRatio:
-		defaultParentBased.Root = traceIDRatioID
-		if hasSamplerArg {
-			if defaultTraceIDRatio.config, err = parseTraceIDRatio(samplerArg); err != nil {
-				break
-			}
-		}
-		err = sc.setSamplerConfig(&defaultTraceIDRatio, traceIDRatioID)
-		if err == nil {
-			err = sc.setSamplerConfig(&samplerConfig{samplerType: samplerParentBased, config: defaultParentBased}, parentBasedID)
-		}
-		samplerID = parentBasedID
-	default:
-		samplerID = parentBasedID
+	n, err := m.samplersConfigMap.BatchUpdate(samplerIDs, configsBytes, &ebpf.BatchOptions{})
+	if err != nil {
+		return err
+	}
+	if n != len(samplerIDs) {
+		return fmt.Errorf("failed to update samplers, expected %d, updated %d", len(samplerIDs), n)
 	}
 
+	err = m.setActiveSampler(conf.ActiveSampler)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func DefaultParentBasedSampler() ParentBasedConfig {
+	return ParentBasedConfig{
+		Root:             AlwaysOnID,
+		RemoteSampled:    AlwaysOnID,
+		RemoteNotSampled: AlwaysOffID,
+		LocalSampled:     AlwaysOnID,
+		LocalNotSampled:  AlwaysOffID,
+	}
+}
+
+func (m *Manager) setActiveSampler(id SamplerID) error {
+	err := m.ActiveSamplerMap.Put(uint32(0), id)
 	if err != nil {
 		return err
 	}
 
-	err = sc.setActiveSampler(samplerID)
-	return err
-}
-
-type samplerArgParseError struct {
-	parseErr error
-}
-
-func (e samplerArgParseError) Error() string {
-	return fmt.Sprintf("parsing sampler argument: %s", e.parseErr.Error())
-}
-
-func parseTraceIDRatio(ratio string) (traceIDRatioConfig, error) {
-	v, err := strconv.ParseFloat(ratio, 64)
-	if err != nil {
-		return traceIDRationDefaultConfig(), samplerArgParseError{err}
-	}
-
-	numerator, err := floatToNumerator(v, samplingRateDenominator)
-	if err != nil {
-		return traceIDRationDefaultConfig(), samplerArgParseError{err}
-	}
-
-	return traceIDRatioConfig{samplingRateNumerator: numerator}, nil
-}
-
-func (sc *Config) setSamplerConfig(samplerConfig *samplerConfig, id samplerID) error {
-	return sc.samplersConfig.Put(id, samplerConfig)
-}
-
-func (sc *Config) setActiveSampler(id samplerID) error {
-	err := sc.probeActiveSampler.Put(uint32(0), id)
-	if err != nil {
-		return err
-	}
-
-	sc.currentSamplerID = id
+	m.currentSamplerID = id
 	return nil
 }

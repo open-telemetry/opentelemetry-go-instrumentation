@@ -59,163 +59,72 @@ func TestEbpfNewSamplingConfigDefault(t *testing.T) {
 	}
 
 	defer c.Close()
-	sc, err := NewSamplingConfig(c)
-	if !assert.NoError(t, err) {
-		return
-	}
+	t.Run("default", func(t *testing.T) {
+		m, err := NewSamplingManager(c, DefaultConfig())
+		if !assert.NoError(t, err) {
+			return
+		}
 
-	assert.Equal(t, sc.currentSamplerID, parentBasedID)
+		assert.Equal(t, m.currentSamplerID, ParentBasedID)
 
-	var activeSamplerIDInMap samplerID
-	err = sc.probeActiveSampler.Lookup(uint32(0), &activeSamplerIDInMap)
-	if !assert.NoError(t, err) {
-		return
-	}
-	assert.Equal(t, activeSamplerIDInMap, parentBasedID)
+		var activeSamplerIDInMap SamplerID
+		err = m.ActiveSamplerMap.Lookup(uint32(0), &activeSamplerIDInMap)
+		if !assert.NoError(t, err) {
+			return
+		}
+		assert.Equal(t, activeSamplerIDInMap, ParentBasedID)
 
-	var samplersConfigInMap samplerConfig
-	err = sc.samplersConfig.Lookup(uint32(parentBasedID), &samplersConfigInMap)
-	if !assert.NoError(t, err) {
-		return
-	}
-	assert.Equal(t, samplersConfigInMap.samplerType, samplerParentBased)
-	assert.Equal(t, samplersConfigInMap.config, defaultParentBasedSampler())
-}
+		var samplersConfigInMap SamplerConfig
+		err = m.samplersConfigMap.Lookup(uint32(ParentBasedID), &samplersConfigInMap)
+		if !assert.NoError(t, err) {
+			return
+		}
+		assert.Equal(t, samplersConfigInMap.SamplerType, SamplerParentBased)
+		assert.Equal(t, samplersConfigInMap.Config, DefaultParentBasedSampler())
+	})
 
-func TestEbpfNewSamplingConfigFromEnv(t *testing.T) {
-	col, err := mockEbpfCollectionForSampling()
-	if !assert.NoError(t, err) {
-		return
-	}
-
-	defer col.Close()
-
-	cases := []struct {
-		testName                  string
-		sampler                   string
-		samplerArg                string
-		expectedSamplerID         samplerID
-		expectedSamplerConfig     samplerConfig
-		expectedRootSamplerConfig samplerConfig
-	}{
-		{
-			testName:          "parentbased_always_off",
-			sampler:           samplerNameParsedBasedAlwaysOff,
-			samplerArg:        "",
-			expectedSamplerID: parentBasedID,
-			expectedSamplerConfig: samplerConfig{
-				samplerType: samplerParentBased,
-				config: parentBasedConfig{
-					Root:             alwaysOffID,
-					RemoteSampled:    alwaysOnID,
-					RemoteNotSampled: alwaysOffID,
-					LocalSampled:     alwaysOnID,
-					LocalNotSampled:  alwaysOffID,
+	t.Run("parent based with trace id ratio", func(t *testing.T) {
+		pb := DefaultParentBasedSampler()
+		pb.Root = TraceIDRatioID
+		m, err := NewSamplingManager(c, Config{
+			Samplers: map[SamplerID]SamplerConfig{
+				ParentBasedID: {
+					SamplerType: SamplerParentBased,
+					Config:      pb,
+				},
+				TraceIDRatioID: {
+					SamplerType: SamplerTraceIDRatio,
+					Config:      TraceIDRatioConfig{42},
 				},
 			},
-		},
-		{
-			testName:          "parentbased_always_on",
-			sampler:           samplerNameParentBasedAlwaysOn,
-			samplerArg:        "",
-			expectedSamplerID: parentBasedID,
-			expectedSamplerConfig: samplerConfig{
-				samplerType: samplerParentBased,
-				config: parentBasedConfig{
-					Root:             alwaysOnID,
-					RemoteSampled:    alwaysOnID,
-					RemoteNotSampled: alwaysOffID,
-					LocalSampled:     alwaysOnID,
-					LocalNotSampled:  alwaysOffID,
-				},
-			},
-		},
-		{
-			testName:          "traceidratio with 0.5",
-			sampler:           samplerNameTraceIDRatio,
-			samplerArg:        "0.5",
-			expectedSamplerID: traceIDRatioID,
-			expectedSamplerConfig: samplerConfig{
-				samplerType: samplerTraceIDRatio,
-				config: traceIDRatioConfig{
-					samplingRateNumerator: samplingRateDenominator / 2,
-				},
-			},
-		},
-		{
-			testName:          "traceidratio with 0.001",
-			sampler:           samplerNameTraceIDRatio,
-			samplerArg:        "0.001",
-			expectedSamplerID: traceIDRatioID,
-			expectedSamplerConfig: samplerConfig{
-				samplerType: samplerTraceIDRatio,
-				config: traceIDRatioConfig{
-					samplingRateNumerator: samplingRateDenominator / 1000,
-				},
-			},
-		},
-		{
-			testName:          "parentbased_traceidratio with 0.1",
-			sampler:           samplerNameParentBasedTraceIDRatio,
-			samplerArg:        "0.1",
-			expectedSamplerID: parentBasedID,
-			expectedSamplerConfig: samplerConfig{
-				samplerType: samplerParentBased,
-				config: parentBasedConfig{
-					Root:             traceIDRatioID,
-					RemoteSampled:    alwaysOnID,
-					RemoteNotSampled: alwaysOffID,
-					LocalSampled:     alwaysOnID,
-					LocalNotSampled:  alwaysOffID,
-				},
-			},
-			expectedRootSamplerConfig: samplerConfig{
-				samplerType: samplerTraceIDRatio,
-				config: traceIDRatioConfig{
-					samplingRateNumerator: samplingRateDenominator / 10,
-				},
-			},
-		},
-	}
-
-	for _, c := range cases {
-		t.Run(c.testName, func(t *testing.T) {
-			t.Setenv(tracesSamplerKey, c.sampler)
-
-			if c.samplerArg != "" {
-				t.Setenv(tracesSamplerArgKey, c.samplerArg)
-			}
-
-			sc, err := NewSamplingConfig(col)
-			if !assert.NoError(t, err) {
-				return
-			}
-
-			assert.Equal(t, c.expectedSamplerID, sc.currentSamplerID)
-
-			var activeSamplerIDInMap samplerID
-			err = sc.probeActiveSampler.Lookup(uint32(0), &activeSamplerIDInMap)
-			if !assert.NoError(t, err) {
-				return
-			}
-			assert.Equal(t, c.expectedSamplerID, activeSamplerIDInMap)
-
-			var samplersConfigInMap samplerConfig
-			err = sc.samplersConfig.Lookup(uint32(c.expectedSamplerID), &samplersConfigInMap)
-			if !assert.NoError(t, err) {
-				return
-			}
-			assert.Equal(t, c.expectedSamplerConfig, samplersConfigInMap)
-
-			parentBasedConfig, ok := samplersConfigInMap.config.(parentBasedConfig)
-			if ok && c.samplerArg != "" {
-				var baseConfig samplerConfig
-				err = sc.samplersConfig.Lookup(uint32(parentBasedConfig.Root), &baseConfig)
-				if !assert.NoError(t, err) {
-					return
-				}
-				assert.Equal(t, c.expectedRootSamplerConfig, baseConfig)
-			}
+			ActiveSampler: ParentBasedID,
 		})
-	}
+		if !assert.NoError(t, err) {
+			return
+		}
+
+		assert.Equal(t, ParentBasedID, m.currentSamplerID)
+
+		var activeSamplerIDInMap SamplerID
+		err = m.ActiveSamplerMap.Lookup(uint32(0), &activeSamplerIDInMap)
+		if !assert.NoError(t, err) {
+			return
+		}
+		assert.Equal(t, ParentBasedID, activeSamplerIDInMap)
+
+		var samplersConfigInMap SamplerConfig
+		err = m.samplersConfigMap.Lookup(uint32(ParentBasedID), &samplersConfigInMap)
+		if !assert.NoError(t, err) {
+			return
+		}
+		assert.Equal(t, SamplerParentBased, samplersConfigInMap.SamplerType)
+		assert.Equal(t, pb, samplersConfigInMap.Config)
+
+		err = m.samplersConfigMap.Lookup(uint32(TraceIDRatioID), &samplersConfigInMap)
+		if !assert.NoError(t, err) {
+			return
+		}
+		assert.Equal(t, SamplerTraceIDRatio, samplersConfigInMap.SamplerType)
+		assert.Equal(t, TraceIDRatioConfig{42}, samplersConfigInMap.Config)
+	})
 }

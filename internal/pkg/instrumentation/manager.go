@@ -23,6 +23,7 @@ import (
 	httpServer "go.opentelemetry.io/auto/internal/pkg/instrumentation/bpf/net/http/server"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/bpffs"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/probe"
+	"go.opentelemetry.io/auto/internal/pkg/instrumentation/probe/sampling"
 	"go.opentelemetry.io/auto/internal/pkg/opentelemetry"
 	"go.opentelemetry.io/auto/internal/pkg/process"
 )
@@ -41,7 +42,7 @@ type Manager struct {
 }
 
 // NewManager returns a new [Manager].
-func NewManager(logger logr.Logger, otelController *opentelemetry.Controller, globalImpl bool, loadIndicator chan struct{}) (*Manager, error) {
+func NewManager(logger logr.Logger, otelController *opentelemetry.Controller, globalImpl bool, loadIndicator chan struct{}, samplingConfig sampling.Config) (*Manager, error) {
 	logger = logger.WithName("Manager")
 	m := &Manager{
 		logger:          logger,
@@ -54,7 +55,7 @@ func NewManager(logger logr.Logger, otelController *opentelemetry.Controller, gl
 		loadedIndicator: loadIndicator,
 	}
 
-	err := m.registerProbes()
+	err := m.registerProbes(samplingConfig)
 	if err != nil {
 		return nil, err
 	}
@@ -234,15 +235,15 @@ func (m *Manager) Close() error {
 	return err
 }
 
-func (m *Manager) registerProbes() error {
+func (m *Manager) registerProbes(samplingConfig sampling.Config) error {
 	insts := []probe.Probe{
-		grpcClient.New(m.logger),
-		grpcServer.New(m.logger),
-		httpServer.New(m.logger),
-		httpClient.New(m.logger),
-		dbSql.New(m.logger),
-		kafkaProducer.New(m.logger),
-		kafkaConsumer.New(m.logger),
+		grpcClient.New(m.logger, samplingConfig),
+		grpcServer.New(m.logger, samplingConfig),
+		httpServer.New(m.logger, samplingConfig),
+		httpClient.New(m.logger, samplingConfig),
+		dbSql.New(m.logger, samplingConfig),
+		kafkaProducer.New(m.logger, samplingConfig),
+		kafkaConsumer.New(m.logger, samplingConfig),
 	}
 
 	if m.globalImpl {

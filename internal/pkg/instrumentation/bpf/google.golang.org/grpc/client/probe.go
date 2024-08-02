@@ -17,6 +17,7 @@ import (
 
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/context"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/probe"
+	"go.opentelemetry.io/auto/internal/pkg/instrumentation/probe/sampling"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/utils"
 	"go.opentelemetry.io/auto/internal/pkg/structfield"
 )
@@ -29,7 +30,7 @@ const (
 )
 
 // New returns a new [probe.Probe].
-func New(logger logr.Logger) probe.Probe {
+func New(logger logr.Logger, samplingConfig sampling.Config) probe.Probe {
 	id := probe.ID{
 		SpanKind:        trace.SpanKindClient,
 		InstrumentedPkg: pkg,
@@ -74,6 +75,7 @@ func New(logger logr.Logger) probe.Probe {
 		},
 		SpecFn:    verifyAndLoadBpf,
 		ProcessFn: convertEvent,
+		SamplingConfig: samplingConfig,
 	}
 }
 
