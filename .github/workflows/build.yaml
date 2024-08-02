@@ -22,7 +22,7 @@ jobs:
           cache-dependency-path: "**/go.sum"
       - name: Install build dependencies
         run: sudo apt-get update && sudo apt-get install -y clang llvm libbpf-dev
-      - name: Archetecture
+      - name: Architecture
         run: |
           uname -p;
           clang --version;
@@ -46,7 +46,7 @@ jobs:
           echo "PATH=/opt/homebrew/opt/llvm/bin:$PATH" >> $GITHUB_ENV;
           echo "LDFLAGS=-L/opt/homebrew/opt/llvm/lib -L/opt/homebrew/opt/llvm/lib/c++ -Wl,-rpath,/opt/homebrew/opt/llvm/lib/c++" >> $GITHUB_ENV;
           echo "CPPFLAGS=-I/opt/homebrew/opt/llvm/include" >> $GITHUB_ENV;
-      - name: Archetecture
+      - name: Architecture
         run: |
           uname -p;
           clang --version;

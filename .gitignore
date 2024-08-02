@@ -37,6 +37,10 @@ internal/test/**/traces-orig.json
 # ignore db files created by the example or tests
 *.db
 
+cli/cli
 examples/rolldice/rolldice
+examples/httpPlusdb/httpPlusdb
+examples/kafka-go/producer/producer
+examples/kafka-go/consumer/consumer
 
 go.work*
