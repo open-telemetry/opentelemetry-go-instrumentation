@@ -141,9 +141,12 @@ func (sc *SamplerConfig) MarshalBinary() ([]byte, error) {
 		return nil, err
 	}
 
-	err = binary.Write(writingBuffer, binary.NativeEndian, sc.Config)
-	if err != nil {
-		return nil, err
+	if sc.Config != nil {
+		// sampler config may be empty. In that case, we don't write anything.
+		err = binary.Write(writingBuffer, binary.NativeEndian, sc.Config)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	if available := writingBuffer.Available(); available > 0 {
