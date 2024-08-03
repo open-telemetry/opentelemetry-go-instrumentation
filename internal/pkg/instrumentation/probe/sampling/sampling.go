@@ -75,6 +75,12 @@ func (c Config) IsZero() bool {
 func DefaultConfig() Config {
 	return Config{
 		Samplers: map[SamplerID]SamplerConfig{
+			AlwaysOnID: {
+				SamplerType: SamplerAlwaysOn,
+			},
+			AlwaysOffID: {
+				SamplerType: SamplerAlwaysOff,
+			},
 			ParentBasedID: {
 				SamplerType: SamplerParentBased,
 				Config:      DefaultParentBasedSampler(),
