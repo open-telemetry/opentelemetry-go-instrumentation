@@ -11,9 +11,10 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"go.opentelemetry.io/auto/internal/pkg/instrumentation/probe/sampling"
 	"go.opentelemetry.io/otel/attribute"
 	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
+
+	"go.opentelemetry.io/auto/internal/pkg/instrumentation/probe/sampling"
 )
 
 func TestWithServiceName(t *testing.T) {
@@ -236,7 +237,7 @@ func TestWithSampler(t *testing.T) {
 	t.Run("WithSampler", func(t *testing.T) {
 		c, err := newInstConfig(context.Background(), []InstrumentationOption{
 			WithSampler(ParentBased{
-				Root: TraceIDRatio{Ratio: 0.42},
+				Root: TraceIDRatio{Fraction: 0.42},
 			}),
 		})
 		require.NoError(t, err)

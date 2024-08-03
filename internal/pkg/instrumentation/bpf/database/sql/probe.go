@@ -60,8 +60,8 @@ func New(logger logr.Logger, samplingConfig sampling.Config) probe.Probe {
 			},
 		},
 
-		SpecFn:    loadBpf,
-		ProcessFn: convertEvent,
+		SpecFn:         loadBpf,
+		ProcessFn:      convertEvent,
 		SamplingConfig: samplingConfig,
 	}
 }

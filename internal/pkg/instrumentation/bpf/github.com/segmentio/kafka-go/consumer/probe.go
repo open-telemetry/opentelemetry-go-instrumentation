@@ -74,8 +74,8 @@ func New(logger logr.Logger, samplingConfig sampling.Config) probe.Probe {
 				ReturnProbe: "uprobe_FetchMessage_Returns",
 			},
 		},
-		SpecFn:    loadBpf,
-		ProcessFn: convertEvent,
+		SpecFn:         loadBpf,
+		ProcessFn:      convertEvent,
 		SamplingConfig: samplingConfig,
 	}
 }

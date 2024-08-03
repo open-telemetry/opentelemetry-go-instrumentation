@@ -73,8 +73,8 @@ func New(logger logr.Logger, samplingConfig sampling.Config) probe.Probe {
 				EntryProbe: "uprobe_http2Server_operateHeader",
 			},
 		},
-		SpecFn:    loadBpf,
-		ProcessFn: convertEvent,
+		SpecFn:         loadBpf,
+		ProcessFn:      convertEvent,
 		SamplingConfig: samplingConfig,
 	}
 }

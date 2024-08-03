@@ -360,7 +360,7 @@ var lookupEnv = os.LookupEnv
 //   - OTEL_LOG_LEVEL: sets the log level
 //
 // This option may conflict with [WithTarget], [WithPID], [WithTraceExporter],
-// [WithServiceName], [WithGlobal] and [WithLogLevel] if their respective environment variable is defined.
+// [WithServiceName], [WithGlobal], [WithLogLevel] and [WithSampler] if their respective environment variable is defined.
 // If more than one of these options are used, the last one provided to an
 // [Instrumentation] will be used.
 //
@@ -528,6 +528,8 @@ func WithLogLevel(level LogLevel) InstrumentationOption {
 	})
 }
 
+// WithSampler returns an [InstrumentationOption] that will configure
+// an [Instrumentation] to use the provided sampler to sample OpenTelemetry traces.
 func WithSampler(sampler Sampler) InstrumentationOption {
 	return fnOpt(func(_ context.Context, c instConfig) (instConfig, error) {
 		err := sampler.validate()

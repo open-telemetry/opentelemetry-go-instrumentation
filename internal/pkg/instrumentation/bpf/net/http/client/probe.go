@@ -154,9 +154,9 @@ func New(logger logr.Logger, samplingConfig sampling.Config) probe.Probe {
 				Val: structfield.NewID("std", "net/url", "URL", "Host"),
 			},
 		},
-		Uprobes:   uprobes,
-		SpecFn:    verifyAndLoadBpf,
-		ProcessFn: convertEvent,
+		Uprobes:        uprobes,
+		SpecFn:         verifyAndLoadBpf,
+		ProcessFn:      convertEvent,
 		SamplingConfig: samplingConfig,
 	}
 }

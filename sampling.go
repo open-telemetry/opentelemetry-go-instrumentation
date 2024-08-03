@@ -11,6 +11,7 @@ import (
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/probe/sampling"
 )
 
+// Sampler decides whether a trace should be sampled and exported.
 type Sampler interface {
 	validate() error
 	convert() (sampling.Config, error)
@@ -28,6 +29,10 @@ const (
 	samplerNameParentBasedTraceIDRatio = "parentbased_traceidratio"
 )
 
+// AlwaysOn is a Sampler that samples every trace.
+// Be careful about using this sampler in a production application with
+// significant traffic: a new trace will be started and exported for every
+// request.
 type AlwaysOn struct{}
 
 var _ Sampler = AlwaysOn{}
@@ -47,6 +52,7 @@ func (AlwaysOn) convert() (sampling.Config, error) {
 	}, nil
 }
 
+// AlwaysOff returns a Sampler that samples no traces.
 type AlwaysOff struct{}
 
 var _ Sampler = AlwaysOff{}
@@ -66,22 +72,25 @@ func (AlwaysOff) convert() (sampling.Config, error) {
 	}, nil
 }
 
+// TraceIDRatio samples a given fraction of traces. Fractions should be in the close interval [0, 1].
+// To respect the parent trace's `SampledFlag`, the `TraceIDRatio` sampler should be used
+// as a delegate of a `Parent` sampler.
 type TraceIDRatio struct {
-	Ratio float64
+	Fraction float64
 }
 
 var _ Sampler = TraceIDRatio{}
 
 func (t TraceIDRatio) validate() error {
-	if t.Ratio < 0 || t.Ratio > 1 {
-		return errors.New("TraceIDRatio.Ratio must be in the range [0, 1]")
+	if t.Fraction < 0 || t.Fraction > 1 {
+		return errors.New("fraction in TraceIDRatio must be in the range [0, 1]")
 	}
 
 	return nil
 }
 
 func (t TraceIDRatio) convert() (sampling.Config, error) {
-	tidConfig, err := sampling.NewTraceIDRationConfig(t.Ratio)
+	tidConfig, err := sampling.NewTraceIDRationConfig(t.Fraction)
 	if err != nil {
 		return sampling.Config{}, err
 	}
@@ -96,6 +105,15 @@ func (t TraceIDRatio) convert() (sampling.Config, error) {
 	}, nil
 }
 
+// ParentBased returns a sampler decorator which behaves differently,
+// based on the parent of the span. If the span has no parent,
+// the `Root` sampler is used to make sampling decision. If the span has
+// a parent, depending on whether the parent is remote and whether it
+// is sampled, one of the following samplers will apply:
+//   - RemoteSampled (default: AlwaysOn)
+//   - RemoteNotSampled (default: AlwaysOff)
+//   - LocalSampled (default: AlwaysOn)
+//   - LocalNotSampled (default: AlwaysOff)
 type ParentBased struct {
 	Root             Sampler
 	RemoteSampled    Sampler
@@ -111,7 +129,7 @@ func validateParentBasedComponent(s Sampler) error {
 		return nil
 	}
 	if _, ok := s.(ParentBased); ok {
-		return errors.New("ParentBased sampler cannot wrap ParentBased sampler")
+		return errors.New("parent-based sampler cannot wrap parent-based sampler")
 	}
 	return s.validate()
 }
@@ -129,10 +147,7 @@ func (p ParentBased) validate() error {
 	if err := validateParentBasedComponent(p.LocalSampled); err != nil {
 		return err
 	}
-	if err := validateParentBasedComponent(p.LocalNotSampled); err != nil {
-		return err
-	}
-	return nil
+	return validateParentBasedComponent(p.LocalNotSampled)
 }
 
 func getSamplerConfig(s Sampler) (sampling.Config, error) {
@@ -216,11 +231,11 @@ func (p ParentBased) convert() (sampling.Config, error) {
 
 	samplers[sampling.ParentBasedID] = sampling.SamplerConfig{
 		SamplerType: sampling.SamplerParentBased,
-		Config: pbc,
+		Config:      pbc,
 	}
 
 	return sampling.Config{
-		Samplers:     samplers,
+		Samplers:      samplers,
 		ActiveSampler: sampling.ParentBasedID,
 	}, nil
 }
@@ -254,9 +269,9 @@ func newSamplerFromEnv() (Sampler, error) {
 			if err != nil {
 				return nil, err
 			}
-			return TraceIDRatio{Ratio: ratio}, nil
+			return TraceIDRatio{Fraction: ratio}, nil
 		}
-		return TraceIDRatio{Ratio: 1}, nil
+		return TraceIDRatio{Fraction: 1}, nil
 	case samplerNameParentBasedAlwaysOn:
 		defaultSampler.Root = AlwaysOn{}
 		return defaultSampler, nil
@@ -265,14 +280,14 @@ func newSamplerFromEnv() (Sampler, error) {
 		return defaultSampler, nil
 	case samplerNameParentBasedTraceIDRatio:
 		if !hasSamplerArg {
-			defaultSampler.Root = TraceIDRatio{Ratio: 1}
+			defaultSampler.Root = TraceIDRatio{Fraction: 1}
 			return defaultSampler, nil
 		}
 		ratio, err := parseTraceIDRatio(samplerArg)
 		if err != nil {
 			return nil, err
 		}
-		defaultSampler.Root = TraceIDRatio{Ratio: ratio}
+		defaultSampler.Root = TraceIDRatio{Fraction: ratio}
 		return defaultSampler, nil
 	default:
 		return nil, errors.New("unknown sampler name")
@@ -283,9 +298,6 @@ func parseTraceIDRatio(s string) (float64, error) {
 	ratio, err := strconv.ParseFloat(s, 64)
 	if err != nil {
 		return 0, err
-	}
-	if ratio < 0 || ratio > 1 {
-		return 0, errors.New("TraceIDRatio.Ratio must be in the range [0, 1]")
 	}
 	return ratio, nil
 }

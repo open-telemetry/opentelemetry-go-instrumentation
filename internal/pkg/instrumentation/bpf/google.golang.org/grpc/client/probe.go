@@ -73,8 +73,8 @@ func New(logger logr.Logger, samplingConfig sampling.Config) probe.Probe {
 				EntryProbe: "uprobe_LoopyWriter_HeaderHandler",
 			},
 		},
-		SpecFn:    verifyAndLoadBpf,
-		ProcessFn: convertEvent,
+		SpecFn:         verifyAndLoadBpf,
+		ProcessFn:      convertEvent,
 		SamplingConfig: samplingConfig,
 	}
 }

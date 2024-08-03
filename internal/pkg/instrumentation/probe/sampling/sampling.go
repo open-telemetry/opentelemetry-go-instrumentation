@@ -27,13 +27,16 @@ type Manager struct {
 
 type SamplerType uint64
 
+// SamplerType defines the type of a sampler.
 const (
 	// OpenTelemetry spec-defined samplers.
+
 	SamplerAlwaysOn SamplerType = iota
 	SamplerAlwaysOff
 	SamplerTraceIDRatio
 	SamplerParentBased
-	// Custom samplers.
+
+	// Custom samplers TODO.
 )
 
 type TraceIDRatioConfig struct {
@@ -54,8 +57,14 @@ func NewTraceIDRationConfig(ratio float64) (TraceIDRatioConfig, error) {
 // and as a value in the active sampler map. In addition samplers can reference other samplers in their configuration by their ID.
 type SamplerID uint32
 
+// Config holds the configuration for the eBPF samplers.
 type Config struct {
-	Samplers      map[SamplerID]SamplerConfig
+	// Samplers is a map of sampler IDs to their configuration.
+	Samplers map[SamplerID]SamplerConfig
+	// ActiveSampler is the ID of the currently active sampler.
+	// The active sampler id must be one of the keys in the samplers map.
+	// Each sampler can reference other samplers in their configuration by their ID.
+	// When referencing another sampler, the ID must be one of the keys in the samplers map.
 	ActiveSampler SamplerID
 }
 
@@ -75,6 +84,7 @@ func DefaultConfig() Config {
 	}
 }
 
+// ParentBasedConfig holds the configuration for the ParentBased sampler.
 type ParentBasedConfig struct {
 	Root             SamplerID
 	RemoteSampled    SamplerID
@@ -95,10 +105,6 @@ const (
 	maxSamplers             = 32
 )
 
-// config data for samplers is a union of all possible sampler configurations.
-// the size of the data is fixed, and the actual configuration is stored in the first part of the data.
-// the rest of the data is padding to make sure the size is fixed.
-
 // The spec-defined samplers have a constant ID, and are always available.
 const (
 	AlwaysOnID     SamplerID = 0
@@ -107,6 +113,9 @@ const (
 	ParentBasedID  SamplerID = 3
 )
 
+// SamplerConfig holds the configuration for a specific sampler. data for samplers is a union of all possible sampler configurations.
+// the size of the data is fixed, and the actual configuration is stored in the first part of the data.
+// the rest of the data is padding to make sure the size is fixed.
 type SamplerConfig struct {
 	SamplerType SamplerType
 	Config      any
@@ -171,8 +180,7 @@ func (sc *SamplerConfig) UnmarshalBinary(data []byte) error {
 	return nil
 }
 
-// NewSamplingManager creates a new SamplingConfig from the given eBPF collection.
-// It applies the sampler configuration from the environment variables.
+// NewSamplingManager creates a new Manager from the given eBPF collection with the given configuration.
 func NewSamplingManager(c *ebpf.Collection, conf Config) (*Manager, error) {
 	samplersConfig, ok := c.Maps[samplersConfigMapName]
 	if !ok {
