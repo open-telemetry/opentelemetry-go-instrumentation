@@ -14,6 +14,7 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
+	"sync"
 
 	"github.com/go-logr/logr"
 	"github.com/go-logr/stdr"
@@ -57,6 +58,10 @@ type Instrumentation struct {
 	target   *process.TargetDetails
 	analyzer *process.Analyzer
 	manager  *instrumentation.Manager
+
+	stopMu  sync.Mutex
+	stop    context.CancelFunc
+	stopped chan struct{}
 }
 
 // Error message returned when instrumentation is launched without a valid target
@@ -158,13 +163,48 @@ func NewInstrumentation(ctx context.Context, opts ...InstrumentationOption) (*In
 }
 
 // Run starts the instrumentation.
+//
+// This function will not return until either ctx is done, an unrecoverable
+// error is encountered, or Close is called.
 func (i *Instrumentation) Run(ctx context.Context) error {
-	return i.manager.Run(ctx, i.target)
+	ctx, err := i.newStop(ctx)
+	if err != nil {
+		return err
+	}
+
+	err = i.manager.Run(ctx, i.target)
+	close(i.stopped)
+	if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
+		return nil
+	}
+	return err
+}
+
+func (i *Instrumentation) newStop(parent context.Context) (context.Context, error) {
+	i.stopMu.Lock()
+	defer i.stopMu.Unlock()
+
+	if i.stop != nil {
+		return parent, errors.New("instrumentation already running")
+	}
+
+	ctx, stop := context.WithCancel(parent)
+	i.stop, i.stopped = stop, make(chan struct{})
+	return ctx, nil
 }
 
 // Close closes the Instrumentation, cleaning up all used resources.
 func (i *Instrumentation) Close() error {
-	return i.manager.Close()
+	i.stopMu.Lock()
+	defer i.stopMu.Unlock()
+
+	if i.stop != nil {
+		i.stop()
+		<-i.stopped
+
+		i.stop, i.stopped = nil, nil
+	}
+	return nil
 }
 
 // InstrumentationOption applies a configuration option to [Instrumentation].

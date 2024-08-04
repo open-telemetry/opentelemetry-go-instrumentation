@@ -4,10 +4,13 @@
 package instrumentation
 
 import (
+	"context"
 	"log"
 	"os"
 	"testing"
+	"time"
 
+	"github.com/cilium/ebpf/link"
 	"github.com/go-logr/stdr"
 	"github.com/hashicorp/go-version"
 	"github.com/stretchr/testify/assert"
@@ -185,4 +188,88 @@ func fakeManager(t *testing.T) *Manager {
 	assert.NotNil(t, m)
 
 	return m
+}
+
+func TestRunStopping(t *testing.T) {
+	probeStop := make(chan struct{})
+	p := newSlowProbe(probeStop)
+
+	logger := stdr.New(log.New(os.Stderr, "", log.LstdFlags))
+	logger = logger.WithName("Instrumentation")
+
+	m := &Manager{
+		logger: logger.WithName("Manager"),
+		probes: map[probe.ID]probe.Probe{{}: p},
+	}
+
+	origOpenExecutable := openExecutable
+	openExecutable = func(string) (*link.Executable, error) { return nil, nil }
+	t.Cleanup(func() { openExecutable = origOpenExecutable })
+
+	origRlimitRemoveMemlock := rlimitRemoveMemlock
+	rlimitRemoveMemlock = func() error { return nil }
+	t.Cleanup(func() { rlimitRemoveMemlock = origRlimitRemoveMemlock })
+
+	origBpffsMount := bpffsMount
+	bpffsMount = func(*process.TargetDetails) error { return nil }
+	t.Cleanup(func() { bpffsMount = origBpffsMount })
+
+	origBpffsCleanup := bpffsCleanup
+	bpffsCleanup = func(*process.TargetDetails) error { return nil }
+	t.Cleanup(func() { bpffsCleanup = origBpffsCleanup })
+
+	ctx, stopCtx := context.WithCancel(context.Background())
+	errCh := make(chan error, 1)
+	go func() { errCh <- m.Run(ctx, &process.TargetDetails{PID: 1000}) }()
+
+	assert.NotPanics(t, func() {
+		stopCtx()
+		assert.Eventually(t, func() bool {
+			select {
+			case <-p.closeSignal:
+				return true
+			default:
+				return false
+			}
+		}, time.Second, 10*time.Millisecond)
+		close(probeStop)
+	})
+
+	var err error
+	assert.Eventually(t, func() bool {
+		select {
+		case err = <-errCh:
+			return true
+		default:
+			return false
+		}
+	}, time.Second, 10*time.Millisecond)
+	assert.ErrorIs(t, err, context.Canceled, "Stopping Run error")
+}
+
+type slowProbe struct {
+	probe.Probe
+
+	closeSignal chan struct{}
+	stop        chan struct{}
+}
+
+func newSlowProbe(stop chan struct{}) slowProbe {
+	return slowProbe{
+		closeSignal: make(chan struct{}),
+		stop:        stop,
+	}
+}
+
+func (p slowProbe) Load(*link.Executable, *process.TargetDetails) error {
+	return nil
+}
+
+func (p slowProbe) Run(c chan<- *probe.Event) {
+}
+
+func (p slowProbe) Close() error {
+	p.closeSignal <- struct{}{}
+	<-p.stop
+	return nil
 }
