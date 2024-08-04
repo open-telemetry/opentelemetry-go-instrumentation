@@ -180,7 +180,7 @@ fixtures/%:
 		sleep 5; \
 	done
 	kubectl wait --for=condition=Ready --timeout=60s pod/test-opentelemetry-collector-0
-	kubectl -n default create -f .github/workflows/e2e/k8s/sample-job.yml
+	helm install e2e -f ./internal/test/e2e/$(LIBRARY)/values.yaml .github/workflows/e2e/k8s/e2e-chart
 	if kubectl wait --for=condition=Complete --timeout=60s job/sample-job; then \
 		rm -f ./internal/test/e2e/$(LIBRARY)/traces-orig.json; \
 		kubectl cp -c filecp default/test-opentelemetry-collector-0:tmp/trace.json ./internal/test/e2e/$(LIBRARY)/traces-orig.json; \

@@ -38,6 +38,10 @@ spec:
           value: "tracecontext,baggage"
         - name: OTEL_GO_AUTO_INCLUDE_DB_STATEMENT
           value: "true"
+        - name: OTEL_BSP_SCHEDULE_DELAY
+          value: "60000"
+        - name: OTEL_BSP_MAX_EXPORT_BATCH_SIZE
+          value: {{ .Values.expectedSpansCount | quote }}
         resources: {}
         securityContext:
           runAsUser: 0

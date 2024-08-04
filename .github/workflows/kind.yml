@@ -76,7 +76,7 @@ jobs:
           kubectl wait --for=condition=Ready --timeout=60s pod/test-opentelemetry-collector-0
       - name: start sample job
         run: |
-          kubectl -n default create -f .github/workflows/e2e/k8s/sample-job.yml
+          helm install e2e -f ./internal/test/e2e/${{ matrix.library }}/values.yaml .github/workflows/e2e/k8s/e2e-chart
       - name: check job status
         id: job-status
         run: |
