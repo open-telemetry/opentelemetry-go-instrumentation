@@ -86,7 +86,7 @@ func TestEbpfNewSamplingConfigDefault(t *testing.T) {
 	t.Run("parent based with trace id ratio", func(t *testing.T) {
 		pb := DefaultParentBasedSampler()
 		pb.Root = TraceIDRatioID
-		m, err := NewSamplingManager(c, Config{
+		m, err := NewSamplingManager(c, &Config{
 			Samplers: map[SamplerID]SamplerConfig{
 				ParentBasedID: {
 					SamplerType: SamplerParentBased,
