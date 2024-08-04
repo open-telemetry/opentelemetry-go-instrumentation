@@ -20,6 +20,7 @@ import (
 
 	"go.opentelemetry.io/auto/internal/pkg/inject"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/bpffs"
+	"go.opentelemetry.io/auto/internal/pkg/instrumentation/probe/sampling"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/utils"
 	"go.opentelemetry.io/auto/internal/pkg/process"
 	"go.opentelemetry.io/auto/internal/pkg/structfield"
@@ -33,7 +34,7 @@ type Probe interface {
 	Manifest() Manifest
 
 	// Load loads all instrumentation offsets.
-	Load(*link.Executable, *process.TargetDetails) error
+	Load(*link.Executable, *process.TargetDetails, *sampling.Config) error
 
 	// Run runs the events processing loop.
 	Run(eventsChan chan<- *Event)
@@ -66,9 +67,10 @@ type Base[BPFObj any, BPFEvent any] struct {
 	// ProcessFn processes probe events into a uniform Event type.
 	ProcessFn func(*BPFEvent) []*SpanEvent
 
-	reader     *perf.Reader
-	collection *ebpf.Collection
-	closers    []io.Closer
+	reader          *perf.Reader
+	collection      *ebpf.Collection
+	samplingManager *sampling.Manager
+	closers         []io.Closer
 }
 
 const (
@@ -93,7 +95,7 @@ func (i *Base[BPFObj, BPFEvent]) Manifest() Manifest {
 }
 
 // Load loads all instrumentation offsets.
-func (i *Base[BPFObj, BPFEvent]) Load(exec *link.Executable, td *process.TargetDetails) error {
+func (i *Base[BPFObj, BPFEvent]) Load(exec *link.Executable, td *process.TargetDetails, sc *sampling.Config) error {
 	spec, err := i.SpecFn()
 	if err != nil {
 		return err
@@ -118,6 +120,12 @@ func (i *Base[BPFObj, BPFEvent]) Load(exec *link.Executable, td *process.TargetD
 	if err != nil {
 		return err
 	}
+
+	i.samplingManager, err = sampling.NewSamplingManager(i.collection, sc)
+	if err != nil {
+		return err
+	}
+
 	i.closers = append(i.closers, i.reader)
 
 	return nil
