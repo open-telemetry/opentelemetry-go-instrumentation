@@ -1,9 +1,8 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-#include "trace/span_context.h"
 #include "common.h"
-#include "trace/span_context.h"
+#include "trace/sampling.h"
 
 #ifndef _SPAN_OUTPUT_H_
 #define _SPAN_OUTPUT_H_

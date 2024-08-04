@@ -112,6 +112,8 @@ type bpfMapSpecs struct {
 	GoContextToSc             *ebpf.MapSpec `ebpf:"go_context_to_sc"`
 	GolangMapbucketStorageMap *ebpf.MapSpec `ebpf:"golang_mapbucket_storage_map"`
 	OtelSpanStorageMap        *ebpf.MapSpec `ebpf:"otel_span_storage_map"`
+	ProbeActiveSamplerMap     *ebpf.MapSpec `ebpf:"probe_active_sampler_map"`
+	SamplersConfigMap         *ebpf.MapSpec `ebpf:"samplers_config_map"`
 	SliceArrayBuffMap         *ebpf.MapSpec `ebpf:"slice_array_buff_map"`
 	SpanNameByContext         *ebpf.MapSpec `ebpf:"span_name_by_context"`
 	TracerIdByContext         *ebpf.MapSpec `ebpf:"tracer_id_by_context"`
@@ -145,6 +147,8 @@ type bpfMaps struct {
 	GoContextToSc             *ebpf.Map `ebpf:"go_context_to_sc"`
 	GolangMapbucketStorageMap *ebpf.Map `ebpf:"golang_mapbucket_storage_map"`
 	OtelSpanStorageMap        *ebpf.Map `ebpf:"otel_span_storage_map"`
+	ProbeActiveSamplerMap     *ebpf.Map `ebpf:"probe_active_sampler_map"`
+	SamplersConfigMap         *ebpf.Map `ebpf:"samplers_config_map"`
 	SliceArrayBuffMap         *ebpf.Map `ebpf:"slice_array_buff_map"`
 	SpanNameByContext         *ebpf.Map `ebpf:"span_name_by_context"`
 	TracerIdByContext         *ebpf.Map `ebpf:"tracer_id_by_context"`
@@ -161,6 +165,8 @@ func (m *bpfMaps) Close() error {
 		m.GoContextToSc,
 		m.GolangMapbucketStorageMap,
 		m.OtelSpanStorageMap,
+		m.ProbeActiveSamplerMap,
+		m.SamplersConfigMap,
 		m.SliceArrayBuffMap,
 		m.SpanNameByContext,
 		m.TracerIdByContext,
