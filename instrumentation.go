@@ -28,6 +28,7 @@ import (
 	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
 
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation"
+	"go.opentelemetry.io/auto/internal/pkg/instrumentation/probe/sampling"
 	"go.opentelemetry.io/auto/internal/pkg/opentelemetry"
 	"go.opentelemetry.io/auto/internal/pkg/process"
 )
@@ -125,7 +126,7 @@ func NewInstrumentation(ctx context.Context, opts ...InstrumentationOption) (*In
 		return nil, err
 	}
 
-	mngr, err := instrumentation.NewManager(logger, ctrl, c.globalImpl, c.loadIndicator)
+	mngr, err := instrumentation.NewManager(logger, ctrl, c.globalImpl, c.loadIndicator, c.samplingConfig)
 	if err != nil {
 		return nil, err
 	}
@@ -173,7 +174,6 @@ type InstrumentationOption interface {
 }
 
 type instConfig struct {
-	sampler            trace.Sampler
 	traceExp           trace.SpanExporter
 	target             process.TargetArgs
 	serviceName        string
@@ -181,6 +181,7 @@ type instConfig struct {
 	globalImpl         bool
 	loadIndicator      chan struct{}
 	logLevel           LogLevel
+	samplingConfig     *sampling.Config
 }
 
 func newInstConfig(ctx context.Context, opts []InstrumentationOption) (instConfig, error) {
@@ -207,8 +208,8 @@ func newInstConfig(ctx context.Context, opts []InstrumentationOption) (instConfi
 		err = errors.Join(err, e)
 	}
 
-	if c.sampler == nil {
-		c.sampler = trace.AlwaysSample()
+	if c.samplingConfig == nil {
+		c.samplingConfig = sampling.DefaultConfig()
 	}
 
 	if c.logLevel == logLevelUndefined {
@@ -239,7 +240,9 @@ func (c instConfig) validate() error {
 
 func (c instConfig) tracerProvider(bi *buildinfo.BuildInfo) *trace.TracerProvider {
 	return trace.NewTracerProvider(
-		trace.WithSampler(c.sampler),
+		// the actual sampling is done in the eBPF probes.
+		// this is just to make sure that we export all spans we get from the probes
+		trace.WithSampler(trace.AlwaysSample()),
 		trace.WithResource(c.res(bi)),
 		trace.WithBatcher(c.traceExp),
 		trace.WithIDGenerator(opentelemetry.NewEBPFSourceIDGenerator()),
@@ -355,9 +358,11 @@ var lookupEnv = os.LookupEnv
 //   - OTEL_TRACES_EXPORTER: sets the trace exporter
 //   - OTEL_GO_AUTO_GLOBAL: enables the OpenTelemetry global implementation
 //   - OTEL_LOG_LEVEL: sets the log level
+//   - OTEL_TRACES_SAMPLER: sets the trace sampler
+//   - OTEL_TRACES_SAMPLER_ARG: optionally sets the trace sampler argument
 //
 // This option may conflict with [WithTarget], [WithPID], [WithTraceExporter],
-// [WithServiceName], [WithGlobal] and [WithLogLevel] if their respective environment variable is defined.
+// [WithServiceName], [WithGlobal], [WithLogLevel] and [WithSampler] if their respective environment variable is defined.
 // If more than one of these options are used, the last one provided to an
 // [Instrumentation] will be used.
 //
@@ -400,6 +405,17 @@ func WithEnv() InstrumentationOption {
 			}
 
 			err = errors.Join(err, e)
+		}
+		if s, err := newSamplerFromEnv(); err == nil {
+			err := s.validate()
+			if err != nil {
+				return c, err
+			}
+			cfg, err := s.convert()
+			if err != nil {
+				return c, err
+			}
+			c.samplingConfig = cfg
 		}
 		return c, err
 	})
@@ -454,9 +470,17 @@ func WithTraceExporter(exp trace.SpanExporter) InstrumentationOption {
 
 // WithSampler returns an [InstrumentationOption] that will configure
 // an [Instrumentation] to use the provided sampler to sample OpenTelemetry traces.
-func WithSampler(sampler trace.Sampler) InstrumentationOption {
+func WithSampler(sampler Sampler) InstrumentationOption {
 	return fnOpt(func(_ context.Context, c instConfig) (instConfig, error) {
-		c.sampler = sampler
+		err := sampler.validate()
+		if err != nil {
+			return c, err
+		}
+		cfg, err := sampler.convert()
+		if err != nil {
+			return c, err
+		}
+		c.samplingConfig = cfg
 		return c, nil
 	})
 }
