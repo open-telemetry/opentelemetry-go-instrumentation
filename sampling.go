@@ -14,7 +14,7 @@ import (
 // Sampler decides whether a trace should be sampled and exported.
 type Sampler interface {
 	validate() error
-	convert() (sampling.Config, error)
+	convert() (*sampling.Config, error)
 }
 
 const (
@@ -41,8 +41,8 @@ func (AlwaysOn) validate() error {
 	return nil
 }
 
-func (AlwaysOn) convert() (sampling.Config, error) {
-	return sampling.Config{
+func (AlwaysOn) convert() (*sampling.Config, error) {
+	return &sampling.Config{
 		Samplers: map[sampling.SamplerID]sampling.SamplerConfig{
 			sampling.AlwaysOnID: {
 				SamplerType: sampling.SamplerAlwaysOn,
@@ -61,8 +61,8 @@ func (AlwaysOff) validate() error {
 	return nil
 }
 
-func (AlwaysOff) convert() (sampling.Config, error) {
-	return sampling.Config{
+func (AlwaysOff) convert() (*sampling.Config, error) {
+	return &sampling.Config{
 		Samplers: map[sampling.SamplerID]sampling.SamplerConfig{
 			sampling.AlwaysOffID: {
 				SamplerType: sampling.SamplerAlwaysOff,
@@ -89,12 +89,12 @@ func (t TraceIDRatio) validate() error {
 	return nil
 }
 
-func (t TraceIDRatio) convert() (sampling.Config, error) {
+func (t TraceIDRatio) convert() (*sampling.Config, error) {
 	tidConfig, err := sampling.NewTraceIDRationConfig(t.Fraction)
 	if err != nil {
-		return sampling.Config{}, err
+		return nil, err
 	}
-	return sampling.Config{
+	return &sampling.Config{
 		Samplers: map[sampling.SamplerID]sampling.SamplerConfig{
 			sampling.TraceIDRatioID: {
 				SamplerType: sampling.SamplerTraceIDRatio,
@@ -150,25 +150,25 @@ func (p ParentBased) validate() error {
 	return validateParentBasedComponent(p.LocalNotSampled)
 }
 
-func getSamplerConfig(s Sampler) (sampling.Config, error) {
+func getSamplerConfig(s Sampler) (*sampling.Config, error) {
 	if s == nil {
-		return sampling.Config{}, nil
+		return nil, nil
 	}
 	config, err := s.convert()
 	if err != nil {
-		return sampling.Config{}, err
+		return nil, err
 	}
 	return config, nil
 }
 
-func (p ParentBased) convert() (sampling.Config, error) {
+func (p ParentBased) convert() (*sampling.Config, error) {
 	pbc := sampling.DefaultParentBasedSampler()
 	samplers := make(map[sampling.SamplerID]sampling.SamplerConfig)
 	rootSampler, err := getSamplerConfig(p.Root)
 	if err != nil {
-		return sampling.Config{}, err
+		return nil, err
 	}
-	if !rootSampler.IsZero() {
+	if rootSampler != nil {
 		pbc.Root = rootSampler.ActiveSampler
 		for id, config := range rootSampler.Samplers {
 			if config.Config != nil {
@@ -179,9 +179,9 @@ func (p ParentBased) convert() (sampling.Config, error) {
 
 	remoteSampledSampler, err := getSamplerConfig(p.RemoteSampled)
 	if err != nil {
-		return sampling.Config{}, err
+		return nil, err
 	}
-	if !remoteSampledSampler.IsZero() {
+	if remoteSampledSampler != nil {
 		pbc.RemoteSampled = remoteSampledSampler.ActiveSampler
 		for id, config := range remoteSampledSampler.Samplers {
 			if config.Config != nil {
@@ -192,9 +192,9 @@ func (p ParentBased) convert() (sampling.Config, error) {
 
 	remoteNotSampledSampler, err := getSamplerConfig(p.RemoteNotSampled)
 	if err != nil {
-		return sampling.Config{}, err
+		return nil, err
 	}
-	if !remoteNotSampledSampler.IsZero() {
+	if remoteNotSampledSampler != nil {
 		pbc.RemoteNotSampled = remoteNotSampledSampler.ActiveSampler
 		for id, config := range remoteNotSampledSampler.Samplers {
 			if config.Config != nil {
@@ -205,9 +205,9 @@ func (p ParentBased) convert() (sampling.Config, error) {
 
 	localSampledSamplers, err := getSamplerConfig(p.LocalSampled)
 	if err != nil {
-		return sampling.Config{}, err
+		return nil, err
 	}
-	if !localSampledSamplers.IsZero() {
+	if localSampledSamplers != nil {
 		pbc.LocalSampled = localSampledSamplers.ActiveSampler
 		for id, config := range localSampledSamplers.Samplers {
 			if config.Config != nil {
@@ -218,9 +218,9 @@ func (p ParentBased) convert() (sampling.Config, error) {
 
 	localNotSampledSampler, err := getSamplerConfig(p.LocalNotSampled)
 	if err != nil {
-		return sampling.Config{}, err
+		return nil, err
 	}
-	if !localNotSampledSampler.IsZero() {
+	if localNotSampledSampler != nil {
 		pbc.LocalNotSampled = localNotSampledSampler.ActiveSampler
 		for id, config := range localNotSampledSampler.Samplers {
 			if config.Config != nil {
@@ -234,7 +234,7 @@ func (p ParentBased) convert() (sampling.Config, error) {
 		Config:      pbc,
 	}
 
-	return sampling.Config{
+	return &sampling.Config{
 		Samplers:      samplers,
 		ActiveSampler: sampling.ParentBasedID,
 	}, nil

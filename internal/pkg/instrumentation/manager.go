@@ -39,10 +39,11 @@ type Manager struct {
 	wg              sync.WaitGroup
 	closingErrors   chan error
 	loadedIndicator chan struct{}
+	sc              *sampling.Config
 }
 
 // NewManager returns a new [Manager].
-func NewManager(logger logr.Logger, otelController *opentelemetry.Controller, globalImpl bool, loadIndicator chan struct{}, samplingConfig sampling.Config) (*Manager, error) {
+func NewManager(logger logr.Logger, otelController *opentelemetry.Controller, globalImpl bool, loadIndicator chan struct{}, samplingConfig *sampling.Config) (*Manager, error) {
 	logger = logger.WithName("Manager")
 	m := &Manager{
 		logger:          logger,
@@ -53,9 +54,10 @@ func NewManager(logger logr.Logger, otelController *opentelemetry.Controller, gl
 		globalImpl:      globalImpl,
 		closingErrors:   make(chan error, 1),
 		loadedIndicator: loadIndicator,
+		sc:              samplingConfig,
 	}
 
-	err := m.registerProbes(samplingConfig)
+	err := m.registerProbes()
 	if err != nil {
 		return nil, err
 	}
@@ -196,7 +198,7 @@ func (m *Manager) load(target *process.TargetDetails) error {
 	// Load probes
 	for name, i := range m.probes {
 		m.logger.V(0).Info("loading probe", "name", name)
-		err := i.Load(exe, target)
+		err := i.Load(exe, target, m.sc)
 		if err != nil {
 			m.logger.Error(err, "error while loading probes, cleaning up", "name", name)
 			return errors.Join(err, m.cleanup(target))
@@ -235,15 +237,15 @@ func (m *Manager) Close() error {
 	return err
 }
 
-func (m *Manager) registerProbes(samplingConfig sampling.Config) error {
+func (m *Manager) registerProbes() error {
 	insts := []probe.Probe{
-		grpcClient.New(m.logger, samplingConfig),
-		grpcServer.New(m.logger, samplingConfig),
-		httpServer.New(m.logger, samplingConfig),
-		httpClient.New(m.logger, samplingConfig),
-		dbSql.New(m.logger, samplingConfig),
-		kafkaProducer.New(m.logger, samplingConfig),
-		kafkaConsumer.New(m.logger, samplingConfig),
+		grpcClient.New(m.logger),
+		grpcServer.New(m.logger),
+		httpServer.New(m.logger),
+		httpClient.New(m.logger),
+		dbSql.New(m.logger),
+		kafkaProducer.New(m.logger),
+		kafkaConsumer.New(m.logger),
 	}
 
 	if m.globalImpl {

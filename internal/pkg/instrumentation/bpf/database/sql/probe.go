@@ -15,7 +15,6 @@ import (
 
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/context"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/probe"
-	"go.opentelemetry.io/auto/internal/pkg/instrumentation/probe/sampling"
 )
 
 //go:generate go run github.com/cilium/ebpf/cmd/bpf2go -target amd64,arm64 -cc clang -cflags $CFLAGS bpf ./bpf/probe.bpf.c
@@ -29,7 +28,7 @@ const (
 )
 
 // New returns a new [probe.Probe].
-func New(logger logr.Logger, samplingConfig sampling.Config) probe.Probe {
+func New(logger logr.Logger) probe.Probe {
 	id := probe.ID{
 		SpanKind:        trace.SpanKindClient,
 		InstrumentedPkg: pkg,
@@ -60,9 +59,8 @@ func New(logger logr.Logger, samplingConfig sampling.Config) probe.Probe {
 			},
 		},
 
-		SpecFn:         loadBpf,
-		ProcessFn:      convertEvent,
-		SamplingConfig: samplingConfig,
+		SpecFn:    loadBpf,
+		ProcessFn: convertEvent,
 	}
 }
 

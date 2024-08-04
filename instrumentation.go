@@ -181,7 +181,7 @@ type instConfig struct {
 	globalImpl         bool
 	loadIndicator      chan struct{}
 	logLevel           LogLevel
-	samplingConfig     sampling.Config
+	samplingConfig     *sampling.Config
 }
 
 func newInstConfig(ctx context.Context, opts []InstrumentationOption) (instConfig, error) {
@@ -212,7 +212,7 @@ func newInstConfig(ctx context.Context, opts []InstrumentationOption) (instConfi
 		c.logLevel = LogLevelInfo
 	}
 
-	if c.samplingConfig.IsZero() {
+	if c.samplingConfig == nil {
 		c.samplingConfig = sampling.DefaultConfig()
 	}
 

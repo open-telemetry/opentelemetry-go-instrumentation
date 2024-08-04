@@ -34,7 +34,7 @@ type Probe interface {
 	Manifest() Manifest
 
 	// Load loads all instrumentation offsets.
-	Load(*link.Executable, *process.TargetDetails) error
+	Load(*link.Executable, *process.TargetDetails, *sampling.Config) error
 
 	// Run runs the events processing loop.
 	Run(eventsChan chan<- *Event)
@@ -70,7 +70,6 @@ type Base[BPFObj any, BPFEvent any] struct {
 	reader          *perf.Reader
 	collection      *ebpf.Collection
 	samplingManager *sampling.Manager
-	SamplingConfig  sampling.Config
 	closers         []io.Closer
 }
 
@@ -96,7 +95,7 @@ func (i *Base[BPFObj, BPFEvent]) Manifest() Manifest {
 }
 
 // Load loads all instrumentation offsets.
-func (i *Base[BPFObj, BPFEvent]) Load(exec *link.Executable, td *process.TargetDetails) error {
+func (i *Base[BPFObj, BPFEvent]) Load(exec *link.Executable, td *process.TargetDetails, sc *sampling.Config) error {
 	spec, err := i.SpecFn()
 	if err != nil {
 		return err
@@ -122,7 +121,7 @@ func (i *Base[BPFObj, BPFEvent]) Load(exec *link.Executable, td *process.TargetD
 		return err
 	}
 
-	i.samplingManager, err = sampling.NewSamplingManager(i.collection, i.SamplingConfig)
+	i.samplingManager, err = sampling.NewSamplingManager(i.collection, sc)
 	if err != nil {
 		return err
 	}

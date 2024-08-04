@@ -207,6 +207,12 @@ func TestWithSampler(t *testing.T) {
 		sc := c.samplingConfig
 		assert.Equal(t, sc.Samplers, sampling.DefaultConfig().Samplers)
 		assert.Equal(t, sc.ActiveSampler, sampling.ParentBasedID)
+		conf, ok := sc.Samplers[sampling.ParentBasedID]
+		assert.True(t, ok)
+		assert.Equal(t, conf.SamplerType, sampling.SamplerParentBased)
+		pbConfig, ok := conf.Config.(sampling.ParentBasedConfig)
+		assert.True(t, ok)
+		assert.Equal(t, pbConfig, sampling.DefaultParentBasedSampler())
 	})
 
 	t.Run("Env config", func(t *testing.T) {

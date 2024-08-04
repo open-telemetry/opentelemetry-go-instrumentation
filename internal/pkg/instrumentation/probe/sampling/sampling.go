@@ -68,12 +68,8 @@ type Config struct {
 	ActiveSampler SamplerID
 }
 
-func (c Config) IsZero() bool {
-	return len(c.Samplers) == 0
-}
-
-func DefaultConfig() Config {
-	return Config{
+func DefaultConfig() *Config {
+	return &Config{
 		Samplers: map[SamplerID]SamplerConfig{
 			AlwaysOnID: {
 				SamplerType: SamplerAlwaysOn,
@@ -190,7 +186,7 @@ func (sc *SamplerConfig) UnmarshalBinary(data []byte) error {
 }
 
 // NewSamplingManager creates a new Manager from the given eBPF collection with the given configuration.
-func NewSamplingManager(c *ebpf.Collection, conf Config) (*Manager, error) {
+func NewSamplingManager(c *ebpf.Collection, conf *Config) (*Manager, error) {
 	samplersConfig, ok := c.Maps[samplersConfigMapName]
 	if !ok {
 		return nil, fmt.Errorf("map %s not found", samplersConfigMapName)
@@ -214,7 +210,7 @@ func NewSamplingManager(c *ebpf.Collection, conf Config) (*Manager, error) {
 	return m, nil
 }
 
-func (m *Manager) applyConfig(conf Config) error {
+func (m *Manager) applyConfig(conf *Config) error {
 	samplerIDs := make([]SamplerID, len(conf.Samplers))
 	configs := make([]SamplerConfig, len(conf.Samplers))
 
