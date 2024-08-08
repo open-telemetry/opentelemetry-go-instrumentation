@@ -164,6 +164,7 @@ func (m *Manager) Run(ctx context.Context, target *process.TargetDetails) error 
 			m.logger.V(1).Info("Shutting down all probes")
 			err := m.cleanup(target)
 
+			// Wait for all probes to stop before closing the chan they send on.
 			wg.Wait()
 			close(eventCh)
 
