@@ -27,16 +27,20 @@ import (
 	"go.opentelemetry.io/auto/internal/pkg/process"
 )
 
+// Function variables overridden in testing.
+var (
+	openExecutable      = link.OpenExecutable
+	rlimitRemoveMemlock = rlimit.RemoveMemlock
+	bpffsMount          = bpffs.Mount
+	bpffsCleanup        = bpffs.Cleanup
+)
+
 // Manager handles the management of [probe.Probe] instances.
 type Manager struct {
 	logger          logr.Logger
 	probes          map[probe.ID]probe.Probe
-	done            chan bool
-	incomingEvents  chan *probe.Event
 	otelController  *opentelemetry.Controller
 	globalImpl      bool
-	wg              sync.WaitGroup
-	closingErrors   chan error
 	loadedIndicator chan struct{}
 }
 
@@ -46,11 +50,8 @@ func NewManager(logger logr.Logger, otelController *opentelemetry.Controller, gl
 	m := &Manager{
 		logger:          logger,
 		probes:          make(map[probe.ID]probe.Probe),
-		done:            make(chan bool, 1),
-		incomingEvents:  make(chan *probe.Event),
 		otelController:  otelController,
 		globalImpl:      globalImpl,
-		closingErrors:   make(chan error, 1),
 		loadedIndicator: loadIndicator,
 	}
 
@@ -135,22 +136,21 @@ func (m *Manager) FilterUnusedProbes(target *process.TargetDetails) {
 // Run runs the event processing loop for all managed probes.
 func (m *Manager) Run(ctx context.Context, target *process.TargetDetails) error {
 	if len(m.probes) == 0 {
-		err := errors.New("no instrumentation for target process")
-		close(m.closingErrors)
-		return err
+		return errors.New("no instrumentation for target process")
 	}
 
 	err := m.load(target)
 	if err != nil {
-		close(m.closingErrors)
 		return err
 	}
 
-	m.wg.Add(len(m.probes))
+	eventCh := make(chan *probe.Event)
+	var wg sync.WaitGroup
 	for _, i := range m.probes {
+		wg.Add(1)
 		go func(p probe.Probe) {
-			defer m.wg.Done()
-			p.Run(m.incomingEvents)
+			defer wg.Done()
+			p.Run(eventCh)
 		}(i)
 	}
 
@@ -161,17 +161,15 @@ func (m *Manager) Run(ctx context.Context, target *process.TargetDetails) error 
 	for {
 		select {
 		case <-ctx.Done():
-			m.logger.V(1).Info("shutting down all probes due to context cancellation")
+			m.logger.V(1).Info("Shutting down all probes")
 			err := m.cleanup(target)
-			err = errors.Join(err, ctx.Err())
-			m.closingErrors <- err
-			return nil
-		case <-m.done:
-			m.logger.V(1).Info("shutting down all probes due to signal")
-			err := m.cleanup(target)
-			m.closingErrors <- err
-			return nil
-		case e := <-m.incomingEvents:
+
+			// Wait for all probes to stop before closing the chan they send on.
+			wg.Wait()
+			close(eventCh)
+
+			return errors.Join(err, ctx.Err())
+		case e := <-eventCh:
 			m.otelController.Trace(e)
 		}
 	}
@@ -179,11 +177,11 @@ func (m *Manager) Run(ctx context.Context, target *process.TargetDetails) error 
 
 func (m *Manager) load(target *process.TargetDetails) error {
 	// Remove resource limits for kernels <5.11.
-	if err := rlimit.RemoveMemlock(); err != nil {
+	if err := rlimitRemoveMemlock(); err != nil {
 		return err
 	}
 
-	exe, err := link.OpenExecutable(fmt.Sprintf("/proc/%d/exe", target.PID))
+	exe, err := openExecutable(fmt.Sprintf("/proc/%d/exe", target.PID))
 	if err != nil {
 		return err
 	}
@@ -212,26 +210,17 @@ func (m *Manager) mount(target *process.TargetDetails) error {
 	} else {
 		m.logger.V(1).Info("Mounting bpffs")
 	}
-	return bpffs.Mount(target)
+	return bpffsMount(target)
 }
 
 func (m *Manager) cleanup(target *process.TargetDetails) error {
 	var err error
-	close(m.incomingEvents)
 	for _, i := range m.probes {
 		err = errors.Join(err, i.Close())
 	}
 
 	m.logger.V(1).Info("Cleaning bpffs")
-	return errors.Join(err, bpffs.Cleanup(target))
-}
-
-// Close closes m.
-func (m *Manager) Close() error {
-	m.done <- true
-	err := <-m.closingErrors
-	m.wg.Wait()
-	return err
+	return errors.Join(err, bpffsCleanup(target))
 }
 
 func (m *Manager) registerProbes() error {
