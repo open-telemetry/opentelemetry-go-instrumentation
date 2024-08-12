@@ -278,16 +278,16 @@ func (o *Offsets) getLatest() (OffsetKey, verKey) {
 	o.mu.RLock()
 	defer o.mu.RUnlock()
 
-	oldestVersion := verKey{}
+	latestVersion := verKey{}
 	val := OffsetKey{}
 	for verKey, ov := range o.values {
-		if verKey.GreaterThan(oldestVersion) && ov.offset.Valid {
-			oldestVersion = verKey
+		if verKey.GreaterThan(latestVersion) && ov.offset.Valid {
+			latestVersion = verKey
 			val = ov.offset
 		}
 	}
 
-	return val, oldestVersion
+	return val, latestVersion
 }
 
 // Put sets the offset value for ver. If an offset for ver is already known
