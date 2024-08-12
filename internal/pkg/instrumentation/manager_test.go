@@ -1,3 +1,5 @@
+//go:build !multi_kernel_test
+
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
