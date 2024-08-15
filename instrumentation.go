@@ -32,6 +32,7 @@ import (
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation"
 	"go.opentelemetry.io/auto/internal/pkg/opentelemetry"
 	"go.opentelemetry.io/auto/internal/pkg/process"
+	otelauto "go.opentelemetry.io/auto/pkg/opentelemetry"
 )
 
 const (
@@ -126,9 +127,12 @@ func NewInstrumentation(ctx context.Context, opts ...InstrumentationOption) (*In
 		return nil, err
 	}
 
-	ctrl, err := opentelemetry.NewController(logger, c.tracerProvider(pa.BuildInfo), Version())
-	if err != nil {
-		return nil, err
+	ctrl := c.otelController
+	if ctrl == nil {
+		ctrl, err = opentelemetry.NewController(logger, c.tracerProvider(pa.BuildInfo), Version())
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	mngr, err := instrumentation.NewManager(logger, ctrl, c.globalImpl, c.loadIndicator, c.cp)
@@ -223,6 +227,7 @@ type instConfig struct {
 	loadIndicator      chan struct{}
 	logLevel           LogLevel
 	cp                 config.Provider
+	otelController     otelauto.OpenTelemetryController
 }
 
 func newInstConfig(ctx context.Context, opts []InstrumentationOption) (instConfig, error) {
@@ -336,6 +341,15 @@ func (c instConfig) res(bi *buildinfo.BuildInfo) *resource.Resource {
 type fnOpt func(context.Context, instConfig) (instConfig, error)
 
 func (o fnOpt) apply(ctx context.Context, c instConfig) (instConfig, error) { return o(ctx, c) }
+
+// WithOpenTelemetryController returns an [InstrumentationOption] defining the
+// OpenTelemetryController used by [Instrumentation].
+func WithOpenTelemetryController(ctrl otelauto.OpenTelemetryController) InstrumentationOption {
+	return fnOpt(func(_ context.Context, c instConfig) (instConfig, error) {
+		c.otelController = ctrl
+		return c, nil
+	})
+}
 
 // WithTarget returns an [InstrumentationOption] defining the target binary for
 // [Instrumentation] that is being executed at the provided path.

@@ -14,8 +14,8 @@ import (
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/utils"
 )
 
-// Controller handles OpenTelemetry telemetry generation for events.
-type Controller struct {
+// ControllerImpl handles OpenTelemetry telemetry generation for events.
+type ControllerImpl struct {
 	logger         logr.Logger
 	version        string
 	tracerProvider trace.TracerProvider
@@ -25,7 +25,7 @@ type Controller struct {
 
 type tracerID struct{ name, version, schema string }
 
-func (c *Controller) getTracer(pkg, tracerName, version, schema string) trace.Tracer {
+func (c *ControllerImpl) getTracer(pkg, tracerName, version, schema string) trace.Tracer {
 	// Default Tracer ID, if the user does not provide one.
 	tID := tracerID{name: pkg, version: c.version}
 	if tracerName != "" {
@@ -54,7 +54,7 @@ func (c *Controller) getTracer(pkg, tracerName, version, schema string) trace.Tr
 }
 
 // Trace creates a trace span for event.
-func (c *Controller) Trace(event *probe.Event) {
+func (c *ControllerImpl) Trace(event *probe.Event) {
 	for _, se := range event.SpanEvents {
 		c.logger.V(1).Info("got event", "kind", event.Kind.String(), "pkg", event.Package, "attrs", se.Attributes, "traceID", se.SpanContext.TraceID().String(), "spanID", se.SpanContext.SpanID().String())
 		ctx := context.Background()
@@ -81,12 +81,12 @@ func (c *Controller) Trace(event *probe.Event) {
 	}
 }
 
-func (c *Controller) convertTime(t int64) time.Time {
+func (c *ControllerImpl) convertTime(t int64) time.Time {
 	return time.Unix(0, c.bootTime+t)
 }
 
-// NewController returns a new initialized [Controller].
-func NewController(logger logr.Logger, tracerProvider trace.TracerProvider, ver string) (*Controller, error) {
+// NewController returns a new initialized [ControllerImpl].
+func NewController(logger logr.Logger, tracerProvider trace.TracerProvider, ver string) (*ControllerImpl, error) {
 	logger = logger.WithName("Controller")
 
 	bt, err := utils.EstimateBootTimeOffset()
@@ -94,7 +94,7 @@ func NewController(logger logr.Logger, tracerProvider trace.TracerProvider, ver 
 		return nil, err
 	}
 
-	return &Controller{
+	return &ControllerImpl{
 		logger:         logger,
 		version:        ver,
 		tracerProvider: tracerProvider,

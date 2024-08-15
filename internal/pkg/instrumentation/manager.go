@@ -26,8 +26,8 @@ import (
 	httpServer "go.opentelemetry.io/auto/internal/pkg/instrumentation/bpf/net/http/server"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/bpffs"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/probe"
-	"go.opentelemetry.io/auto/internal/pkg/opentelemetry"
 	"go.opentelemetry.io/auto/internal/pkg/process"
+	otelauto "go.opentelemetry.io/auto/pkg/opentelemetry"
 )
 
 // Function variables overridden in testing.
@@ -49,7 +49,7 @@ const (
 type Manager struct {
 	logger          logr.Logger
 	probes          map[probe.ID]probe.Probe
-	otelController  *opentelemetry.Controller
+	otelController  otelauto.OpenTelemetryController
 	globalImpl      bool
 	loadedIndicator chan struct{}
 	cp              config.Provider
@@ -63,7 +63,7 @@ type Manager struct {
 }
 
 // NewManager returns a new [Manager].
-func NewManager(logger logr.Logger, otelController *opentelemetry.Controller, globalImpl bool, loadIndicator chan struct{}, cp config.Provider) (*Manager, error) {
+func NewManager(logger logr.Logger, otelController otelauto.OpenTelemetryController, globalImpl bool, loadIndicator chan struct{}, cp config.Provider) (*Manager, error) {
 	logger = logger.WithName("Manager")
 	m := &Manager{
 		logger:          logger,
