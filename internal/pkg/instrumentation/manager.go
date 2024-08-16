@@ -13,6 +13,9 @@ import (
 	"github.com/cilium/ebpf/rlimit"
 	"github.com/go-logr/logr"
 
+	"go.opentelemetry.io/otel/trace"
+
+	"go.opentelemetry.io/auto/config"
 	dbSql "go.opentelemetry.io/auto/internal/pkg/instrumentation/bpf/database/sql"
 	kafkaConsumer "go.opentelemetry.io/auto/internal/pkg/instrumentation/bpf/github.com/segmentio/kafka-go/consumer"
 	kafkaProducer "go.opentelemetry.io/auto/internal/pkg/instrumentation/bpf/github.com/segmentio/kafka-go/producer"
@@ -42,10 +45,16 @@ type Manager struct {
 	otelController  *opentelemetry.Controller
 	globalImpl      bool
 	loadedIndicator chan struct{}
+	cp              config.Provider
+	exe             *link.Executable
+	td              *process.TargetDetails
+	runningProbesWG sync.WaitGroup
+	eventCh         chan *probe.Event
+	currentConfig   config.InstrumentationConfig
 }
 
 // NewManager returns a new [Manager].
-func NewManager(logger logr.Logger, otelController *opentelemetry.Controller, globalImpl bool, loadIndicator chan struct{}) (*Manager, error) {
+func NewManager(logger logr.Logger, otelController *opentelemetry.Controller, globalImpl bool, loadIndicator chan struct{}, cp config.Provider) (*Manager, error) {
 	logger = logger.WithName("Manager")
 	m := &Manager{
 		logger:          logger,
@@ -53,6 +62,8 @@ func NewManager(logger logr.Logger, otelController *opentelemetry.Controller, gl
 		otelController:  otelController,
 		globalImpl:      globalImpl,
 		loadedIndicator: loadIndicator,
+		cp:              cp,
+		eventCh:         make(chan *probe.Event),
 	}
 
 	err := m.registerProbes()
@@ -133,30 +144,123 @@ func (m *Manager) FilterUnusedProbes(target *process.TargetDetails) {
 	}
 }
 
+func getProbeConfig(id probe.ID, c config.InstrumentationConfig) (config.InstrumentationLibrary, bool) {
+	libKindID := config.InstrumentationLibraryID{
+		InstrumentedPkg: id.InstrumentedPkg,
+		SpanKind:        id.SpanKind,
+	}
+
+	if lib, ok := c.InstrumentationLibraryConfigs[libKindID]; ok {
+		return lib, true
+	}
+
+	libID := config.InstrumentationLibraryID{
+		InstrumentedPkg: id.InstrumentedPkg,
+		SpanKind:        trace.SpanKindUnspecified,
+	}
+
+	if lib, ok := c.InstrumentationLibraryConfigs[libID]; ok {
+		return lib, true
+	}
+
+	return config.InstrumentationLibrary{}, false
+}
+
+func isProbeEnabled(id probe.ID, c config.InstrumentationConfig) bool {
+	if pc, ok := getProbeConfig(id, c); ok {
+		return pc.Enabled
+	}
+	return !c.DefaultDisabled
+}
+
+func (m *Manager) applyConfig(c config.InstrumentationConfig) error {
+	if m.td == nil {
+		return errors.New("failed to apply config: target details not set")
+	}
+	if m.exe == nil {
+		return errors.New("failed to apply config: executable not set")
+	}
+
+	var err error
+
+	for id, p := range m.probes {
+		currentlyEnabled := isProbeEnabled(id, m.currentConfig)
+		newEnabled := isProbeEnabled(id, c)
+
+		if currentlyEnabled && !newEnabled {
+			m.logger.Info("Disabling probe", "id", id)
+			err = errors.Join(err, p.Close())
+			continue
+		}
+
+		if !currentlyEnabled && newEnabled {
+			m.logger.Info("Enabling probe", "id", id)
+			err = errors.Join(err, p.Load(m.exe, m.td))
+			if err == nil {
+				m.runProbe(p)
+			}
+			continue
+		}
+	}
+
+	return nil
+}
+
+func (m *Manager) runProbe(p probe.Probe) {
+	m.runningProbesWG.Add(1)
+	go func(ap probe.Probe) {
+		defer m.runningProbesWG.Done()
+		ap.Run(m.eventCh)
+	}(p)
+}
+
+func (m *Manager) ConfigLoop(ctx context.Context) {
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case c, ok := <-m.cp.Watch():
+			if !ok {
+				m.logger.Info("Configuration provider closed")
+				return
+			}
+			err := m.applyConfig(c)
+			if err != nil {
+				m.logger.Error(err, "Failed to apply config")
+				continue
+			}
+			m.currentConfig = c
+		}
+	}
+}
+
 // Run runs the event processing loop for all managed probes.
 func (m *Manager) Run(ctx context.Context, target *process.TargetDetails) error {
 	if len(m.probes) == 0 {
 		return errors.New("no instrumentation for target process")
 	}
+	if m.cp == nil {
+		return errors.New("no config provider set")
+	}
+
+	m.currentConfig = m.cp.InitialConfig(ctx)
 
 	err := m.load(target)
 	if err != nil {
 		return err
 	}
 
-	eventCh := make(chan *probe.Event)
-	var wg sync.WaitGroup
-	for _, i := range m.probes {
-		wg.Add(1)
-		go func(p probe.Probe) {
-			defer wg.Done()
-			p.Run(eventCh)
-		}(i)
+	for id, p := range m.probes {
+		if isProbeEnabled(id, m.currentConfig) {
+			m.runProbe(p)
+		}
 	}
 
 	if m.loadedIndicator != nil {
 		close(m.loadedIndicator)
 	}
+
+	go m.ConfigLoop(ctx)
 
 	for {
 		select {
@@ -165,11 +269,11 @@ func (m *Manager) Run(ctx context.Context, target *process.TargetDetails) error 
 			err := m.cleanup(target)
 
 			// Wait for all probes to stop before closing the chan they send on.
-			wg.Wait()
-			close(eventCh)
+			m.runningProbesWG.Wait()
+			close(m.eventCh)
 
 			return errors.Join(err, ctx.Err())
-		case e := <-eventCh:
+		case e := <-m.eventCh:
 			m.otelController.Trace(e)
 		}
 	}
@@ -185,6 +289,11 @@ func (m *Manager) load(target *process.TargetDetails) error {
 	if err != nil {
 		return err
 	}
+	m.exe = exe
+
+	if m.td == nil {
+		m.td = target
+	}
 
 	if err := m.mount(target); err != nil {
 		return err
@@ -192,11 +301,13 @@ func (m *Manager) load(target *process.TargetDetails) error {
 
 	// Load probes
 	for name, i := range m.probes {
-		m.logger.V(0).Info("loading probe", "name", name)
-		err := i.Load(exe, target)
-		if err != nil {
-			m.logger.Error(err, "error while loading probes, cleaning up", "name", name)
-			return errors.Join(err, m.cleanup(target))
+		if isProbeEnabled(name, m.currentConfig) {
+			m.logger.V(0).Info("loading probe", "name", name)
+			err := i.Load(exe, target)
+			if err != nil {
+				m.logger.Error(err, "error while loading probes, cleaning up", "name", name)
+				return errors.Join(err, m.cleanup(target))
+			}
 		}
 	}
 
@@ -215,6 +326,7 @@ func (m *Manager) mount(target *process.TargetDetails) error {
 
 func (m *Manager) cleanup(target *process.TargetDetails) error {
 	var err error
+	err = errors.Join(err, m.cp.Shutdown(context.Background()))
 	for _, i := range m.probes {
 		err = errors.Join(err, i.Close())
 	}

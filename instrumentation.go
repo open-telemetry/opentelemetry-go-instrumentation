@@ -28,6 +28,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
 
+	"go.opentelemetry.io/auto/config"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation"
 	"go.opentelemetry.io/auto/internal/pkg/opentelemetry"
 	"go.opentelemetry.io/auto/internal/pkg/process"
@@ -74,11 +75,11 @@ func newLogger(logLevel LogLevel) logr.Logger {
 		level, _ = zap.ParseAtomicLevel(LogLevelInfo.String())
 	}
 
-	config := zap.NewProductionConfig()
+	c := zap.NewProductionConfig()
 
-	config.Level.SetLevel(level.Level())
+	c.Level.SetLevel(level.Level())
 
-	zapLog, err := config.Build()
+	zapLog, err := c.Build()
 
 	var logger logr.Logger
 	if err != nil {
@@ -130,7 +131,7 @@ func NewInstrumentation(ctx context.Context, opts ...InstrumentationOption) (*In
 		return nil, err
 	}
 
-	mngr, err := instrumentation.NewManager(logger, ctrl, c.globalImpl, c.loadIndicator)
+	mngr, err := instrumentation.NewManager(logger, ctrl, c.globalImpl, c.loadIndicator, c.cp)
 	if err != nil {
 		return nil, err
 	}
@@ -221,6 +222,7 @@ type instConfig struct {
 	globalImpl         bool
 	loadIndicator      chan struct{}
 	logLevel           LogLevel
+	cp                 config.Provider
 }
 
 func newInstConfig(ctx context.Context, opts []InstrumentationOption) (instConfig, error) {
@@ -253,6 +255,10 @@ func newInstConfig(ctx context.Context, opts []InstrumentationOption) (instConfi
 
 	if c.logLevel == logLevelUndefined {
 		c.logLevel = LogLevelInfo
+	}
+
+	if c.cp == nil {
+		c.cp = config.NewNoopProvider()
 	}
 
 	return c, err
@@ -559,6 +565,17 @@ func WithLogLevel(level LogLevel) InstrumentationOption {
 
 		c.logLevel = level
 
+		return c, nil
+	})
+}
+
+// WithConfigProvider returns an [InstrumentationOption] that will configure
+// an [Instrumentation] to use the provided config.Provider. The config.Provider
+// is used to provide the initial configuration and update the configuration of
+// the instrumentation in runtime.
+func WithConfigProvider(cp config.Provider) InstrumentationOption {
+	return fnOpt(func(_ context.Context, c instConfig) (instConfig, error) {
+		c.cp = cp
 		return c, nil
 	})
 }

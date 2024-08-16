@@ -15,6 +15,9 @@ import (
 	"github.com/hashicorp/go-version"
 	"github.com/stretchr/testify/assert"
 
+	"go.opentelemetry.io/otel/trace"
+
+	"go.opentelemetry.io/auto/config"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/probe"
 	"go.opentelemetry.io/auto/internal/pkg/process"
 	"go.opentelemetry.io/auto/internal/pkg/process/binary"
@@ -183,27 +186,16 @@ func fakeManager(t *testing.T) *Manager {
 	logger := stdr.New(log.New(os.Stderr, "", log.LstdFlags))
 	logger = logger.WithName("Instrumentation")
 
-	m, err := NewManager(logger, nil, true, nil)
+	m, err := NewManager(logger, nil, true, nil, config.NewNoopProvider())
 	assert.NoError(t, err)
 	assert.NotNil(t, m)
 
 	return m
 }
 
-func TestRunStopping(t *testing.T) {
-	probeStop := make(chan struct{})
-	p := newSlowProbe(probeStop)
-
-	logger := stdr.New(log.New(os.Stderr, "", log.LstdFlags))
-	logger = logger.WithName("Instrumentation")
-
-	m := &Manager{
-		logger: logger.WithName("Manager"),
-		probes: map[probe.ID]probe.Probe{{}: p},
-	}
-
+func mockExeAndBpffs(t *testing.T) {
 	origOpenExecutable := openExecutable
-	openExecutable = func(string) (*link.Executable, error) { return nil, nil }
+	openExecutable = func(string) (*link.Executable, error) { return &link.Executable{}, nil }
 	t.Cleanup(func() { openExecutable = origOpenExecutable })
 
 	origRlimitRemoveMemlock := rlimitRemoveMemlock
@@ -217,6 +209,23 @@ func TestRunStopping(t *testing.T) {
 	origBpffsCleanup := bpffsCleanup
 	bpffsCleanup = func(*process.TargetDetails) error { return nil }
 	t.Cleanup(func() { bpffsCleanup = origBpffsCleanup })
+}
+
+func TestRunStopping(t *testing.T) {
+	probeStop := make(chan struct{})
+	p := newSlowProbe(probeStop)
+
+	logger := stdr.New(log.New(os.Stderr, "", log.LstdFlags))
+	logger = logger.WithName("Instrumentation")
+
+	m := &Manager{
+		logger:  logger.WithName("Manager"),
+		probes:  map[probe.ID]probe.Probe{{}: p},
+		eventCh: make(chan *probe.Event),
+		cp:      config.NewNoopProvider(),
+	}
+
+	mockExeAndBpffs(t)
 
 	ctx, stopCtx := context.WithCancel(context.Background())
 	errCh := make(chan error, 1)
@@ -272,4 +281,147 @@ func (p slowProbe) Close() error {
 	p.closeSignal <- struct{}{}
 	<-p.stop
 	return nil
+}
+
+type noopProbe struct {
+	loaded, running, closed bool
+}
+
+var _ probe.Probe = (*noopProbe)(nil)
+
+func (p *noopProbe) Load(*link.Executable, *process.TargetDetails) error {
+	p.loaded = true
+	return nil
+}
+
+func (p *noopProbe) Run(c chan<- *probe.Event) {
+	p.running = true
+}
+
+func (p *noopProbe) Close() error {
+	p.closed = true
+	p.loaded = false
+	p.running = false
+	return nil
+}
+
+func (p *noopProbe) Manifest() probe.Manifest {
+	return probe.Manifest{}
+}
+
+type dummyProvider struct {
+	initial config.InstrumentationConfig
+	ch      chan config.InstrumentationConfig
+}
+
+func newDummyProvider(initialConfig config.InstrumentationConfig) config.Provider {
+	return &dummyProvider{
+		ch:      make(chan config.InstrumentationConfig),
+		initial: initialConfig,
+	}
+}
+
+func (p *dummyProvider) InitialConfig(_ context.Context) config.InstrumentationConfig {
+	return p.initial
+}
+
+func (p *dummyProvider) Watch() <-chan config.InstrumentationConfig {
+	return p.ch
+}
+
+func (p *dummyProvider) Shutdown(_ context.Context) error {
+	close(p.ch)
+	return nil
+}
+
+func (p *dummyProvider) sendConfig(c config.InstrumentationConfig) {
+	p.ch <- c
+}
+
+func TestConfigProvider(t *testing.T) {
+	logger := stdr.New(log.New(os.Stderr, "", log.LstdFlags))
+	logger = logger.WithName("Instrumentation")
+	loadedIndicator := make(chan struct{})
+
+	netHTTPClientProbeID := probe.ID{InstrumentedPkg: "net/http", SpanKind: trace.SpanKindClient}
+	netHTTPServerProbeID := probe.ID{InstrumentedPkg: "net/http", SpanKind: trace.SpanKindServer}
+	somePackageProducerProbeID := probe.ID{InstrumentedPkg: "some/package", SpanKind: trace.SpanKindProducer}
+
+	netHTTPClientLibID := config.InstrumentationLibraryID{InstrumentedPkg: "net/http", SpanKind: trace.SpanKindClient}
+	netHTTPLibID := config.InstrumentationLibraryID{InstrumentedPkg: "net/http"}
+
+	m := &Manager{
+		logger: logger.WithName("Manager"),
+		probes: map[probe.ID]probe.Probe{
+			netHTTPClientProbeID:       &noopProbe{},
+			netHTTPServerProbeID:       &noopProbe{},
+			somePackageProducerProbeID: &noopProbe{},
+		},
+		eventCh: make(chan *probe.Event),
+		cp: newDummyProvider(config.InstrumentationConfig{
+			InstrumentationLibraryConfigs: map[config.InstrumentationLibraryID]config.InstrumentationLibrary{
+				netHTTPClientLibID: {Enabled: false},
+			},
+		}),
+		loadedIndicator: loadedIndicator,
+	}
+
+	mockExeAndBpffs(t)
+	go func() { _ = m.Run(context.Background(), &process.TargetDetails{PID: 1000}) }()
+	assert.Eventually(t, func() bool {
+		select {
+		case <-loadedIndicator:
+			return true
+		default:
+			return false
+		}
+	}, time.Second, 10*time.Millisecond)
+
+	probeRunning := func(id probe.ID) bool {
+		p := m.probes[id].(*noopProbe)
+		return p.loaded && p.running
+	}
+
+	probePending := func(id probe.ID) bool {
+		p := m.probes[id].(*noopProbe)
+		return !p.loaded && !p.running
+	}
+
+	probeClosed := func(id probe.ID) bool {
+		p := m.probes[id].(*noopProbe)
+		return p.closed
+	}
+
+	assert.True(t, probePending(netHTTPClientProbeID))
+	assert.True(t, probeRunning(netHTTPServerProbeID))
+	assert.True(t, probeRunning(somePackageProducerProbeID))
+
+	// Send a new config that enables the net/http client probe by removing the explicit disable
+	m.cp.(*dummyProvider).sendConfig(config.InstrumentationConfig{})
+	assert.Eventually(t, func() bool {
+		return probeRunning(netHTTPClientProbeID)
+	}, time.Second, 10*time.Millisecond)
+	assert.True(t, probeRunning(netHTTPServerProbeID))
+	assert.True(t, probeRunning(somePackageProducerProbeID))
+
+	// Send a new config that disables the net/http client and server probes
+	m.cp.(*dummyProvider).sendConfig(config.InstrumentationConfig{
+		InstrumentationLibraryConfigs: map[config.InstrumentationLibraryID]config.InstrumentationLibrary{
+			netHTTPLibID: {Enabled: false},
+		},
+	})
+	assert.Eventually(t, func() bool {
+		return probeClosed(netHTTPClientProbeID) && probeClosed(netHTTPServerProbeID)
+	}, time.Second, 10*time.Millisecond)
+	assert.True(t, probeRunning(somePackageProducerProbeID))
+
+	// Send a new config the disables all probes by default
+	m.cp.(*dummyProvider).sendConfig(config.InstrumentationConfig{
+		DefaultDisabled: true,
+	})
+	assert.Eventually(t, func() bool {
+		return probeClosed(netHTTPClientProbeID) && !probeRunning(netHTTPClientProbeID) &&
+			probeClosed(netHTTPServerProbeID) && !probeRunning(netHTTPServerProbeID) &&
+			probeClosed(somePackageProducerProbeID) && !probeRunning(somePackageProducerProbeID)
+	}, time.Second, 10*time.Millisecond)
 }
