@@ -92,6 +92,10 @@ func (i *Base[BPFObj, BPFEvent]) Manifest() Manifest {
 	return NewManifest(i.ID, structfields, symbols)
 }
 
+func (i *Base[BPFObj, BPFEvent]) Spec() (*ebpf.CollectionSpec, error) {
+	return i.SpecFn()
+}
+
 // Load loads all instrumentation offsets.
 func (i *Base[BPFObj, BPFEvent]) Load(exec *link.Executable, td *process.TargetDetails) error {
 	spec, err := i.SpecFn()
@@ -99,7 +103,7 @@ func (i *Base[BPFObj, BPFEvent]) Load(exec *link.Executable, td *process.TargetD
 		return err
 	}
 
-	err = i.injectConsts(td, spec)
+	err = i.InjectConsts(td, spec)
 	if err != nil {
 		return err
 	}
@@ -123,7 +127,7 @@ func (i *Base[BPFObj, BPFEvent]) Load(exec *link.Executable, td *process.TargetD
 	return nil
 }
 
-func (i *Base[BPFObj, BPFEvent]) injectConsts(td *process.TargetDetails, spec *ebpf.CollectionSpec) error {
+func (i *Base[BPFObj, BPFEvent]) InjectConsts(td *process.TargetDetails, spec *ebpf.CollectionSpec) error {
 	opts, err := consts(i.Consts).injectOpts(td)
 	if err != nil {
 		return err
