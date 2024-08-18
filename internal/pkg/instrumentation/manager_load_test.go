@@ -13,6 +13,7 @@ import (
 	"github.com/go-logr/stdr"
 	"github.com/hashicorp/go-version"
 	"github.com/stretchr/testify/assert"
+	"go.opentelemetry.io/auto/config"
 	"go.opentelemetry.io/auto/internal/pkg/inject"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/testutils"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/utils"
@@ -49,7 +50,7 @@ func fakeManager(t *testing.T) *Manager {
 	logger := stdr.New(log.New(os.Stderr, "", log.LstdFlags))
 	logger = logger.WithName("Instrumentation")
 
-	m, err := NewManager(logger, nil, true, nil)
+	m, err := NewManager(logger, nil, true, nil, config.NewNoopProvider())
 	assert.NoError(t, err)
 	assert.NotNil(t, m)
 
