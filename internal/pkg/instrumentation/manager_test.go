@@ -351,6 +351,7 @@ func TestConfigProvider(t *testing.T) {
 
 	netHTTPClientLibID := config.InstrumentationLibraryID{InstrumentedPkg: "net/http", SpanKind: trace.SpanKindClient}
 	netHTTPLibID := config.InstrumentationLibraryID{InstrumentedPkg: "net/http"}
+	falseVal := false
 
 	m := &Manager{
 		logger: logger.WithName("Manager"),
@@ -362,7 +363,7 @@ func TestConfigProvider(t *testing.T) {
 		eventCh: make(chan *probe.Event),
 		cp: newDummyProvider(config.InstrumentationConfig{
 			InstrumentationLibraryConfigs: map[config.InstrumentationLibraryID]config.InstrumentationLibrary{
-				netHTTPClientLibID: {Enabled: false},
+				netHTTPClientLibID: {TracesEnabled: &falseVal},
 			},
 		}),
 		loadedIndicator: loadedIndicator,
@@ -409,7 +410,7 @@ func TestConfigProvider(t *testing.T) {
 	// Send a new config that disables the net/http client and server probes
 	m.cp.(*dummyProvider).sendConfig(config.InstrumentationConfig{
 		InstrumentationLibraryConfigs: map[config.InstrumentationLibraryID]config.InstrumentationLibrary{
-			netHTTPLibID: {Enabled: false},
+			netHTTPLibID: {TracesEnabled: &falseVal},
 		},
 	})
 	assert.Eventually(t, func() bool {
@@ -420,7 +421,7 @@ func TestConfigProvider(t *testing.T) {
 
 	// Send a new config the disables all probes by default
 	m.cp.(*dummyProvider).sendConfig(config.InstrumentationConfig{
-		DefaultDisabled: true,
+		DefaultTracesDisabled: true,
 	})
 	assert.Eventually(t, func() bool {
 		return probeClosed(netHTTPClientProbeID) && !probeRunning(netHTTPClientProbeID) &&

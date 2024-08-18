@@ -21,8 +21,9 @@ type InstrumentationLibraryID struct {
 
 // InstrumentationLibrary is used to configure instrumentation for a specific library.
 type InstrumentationLibrary struct {
-	// Enabled determines whether instrumentation is enabled for the library.
-	Enabled bool
+	// TracesEnabled determines whether traces are enabled for the instrumentation library.
+	// if nil - take DefaultTracesDisabled value.
+	TracesEnabled *bool
 }
 
 // InstrumentationConfig is used to configure instrumentation.
@@ -33,10 +34,11 @@ type InstrumentationConfig struct {
 	// the configuration for ("net/http", client) is used for client spans and the configuration for ("net/http", unspecified) is used for server spans.
 	InstrumentationLibraryConfigs map[InstrumentationLibraryID]InstrumentationLibrary
 
-	// DefaultDisabled determines whether instrumentation is disabled by default.
-	// If set to true, instrumentation is disabled by default for all libraries, unless the library is explicitly enabled.
-	// If set to false, instrumentation is enabled by default for all libraries, unless the library is explicitly disabled.
-	DefaultDisabled bool
+	// DefaultTracesDisabled determines whether traces are disabled by default.
+	// If set to true, traces are disabled by default for all libraries, unless the library is explicitly enabled.
+	// If set to false, traces are enabled by default for all libraries, unless the library is explicitly disabled.
+	// default is false - traces are enabled by default.
+	DefaultTracesDisabled bool
 }
 
 // Provider provides the initial configuration and updates to the instrumentation configuration.

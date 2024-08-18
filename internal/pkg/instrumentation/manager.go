@@ -167,10 +167,10 @@ func getProbeConfig(id probe.ID, c config.InstrumentationConfig) (config.Instrum
 }
 
 func isProbeEnabled(id probe.ID, c config.InstrumentationConfig) bool {
-	if pc, ok := getProbeConfig(id, c); ok {
-		return pc.Enabled
+	if pc, ok := getProbeConfig(id, c); ok && pc.TracesEnabled != nil {
+		return *pc.TracesEnabled
 	}
-	return !c.DefaultDisabled
+	return !c.DefaultTracesDisabled
 }
 
 func (m *Manager) applyConfig(c config.InstrumentationConfig) error {
