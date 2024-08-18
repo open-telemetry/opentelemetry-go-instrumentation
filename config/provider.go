@@ -27,7 +27,12 @@ type InstrumentationLibrary struct {
 
 // InstrumentationConfig is used to configure instrumentation.
 type InstrumentationConfig struct {
+	// InstrumentationLibraryConfigs defines library-specific configuration.
+	// If a package is referenced by more than one key, the most specific key is used.
+	// For example, if ("net/http", unspecified) and ("net/http", client) are both present,
+	// the configuration for ("net/http", client) is used for client spans and the configuration for ("net/http", unspecified) is used for server spans.
 	InstrumentationLibraryConfigs map[InstrumentationLibraryID]InstrumentationLibrary
+
 	// DefaultDisabled determines whether instrumentation is disabled by default.
 	// If set to true, instrumentation is disabled by default for all libraries, unless the library is explicitly enabled.
 	// If set to false, instrumentation is enabled by default for all libraries, unless the library is explicitly disabled.

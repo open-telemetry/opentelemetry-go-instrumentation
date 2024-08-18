@@ -413,7 +413,8 @@ func TestConfigProvider(t *testing.T) {
 		},
 	})
 	assert.Eventually(t, func() bool {
-		return probeClosed(netHTTPClientProbeID) && probeClosed(netHTTPServerProbeID)
+		return probeClosed(netHTTPClientProbeID) && !probeRunning(netHTTPClientProbeID) &&
+			probeClosed(netHTTPServerProbeID) && !probeRunning(netHTTPServerProbeID)
 	}, time.Second, 10*time.Millisecond)
 	assert.True(t, probeRunning(somePackageProducerProbeID))
 

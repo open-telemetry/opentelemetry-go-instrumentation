@@ -221,7 +221,7 @@ func (m *Manager) ConfigLoop(ctx context.Context) {
 			return
 		case c, ok := <-m.cp.Watch():
 			if !ok {
-				m.logger.Info("Configuration provider closed")
+				m.logger.Info("Configuration provider closed, configuration updates will no longer be received")
 				return
 			}
 			err := m.applyConfig(c)
