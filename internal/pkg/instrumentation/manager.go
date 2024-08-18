@@ -335,20 +335,27 @@ func (m *Manager) cleanup(target *process.TargetDetails) error {
 	return errors.Join(err, bpffsCleanup(target))
 }
 
-func (m *Manager) registerProbes() error {
+//nolint:revive // ignoring linter complaint about control flag
+func availableProbes(l logr.Logger, withTraceGlobal bool) []probe.Probe {
 	insts := []probe.Probe{
-		grpcClient.New(m.logger),
-		grpcServer.New(m.logger),
-		httpServer.New(m.logger),
-		httpClient.New(m.logger),
-		dbSql.New(m.logger),
-		kafkaProducer.New(m.logger),
-		kafkaConsumer.New(m.logger),
+		grpcClient.New(l),
+		grpcServer.New(l),
+		httpServer.New(l),
+		httpClient.New(l),
+		dbSql.New(l),
+		kafkaProducer.New(l),
+		kafkaConsumer.New(l),
 	}
 
-	if m.globalImpl {
-		insts = append(insts, otelTraceGlobal.New(m.logger))
+	if withTraceGlobal {
+		insts = append(insts, otelTraceGlobal.New(l))
 	}
+
+	return insts
+}
+
+func (m *Manager) registerProbes() error {
+	insts := availableProbes(m.logger, m.globalImpl)
 
 	for _, i := range insts {
 		err := m.registerProbe(i)

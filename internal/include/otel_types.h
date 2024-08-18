@@ -55,11 +55,6 @@ static __always_inline bool set_attr_value(otel_attirbute_t *attr, go_otel_attr_
 {
 	u64 vtype = go_attr_value->vtype;
 
-	if (vtype == attr_type_invalid) {
-		bpf_printk("Invalid attribute value type\n");
-		return false;
-	}
-
 	// Constant size values
 	if (vtype == attr_type_bool ||
 		vtype == attr_type_int64 ||
@@ -74,7 +69,8 @@ static __always_inline bool set_attr_value(otel_attirbute_t *attr, go_otel_attr_
 			bpf_printk("Aattribute string value is too long\n");
 			return false;
 		}
-		return get_go_string_from_user_ptr(&go_attr_value->string, attr->value, OTEL_ATTRIBUTE_VALUE_MAX_LEN);
+		long res = bpf_probe_read_user(attr->value, go_attr_value->string.len & (OTEL_ATTRIBUTE_VALUE_MAX_LEN -1), go_attr_value->string.str);
+ 		return res == 0;
 	}
 
 	// TODO (#525): handle slices
@@ -83,7 +79,7 @@ static __always_inline bool set_attr_value(otel_attirbute_t *attr, go_otel_attr_
 
 static __always_inline void convert_go_otel_attributes(void *attrs_buf, u64 slice_len, otel_attributes_t *enc_attrs)
 {
-	if (attrs_buf == NULL || enc_attrs == NULL){
+	if (attrs_buf == NULL){
 		return;
 	}
 
@@ -100,7 +96,10 @@ static __always_inline void convert_go_otel_attributes(void *attrs_buf, u64 slic
 		return;
 	}
 
-	for (u8 go_attr_index = 0; go_attr_index < num_attrs; go_attr_index++) {
+	for (u8 go_attr_index = 0; go_attr_index < OTEL_ATTRUBUTE_MAX_COUNT; go_attr_index++) {
+		if (go_attr_index >= slice_len) {
+ 			break;
+ 		}
 		__builtin_memset(&go_attr_value, 0, sizeof(go_otel_attr_value_t));
 		// Read the value struct
 		bpf_probe_read(&go_attr_value, sizeof(go_otel_attr_value_t), &go_attr[go_attr_index].value);
@@ -124,9 +123,7 @@ static __always_inline void convert_go_otel_attributes(void *attrs_buf, u64 slic
 			break;
 		}
 
-		if (!get_go_string_from_user_ptr(&go_str, enc_attrs->attrs[valid_attrs].key, OTEL_ATTRIBUTE_KEY_MAX_LEN)) {
-			continue;
-		}
+		bpf_probe_read_user(enc_attrs->attrs[valid_attrs].key, go_str.len & (OTEL_ATTRIBUTE_KEY_MAX_LEN -1), go_str.str);
 
 		if (!set_attr_value(&enc_attrs->attrs[valid_attrs], &go_attr_value)) {
 			continue;

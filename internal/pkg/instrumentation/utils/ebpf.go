@@ -21,7 +21,7 @@ const (
 // If the environment variable OTEL_GO_AUTO_SHOW_VERIFIER_LOG is set to true, the verifier log will be printed.
 func InitializeEBPFCollection(spec *ebpf.CollectionSpec, opts *ebpf.CollectionOptions) (*ebpf.Collection, error) {
 	// Getting full verifier log is expensive, so we only do it if the user explicitly asks for it.
-	showVerifierLogs := shouldShowVerifierLogs()
+	showVerifierLogs := ShouldShowVerifierLogs()
 	if showVerifierLogs {
 		opts.Programs.LogLevel = ebpf.LogLevelInstruction | ebpf.LogLevelBranch | ebpf.LogLevelStats
 	}
@@ -37,8 +37,8 @@ func InitializeEBPFCollection(spec *ebpf.CollectionSpec, opts *ebpf.CollectionOp
 	return c, err
 }
 
-// shouldShowVerifierLogs returns if the user has configured verifier logs to be emitted.
-func shouldShowVerifierLogs() bool {
+// ShouldShowVerifierLogs returns if the user has configured verifier logs to be emitted.
+func ShouldShowVerifierLogs() bool {
 	val, exists := os.LookupEnv(showVerifierLogEnvVar)
 	if exists {
 		boolVal, err := strconv.ParseBool(val)

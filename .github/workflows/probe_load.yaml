@@ -1,0 +1,47 @@
+name: probe_load
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+
+env:
+  go_version: '~1.22'
+  CGO_ENABLED: '0'
+
+jobs:
+    vm-test:
+        name: Run tests
+        runs-on: ubuntu-latest
+        timeout-minutes: 15
+        strategy:
+          fail-fast: false
+          matrix:
+            tag:
+              - "stable"
+              - "6.6"
+              - "5.15"
+              - "5.10"
+              - "5.4"
+        steps:
+          - uses: actions/checkout@v4
+          - name: Set up Go
+            uses: actions/setup-go@v5
+            with:
+              go-version: '${{ env.go_version }}'
+          - name: make docker-generate
+            run: make docker-generate
+          - name: verify output
+            run: make check-clean-work-tree
+          - name: Install vimto
+            run: go install lmb.io/vimto@latest
+          - name: Install qemu
+            run: |
+                sudo apt-get update && sudo apt-get install -y --no-install-recommends qemu-system-x86
+                sudo chmod 0666 /dev/kvm
+          - name: Test without verifier logs
+            id: no_verifier_logs_test
+            run: OTEL_GO_AUTO_SHOW_VERIFIER_LOG=false vimto -kernel :${{ matrix.tag }} -- go test -v -count=1 -tags=multi_kernel_test go.opentelemetry.io/auto/internal/pkg/instrumentation
+          - name: Test with verifier logs
+            run: OTEL_GO_AUTO_SHOW_VERIFIER_LOG=true vimto -kernel :${{ matrix.tag }} -- go test -v -count=1 -tags=multi_kernel_test go.opentelemetry.io/auto/internal/pkg/instrumentation
+            if: always() && steps.no_verifier_logs_test.outcome == 'failure'
