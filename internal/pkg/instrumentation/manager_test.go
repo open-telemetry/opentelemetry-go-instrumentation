@@ -370,7 +370,8 @@ func TestConfigProvider(t *testing.T) {
 	}
 
 	mockExeAndBpffs(t)
-	go func() { _ = m.Run(context.Background(), &process.TargetDetails{PID: 1000}) }()
+	runCtx, cancel := context.WithCancel(context.Background())
+	go func() { _ = m.Run(runCtx, &process.TargetDetails{PID: 1000}) }()
 	assert.Eventually(t, func() bool {
 		select {
 		case <-loadedIndicator:
@@ -428,4 +429,25 @@ func TestConfigProvider(t *testing.T) {
 			probeClosed(netHTTPServerProbeID) && !probeRunning(netHTTPServerProbeID) &&
 			probeClosed(somePackageProducerProbeID) && !probeRunning(somePackageProducerProbeID)
 	}, time.Second, 10*time.Millisecond)
+
+	// Send a new config that enables all probes by default
+	m.cp.(*dummyProvider).sendConfig(config.InstrumentationConfig{})
+	assert.Eventually(t, func() bool {
+		return probeRunning(netHTTPClientProbeID) &&
+			probeRunning(netHTTPServerProbeID) &&
+			probeRunning(somePackageProducerProbeID)
+	}, time.Second, 10*time.Millisecond)
+
+	cancel()
+	assert.Eventually(t, func() bool {
+		return probeClosed(netHTTPClientProbeID) && !probeRunning(netHTTPClientProbeID) &&
+			probeClosed(netHTTPServerProbeID) && !probeRunning(netHTTPServerProbeID) &&
+			probeClosed(somePackageProducerProbeID) && !probeRunning(somePackageProducerProbeID)
+	}, time.Second, 10*time.Millisecond)
+
+	// Send a config to enable all probes, but the manager is stopped
+	m.cp.(*dummyProvider).sendConfig(config.InstrumentationConfig{})
+	assert.True(t, probeClosed(netHTTPClientProbeID) && !probeRunning(netHTTPClientProbeID))
+	assert.True(t, probeClosed(netHTTPServerProbeID) && !probeRunning(netHTTPServerProbeID))
+	assert.True(t, probeClosed(somePackageProducerProbeID) && !probeRunning(somePackageProducerProbeID))
 }

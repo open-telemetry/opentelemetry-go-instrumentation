@@ -38,6 +38,13 @@ var (
 	bpffsCleanup        = bpffs.Cleanup
 )
 
+type managerState int
+
+const (
+	managerStateRunning managerState = iota
+	managerStateStopped
+)
+
 // Manager handles the management of [probe.Probe] instances.
 type Manager struct {
 	logger          logr.Logger
@@ -51,6 +58,8 @@ type Manager struct {
 	runningProbesWG sync.WaitGroup
 	eventCh         chan *probe.Event
 	currentConfig   config.InstrumentationConfig
+	probeMu         sync.Mutex
+	state           managerState
 }
 
 // NewManager returns a new [Manager].
@@ -182,6 +191,12 @@ func (m *Manager) applyConfig(c config.InstrumentationConfig) error {
 	}
 
 	var err error
+	m.probeMu.Lock()
+	defer m.probeMu.Unlock()
+
+	if m.state != managerStateRunning {
+		return nil
+	}
 
 	for id, p := range m.probes {
 		currentlyEnabled := isProbeEnabled(id, m.currentConfig)
@@ -259,12 +274,15 @@ func (m *Manager) Run(ctx context.Context, target *process.TargetDetails) error 
 	if m.loadedIndicator != nil {
 		close(m.loadedIndicator)
 	}
+	m.state = managerStateRunning
 
 	go m.ConfigLoop(ctx)
 
 	for {
 		select {
 		case <-ctx.Done():
+			m.probeMu.Lock()
+
 			m.logger.V(1).Info("Shutting down all probes")
 			err := m.cleanup(target)
 
@@ -272,6 +290,8 @@ func (m *Manager) Run(ctx context.Context, target *process.TargetDetails) error 
 			m.runningProbesWG.Wait()
 			close(m.eventCh)
 
+			m.state = managerStateStopped
+			m.probeMu.Unlock()
 			return errors.Join(err, ctx.Err())
 		case e := <-m.eventCh:
 			m.otelController.Trace(e)
