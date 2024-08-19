@@ -445,9 +445,8 @@ func TestConfigProvider(t *testing.T) {
 			probeClosed(somePackageProducerProbeID) && !probeRunning(somePackageProducerProbeID)
 	}, time.Second, 10*time.Millisecond)
 
-	// Send a config to enable all probes, but the manager is stopped
-	m.cp.(*dummyProvider).sendConfig(config.InstrumentationConfig{})
-	assert.True(t, probeClosed(netHTTPClientProbeID) && !probeRunning(netHTTPClientProbeID))
-	assert.True(t, probeClosed(netHTTPServerProbeID) && !probeRunning(netHTTPServerProbeID))
-	assert.True(t, probeClosed(somePackageProducerProbeID) && !probeRunning(somePackageProducerProbeID))
+	// Send a config to enable all probes, but the manager is stopped - this should panic
+	assert.Panics(t, func() {
+		m.cp.(*dummyProvider).sendConfig(config.InstrumentationConfig{})
+	})
 }

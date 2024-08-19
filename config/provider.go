@@ -48,6 +48,7 @@ type Provider interface {
 	// Watch returns a channel that receives updates to the instrumentation configuration.
 	Watch() <-chan InstrumentationConfig
 	// Shutdown releases any resources held by the provider.
+	// It is an error to send updates after Shutdown is called.
 	Shutdown(ctx context.Context) error
 }
 
