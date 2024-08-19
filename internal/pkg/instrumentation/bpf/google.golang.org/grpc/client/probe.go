@@ -56,6 +56,14 @@ func New(logger logr.Logger) probe.Probe {
 				Key: "headerFrame_streamid_pos",
 				Val: structfield.NewID("google.golang.org/grpc", "google.golang.org/grpc/internal/transport", "headerFrame", "streamID"),
 			},
+			probe.StructFieldConst{
+				Key: "status_s_pos",
+				Val: structfield.NewID("google.golang.org/grpc", "google.golang.org/grpc/internal/status", "Status", "s"),
+			},
+			probe.StructFieldConst{
+				Key: "status_code_pos",
+				Val: structfield.NewID("google.golang.org/grpc", "google.golang.org/genproto/googleapis/rpc/status", "Status", "Code"),
+			},
 		},
 		Uprobes: []probe.Uprobe{
 			{
