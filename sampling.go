@@ -72,10 +72,11 @@ func (AlwaysOff) convert() (*sampling.Config, error) {
 	}, nil
 }
 
-// TraceIDRatio samples a given fraction of traces. Fractions should be in the close interval [0, 1].
-// To respect the parent trace's `SampledFlag`, the `TraceIDRatio` sampler should be used
-// as a delegate of a `Parent` sampler.
+// TraceIDRatio samples a given fraction of traces. Fraction should be in the closed interval [0, 1].
+// To respect the parent trace's SampledFlag, the TraceIDRatio sampler should be used
+// as a delegate of a [ParentBased] sampler.
 type TraceIDRatio struct {
+	// Fraction is the fraction of traces to sample. This value needs to be in the interval [0, 1].
 	Fraction float64
 }
 
@@ -105,20 +106,24 @@ func (t TraceIDRatio) convert() (*sampling.Config, error) {
 	}, nil
 }
 
-// ParentBased returns a sampler decorator which behaves differently,
+// ParentBased is a [Sampler] which behaves differently,
 // based on the parent of the span. If the span has no parent,
-// the `Root` sampler is used to make sampling decision. If the span has
+// the Root sampler is used to make sampling decision. If the span has
 // a parent, depending on whether the parent is remote and whether it
 // is sampled, one of the following samplers will apply:
-//   - RemoteSampled (default: AlwaysOn)
-//   - RemoteNotSampled (default: AlwaysOff)
-//   - LocalSampled (default: AlwaysOn)
-//   - LocalNotSampled (default: AlwaysOff)
+//   - RemoteSampled (default: [AlwaysOn])
+//   - RemoteNotSampled (default: [AlwaysOff])
+//   - LocalSampled (default: [AlwaysOn])
+//   - LocalNotSampled (default: [AlwaysOff])
 type ParentBased struct {
+	// Root is the Sampler used when a span is created without a parent.
 	Root             Sampler
 	RemoteSampled    Sampler
+	// RemoteNotSampled is the Sampler used when the span parent is remote and not sampled.
 	RemoteNotSampled Sampler
+	// LocalSampled is the Sampler used when the span parent is local and sampled.
 	LocalSampled     Sampler
+	// LocalNotSampled is the Sampler used when the span parent is local and not sampled.
 	LocalNotSampled  Sampler
 }
 
@@ -154,11 +159,7 @@ func getSamplerConfig(s Sampler) (*sampling.Config, error) {
 	if s == nil {
 		return nil, nil
 	}
-	config, err := s.convert()
-	if err != nil {
-		return nil, err
-	}
-	return config, nil
+	return s.convert()
 }
 
 func (p ParentBased) convert() (*sampling.Config, error) {

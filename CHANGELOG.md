@@ -10,7 +10,13 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 
 ### Added
 
--- `Sampler` interface can be passed to `Instrumentation` to configure sampling for different probes. Configuration can be done programmatically using `WithSampler` or using the `OTEL_TRACES_SAMPLER` and `OTEL_TRACES_SAMPLER_ARG` environment variables. ([#982](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/982))
+- `Sampler` interface that can be passed to `Instrumentation` via the new `WithSampler` option.
+  This configuration allows customization of what sampler is used by the `Instrumentation`. ([#982](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/982))
+- The `OTEL_TRACES_SAMPLER` and `OTEL_TRACES_SAMPLER_ARG` environment variables are now supported when the `WithEnv` option is used. ([#982](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/982))
+
+### Changed
+
+- The `WithSampler` option function now accepts the new `Sampler` interface instead of `trace.Sampler`. ([#982](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/982))
 
 ## [v0.14.0-alpha] - 2024-07-15
 
