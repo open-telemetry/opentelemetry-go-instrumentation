@@ -30,7 +30,7 @@ type TraceIDRatioConfig struct {
 	samplingRateNumerator uint64
 }
 
-func NewTraceIDRationConfig(ratio float64) (TraceIDRatioConfig, error) {
+func NewTraceIDRatioConfig(ratio float64) (TraceIDRatioConfig, error) {
 	numerator, err := floatToNumerator(ratio, samplingRateDenominator)
 	if err != nil {
 		return TraceIDRatioConfig{}, err

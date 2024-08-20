@@ -236,7 +236,7 @@ func TestWithSampler(t *testing.T) {
 		assert.Equal(t, tidRatio.SamplerType, sampling.SamplerTraceIDRatio)
 		config, ok := tidRatio.Config.(sampling.TraceIDRatioConfig)
 		assert.True(t, ok)
-		expected, _ := sampling.NewTraceIDRationConfig(0.42)
+		expected, _ := sampling.NewTraceIDRatioConfig(0.42)
 		assert.Equal(t, expected, config)
 	})
 
@@ -265,7 +265,7 @@ func TestWithSampler(t *testing.T) {
 		assert.Equal(t, tidRatio.SamplerType, sampling.SamplerTraceIDRatio)
 		config, ok := tidRatio.Config.(sampling.TraceIDRatioConfig)
 		assert.True(t, ok)
-		expected, _ := sampling.NewTraceIDRationConfig(0.42)
+		expected, _ := sampling.NewTraceIDRatioConfig(0.42)
 		assert.Equal(t, expected, config)
 	})
 }

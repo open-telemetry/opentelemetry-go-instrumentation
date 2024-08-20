@@ -91,7 +91,7 @@ func (t TraceIDRatio) validate() error {
 }
 
 func (t TraceIDRatio) convert() (*sampling.Config, error) {
-	tidConfig, err := sampling.NewTraceIDRationConfig(t.Fraction)
+	tidConfig, err := sampling.NewTraceIDRatioConfig(t.Fraction)
 	if err != nil {
 		return nil, err
 	}
