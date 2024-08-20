@@ -117,15 +117,15 @@ func (t TraceIDRatio) convert() (*sampling.Config, error) {
 //   - LocalNotSampled (default: [AlwaysOff])
 type ParentBased struct {
 	// Root is the Sampler used when a span is created without a parent.
-	Root             Sampler
+	Root Sampler
 	// RemoteSampled is the Sampler used when the span parent is remote and sampled.
-	RemoteSampled    Sampler
+	RemoteSampled Sampler
 	// RemoteNotSampled is the Sampler used when the span parent is remote and not sampled.
 	RemoteNotSampled Sampler
 	// LocalSampled is the Sampler used when the span parent is local and sampled.
-	LocalSampled     Sampler
+	LocalSampled Sampler
 	// LocalNotSampled is the Sampler used when the span parent is local and not sampled.
-	LocalNotSampled  Sampler
+	LocalNotSampled Sampler
 }
 
 var _ Sampler = ParentBased{}
@@ -141,19 +141,12 @@ func validateParentBasedComponent(s Sampler) error {
 }
 
 func (p ParentBased) validate() error {
-	if err := validateParentBasedComponent(p.Root); err != nil {
-		return err
-	}
-	if err := validateParentBasedComponent(p.RemoteSampled); err != nil {
-		return err
-	}
-	if err := validateParentBasedComponent(p.RemoteNotSampled); err != nil {
-		return err
-	}
-	if err := validateParentBasedComponent(p.LocalSampled); err != nil {
-		return err
-	}
-	return validateParentBasedComponent(p.LocalNotSampled)
+	var err error
+	err = errors.Join(err, validateParentBasedComponent(p.Root))
+	err = errors.Join(err, validateParentBasedComponent(p.RemoteSampled))
+	err = errors.Join(err, validateParentBasedComponent(p.RemoteNotSampled))
+	err = errors.Join(err, validateParentBasedComponent(p.LocalSampled))
+	return errors.Join(err, validateParentBasedComponent(p.LocalNotSampled))
 }
 
 func getSamplerConfig(s Sampler) (*sampling.Config, error) {
@@ -243,17 +236,17 @@ func (p ParentBased) convert() (*sampling.Config, error) {
 }
 
 func newSamplerFromEnv() (Sampler, error) {
+	samplerName, ok := lookupEnv(tracesSamplerKey)
+	if !ok {
+		return nil, nil
+	}
+
 	defaultSampler := ParentBased{
 		Root:             AlwaysOn{},
 		RemoteSampled:    AlwaysOn{},
 		RemoteNotSampled: AlwaysOff{},
 		LocalSampled:     AlwaysOn{},
 		LocalNotSampled:  AlwaysOff{},
-	}
-
-	samplerName, ok := lookupEnv(tracesSamplerKey)
-	if !ok {
-		return defaultSampler, nil
 	}
 
 	samplerName = strings.ToLower(strings.TrimSpace(samplerName))

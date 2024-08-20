@@ -3,14 +3,11 @@
 
 package sampling
 
-import "github.com/cilium/ebpf"
-
 // SamplerType defines the type of a sampler.
 type SamplerType uint64
 
+// OpenTelemetry spec-defined samplers.
 const (
-	// OpenTelemetry spec-defined samplers.
-
 	SamplerAlwaysOn SamplerType = iota
 	SamplerAlwaysOff
 	SamplerTraceIDRatio
@@ -18,11 +15,6 @@ const (
 
 	// Custom samplers TODO.
 )
-
-// Manager is used to configure the samplers used by eBPF.
-type Manager struct {
-	// TODO
-}
 
 type TraceIDRatioConfig struct {
 	// samplingRateNumerator is the numerator of the sampling rate.
@@ -113,11 +105,4 @@ func DefaultParentBasedSampler() ParentBasedConfig {
 		LocalSampled:     AlwaysOnID,
 		LocalNotSampled:  AlwaysOffID,
 	}
-}
-
-// NewSamplingManager creates a new Manager from the given eBPF collection with the given configuration.
-func NewSamplingManager(c *ebpf.Collection, conf *Config) (*Manager, error) {
-	// TODO
-	m := &Manager{}
-	return m, nil
 }

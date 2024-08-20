@@ -67,10 +67,9 @@ type Base[BPFObj any, BPFEvent any] struct {
 	// ProcessFn processes probe events into a uniform Event type.
 	ProcessFn func(*BPFEvent) []*SpanEvent
 
-	reader          *perf.Reader
-	collection      *ebpf.Collection
-	samplingManager *sampling.Manager
-	closers         []io.Closer
+	reader     *perf.Reader
+	collection *ebpf.Collection
+	closers    []io.Closer
 }
 
 const (
@@ -121,10 +120,9 @@ func (i *Base[BPFObj, BPFEvent]) Load(exec *link.Executable, td *process.TargetD
 		return err
 	}
 
-	i.samplingManager, err = sampling.NewSamplingManager(i.collection, sc)
-	if err != nil {
-		return err
-	}
+	// TODO: Initialize sampling manager based on the sampling configuration and the eBPF collection.
+	// The manager will be responsible for writing to eBPF maps - configuring the sampling.
+	// In addition the sampling manager will be responsible for handling updates for the configuration.
 
 	i.closers = append(i.closers, i.reader)
 

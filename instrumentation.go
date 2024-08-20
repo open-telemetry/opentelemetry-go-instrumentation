@@ -406,16 +406,16 @@ func WithEnv() InstrumentationOption {
 
 			err = errors.Join(err, e)
 		}
-		if s, err := newSamplerFromEnv(); err == nil {
-			err := s.validate()
-			if err != nil {
-				return c, err
+		if s, e := newSamplerFromEnv(); e != nil {
+			err = errors.Join(err, e)
+		} else if s != nil {
+			e := s.validate()
+			if e == nil {
+				if cfg, e := s.convert(); e == nil {
+					c.samplingConfig = cfg
+				}
 			}
-			cfg, err := s.convert()
-			if err != nil {
-				return c, err
-			}
-			c.samplingConfig = cfg
+			err = errors.Join(err, e)
 		}
 		return c, err
 	})
