@@ -267,7 +267,7 @@ func newSamplerFromEnv() (Sampler, error) {
 		return AlwaysOff{}, nil
 	case samplerNameTraceIDRatio:
 		if hasSamplerArg {
-			ratio, err := parseTraceIDRatio(samplerArg)
+			ratio, err := strconv.ParseFloat(samplerArg, 64)
 			if err != nil {
 				return nil, err
 			}
@@ -285,7 +285,7 @@ func newSamplerFromEnv() (Sampler, error) {
 			defaultSampler.Root = TraceIDRatio{Fraction: 1}
 			return defaultSampler, nil
 		}
-		ratio, err := parseTraceIDRatio(samplerArg)
+		ratio, err := strconv.ParseFloat(samplerArg, 64)
 		if err != nil {
 			return nil, err
 		}
@@ -294,12 +294,4 @@ func newSamplerFromEnv() (Sampler, error) {
 	default:
 		return nil, errors.New("unknown sampler name")
 	}
-}
-
-func parseTraceIDRatio(s string) (float64, error) {
-	ratio, err := strconv.ParseFloat(s, 64)
-	if err != nil {
-		return 0, err
-	}
-	return ratio, nil
 }
