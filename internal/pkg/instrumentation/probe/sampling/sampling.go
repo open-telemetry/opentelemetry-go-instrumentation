@@ -5,9 +5,9 @@ package sampling
 
 import "github.com/cilium/ebpf"
 
+// SamplerType defines the type of a sampler.
 type SamplerType uint64
 
-// SamplerType defines the type of a sampler.
 const (
 	// OpenTelemetry spec-defined samplers.
 
