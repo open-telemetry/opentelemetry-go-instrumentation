@@ -240,6 +240,17 @@ func TestWithSampler(t *testing.T) {
 		assert.Equal(t, expected, config)
 	})
 
+	t.Run("Invalid Env config", func(t *testing.T) {
+		mockEnv(t, map[string]string{
+			tracesSamplerKey:    "invalid",
+			tracesSamplerArgKey: "0.42",
+		})
+
+		_, err := newInstConfig(context.Background(), []InstrumentationOption{WithEnv()})
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "unknown sampler name")
+	})
+
 	t.Run("WithSampler", func(t *testing.T) {
 		c, err := newInstConfig(context.Background(), []InstrumentationOption{
 			WithSampler(ParentBased{
