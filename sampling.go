@@ -118,6 +118,7 @@ func (t TraceIDRatio) convert() (*sampling.Config, error) {
 type ParentBased struct {
 	// Root is the Sampler used when a span is created without a parent.
 	Root             Sampler
+	// RemoteSampled is the Sampler used when the span parent is remote and sampled.
 	RemoteSampled    Sampler
 	// RemoteNotSampled is the Sampler used when the span parent is remote and not sampled.
 	RemoteNotSampled Sampler
