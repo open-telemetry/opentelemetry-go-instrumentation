@@ -102,3 +102,16 @@ func NewController(logger logr.Logger, tracerProvider trace.TracerProvider, ver 
 		bootTime:       bt,
 	}, nil
 }
+
+// Shutdown shuts down the OpenTelemetry TracerProvider.
+//
+// Once shut down, calls to Trace will result in no-op spans (i.e. dropped).
+func (c *Controller) Shutdown(ctx context.Context) error {
+	if s, ok := c.tracerProvider.(interface {
+		Shutdown(context.Context) error
+	}); ok {
+		// Default TracerProvider implementation.
+		return s.Shutdown(ctx)
+	}
+	return nil
+}
