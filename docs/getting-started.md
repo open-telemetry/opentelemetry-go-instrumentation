@@ -35,7 +35,7 @@ To instrument an application on the same host, follow these steps:
   For example:
 
   ```sh
-  sudo OTEL_GO_AUTO_TARGET_EXE=/home/bin/service_executable OTEL_SERVICE_NAME=my_service OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318 ./otel-go-instrumentation`
+  sudo OTEL_GO_AUTO_TARGET_EXE=/home/bin/service_executable OTEL_SERVICE_NAME=my_service OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318 ./otel-go-instrumentation
   ```
 
 3. Run the OpenTelemetry Go Automatic Instrumentation with root privileges.
@@ -67,6 +67,8 @@ network, a shared volume, and a service for the application.
         - <shared_volume_of_application>
         - /proc:/host/proc
   ```
+
+  For more environment variables, refer to [here](https://opentelemetry.io/docs/languages/sdk-configuration/).
 
 3. Run `docker compose up`.
 

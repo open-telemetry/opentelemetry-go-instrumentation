@@ -18,9 +18,9 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/hashicorp/go-version"
 
+	"go.opentelemetry.io/auto/config"
 	"go.opentelemetry.io/auto/internal/pkg/inject"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/bpffs"
-	"go.opentelemetry.io/auto/internal/pkg/instrumentation/probe/sampling"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/utils"
 	"go.opentelemetry.io/auto/internal/pkg/process"
 	"go.opentelemetry.io/auto/internal/pkg/structfield"
@@ -34,7 +34,7 @@ type Probe interface {
 	Manifest() Manifest
 
 	// Load loads all instrumentation offsets.
-	Load(*link.Executable, *process.TargetDetails, *sampling.Config) error
+	Load(*link.Executable, *process.TargetDetails, config.Sampler) error
 
 	// Run runs the events processing loop.
 	Run(eventsChan chan<- *Event)
@@ -93,14 +93,18 @@ func (i *Base[BPFObj, BPFEvent]) Manifest() Manifest {
 	return NewManifest(i.ID, structfields, symbols)
 }
 
+func (i *Base[BPFObj, BPFEvent]) Spec() (*ebpf.CollectionSpec, error) {
+	return i.SpecFn()
+}
+
 // Load loads all instrumentation offsets.
-func (i *Base[BPFObj, BPFEvent]) Load(exec *link.Executable, td *process.TargetDetails, sc *sampling.Config) error {
+func (i *Base[BPFObj, BPFEvent]) Load(exec *link.Executable, td *process.TargetDetails, sampler config.Sampler) error {
 	spec, err := i.SpecFn()
 	if err != nil {
 		return err
 	}
 
-	err = i.injectConsts(td, spec)
+	err = i.InjectConsts(td, spec)
 	if err != nil {
 		return err
 	}
@@ -129,7 +133,7 @@ func (i *Base[BPFObj, BPFEvent]) Load(exec *link.Executable, td *process.TargetD
 	return nil
 }
 
-func (i *Base[BPFObj, BPFEvent]) injectConsts(td *process.TargetDetails, spec *ebpf.CollectionSpec) error {
+func (i *Base[BPFObj, BPFEvent]) InjectConsts(td *process.TargetDetails, spec *ebpf.CollectionSpec) error {
 	opts, err := consts(i.Consts).injectOpts(td)
 	if err != nil {
 		return err

@@ -1,4 +1,4 @@
-FROM golang:1.22.5
+FROM golang:1.23.0
 WORKDIR /app
 COPY . .
 ARG BINARY_NAME

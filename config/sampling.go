@@ -1,7 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package auto
+package config
 
 import (
 	"errors"
@@ -17,16 +17,17 @@ type Sampler interface {
 	convert() (*sampling.Config, error)
 }
 
+// OpenTelemetry spec-defined sampler names and environment variables for configuration.
 const (
-	tracesSamplerKey    = "OTEL_TRACES_SAMPLER"
-	tracesSamplerArgKey = "OTEL_TRACES_SAMPLER_ARG"
+	TracesSamplerKey    = "OTEL_TRACES_SAMPLER"
+	TracesSamplerArgKey = "OTEL_TRACES_SAMPLER_ARG"
 
-	samplerNameAlwaysOn                = "always_on"
-	samplerNameAlwaysOff               = "always_off"
-	samplerNameTraceIDRatio            = "traceidratio"
-	samplerNameParentBasedAlwaysOn     = "parentbased_always_on"
-	samplerNameParsedBasedAlwaysOff    = "parentbased_always_off"
-	samplerNameParentBasedTraceIDRatio = "parentbased_traceidratio"
+	SamplerNameAlwaysOn                = "always_on"
+	SamplerNameAlwaysOff               = "always_off"
+	SamplerNameTraceIDRatio            = "traceidratio"
+	SamplerNameParentBasedAlwaysOn     = "parentbased_always_on"
+	SamplerNameParsedBasedAlwaysOff    = "parentbased_always_off"
+	SamplerNameParentBasedTraceIDRatio = "parentbased_traceidratio"
 )
 
 // AlwaysOn is a Sampler that samples every trace.
@@ -149,78 +150,61 @@ func (p ParentBased) validate() error {
 	return errors.Join(err, validateParentBasedComponent(p.LocalNotSampled))
 }
 
-func getSamplerConfig(s Sampler) (*sampling.Config, error) {
-	if s == nil {
-		return nil, nil
-	}
-	return s.convert()
-}
-
 func (p ParentBased) convert() (*sampling.Config, error) {
 	pbc := sampling.DefaultParentBasedSampler()
 	samplers := make(map[sampling.SamplerID]sampling.SamplerConfig)
-	rootSampler, err := getSamplerConfig(p.Root)
+	rootSampler, err := ConvertSamplerToConfig(p.Root)
 	if err != nil {
 		return nil, err
 	}
 	if rootSampler != nil {
 		pbc.Root = rootSampler.ActiveSampler
 		for id, config := range rootSampler.Samplers {
-			if config.Config != nil {
-				samplers[id] = config
-			}
+			samplers[id] = config
 		}
 	}
 
-	remoteSampledSampler, err := getSamplerConfig(p.RemoteSampled)
+	remoteSampledSampler, err := ConvertSamplerToConfig(p.RemoteSampled)
 	if err != nil {
 		return nil, err
 	}
 	if remoteSampledSampler != nil {
 		pbc.RemoteSampled = remoteSampledSampler.ActiveSampler
 		for id, config := range remoteSampledSampler.Samplers {
-			if config.Config != nil {
-				samplers[id] = config
-			}
+			samplers[id] = config
 		}
 	}
 
-	remoteNotSampledSampler, err := getSamplerConfig(p.RemoteNotSampled)
+	remoteNotSampledSampler, err := ConvertSamplerToConfig(p.RemoteNotSampled)
 	if err != nil {
 		return nil, err
 	}
 	if remoteNotSampledSampler != nil {
 		pbc.RemoteNotSampled = remoteNotSampledSampler.ActiveSampler
 		for id, config := range remoteNotSampledSampler.Samplers {
-			if config.Config != nil {
-				samplers[id] = config
-			}
+			samplers[id] = config
 		}
 	}
 
-	localSampledSamplers, err := getSamplerConfig(p.LocalSampled)
+	localSampledSamplers, err := ConvertSamplerToConfig(p.LocalSampled)
 	if err != nil {
 		return nil, err
 	}
 	if localSampledSamplers != nil {
 		pbc.LocalSampled = localSampledSamplers.ActiveSampler
 		for id, config := range localSampledSamplers.Samplers {
-			if config.Config != nil {
-				samplers[id] = config
-			}
+			samplers[id] = config
 		}
 	}
 
-	localNotSampledSampler, err := getSamplerConfig(p.LocalNotSampled)
+	localNotSampledSampler, err := ConvertSamplerToConfig(p.LocalNotSampled)
 	if err != nil {
 		return nil, err
 	}
 	if localNotSampledSampler != nil {
 		pbc.LocalNotSampled = localNotSampledSampler.ActiveSampler
 		for id, config := range localNotSampledSampler.Samplers {
-			if config.Config != nil {
-				samplers[id] = config
-			}
+			samplers[id] = config
 		}
 	}
 
@@ -235,30 +219,42 @@ func (p ParentBased) convert() (*sampling.Config, error) {
 	}, nil
 }
 
-func newSamplerFromEnv() (Sampler, error) {
-	samplerName, ok := lookupEnv(tracesSamplerKey)
-	if !ok {
-		return nil, nil
-	}
-
-	defaultSampler := ParentBased{
+// DefaultSampler returns a ParentBased sampler with the following defaults:
+//   - Root: AlwaysOn
+//   - RemoteSampled: AlwaysOn
+//   - RemoteNotSampled: AlwaysOff
+//   - LocalSampled: AlwaysOn
+//   - LocalNotSampled: AlwaysOff
+func DefaultSampler() Sampler {
+	return ParentBased{
 		Root:             AlwaysOn{},
 		RemoteSampled:    AlwaysOn{},
 		RemoteNotSampled: AlwaysOff{},
 		LocalSampled:     AlwaysOn{},
 		LocalNotSampled:  AlwaysOff{},
 	}
+}
+
+// NewSamplerFromEnv creates a Sampler based on the environment variables.
+// If the environment variables are not set, it returns a nil Sampler.
+func NewSamplerFromEnv(lookupEnv func(string) (string, bool)) (Sampler, error) {
+	samplerName, ok := lookupEnv(TracesSamplerKey)
+	if !ok {
+		return nil, nil
+	}
+
+	defaultSampler := DefaultSampler().(ParentBased)
 
 	samplerName = strings.ToLower(strings.TrimSpace(samplerName))
-	samplerArg, hasSamplerArg := lookupEnv(tracesSamplerArgKey)
+	samplerArg, hasSamplerArg := lookupEnv(TracesSamplerArgKey)
 	samplerArg = strings.TrimSpace(samplerArg)
 
 	switch samplerName {
-	case samplerNameAlwaysOn:
+	case SamplerNameAlwaysOn:
 		return AlwaysOn{}, nil
-	case samplerNameAlwaysOff:
+	case SamplerNameAlwaysOff:
 		return AlwaysOff{}, nil
-	case samplerNameTraceIDRatio:
+	case SamplerNameTraceIDRatio:
 		if hasSamplerArg {
 			ratio, err := strconv.ParseFloat(samplerArg, 64)
 			if err != nil {
@@ -267,13 +263,13 @@ func newSamplerFromEnv() (Sampler, error) {
 			return TraceIDRatio{Fraction: ratio}, nil
 		}
 		return TraceIDRatio{Fraction: 1}, nil
-	case samplerNameParentBasedAlwaysOn:
+	case SamplerNameParentBasedAlwaysOn:
 		defaultSampler.Root = AlwaysOn{}
 		return defaultSampler, nil
-	case samplerNameParsedBasedAlwaysOff:
+	case SamplerNameParsedBasedAlwaysOff:
 		defaultSampler.Root = AlwaysOff{}
 		return defaultSampler, nil
-	case samplerNameParentBasedTraceIDRatio:
+	case SamplerNameParentBasedTraceIDRatio:
 		if !hasSamplerArg {
 			defaultSampler.Root = TraceIDRatio{Fraction: 1}
 			return defaultSampler, nil
@@ -287,4 +283,15 @@ func newSamplerFromEnv() (Sampler, error) {
 	default:
 		return nil, errors.New("unknown sampler name")
 	}
+}
+
+// ConvertSamplerToConfig converts a Sampler its internal representation.
+func ConvertSamplerToConfig(s Sampler) (*sampling.Config, error) {
+	if s == nil {
+		return nil, nil
+	}
+	if err := s.validate(); err != nil {
+		return nil, err
+	}
+	return s.convert()
 }

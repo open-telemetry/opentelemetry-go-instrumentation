@@ -74,6 +74,7 @@ linters-settings:
         files:
           - "!$test"
           - "!**/*test/*.go"
+          - "!**/testutils/*.go"
         deny:
           - pkg: "testing"
           - pkg: "github.com/stretchr/testify"

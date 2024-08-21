@@ -49,6 +49,20 @@ func (i *Index) GetOffset(id ID, ver *version.Version) (OffsetKey, bool) {
 	return i.getOffset(id, ver)
 }
 
+// GetLatestOffset returns the latest known offset value and version for id
+// contained in the Index i.
+func (i *Index) GetLatestOffset(id ID) (OffsetKey, *version.Version) {
+	i.dataMu.RLock()
+	defer i.dataMu.RUnlock()
+
+	offs, ok := i.get(id)
+	if !ok {
+		return OffsetKey{}, nil
+	}
+	off, ver := offs.getLatest()
+	return off, ver.ToVersion()
+}
+
 func (i *Index) getOffset(id ID, ver *version.Version) (OffsetKey, bool) {
 	offs, ok := i.get(id)
 	if !ok {
@@ -259,6 +273,23 @@ func (o *Offsets) Get(ver *version.Version) (OffsetKey, bool) {
 	return v.offset, ok
 }
 
+// getLatest returns the latest known offset value and version.
+func (o *Offsets) getLatest() (OffsetKey, verKey) {
+	o.mu.RLock()
+	defer o.mu.RUnlock()
+
+	latestVersion := verKey{}
+	val := OffsetKey{}
+	for verKey, ov := range o.values {
+		if verKey.GreaterThan(latestVersion) && ov.offset.Valid {
+			latestVersion = verKey
+			val = ov.offset
+		}
+	}
+
+	return val, latestVersion
+}
+
 // Put sets the offset value for ver. If an offset for ver is already known
 // (i.e. ver.Equal(other) == true), this will overwrite that value.
 func (o *Offsets) Put(ver *version.Version, offset OffsetKey) {
@@ -279,6 +310,28 @@ func (o *Offsets) Put(ver *version.Version, offset OffsetKey) {
 	if o.uo.valid && o.uo.value != ov.offset.Offset {
 		o.uo.valid = false
 	}
+}
+
+func (v verKey) GreaterThan(other verKey) bool {
+	if v.major != other.major {
+		return v.major > other.major
+	}
+	if v.minor != other.minor {
+		return v.minor > other.minor
+	}
+	if v.patch != other.patch {
+		return v.patch > other.patch
+	}
+	return false
+}
+
+func (v verKey) ToVersion() *version.Version {
+	vs := fmt.Sprintf("%d.%d.%d", v.major, v.minor, v.patch)
+	if v.prerelease != "" {
+		vs += "-" + v.prerelease
+	}
+	ver, _ := version.NewVersion(vs)
+	return ver
 }
 
 func (o *Offsets) index() map[OffsetKey][]*version.Version {

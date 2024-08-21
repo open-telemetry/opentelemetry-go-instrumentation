@@ -10,6 +10,12 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 
 ### Added
 
+- Support Go `v1.21.13`. ([#988](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/988))
+- Support Go `v1.22.6`. ([#988](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/988))
+- Support `golang.org/x/net` `v0.28.0`. ([#988](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/988))
+- Support `google.golang.org/grpc` `1.67.0-dev`. ([#1007](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1007))
+- Support Go `1.23.0`.  ([#1007](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1007))
+- Introduce `config.Provider` as an option to set the initial configuration and update it in runtime. ([#1010](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1010))
 - `Sampler` interface that can be passed to `Instrumentation` via the new `WithSampler` option.
   This configuration allows customization of what sampler is used by the `Instrumentation`. ([#982](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/982))
 - The `OTEL_TRACES_SAMPLER` and `OTEL_TRACES_SAMPLER_ARG` environment variables are now supported when the `WithEnv` option is used. ([#982](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/982))
@@ -17,6 +23,10 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 ### Changed
 
 - The `WithSampler` option function now accepts the new `Sampler` interface instead of `trace.Sampler`. ([#982](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/982))
+
+### Fixed
+
+- Fix dirty shutdown caused by panic. ([#980](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/980))
 
 ## [v0.14.0-alpha] - 2024-07-15
 
