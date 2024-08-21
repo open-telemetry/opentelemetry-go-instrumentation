@@ -345,10 +345,16 @@ func (m *Manager) mount(target *process.TargetDetails) error {
 }
 
 func (m *Manager) cleanup(target *process.TargetDetails) error {
-	var err error
-	err = errors.Join(err, m.cp.Shutdown(context.Background()))
+	ctx := context.Background()
+	err := m.cp.Shutdown(context.Background())
 	for _, i := range m.probes {
 		err = errors.Join(err, i.Close())
+	}
+
+	// Wait for all probes to close so we know there is no more telemetry being
+	// generated before stopping (and flushing) the Controller.
+	if m.otelController != nil {
+		err = errors.Join(err, m.otelController.Shutdown(ctx))
 	}
 
 	m.logger.V(1).Info("Cleaning bpffs")

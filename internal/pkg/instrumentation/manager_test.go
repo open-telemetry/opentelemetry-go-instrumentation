@@ -16,11 +16,13 @@ import (
 	"github.com/go-logr/stdr"
 	"github.com/hashicorp/go-version"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel/trace"
 
 	"go.opentelemetry.io/auto/config"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/probe"
+	"go.opentelemetry.io/auto/internal/pkg/opentelemetry"
 	"go.opentelemetry.io/auto/internal/pkg/process"
 	"go.opentelemetry.io/auto/internal/pkg/process/binary"
 )
@@ -213,6 +215,17 @@ func mockExeAndBpffs(t *testing.T) {
 	t.Cleanup(func() { bpffsCleanup = origBpffsCleanup })
 }
 
+type shutdownTracerProvider struct {
+	trace.TracerProvider
+
+	called bool
+}
+
+func (tp *shutdownTracerProvider) Shutdown(context.Context) error {
+	tp.called = true
+	return nil
+}
+
 func TestRunStopping(t *testing.T) {
 	probeStop := make(chan struct{})
 	p := newSlowProbe(probeStop)
@@ -220,11 +233,16 @@ func TestRunStopping(t *testing.T) {
 	logger := stdr.New(log.New(os.Stderr, "", log.LstdFlags))
 	logger = logger.WithName("Instrumentation")
 
+	tp := new(shutdownTracerProvider)
+	ctrl, err := opentelemetry.NewController(logger, tp, "")
+	require.NoError(t, err)
+
 	m := &Manager{
-		logger:  logger.WithName("Manager"),
-		probes:  map[probe.ID]probe.Probe{{}: p},
-		eventCh: make(chan *probe.Event),
-		cp:      config.NewNoopProvider(),
+		otelController: ctrl,
+		logger:         logger.WithName("Manager"),
+		probes:         map[probe.ID]probe.Probe{{}: p},
+		eventCh:        make(chan *probe.Event),
+		cp:             config.NewNoopProvider(),
 	}
 
 	mockExeAndBpffs(t)
@@ -246,7 +264,6 @@ func TestRunStopping(t *testing.T) {
 		close(probeStop)
 	})
 
-	var err error
 	assert.Eventually(t, func() bool {
 		select {
 		case err = <-errCh:
@@ -256,6 +273,7 @@ func TestRunStopping(t *testing.T) {
 		}
 	}, time.Second, 10*time.Millisecond)
 	assert.ErrorIs(t, err, context.Canceled, "Stopping Run error")
+	assert.True(t, tp.called, "Controller not stopped")
 }
 
 type slowProbe struct {

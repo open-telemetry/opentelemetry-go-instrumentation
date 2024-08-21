@@ -9,12 +9,16 @@ import (
 	"log"
 	"os"
 	"runtime"
+	"strconv"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 
+	"github.com/go-logr/logr/testr"
 	"github.com/go-logr/stdr"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
@@ -304,4 +308,52 @@ func TestGetTracer(t *testing.T) {
 	t4 := ctrl.getTracer("net/http", "", "", "")
 	assert.Same(t, t2, t4)
 	assert.Equal(t, len(ctrl.tracersMap), 2)
+}
+
+type shutdownExporter struct {
+	sdktrace.SpanExporter
+
+	exported atomic.Uint32
+	called   bool
+}
+
+// ExportSpans handles export of spans by storing them in memory.
+func (e *shutdownExporter) ExportSpans(_ context.Context, spans []sdktrace.ReadOnlySpan) error {
+	e.exported.Add(uint32(len(spans)))
+	return nil
+}
+
+func (e *shutdownExporter) Shutdown(context.Context) error {
+	e.called = true
+	return nil
+}
+
+func TestShutdown(t *testing.T) {
+	const nSpan = 10
+
+	exporter := new(shutdownExporter)
+
+	batcher := sdktrace.NewBatchSpanProcessor(
+		exporter,
+		sdktrace.WithMaxQueueSize(nSpan+1),
+		sdktrace.WithBatchTimeout(nSpan+1),
+		// Ensure we are checking Shutdown flushes the queue.
+		sdktrace.WithBatchTimeout(time.Hour),
+	)
+
+	tp := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(batcher))
+
+	ctrl, err := NewController(testr.New(t), tp, "test")
+	require.NoError(t, err)
+
+	ctx := context.Background()
+	tracer := tp.Tracer("test")
+	for i := 0; i < nSpan; i++ {
+		_, s := tracer.Start(ctx, "span"+strconv.Itoa(i))
+		s.End()
+	}
+
+	require.NoError(t, ctrl.Shutdown(ctx))
+	assert.True(t, exporter.called, "Exporter not shutdown")
+	assert.Equal(t, uint32(nSpan), exporter.exported.Load(), "Pending spans not flushed")
 }
