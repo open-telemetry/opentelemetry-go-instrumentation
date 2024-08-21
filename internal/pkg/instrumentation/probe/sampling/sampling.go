@@ -3,6 +3,8 @@
 
 package sampling
 
+import "math"
+
 // SamplerType defines the type of a sampler.
 type SamplerType uint64
 
@@ -78,7 +80,7 @@ const (
 	// since eBPF does not support floating point arithmetic, we use a rational number to represent the ratio.
 	// the denominator is fixed and the numerator is used to represent the ratio.
 	// This value can limit the precision of the sampling rate, hence setting it to a high value should be enough in terms of precision.
-	samplingRateDenominator = 1e9
+	samplingRateDenominator = math.MaxUint32
 )
 
 // The spec-defined samplers have a constant ID, and are always available.
