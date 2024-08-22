@@ -143,12 +143,12 @@ func validateParentBasedComponent(s Sampler) error {
 
 func (p ParentBased) validate() error {
 	var err error
-	return errors.Join(err, 
-	validateParentBasedComponent(p.LocalNotSampled),
-	validateParentBasedComponent(p.LocalSampled),
-	validateParentBasedComponent(p.RemoteNotSampled),
-	validateParentBasedComponent(p.RemoteSampled),
-	validateParentBasedComponent(p.Root))
+	return errors.Join(err,
+		validateParentBasedComponent(p.LocalNotSampled),
+		validateParentBasedComponent(p.LocalSampled),
+		validateParentBasedComponent(p.RemoteNotSampled),
+		validateParentBasedComponent(p.RemoteSampled),
+		validateParentBasedComponent(p.Root))
 }
 
 func (p ParentBased) convert() (*sampling.Config, error) {

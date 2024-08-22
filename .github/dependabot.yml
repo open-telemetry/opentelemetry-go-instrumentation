@@ -11,15 +11,6 @@ updates:
       interval: weekly
       day: sunday
   - package-ecosystem: docker
-    directory: /.git/logs/refs/heads
-    labels:
-      - dependencies
-      - docker
-      - Skip Changelog
-    schedule:
-      interval: weekly
-      day: sunday
-  - package-ecosystem: docker
     directory: /
     labels:
       - dependencies

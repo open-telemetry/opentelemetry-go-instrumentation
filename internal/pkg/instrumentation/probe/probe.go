@@ -33,7 +33,10 @@ type Probe interface {
 	// the information about the package the Probe instruments.
 	Manifest() Manifest
 
-	// Load loads all instrumentation offsets.
+	// Load loads all the eBPF programs ans maps required by the Probe.
+	// It also attaches the eBPF programs to the target process.
+	// TODO: currently passing Sampler as an initial configuration - this will be
+	// updated to a more generic configuration in the future.
 	Load(*link.Executable, *process.TargetDetails, config.Sampler) error
 
 	// Run runs the events processing loop.
