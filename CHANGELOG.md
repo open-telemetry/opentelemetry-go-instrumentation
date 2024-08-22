@@ -27,6 +27,7 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 ### Fixed
 
 - Fix dirty shutdown caused by panic. ([#980](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/980))
+- Flush pending span exports on shutdown. ([#1028](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1028))
 
 ## [v0.14.0-alpha] - 2024-07-15
 
