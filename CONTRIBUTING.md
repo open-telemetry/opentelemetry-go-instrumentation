@@ -146,14 +146,14 @@ Any [Maintainer] can merge the PR once the above criteria have been met.
 
 - [Aaron Clawson](https://github.com/MadVikingGod), LightStep
 - [Dinesh Gurumurthy](https://github.com/dineshg13), DataDog
-- [Mike Dame](https://github.com/damemi), Google
 - [Robert Pająk](https://github.com/pellared), Splunk
-- [Ron Federman](https://github.com/RonFed), Odigos
 
 ### Maintainers
 
 - [Eden Federman](https://github.com/edeNFed), Odigos
+- [Mike Dame](https://github.com/damemi), Google
 - [Przemyslaw Delewski](https://github.com/pdelewski), SumoLogic
+- [Ron Federman](https://github.com/RonFed), Odigos
 - [Tyler Yahn](https://github.com/MrAlias), Splunk
 
 ### Emeritus
