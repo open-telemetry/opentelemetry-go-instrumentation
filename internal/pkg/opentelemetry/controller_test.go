@@ -120,7 +120,7 @@ func TestTrace(t *testing.T) {
 					StartTime: convertedStartTime,
 					EndTime:   convertedEndTime,
 					Resource:  instResource(),
-					InstrumentationLibrary: instrumentation.Library{
+					InstrumentationScope: instrumentation.Scope{
 						Name:      "go.opentelemetry.io/auto/foo/bar",
 						Version:   "test",
 						SchemaURL: semconv.SchemaURL,
@@ -156,7 +156,7 @@ func TestTrace(t *testing.T) {
 					StartTime: convertedStartTime,
 					EndTime:   convertedEndTime,
 					Resource:  instResource(),
-					InstrumentationLibrary: instrumentation.Library{
+					InstrumentationScope: instrumentation.Scope{
 						Name:    "go.opentelemetry.io/auto/net/http",
 						Version: "test",
 					},
@@ -199,7 +199,7 @@ func TestTrace(t *testing.T) {
 					StartTime: convertedStartTime,
 					EndTime:   convertedEndTime,
 					Resource:  instResource(),
-					InstrumentationLibrary: instrumentation.Library{
+					InstrumentationScope: instrumentation.Scope{
 						Name:    "go.opentelemetry.io/auto/net/http",
 						Version: "test",
 					},
@@ -244,7 +244,7 @@ func TestTrace(t *testing.T) {
 					StartTime: convertedStartTime,
 					EndTime:   convertedEndTime,
 					Resource:  instResource(),
-					InstrumentationLibrary: instrumentation.Library{
+					InstrumentationScope: instrumentation.Scope{
 						Name:      "user-tracer",
 						Version:   "v1",
 						SchemaURL: "user-schema",
