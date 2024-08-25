@@ -34,7 +34,7 @@ static __always_inline void start_span(start_span_params_t *params) {
     if (params->get_parent_span_context_fn != NULL) {
         found_parent = params->get_parent_span_context_fn(params->get_parent_span_context_arg, params->psc);
     } else {
-        struct span_context *local_psc = get_parent_span_context(params->go_context);
+        struct span_context *local_psc = span_context_from_go_context(params->go_context);
         if (local_psc != NULL) {
             found_parent = 0;
             *(params->psc) = *local_psc;

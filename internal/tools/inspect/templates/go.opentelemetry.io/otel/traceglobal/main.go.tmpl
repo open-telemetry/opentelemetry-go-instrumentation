@@ -3,11 +3,13 @@ package main
 import (
 	"context"
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/trace"
 )
 
 var tracer = otel.Tracer("trace-example")
 
 func main() {
-	_, span := tracer.Start(context.Background(), "some name")
+	ctx, span := tracer.Start(context.Background(), "some name")
+	_ = trace.SpanContextFromContext(ctx)
 	defer span.End()
 }

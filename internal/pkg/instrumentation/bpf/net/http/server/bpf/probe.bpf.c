@@ -230,6 +230,7 @@ int uprobe_serverHandler_ServeHTTP(struct pt_regs *ctx)
     start_span(&start_span_params);
 
     bpf_map_update_elem(&http_server_uprobes, &key, uprobe_data, 0);
+    bpf_printk("server go_context.data: 0x%llx", go_context.data);
     start_tracking_span(go_context.data, &http_server_span->sc);
     return 0;
 }

@@ -116,6 +116,16 @@ SCOPE="go.opentelemetry.io/auto/net/http"
   assert_equal "$result" '"http://user@localhost:8080/hello/42?query=true#fragment"'
 }
 
+@test "server :: span context returned to app matchers the exported span" {
+  exported_server_spanID=$(server_spans_from_scope_named ${SCOPE} | jq ".spanId")
+  app_received_server_spanID=$(spanID_from_app "server")
+  assert_equal "$exported_server_spanID" "$app_received_server_spanID"
+
+  exported_server_traceID=$(server_spans_from_scope_named ${SCOPE} | jq ".traceId")
+  app_received_server_traceID=$(traceID_from_app "server")
+  assert_equal "$exported_server_traceID" "$app_received_server_traceID"
+}
+
 @test "client, server :: expected (redacted) trace output" {
   redact_json
   assert_equal "$(git --no-pager diff ${BATS_TEST_DIRNAME}/traces.json)" ""

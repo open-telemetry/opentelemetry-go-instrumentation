@@ -86,6 +86,16 @@ SCOPE="trace-example"
   assert_equal "$child_status_description" '"i deleted the prod db sry"'
 }
 
+@test "parent :: span context returned to app matchers the exported span" {
+  exported_parent_spanID=$(spans_from_scope_named ${SCOPE} | jq "select(.name == \"parent\")" | jq ".spanId")
+  app_received_parent_spanID=$(spanID_from_app "parent")
+  assert_equal "$exported_parent_spanID" "$app_received_parent_spanID"
+
+  exported_parent_traceID=$(spans_from_scope_named ${SCOPE} | jq "select(.name == \"parent\")" | jq ".traceId")
+  app_received_parent_traceID=$(traceID_from_app "parent")
+  assert_equal "$exported_parent_traceID" "$app_received_parent_traceID"
+}
+
 @test "server :: expected (redacted) trace output" {
   redact_json
   assert_equal "$(git --no-pager diff ${BATS_TEST_DIRNAME}/traces.json)" ""

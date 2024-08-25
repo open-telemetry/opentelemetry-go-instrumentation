@@ -192,3 +192,18 @@ assert_not_empty() {
 		return 1
 	fi
 }
+
+span_context_from_app() {
+	span_id="$1"
+	kubectl logs -l app=sample -c sample-app | grep "SpanContext of $span_id" | sed -n "s/.*$span_id: \({[^}]*}\).*/\1/p"
+}
+
+spanID_from_app() {
+	span_id="$1"
+	span_context_from_app $span_id | jq .spanID
+}
+
+traceID_from_app() {
+	span_id="$1"
+	span_context_from_app $span_id | jq .traceID
+}

@@ -4,14 +4,34 @@
 package main
 
 import (
+	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"log"
 	"net/http"
+	"strconv"
 	"time"
+
+	"go.opentelemetry.io/otel/trace"
 )
 
-func hello(w http.ResponseWriter, _ *http.Request) {
+func writeSpanContextToStdout(ctx context.Context, name string) {
+	sc := trace.SpanContextFromContext(ctx)
+
+	spanContextJSON := map[string]string{
+		"spanID":     sc.SpanID().String(),
+		"traceID":    sc.TraceID().String(),
+		"traceFlags": strconv.FormatUint(uint64(sc.TraceFlags()), 16),
+	}
+
+	b, _ := json.Marshal(spanContextJSON)
+
+	fmt.Printf("SpanContext of %s: %s\n", name, b)
+}
+
+func hello(w http.ResponseWriter, r *http.Request) {
+	writeSpanContextToStdout(r.Context(), "server")
 	fmt.Fprintf(w, "hello\n")
 }
 

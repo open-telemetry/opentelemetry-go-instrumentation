@@ -5,6 +5,9 @@ package main
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
+	"strconv"
 	"time"
 
 	"go.opentelemetry.io/otel"
@@ -12,6 +15,20 @@ import (
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/trace"
 )
+
+func writeSpanContextToStdout(ctx context.Context, name string) {
+	sc := trace.SpanContextFromContext(ctx)
+
+	spanContextJSON := map[string]string{
+		"spanID":     sc.SpanID().String(),
+		"traceID":    sc.TraceID().String(),
+		"traceFlags": strconv.FormatUint(uint64(sc.TraceFlags()), 16),
+	}
+
+	b, _ := json.Marshal(spanContextJSON)
+
+	fmt.Printf("SpanContext of %s: %s\n", name, b)
+}
 
 var tracer = otel.Tracer(
 	"trace-example",
@@ -41,6 +58,7 @@ func createMainSpan(ctx context.Context) {
 	floatAttr := attribute.Float64("float_key", 42.3)
 	span.SetAttributes(intAttr, strAttr, boolAttr, floatAttr)
 	span.SetStatus(codes.Ok, "this msg won't be seen")
+	writeSpanContextToStdout(ctx, "parent")
 }
 
 func main() {

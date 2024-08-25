@@ -52,7 +52,7 @@ static __always_inline void *get_parent_go_context(struct go_iface *go_context, 
     return NULL;
 }
 
-static __always_inline struct span_context *get_parent_span_context(struct go_iface *go_context) {
+static __always_inline struct span_context *span_context_from_go_context(struct go_iface *go_context) {
     void *parent_go_ctx = get_parent_go_context(go_context, &go_context_to_sc);
     if (parent_go_ctx == NULL)
     {
