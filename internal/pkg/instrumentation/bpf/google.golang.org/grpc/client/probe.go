@@ -11,6 +11,7 @@ import (
 	"github.com/cilium/ebpf"
 	"github.com/go-logr/logr"
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
 	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
 	"go.opentelemetry.io/otel/trace"
 	"golang.org/x/sys/unix"
@@ -96,8 +97,9 @@ func verifyAndLoadBpf() (*ebpf.CollectionSpec, error) {
 // event represents an event in the gRPC client during a gRPC request.
 type event struct {
 	context.BaseSpanProperties
-	Method [50]byte
-	Target [50]byte
+	Method     [50]byte
+	Target     [50]byte
+	StatusCode uint64
 }
 
 // According to https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/trace/semantic_conventions/rpc.md
@@ -146,6 +148,7 @@ func convertEvent(e *event) []*probe.SpanEvent {
 			SpanContext:       &sc,
 			ParentSpanContext: pscPtr,
 			TracerSchema:      semconv.SchemaURL,
+			Status:            probe.Status{Code: codes.Code(int(e.StatusCode))},
 		},
 	}
 }
