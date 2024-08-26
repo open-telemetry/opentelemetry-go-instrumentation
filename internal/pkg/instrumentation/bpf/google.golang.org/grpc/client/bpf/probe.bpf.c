@@ -18,6 +18,7 @@ struct grpc_request_t
     BASE_SPAN_PROPERTIES
     char method[MAX_SIZE];
     char target[MAX_SIZE];
+    u64 status_code;
 };
 
 struct hpack_header_field
@@ -48,6 +49,8 @@ volatile const u64 clientconn_target_ptr_pos;
 volatile const u64 httpclient_nextid_pos;
 volatile const u64 headerFrame_streamid_pos;
 volatile const u64 headerFrame_hf_pos;
+volatile const u64 status_s_pos;
+volatile const u64 status_code_pos;
 
 // This instrumentation attaches uprobe to the following function:
 // func (cc *ClientConn) Invoke(ctx context.Context, method string, args, reply interface{}, opts ...CallOption) error
@@ -105,7 +108,27 @@ int uprobe_ClientConn_Invoke(struct pt_regs *ctx)
     return 0;
 }
 
-UPROBE_RETURN(ClientConn_Invoke, struct grpc_request_t, grpc_events, events, 3, 0, true)
+SEC("uprobe/ClientConn_Invoke")
+int uprobe_ClientConn_Invoke_Returns(struct pt_regs *ctx) {
+    struct go_iface go_context = {0};
+    get_Go_context(ctx, 3, 0, true, &go_context);
+    void *key = get_consistent_key(ctx, go_context.data);
+    struct grpc_request_t *grpc_span = bpf_map_lookup_elem(&grpc_events, &key);
+    if (grpc_span == NULL) {
+        bpf_printk("event is NULL in ret probe");
+        return 0;
+    }
+    if (is_register_abi()) {
+        // Getting the returned response
+        void *resp_ptr = get_argument(ctx, 1);
+        // Get status code from response
+        bpf_probe_read(&grpc_span->status_code, sizeof(grpc_span->status_code), (void *)(resp_ptr + status_s_pos + status_code_pos));
+    }
+    grpc_span->end_time = bpf_ktime_get_ns();
+    output_span_event(ctx, grpc_span, sizeof(*grpc_span), &grpc_span->sc);
+    bpf_map_delete_elem(&grpc_events, &key);
+    return 0;
+}
 
 // func (l *loopyWriter) headerHandler(h *headerFrame) error
 SEC("uprobe/loopyWriter_headerHandler")
