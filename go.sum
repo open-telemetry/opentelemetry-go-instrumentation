@@ -59,10 +59,10 @@ github.com/rogpeppe/go-internal v1.12.0 h1:exVL4IDcn6na9z1rAb56Vxr+CgyK3nn3O+epU
 github.com/rogpeppe/go-internal v1.12.0/go.mod h1:E+RYuTGaKKdloAfM02xzb0FW3Paa99yedzYV+kq4uf4=
 github.com/stretchr/testify v1.9.0 h1:HtqpIVDClZ4nwg75+f6Lvsy/wHu+3BoSGCbBAcpTsTg=
 github.com/stretchr/testify v1.9.0/go.mod h1:r2ic/lqez/lEtzL7wO/rwa5dbSLXVDPFyf8C91i36aY=
-go.opentelemetry.io/contrib/bridges/prometheus v0.53.0 h1:BdkKDtcrHThgjcEia1737OUuFdP6xzBKAMx2sNZCkvE=
-go.opentelemetry.io/contrib/bridges/prometheus v0.53.0/go.mod h1:ZkhVxcJgeXlL/lVyT/vxNHVFiSG5qOaDwYaSgD8IfZo=
-go.opentelemetry.io/contrib/exporters/autoexport v0.53.0 h1:13K+tY7E8GJInkrvRiPAhC0gi/7vKjzDNhtmCf+QXG8=
-go.opentelemetry.io/contrib/exporters/autoexport v0.53.0/go.mod h1:lyQF6xQ4iDnMg4sccNdFs1zf62xd79YI8vZqKjOTwMs=
+go.opentelemetry.io/contrib/bridges/prometheus v0.54.0 h1:WWL67oxtknNVMb70lJXxXruf8UyK/a9hmIE1XO3Uedg=
+go.opentelemetry.io/contrib/bridges/prometheus v0.54.0/go.mod h1:LqNcnXmyULp8ertk4hUTVtSUvKXj4h1Mx7gUCSSr/q0=
+go.opentelemetry.io/contrib/exporters/autoexport v0.54.0 h1:dTmcmVm4J54IRPGm5oVjLci1uYat4UDea84E2tyBaAk=
+go.opentelemetry.io/contrib/exporters/autoexport v0.54.0/go.mod h1:zPp5Fwpq2Hc7xMtVttg6GhZMcfTESjVbY9ONw2o/Dc4=
 go.opentelemetry.io/otel v1.29.0 h1:PdomN/Al4q/lN6iBJEN3AwPvUiHPMlt93c8bqTG5Llw=
 go.opentelemetry.io/otel v1.29.0/go.mod h1:N/WtXPs1CNCUEx+Agz5uouwCba+i+bJGFicT8SR4NP8=
 go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp v0.5.0 h1:4d++HQ+Ihdl+53zSjtsCUFDmNMju2FC9qFkUlTxPLqo=
