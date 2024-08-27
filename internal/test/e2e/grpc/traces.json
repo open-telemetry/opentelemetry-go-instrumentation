@@ -119,6 +119,47 @@
               "spanId": "xxxxx",
               "status": {},
               "traceId": "xxxxx"
+            },
+            {
+              "attributes": [
+                {
+                  "key": "network.peer.port",
+                  "value": {
+                    "intValue": "xxxxx"
+                  }
+                },
+                {
+                  "key": "rpc.system",
+                  "value": {
+                    "stringValue": "grpc"
+                  }
+                },
+                {
+                  "key": "rpc.service",
+                  "value": {
+                    "stringValue": "/helloworld.Greeter/SayHello"
+                  }
+                },
+                {
+                  "key": "server.address",
+                  "value": {
+                    "stringValue": "localhost"
+                  }
+                },
+                {
+                  "key": "rpc.grpc.status_code",
+                  "value": {
+                    "intValue": "37559592082735104"
+                  }
+                }
+              ],
+              "flags": 768,
+              "kind": 3,
+              "name": "/helloworld.Greeter/SayHello",
+              "parentSpanId": "xxxxx",
+              "spanId": "xxxxx",
+              "status": {},
+              "traceId": "xxxxx"
             }
           ]
         }
