@@ -104,6 +104,12 @@
                   "value": {
                     "stringValue": "localhost"
                   }
+                },
+                {
+                  "key": "rpc.grpc.status_code",
+                  "value": {
+                    "intValue": "0"
+                  }
                 }
               ],
               "flags": 256,
