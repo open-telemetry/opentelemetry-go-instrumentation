@@ -18,7 +18,7 @@ struct grpc_request_t
     BASE_SPAN_PROPERTIES
     char method[MAX_SIZE];
     char target[MAX_SIZE];
-    u64 status_code;
+    int status_code;
 };
 
 struct hpack_header_field
@@ -108,6 +108,8 @@ int uprobe_ClientConn_Invoke(struct pt_regs *ctx)
     return 0;
 }
 
+// This instrumentation attaches uprobe to the following function:
+// func (cc *ClientConn) Invoke(ctx context.Context, method string, args, reply interface{}, opts ...CallOption) error
 SEC("uprobe/ClientConn_Invoke")
 int uprobe_ClientConn_Invoke_Returns(struct pt_regs *ctx) {
     struct go_iface go_context = {0};
@@ -118,12 +120,17 @@ int uprobe_ClientConn_Invoke_Returns(struct pt_regs *ctx) {
         bpf_printk("event is NULL in ret probe");
         return 0;
     }
-    if (is_register_abi()) {
-        // Getting the returned response
-        void *resp_ptr = get_argument(ctx, 1);
-        // Get status code from response
-        bpf_probe_read(&grpc_span->status_code, sizeof(grpc_span->status_code), (void *)(resp_ptr + status_s_pos + status_code_pos));
-    }
+
+    // Getting the returned response (error)
+    void *resp_ptr = get_argument(ctx, 1);
+    void *status_ptr = 0;
+    // get `s` field from Status object pointer (from returned error interface)
+    // (*Status)error{*s}
+    bpf_probe_read(&status_ptr, sizeof(status_ptr), (void *)(resp_ptr+status_s_pos));
+    // Get status code from Status.s pointer
+    // (*s)struct{Code}
+    bpf_probe_read(&grpc_span->status_code, sizeof(grpc_span->status_code), (void *)(status_ptr + status_code_pos));
+
     grpc_span->end_time = bpf_ktime_get_ns();
     output_span_event(ctx, grpc_span, sizeof(*grpc_span), &grpc_span->sc);
     bpf_map_delete_elem(&grpc_events, &key);

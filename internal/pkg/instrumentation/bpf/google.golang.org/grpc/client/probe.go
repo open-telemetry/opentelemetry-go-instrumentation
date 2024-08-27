@@ -99,7 +99,7 @@ type event struct {
 	context.BaseSpanProperties
 	Method     [50]byte
 	Target     [50]byte
-	StatusCode uint64
+	StatusCode int32
 }
 
 // According to https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/trace/semantic_conventions/rpc.md

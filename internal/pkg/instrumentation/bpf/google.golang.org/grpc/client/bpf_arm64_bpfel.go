@@ -19,8 +19,7 @@ type bpfGrpcRequestT struct {
 	Psc        bpfSpanContext
 	Method     [50]int8
 	Target     [50]int8
-	_          [4]byte
-	StatusCode uint64
+	StatusCode int32
 }
 
 type bpfSliceArrayBuff struct{ Buff [1024]uint8 }
