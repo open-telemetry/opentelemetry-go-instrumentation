@@ -120,6 +120,8 @@ func convertEvent(e *event) []*probe.SpanEvent {
 		semconv.RPCServiceKey.String(method),
 		semconv.ServerAddress(target))
 
+	attrs = append(attrs, semconv.RPCGRPCStatusCodeKey.Int(int(e.StatusCode)))
+
 	sc := trace.NewSpanContext(trace.SpanContextConfig{
 		TraceID:    e.SpanContext.TraceID,
 		SpanID:     e.SpanContext.SpanID,
