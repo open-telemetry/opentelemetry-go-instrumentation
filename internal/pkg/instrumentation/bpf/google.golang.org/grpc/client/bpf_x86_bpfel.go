@@ -13,13 +13,14 @@ import (
 )
 
 type bpfGrpcRequestT struct {
-	StartTime uint64
-	EndTime   uint64
-	Sc        bpfSpanContext
-	Psc       bpfSpanContext
-	Method    [50]int8
-	Target    [50]int8
-	_         [4]byte
+	StartTime  uint64
+	EndTime    uint64
+	Sc         bpfSpanContext
+	Psc        bpfSpanContext
+	Method     [50]int8
+	Target     [50]int8
+	_          [4]byte
+	StatusCode uint64
 }
 
 type bpfSliceArrayBuff struct{ Buff [1024]uint8 }
