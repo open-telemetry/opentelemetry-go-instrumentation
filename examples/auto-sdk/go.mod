@@ -4,7 +4,11 @@ go 1.23.0
 
 replace go.opentelemetry.io/auto => ../../
 
-require go.opentelemetry.io/auto v0.0.0-00010101000000-000000000000
+require (
+	go.opentelemetry.io/auto v0.0.0-00010101000000-000000000000
+	go.opentelemetry.io/otel v1.29.0
+	go.opentelemetry.io/otel/trace v1.29.0
+)
 
 require (
 	github.com/beorn7/perks v1.0.1 // indirect
@@ -31,7 +35,6 @@ require (
 	go.opentelemetry.io/collector/pdata v1.14.1 // indirect
 	go.opentelemetry.io/contrib/bridges/prometheus v0.54.0 // indirect
 	go.opentelemetry.io/contrib/exporters/autoexport v0.54.0 // indirect
-	go.opentelemetry.io/otel v1.29.0 // indirect
 	go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp v0.5.0 // indirect
 	go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc v1.29.0 // indirect
 	go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp v1.29.0 // indirect
@@ -47,7 +50,6 @@ require (
 	go.opentelemetry.io/otel/sdk v1.29.0 // indirect
 	go.opentelemetry.io/otel/sdk/log v0.5.0 // indirect
 	go.opentelemetry.io/otel/sdk/metric v1.29.0 // indirect
-	go.opentelemetry.io/otel/trace v1.29.0 // indirect
 	go.opentelemetry.io/proto/otlp v1.3.1 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	go.uber.org/zap v1.27.0 // indirect

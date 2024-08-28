@@ -6,71 +6,75 @@ package main
 import (
 	"context"
 	"fmt"
+	"math/rand"
 	"os"
 	"os/signal"
 	"time"
 
 	"go.opentelemetry.io/auto"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/trace"
 )
 
+const service = "go.opentelemetry.io/auto/examples/auto-sdk"
+
 func main() {
-	tracer := auto.TracerProvider().Tracer("go.opentelemetry.io/auto/examples/auto-sdk")
+	otel.SetTracerProvider(auto.TracerProvider())
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer stop()
 
-	//sc0 := trace.NewSpanContext(trace.SpanContextConfig{
-	//	TraceID:    trace.TraceID{0x01},
-	//	SpanID:     trace.SpanID{0x01},
-	//	TraceFlags: trace.FlagsSampled,
-	//})
+	run(ctx)
+}
 
+func run(ctx context.Context) {
 	for i := 0; ; i++ {
-		name := fmt.Sprintf("span-%d", i)
-		fmt.Printf("%s...", name)
-
-		_, span := tracer.Start(
-			ctx,
-			name,
-			//trace.WithAttributes(attribute.Int("i", i)),
-			//trace.WithLinks(trace.Link{
-			//	SpanContext: sc0,
-			//	Attributes: []attribute.KeyValue{
-			//		attribute.Bool("start", true),
-			//	},
-			//}),
-			//trace.WithSpanKind(trace.SpanKindInternal),
-		)
-		fmt.Println(span.IsRecording(), span.SpanContext())
-
-		/*
-			span.SetAttributes(attribute.BoolSlice("key", []bool{true, false}))
-
-			span.RecordError(
-				errors.New("err"),
-				trace.WithAttributes(attribute.Bool("fake", true)),
-				trace.WithStackTrace(true),
-			)
-			span.SetStatus(codes.Error, "errored")
-		*/
-
-		func() {
-			t := time.NewTicker(time.Second * 3)
-			defer t.Stop()
-
-			select {
-			case <-ctx.Done():
-			case <-t.C:
-			}
-		}()
-		span.End()
-
-		fmt.Println("done")
-
+		outter(ctx, i)
 		select {
 		case <-ctx.Done():
 			return
 		default:
 		}
+	}
+}
+
+func outter(ctx context.Context, i int) {
+	fmt.Printf("outter-%d...", i)
+
+	tracer := otel.Tracer(service)
+
+	var span trace.Span
+	ctx, span = tracer.Start(
+		ctx,
+		"outter",
+		trace.WithAttributes(attribute.Int("i", i)),
+	)
+	defer span.End()
+
+	s := time.Duration(3 + rand.Intn(2))
+	wait(ctx, s*time.Second)
+
+	fmt.Println("done")
+}
+
+func wait(ctx context.Context, d time.Duration) {
+	tracer := trace.SpanFromContext(ctx).TracerProvider().Tracer(service)
+	_, span := tracer.Start(
+		ctx,
+		"wait",
+		trace.WithAttributes(attribute.Int64("duration", int64(d))),
+	)
+	defer span.End()
+
+	t := time.NewTicker(d)
+	defer t.Stop()
+
+	select {
+	case <-ctx.Done():
+		span.RecordError(ctx.Err())
+		span.SetStatus(codes.Error, "timeout")
+	case <-t.C:
 	}
 }
