@@ -72,12 +72,11 @@ func main() {
 	<-done
 
 	// try making a request after the server has stopped to generate an error status
-	r, err = c.SayHello(ctx, &pb.HelloRequest{Name: "world"})
+	_, err = c.SayHello(ctx, &pb.HelloRequest{Name: "world"})
 	if err == nil {
 		log.Fatalf("expected an error but none was returned")
-	} else {
-		log.Printf("received expected error: %+v", err)
 	}
+	log.Printf("received expected error: %+v", err)
 
 	// Give time for auto-instrumentation to do the dew.
 	time.Sleep(5 * time.Second)
