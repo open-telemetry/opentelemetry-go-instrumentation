@@ -9,7 +9,6 @@ import (
 	"reflect"
 	"runtime"
 	"time"
-	"unsafe"
 
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/ptrace"
@@ -302,10 +301,7 @@ func (s *Span) End(opts ...trace.SpanEndOption) {
 // Expected to be implemented in eBPF.
 //
 //go:noinline
-func (*Span) ended(buf []byte) {
-	ptr := unsafe.SliceData(buf)
-	fmt.Printf("\nn: %d, ptr: %p, data: %d\n", len(buf), ptr, ptr)
-}
+func (*Span) ended(buf []byte) {}
 
 func (s *Span) RecordError(err error, opts ...trace.EventOption) {
 	if s == nil || err == nil || !s.sampled {
