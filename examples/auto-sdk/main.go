@@ -61,20 +61,50 @@ func outter(ctx context.Context, i int) {
 
 func wait(ctx context.Context, d time.Duration) {
 	tracer := trace.SpanFromContext(ctx).TracerProvider().Tracer(service)
-	_, span := tracer.Start(
+	var span trace.Span
+	ctx, span = tracer.Start(
 		ctx,
 		"wait",
 		trace.WithAttributes(attribute.Int64("duration", int64(d))),
 	)
 	defer span.End()
 
-	t := time.NewTicker(d)
-	defer t.Stop()
+	c := doTick(ctx, d)
 
 	select {
-	case <-ctx.Done():
-		span.RecordError(ctx.Err())
-		span.SetStatus(codes.Error, "timeout")
-	case <-t.C:
+	case err := <-c:
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, "timeout")
+		}
 	}
+}
+
+func doTick(ctx context.Context, d time.Duration) <-chan error {
+	done := make(chan error, 1)
+	go func() {
+		tracer := trace.SpanFromContext(ctx).TracerProvider().Tracer(service)
+		_, span := tracer.Start(
+			context.Background(), // Async, not a child.
+			"doTick",
+			trace.WithLinks(trace.Link{
+				SpanContext: trace.SpanContextFromContext(ctx),
+				Attributes: []attribute.KeyValue{
+					attribute.Bool("spawner", true),
+				},
+			}),
+		)
+		defer span.End()
+
+		t := time.NewTicker(d)
+		defer t.Stop()
+
+		select {
+		case <-ctx.Done():
+		case <-t.C:
+		}
+		done <- ctx.Err()
+		close(done)
+	}()
+	return done
 }

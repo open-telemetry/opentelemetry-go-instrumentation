@@ -85,6 +85,7 @@ func (c *Controller) Trace(event *probe.Event) {
 			trace.WithAttributes(se.Attributes...),
 			trace.WithSpanKind(event.Kind),
 			trace.WithTimestamp(c.convertTime(se.StartTime)),
+			trace.WithLinks(se.Links...),
 		)
 		for name, opts := range se.Events {
 			span.AddEvent(name, opts...)

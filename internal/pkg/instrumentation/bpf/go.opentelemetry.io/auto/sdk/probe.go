@@ -100,9 +100,38 @@ func (c *converter) convertEvent(e *event) []*probe.SpanEvent {
 		TracerVersion:     ss.Scope().Version(),
 		TracerSchema:      ss.SchemaUrl(),
 		Events:            events(span.Events()),
-		// TODO: span links.
+		Links:             c.links(span.Links()),
 		// TODO: span kind.
 	}}
+}
+
+func (c *converter) links(links ptrace.SpanLinkSlice) []trace.Link {
+	n := links.Len()
+	if n == 0 {
+		return nil
+	}
+
+	out := make([]trace.Link, n)
+	for i := range out {
+		l := links.At(i)
+
+		raw := l.TraceState().AsRaw()
+		ts, err := trace.ParseTraceState(raw)
+		if err != nil {
+			c.logger.Error(err, "failed to parse link tracestate", "tracestate", raw)
+		}
+
+		out[i] = trace.Link{
+			SpanContext: trace.NewSpanContext(trace.SpanContextConfig{
+				TraceID:    trace.TraceID(l.TraceID()),
+				SpanID:     trace.SpanID(l.SpanID()),
+				TraceFlags: trace.TraceFlags(l.Flags()),
+				TraceState: ts,
+			}),
+			Attributes: attributes(l.Attributes()),
+		}
+	}
+	return out
 }
 
 func events(e ptrace.SpanEventSlice) map[string][]trace.EventOption {
