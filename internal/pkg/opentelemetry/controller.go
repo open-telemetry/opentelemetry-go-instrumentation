@@ -63,27 +63,13 @@ func (c *Controller) Trace(event *probe.Event) {
 			c.logger.V(1).Info("got event without context - dropping")
 			return
 		}
-		sc := *se.SpanContext
 
 		// TODO: handle remote parent
-		var psc trace.SpanContext
 		if se.ParentSpanContext != nil {
 			ctx = trace.ContextWithSpanContext(ctx, *se.ParentSpanContext)
-			psc = *se.ParentSpanContext
 		}
 
-		c.logger.V(1).Info(
-			"processing event",
-			"kind", event.Kind.String(),
-			"pkg", event.Package,
-			"span name", se.SpanName,
-			"attributes", se.Attributes,
-			"start time", se.StartTime,
-			"end time", se.EndTime,
-			"span context", sc,
-			"parent span context", psc,
-			"status", se.Status,
-		)
+		c.logger.V(1).Info("processing event", "SpanEvent", se)
 
 		ctx = ContextWithEBPFEvent(ctx, *se)
 		c.logger.V(1).Info(
