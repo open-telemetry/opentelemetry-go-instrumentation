@@ -40,14 +40,16 @@ SCOPE="go.opentelemetry.io/auto/google.golang.org/grpc"
 }
 
 @test "client, server :: spans have same trace ID" {
-  client_trace_id=$(client_spans_from_scope_named ${SCOPE} | jq ".traceId")
+  # only check the first client span (the 2nd is an error)
+  client_trace_id=$(client_spans_from_scope_named ${SCOPE} | jq ".traceId" | jq -Rn '[inputs]' | jq -r .[0])
   server_trace_id=$(server_spans_from_scope_named ${SCOPE} | jq ".traceId")
   assert_equal "$server_trace_id" "$client_trace_id"
 }
 
 @test "client, server :: server span has client span as parent" {
   server_parent_span_id=$(server_spans_from_scope_named ${SCOPE} | jq ".parentSpanId")
-  client_span_id=$(client_spans_from_scope_named ${SCOPE} | jq ".spanId")
+  # only check the first client span (the 2nd is an error)
+  client_span_id=$(client_spans_from_scope_named ${SCOPE} | jq ".spanId"| jq -Rn '[inputs]' | jq -r .[0])
   assert_equal "$client_span_id" "$server_parent_span_id"
 }
 
@@ -57,26 +59,34 @@ SCOPE="go.opentelemetry.io/auto/google.golang.org/grpc"
 }
 
 @test "client :: emits a span name 'SayHello'" {
-  result=$(client_span_names_for ${SCOPE})
+  result=$(client_span_names_for ${SCOPE} | uniq)
   assert_equal "$result" '"/helloworld.Greeter/SayHello"'
 }
 
 @test "client :: includes rpc.system attribute" {
-  result=$(client_span_attributes_for ${SCOPE} | jq "select(.key == \"rpc.system\").value.stringValue")
+  result=$(client_span_attributes_for ${SCOPE} | jq "select(.key == \"rpc.system\").value.stringValue" | uniq)
   assert_equal "$result" '"grpc"'
 }
 
 @test "client :: includes rpc.service attribute" {
-  result=$(client_span_attributes_for ${SCOPE} | jq "select(.key == \"rpc.service\").value.stringValue")
+  result=$(client_span_attributes_for ${SCOPE} | jq "select(.key == \"rpc.service\").value.stringValue" | uniq)
   assert_equal "$result" '"/helloworld.Greeter/SayHello"'
 }
 
 @test "client :: trace ID present and valid in all spans" {
-  trace_id=$(client_spans_from_scope_named ${SCOPE} | jq ".traceId")
+  trace_id=$(client_spans_from_scope_named ${SCOPE} | jq ".traceId" | uniq)
   assert_regex "$trace_id" ${MATCH_A_TRACE_ID}
 }
 
 @test "client :: span ID present and valid in all spans" {
-  span_id=$(client_spans_from_scope_named ${SCOPE} | jq ".spanId")
+  span_id=$(client_spans_from_scope_named ${SCOPE} | jq ".spanId" | jq -Rn '[inputs]' | jq -r .[0])
   assert_regex "$span_id" ${MATCH_A_SPAN_ID}
+  span_id=$(client_spans_from_scope_named ${SCOPE} | jq ".spanId" | jq -Rn '[inputs]' | jq -r .[1])
+  assert_regex "$span_id" ${MATCH_A_SPAN_ID}
+}
+
+@test "client :: error code is present for unsuccessful span" {
+  # gRPC error code 14 - Unavailable
+  result=$(client_span_attributes_for ${SCOPE} | jq 'select(.key == "rpc.grpc.status_code" and .value.intValue == "14")')
+  assert_not_empty "$result"
 }
