@@ -50,6 +50,7 @@ func outter(ctx context.Context, i int) {
 		ctx,
 		"outter",
 		trace.WithAttributes(attribute.Int("i", i)),
+		trace.WithSpanKind(trace.SpanKindClient),
 	)
 	defer span.End()
 
@@ -66,6 +67,7 @@ func wait(ctx context.Context, d time.Duration) {
 		ctx,
 		"wait",
 		trace.WithAttributes(attribute.Int64("duration", int64(d))),
+		trace.WithSpanKind(trace.SpanKindConsumer),
 	)
 	defer span.End()
 
@@ -93,6 +95,7 @@ func doTick(ctx context.Context, d time.Duration) <-chan error {
 					attribute.Bool("spawner", true),
 				},
 			}),
+			trace.WithSpanKind(trace.SpanKindProducer),
 		)
 		defer span.End()
 

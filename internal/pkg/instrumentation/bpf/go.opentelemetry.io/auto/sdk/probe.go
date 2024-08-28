@@ -101,8 +101,25 @@ func (c *converter) convertEvent(e *event) []*probe.SpanEvent {
 		TracerSchema:      ss.SchemaUrl(),
 		Events:            events(span.Events()),
 		Links:             c.links(span.Links()),
-		// TODO: span kind.
+		Kind:              spanKind(span.Kind()),
 	}}
+}
+
+func spanKind(kind ptrace.SpanKind) trace.SpanKind {
+	switch kind {
+	case ptrace.SpanKindInternal:
+		return trace.SpanKindInternal
+	case ptrace.SpanKindServer:
+		return trace.SpanKindServer
+	case ptrace.SpanKindClient:
+		return trace.SpanKindClient
+	case ptrace.SpanKindProducer:
+		return trace.SpanKindProducer
+	case ptrace.SpanKindConsumer:
+		return trace.SpanKindConsumer
+	default:
+		return trace.SpanKindUnspecified
+	}
 }
 
 func (c *converter) links(links ptrace.SpanLinkSlice) []trace.Link {

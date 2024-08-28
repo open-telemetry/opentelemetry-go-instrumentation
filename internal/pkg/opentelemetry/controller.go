@@ -71,19 +71,18 @@ func (c *Controller) Trace(event *probe.Event) {
 
 		c.logger.V(1).Info("processing event", "SpanEvent", se)
 
+		kind := se.Kind
+		if kind == trace.SpanKindUnspecified {
+			kind = event.Kind
+		}
+
 		ctx = ContextWithEBPFEvent(ctx, *se)
-		c.logger.V(1).Info(
-			"getting tracer",
-			"name", se.TracerName,
-			"version", se.TracerVersion,
-			"schema", se.TracerSchema,
-		)
 		tracer := c.getTracer(event.Package, se.TracerName, se.TracerVersion, se.TracerSchema)
 		_, span := tracer.Start(
 			ctx,
 			se.SpanName,
 			trace.WithAttributes(se.Attributes...),
-			trace.WithSpanKind(event.Kind),
+			trace.WithSpanKind(kind),
 			trace.WithTimestamp(c.convertTime(se.StartTime)),
 			trace.WithLinks(se.Links...),
 		)
