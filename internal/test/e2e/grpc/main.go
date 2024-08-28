@@ -75,6 +75,8 @@ func main() {
 	r, err = c.SayHello(ctx, &pb.HelloRequest{Name: "world"})
 	if err == nil {
 		log.Fatalf("expected an error but none was returned")
+	} else {
+		log.Printf("received expected error: %+v", err)
 	}
 
 	// Give time for auto-instrumentation to do the dew.

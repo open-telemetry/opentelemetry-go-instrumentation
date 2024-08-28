@@ -122,14 +122,14 @@ int uprobe_ClientConn_Invoke_Returns(struct pt_regs *ctx) {
     }
 
     // Getting the returned response (error)
-    void *resp_ptr = get_argument(ctx, 1);
+    void *resp_ptr = get_argument(ctx, 2);
     void *status_ptr = 0;
     // get `s` field from Status object pointer (from returned error interface)
     // (*Status)error{*s}
-    bpf_probe_read(&status_ptr, sizeof(status_ptr), (void *)(resp_ptr+status_s_pos));
+    bpf_probe_read_user(&status_ptr, sizeof(status_ptr), (void *)(resp_ptr+status_s_pos));
     // Get status code from Status.s pointer
     // (*s)struct{Code}
-    bpf_probe_read(&grpc_span->status_code, sizeof(grpc_span->status_code), (void *)(status_ptr + status_code_pos));
+    bpf_probe_read_user(&grpc_span->status_code, sizeof(grpc_span->status_code), (void *)(status_ptr + status_code_pos));
 
     grpc_span->end_time = bpf_ktime_get_ns();
     output_span_event(ctx, grpc_span, sizeof(*grpc_span), &grpc_span->sc);
