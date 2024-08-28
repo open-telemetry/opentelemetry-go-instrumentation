@@ -49,6 +49,7 @@ volatile const u64 clientconn_target_ptr_pos;
 volatile const u64 httpclient_nextid_pos;
 volatile const u64 headerFrame_streamid_pos;
 volatile const u64 headerFrame_hf_pos;
+volatile const u64 error_status_pos;
 volatile const u64 status_s_pos;
 volatile const u64 status_code_pos;
 
@@ -122,14 +123,26 @@ int uprobe_ClientConn_Invoke_Returns(struct pt_regs *ctx) {
     }
 
     // Getting the returned response (error)
+    // The status code is embedded 3 layers deep:
+    // Invoke() error
+    // the `error` interface concrete type here is a gRPC `internal.Error` struct
+    // type Error struct {
+    //   s *Status
+    // }
+    // The `Error` struct embeds a `Status` proto object
+    // type Status struct {
+    //   s *Status
+    // }
+    // The `Status` proto object contains a `Code` int32 field, which is what we want
     void *resp_ptr = get_argument(ctx, 2);
     void *status_ptr = 0;
-    // get `s` field from Status object pointer (from returned error interface)
-    // (*Status)error{*s}
-    bpf_probe_read_user(&status_ptr, sizeof(status_ptr), (void *)(resp_ptr+status_s_pos));
+    // get `s` (Status pointer field) from Error struct
+    bpf_probe_read_user(&status_ptr, sizeof(status_ptr), (void *)(resp_ptr+error_status_pos));
+    // get `s` field from Status object pointer
+    void *s_ptr = 0;
+    bpf_probe_read_user(&s_ptr, sizeof(s_ptr), (void *)(status_ptr + status_s_pos));
     // Get status code from Status.s pointer
-    // (*s)struct{Code}
-    bpf_probe_read_user(&grpc_span->status_code, sizeof(grpc_span->status_code), (void *)(status_ptr + status_code_pos));
+    bpf_probe_read_user(&grpc_span->status_code, sizeof(grpc_span->status_code), (void *)(s_ptr + status_code_pos));
 
     grpc_span->end_time = bpf_ktime_get_ns();
     output_span_event(ctx, grpc_span, sizeof(*grpc_span), &grpc_span->sc);

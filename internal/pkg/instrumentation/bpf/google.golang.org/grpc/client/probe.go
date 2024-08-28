@@ -58,6 +58,10 @@ func New(logger logr.Logger) probe.Probe {
 				Val: structfield.NewID("google.golang.org/grpc", "google.golang.org/grpc/internal/transport", "headerFrame", "streamID"),
 			},
 			probe.StructFieldConst{
+				Key: "error_status_pos",
+				Val: structfield.NewID("google.golang.org/grpc", "google.golang.org/grpc/internal/status", "Error", "s"),
+			},
+			probe.StructFieldConst{
 				Key: "status_s_pos",
 				Val: structfield.NewID("google.golang.org/grpc", "google.golang.org/grpc/internal/status", "Status", "s"),
 			},
