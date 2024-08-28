@@ -46,7 +46,7 @@ func New(logger logr.Logger) probe.Probe {
 
 type event struct {
 	Size     uint32
-	SpanData [256]byte
+	SpanData [412]byte
 }
 
 type converter struct {
@@ -55,16 +55,10 @@ type converter struct {
 
 func (c *converter) convertEvent(e *event) []*probe.SpanEvent {
 	var m ptrace.ProtoUnmarshaler
-	traces, err := m.UnmarshalTraces(e.SpanData[:e.Size]) // TODO: handle returned error.
+	traces, err := m.UnmarshalTraces(e.SpanData[:e.Size])
 	if err != nil {
 		c.logger.Error(err, "failed to unmarshal span data")
-		sc := trace.NewSpanContext(trace.SpanContextConfig{
-			SpanID: trace.SpanID{1},
-		})
-		return []*probe.SpanEvent{{
-			SpanName:    "error",
-			SpanContext: &sc,
-		}}
+		return nil
 	}
 
 	ss := traces.ResourceSpans().At(0).ScopeSpans().At(0) // TODO: validate len before lookup.
@@ -105,10 +99,32 @@ func (c *converter) convertEvent(e *event) []*probe.SpanEvent {
 		TracerName:        ss.Scope().Name(),
 		TracerVersion:     ss.Scope().Version(),
 		TracerSchema:      ss.SchemaUrl(),
-		// TODO: span events.
+		Events:            events(span.Events()),
 		// TODO: span links.
 		// TODO: span kind.
 	}}
+}
+
+func events(e ptrace.SpanEventSlice) map[string][]trace.EventOption {
+	out := make(map[string][]trace.EventOption)
+	for i := 0; i < e.Len(); i++ {
+		var opts []trace.EventOption
+
+		event := e.At(i)
+
+		ts := event.Timestamp().AsTime()
+		if !ts.IsZero() {
+			opts = append(opts, trace.WithTimestamp(ts))
+		}
+
+		attrs := attributes(event.Attributes())
+		if len(attrs) > 0 {
+			opts = append(opts, trace.WithAttributes(attrs...))
+		}
+
+		out[event.Name()] = opts
+	}
+	return out
 }
 
 func attributes(m pcommon.Map) []attribute.KeyValue {
@@ -186,8 +202,17 @@ func attributeValue(val pcommon.Value) (out attribute.Value) {
 }
 
 func status(stat ptrace.Status) probe.Status {
+	var c codes.Code
+	switch stat.Code() {
+	case ptrace.StatusCodeUnset:
+		c = codes.Unset
+	case ptrace.StatusCodeOk:
+		c = codes.Ok
+	case ptrace.StatusCodeError:
+		c = codes.Error
+	}
 	return probe.Status{
-		Code:        codes.Code(stat.Code()),
+		Code:        c,
 		Description: stat.Message(),
 	}
 }

@@ -78,11 +78,17 @@ func (c *Controller) Trace(event *probe.Event) {
 			"version", se.TracerVersion,
 			"schema", se.TracerSchema,
 		)
-		_, span := c.getTracer(event.Package, se.TracerName, se.TracerVersion, se.TracerSchema).
-			Start(ctx, se.SpanName,
-				trace.WithAttributes(se.Attributes...),
-				trace.WithSpanKind(event.Kind),
-				trace.WithTimestamp(c.convertTime(se.StartTime)))
+		tracer := c.getTracer(event.Package, se.TracerName, se.TracerVersion, se.TracerSchema)
+		_, span := tracer.Start(
+			ctx,
+			se.SpanName,
+			trace.WithAttributes(se.Attributes...),
+			trace.WithSpanKind(event.Kind),
+			trace.WithTimestamp(c.convertTime(se.StartTime)),
+		)
+		for name, opts := range se.Events {
+			span.AddEvent(name, opts...)
+		}
 		span.SetStatus(se.Status.Code, se.Status.Description)
 		span.End(trace.WithTimestamp(c.convertTime(se.EndTime)))
 	}
