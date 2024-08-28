@@ -103,7 +103,7 @@ func (c *Controller) Trace(event *probe.Event) {
 }
 
 func (c *Controller) convertTime(t int64) time.Time {
-	return time.Unix(0, c.bootTime+t)
+	return time.Unix(0, t)
 }
 
 // NewController returns a new initialized [Controller].
