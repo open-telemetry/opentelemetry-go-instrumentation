@@ -135,6 +135,10 @@ int uprobe_ClientConn_Invoke_Returns(struct pt_regs *ctx) {
     // }
     // The `Status` proto object contains a `Code` int32 field, which is what we want
     void *resp_ptr = get_argument(ctx, 2);
+    if(resp_ptr == 0) {
+        // err == nil
+        goto done;
+    }
     void *status_ptr = 0;
     // get `s` (Status pointer field) from Error struct
     bpf_probe_read_user(&status_ptr, sizeof(status_ptr), (void *)(resp_ptr+error_status_pos));
@@ -144,6 +148,7 @@ int uprobe_ClientConn_Invoke_Returns(struct pt_regs *ctx) {
     // Get status code from Status.s pointer
     bpf_probe_read_user(&grpc_span->status_code, sizeof(grpc_span->status_code), (void *)(s_ptr + status_code_pos));
 
+done:
     grpc_span->end_time = bpf_ktime_get_ns();
     output_span_event(ctx, grpc_span, sizeof(*grpc_span), &grpc_span->sc);
     bpf_map_delete_elem(&grpc_events, &key);
