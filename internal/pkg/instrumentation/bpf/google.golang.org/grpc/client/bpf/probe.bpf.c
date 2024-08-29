@@ -18,7 +18,7 @@ struct grpc_request_t
     BASE_SPAN_PROPERTIES
     char method[MAX_SIZE];
     char target[MAX_SIZE];
-    int status_code;
+    u32 status_code;
 };
 
 struct hpack_header_field
