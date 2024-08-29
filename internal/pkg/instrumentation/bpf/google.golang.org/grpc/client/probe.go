@@ -145,16 +145,19 @@ func convertEvent(e *event) []*probe.SpanEvent {
 		pscPtr = nil
 	}
 
-	return []*probe.SpanEvent{
-		{
-			SpanName:          method,
-			StartTime:         int64(e.StartTime),
-			EndTime:           int64(e.EndTime),
-			Attributes:        attrs,
-			SpanContext:       &sc,
-			ParentSpanContext: pscPtr,
-			TracerSchema:      semconv.SchemaURL,
-			Status:            probe.Status{Code: codes.Code(int(e.StatusCode))},
-		},
+	event := &probe.SpanEvent{
+		SpanName:          method,
+		StartTime:         int64(e.StartTime),
+		EndTime:           int64(e.EndTime),
+		Attributes:        attrs,
+		SpanContext:       &sc,
+		ParentSpanContext: pscPtr,
+		TracerSchema:      semconv.SchemaURL,
 	}
+
+	if e.StatusCode > 0 {
+		event.Status = probe.Status{Code: codes.Error}
+	}
+
+	return []*probe.SpanEvent{event}
 }

@@ -158,7 +158,9 @@
               "name": "/helloworld.Greeter/SayHello",
               "parentSpanId": "xxxxx",
               "spanId": "xxxxx",
-              "status": {},
+              "status": {
+                "code": 2
+              },
               "traceId": "xxxxx"
             }
           ]
