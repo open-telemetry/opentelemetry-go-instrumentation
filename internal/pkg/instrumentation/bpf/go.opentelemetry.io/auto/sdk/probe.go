@@ -7,6 +7,7 @@ import (
 	"fmt"
 
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/probe"
+	"go.opentelemetry.io/auto/internal/pkg/structfield"
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/ptrace"
 
@@ -32,8 +33,40 @@ func New(logger logr.Logger) probe.Probe {
 		Logger: logger,
 		Consts: []probe.Const{
 			probe.RegistersABIConst{},
+			probe.AllocationConst{},
+			probe.StructFieldConst{
+				Key: "span_context_trace_id_pos",
+				Val: structfield.NewID(
+					"go.opentelemetry.io/otel",
+					"go.opentelemetry.io/otel/trace",
+					"SpanContext",
+					"traceID",
+				),
+			},
+			probe.StructFieldConst{
+				Key: "span_context_span_id_pos",
+				Val: structfield.NewID(
+					"go.opentelemetry.io/otel",
+					"go.opentelemetry.io/otel/trace",
+					"SpanContext",
+					"spanID",
+				),
+			},
+			probe.StructFieldConst{
+				Key: "span_context_trace_flags_pos",
+				Val: structfield.NewID(
+					"go.opentelemetry.io/otel",
+					"go.opentelemetry.io/otel/trace",
+					"SpanContext",
+					"traceFlags",
+				),
+			},
 		},
 		Uprobes: []probe.Uprobe{
+			{
+				Sym:        "go.opentelemetry.io/auto/internal/sdk.(*Tracer).start",
+				EntryProbe: "uprobe_Tracer_start",
+			},
 			{
 				Sym:        "go.opentelemetry.io/auto/internal/sdk.(*Span).ended",
 				EntryProbe: "uprobe_Span_ended",

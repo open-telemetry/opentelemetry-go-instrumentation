@@ -49,78 +49,36 @@ type Tracer struct {
 var _ trace.Tracer = Tracer{}
 
 func (t Tracer) Start(ctx context.Context, name string, opts ...trace.SpanStartOption) (context.Context, trace.Span) {
-	cfg := trace.NewSpanStartConfig(opts...)
-	span := t.newSpan(ctx, name, cfg)
-	ctx = trace.ContextWithSpan(ctx, span)
-	return ctx, span
-}
-
-// newSpan returns a new configured span.
-func (t *Tracer) newSpan(ctx context.Context, name string, cfg trace.SpanConfig) trace.Span {
-	// If told explicitly to make this a new root use a zero value SpanContext
-	// as a parent which contains an invalid trace ID and is not remote.
 	var psc trace.SpanContext
-	if cfg.NewRoot() {
-		ctx = trace.ContextWithSpanContext(ctx, psc)
-	} else {
-		psc = trace.SpanContextFromContext(ctx)
-	}
-
 	span := &Span{sampled: true}
-	t.sample(&span.sampled, parentStateFromContext(ctx))
 
-	scc := trace.SpanContextConfig{TraceID: psc.TraceID()}
-	idGen := getIDGenerator()
-	scc.TraceID, scc.SpanID = idGen.Generate(scc.TraceID)
-	putIDGenerator(idGen)
+	// Ask eBPF for sampling decision and span context info.
+	t.start(ctx, span, &psc, &span.sampled, &span.spanContext)
+
+	ctx = trace.ContextWithSpan(ctx, span)
 
 	if span.sampled {
-		scc.TraceFlags = psc.TraceFlags() | trace.FlagsSampled
-
-		span.traces, span.span = t.traces(ctx, name, cfg, scc, psc.SpanID())
-	} else {
-		scc.TraceFlags = psc.TraceFlags() &^ trace.FlagsSampled
-	}
-	span.spanContext = trace.NewSpanContext(scc)
-
-	return span
-}
-
-type parentState uint8
-
-const (
-	emptyParent            parentState = 0
-	parentRemoteSampled    parentState = 1
-	parentRemoteNotSampled parentState = 2
-	parentLocalSampled     parentState = 3
-	parentLocalNotSampled  parentState = 4
-)
-
-func parentStateFromContext(ctx context.Context) parentState {
-	psc := trace.SpanContextFromContext(ctx)
-	if !psc.IsValid() {
-		return emptyParent
+		// Only build traces if sampled.
+		cfg := trace.NewSpanStartConfig(opts...)
+		span.traces, span.span = t.traces(ctx, name, cfg, span.spanContext, psc)
 	}
 
-	if psc.IsRemote() {
-		if psc.IsSampled() {
-			return parentRemoteSampled
-		}
-		return parentRemoteNotSampled
-	}
-
-	if psc.IsSampled() {
-		return parentLocalSampled
-	}
-	return parentLocalNotSampled
+	return ctx, span
 }
 
 // Expected to be implemented in eBPF.
 //
 //go:noinline
-func (t Tracer) sample(result *bool, ps parentState) {}
+func (t *Tracer) start(
+	ctx context.Context,
+	spanPtr *Span,
+	psc *trace.SpanContext,
+	sampled *bool,
+	sc *trace.SpanContext,
+) {
+}
 
-func (t Tracer) traces(ctx context.Context, name string, cfg trace.SpanConfig, scc trace.SpanContextConfig, psid trace.SpanID) (ptrace.Traces, ptrace.Span) {
+func (t Tracer) traces(ctx context.Context, name string, cfg trace.SpanConfig, sc, psc trace.SpanContext) (ptrace.Traces, ptrace.Span) {
 	// TODO: pool this. It can be returned on end.
 	traces := ptrace.NewTraces()
 	traces.ResourceSpans().EnsureCapacity(1)
@@ -151,11 +109,11 @@ func (t Tracer) traces(ctx context.Context, name string, cfg trace.SpanConfig, s
 		span = ss.Spans().At(0)
 	}
 
-	span.SetTraceID(pcommon.TraceID(scc.TraceID))
-	span.SetSpanID(pcommon.SpanID(scc.SpanID))
-	span.SetFlags(uint32(scc.TraceFlags))
-	span.TraceState().FromRaw(scc.TraceState.String())
-	span.SetParentSpanID(pcommon.SpanID(psid))
+	span.SetTraceID(pcommon.TraceID(sc.TraceID()))
+	span.SetSpanID(pcommon.SpanID(sc.SpanID()))
+	span.SetFlags(uint32(sc.TraceFlags()))
+	span.TraceState().FromRaw(sc.TraceState().String())
+	span.SetParentSpanID(pcommon.SpanID(psc.SpanID()))
 	span.SetName(name)
 	span.SetKind(spanKind(cfg.SpanKind()))
 
@@ -281,6 +239,10 @@ func setAttributes(dest pcommon.Map, attrs []attribute.KeyValue) {
 }
 
 func (s *Span) End(opts ...trace.SpanEndOption) {
+	if s == nil || !s.sampled {
+		return
+	}
+
 	cfg := trace.NewSpanEndConfig(opts...)
 	var end time.Time
 	if t := cfg.Timestamp(); !t.IsZero() {

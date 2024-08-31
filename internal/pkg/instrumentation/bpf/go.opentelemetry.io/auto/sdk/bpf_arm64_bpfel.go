@@ -12,6 +12,20 @@ import (
 	"github.com/cilium/ebpf"
 )
 
+type bpfOtelSpanT struct {
+	Sc  bpfSpanContext
+	Psc bpfSpanContext
+}
+
+type bpfSliceArrayBuff struct{ Buff [1024]uint8 }
+
+type bpfSpanContext struct {
+	TraceID    [16]uint8
+	SpanID     [8]uint8
+	TraceFlags uint8
+	Padding    [7]uint8
+}
+
 // loadBpf returns the embedded CollectionSpec for bpf.
 func loadBpf() (*ebpf.CollectionSpec, error) {
 	reader := bytes.NewReader(_BpfBytes)
@@ -53,14 +67,21 @@ type bpfSpecs struct {
 //
 // It can be passed ebpf.CollectionSpec.Assign.
 type bpfProgramSpecs struct {
-	UprobeSpanEnded *ebpf.ProgramSpec `ebpf:"uprobe_Span_ended"`
+	UprobeSpanEnded   *ebpf.ProgramSpec `ebpf:"uprobe_Span_ended"`
+	UprobeTracerStart *ebpf.ProgramSpec `ebpf:"uprobe_Tracer_start"`
 }
 
 // bpfMapSpecs contains maps before they are loaded into the kernel.
 //
 // It can be passed ebpf.CollectionSpec.Assign.
 type bpfMapSpecs struct {
-	Events *ebpf.MapSpec `ebpf:"events"`
+	ActiveSpansBySpanPtr *ebpf.MapSpec `ebpf:"active_spans_by_span_ptr"`
+	AllocMap             *ebpf.MapSpec `ebpf:"alloc_map"`
+	Events               *ebpf.MapSpec `ebpf:"events"`
+	GoContextToSc        *ebpf.MapSpec `ebpf:"go_context_to_sc"`
+	OtelSpanStorageMap   *ebpf.MapSpec `ebpf:"otel_span_storage_map"`
+	SliceArrayBuffMap    *ebpf.MapSpec `ebpf:"slice_array_buff_map"`
+	TrackedSpansBySc     *ebpf.MapSpec `ebpf:"tracked_spans_by_sc"`
 }
 
 // bpfObjects contains all objects after they have been loaded into the kernel.
@@ -82,12 +103,24 @@ func (o *bpfObjects) Close() error {
 //
 // It can be passed to loadBpfObjects or ebpf.CollectionSpec.LoadAndAssign.
 type bpfMaps struct {
-	Events *ebpf.Map `ebpf:"events"`
+	ActiveSpansBySpanPtr *ebpf.Map `ebpf:"active_spans_by_span_ptr"`
+	AllocMap             *ebpf.Map `ebpf:"alloc_map"`
+	Events               *ebpf.Map `ebpf:"events"`
+	GoContextToSc        *ebpf.Map `ebpf:"go_context_to_sc"`
+	OtelSpanStorageMap   *ebpf.Map `ebpf:"otel_span_storage_map"`
+	SliceArrayBuffMap    *ebpf.Map `ebpf:"slice_array_buff_map"`
+	TrackedSpansBySc     *ebpf.Map `ebpf:"tracked_spans_by_sc"`
 }
 
 func (m *bpfMaps) Close() error {
 	return _BpfClose(
+		m.ActiveSpansBySpanPtr,
+		m.AllocMap,
 		m.Events,
+		m.GoContextToSc,
+		m.OtelSpanStorageMap,
+		m.SliceArrayBuffMap,
+		m.TrackedSpansBySc,
 	)
 }
 
@@ -95,12 +128,14 @@ func (m *bpfMaps) Close() error {
 //
 // It can be passed to loadBpfObjects or ebpf.CollectionSpec.LoadAndAssign.
 type bpfPrograms struct {
-	UprobeSpanEnded *ebpf.Program `ebpf:"uprobe_Span_ended"`
+	UprobeSpanEnded   *ebpf.Program `ebpf:"uprobe_Span_ended"`
+	UprobeTracerStart *ebpf.Program `ebpf:"uprobe_Tracer_start"`
 }
 
 func (p *bpfPrograms) Close() error {
 	return _BpfClose(
 		p.UprobeSpanEnded,
+		p.UprobeTracerStart,
 	)
 }
 
