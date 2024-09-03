@@ -4,7 +4,8 @@ on:
   push:
     branches: [ main ]
   pull_request:
-
+  # schedule:
+  #   - cron: '* * * * *'
 env:
   GO_VERSION: "~1.22.2"
 
@@ -59,6 +60,14 @@ jobs:
       - name: Build auto-instrumentation
         run: |
           make docker-build
+  local-build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v4
+      - name: Build
+        run: |
+          make build
   offsets:
     runs-on: ubuntu-latest
     steps:
