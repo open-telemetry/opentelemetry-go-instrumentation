@@ -163,10 +163,17 @@ type span struct {
 }
 
 func (s *span) SpanContext() trace.SpanContext {
+	if s == nil {
+		return trace.SpanContext{}
+	}
+
 	return s.spanContext
 }
 
 func (s *span) IsRecording() bool {
+	if s == nil {
+		return false
+	}
 	return s.sampled
 }
 
@@ -301,6 +308,10 @@ func typeStr(i any) string {
 }
 
 func (s *span) AddEvent(name string, opts ...trace.EventOption) {
+	if s == nil || !s.sampled {
+		return
+	}
+
 	cfg := trace.NewEventConfig(opts...)
 	s.addEvent(name, cfg.Timestamp(), cfg.Attributes())
 }
