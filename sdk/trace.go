@@ -19,7 +19,7 @@ import (
 	"go.opentelemetry.io/otel/trace/embedded"
 )
 
-// GetTracerProvider returns a [trace.TracerProvider] that will be
+// TracerProvider returns a [trace.TracerProvider] that will be
 // auto-instrumented by an [Instrumentation]. All trace telemetry produced will
 // be processed and handled by the [Instrumentation] that auto-instruments the
 // target process using the returned [trace.TracerProvider].
@@ -27,7 +27,7 @@ import (
 // If no [Instrumentation] is running that targets the process using the
 // returned [trace.TracerProvider], that TracerProvider will perform no
 // operations. No telemetry will be gathered, processed, nor exported.
-func GetTracerProvider() trace.TracerProvider { return tracerProviderInstance }
+func TracerProvider() trace.TracerProvider { return tracerProviderInstance }
 
 var tracerProviderInstance tracerProvider
 
@@ -348,4 +348,4 @@ func (s *span) SetName(name string) {
 	s.span.SetName(name)
 }
 
-func (*span) TracerProvider() trace.TracerProvider { return GetTracerProvider() }
+func (*span) TracerProvider() trace.TracerProvider { return TracerProvider() }
