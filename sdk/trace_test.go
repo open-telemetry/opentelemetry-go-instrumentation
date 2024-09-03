@@ -10,6 +10,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/collector/pdata/pcommon"
+	"go.opentelemetry.io/collector/pdata/ptrace"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/trace"
@@ -115,6 +116,29 @@ func TestSpanNilUnsampledGuards(t *testing.T) {
 	t.Run("TracerProvider", run(func(s *span) func() {
 		return func() { _ = s.TracerProvider() }
 	}))
+}
+
+func TestSpanSetStatus(t *testing.T) {
+	_, s := spanBuilder{}.Build(context.Background())
+
+	want := ptrace.NewStatus()
+	assert.Equal(t, want, s.span.Status())
+
+	c, msg := codes.Error, "test"
+	want.SetMessage(msg)
+	want.SetCode(ptrace.StatusCodeError)
+	s.SetStatus(c, msg)
+	assert.Equalf(t, want, s.span.Status(), "code: %s, msg: %s", c, msg)
+
+	c = codes.Ok
+	want.SetCode(ptrace.StatusCodeOk)
+	s.SetStatus(c, msg)
+	assert.Equalf(t, want, s.span.Status(), "code: %s, msg: %s", c, msg)
+
+	c = codes.Unset
+	want.SetCode(ptrace.StatusCodeUnset)
+	s.SetStatus(c, msg)
+	assert.Equalf(t, want, s.span.Status(), "code: %s, msg: %s", c, msg)
 }
 
 func TestSpanSetName(t *testing.T) {
