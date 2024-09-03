@@ -4,8 +4,6 @@ on:
   push:
     branches: [ main ]
   pull_request:
-  # schedule:
-  #   - cron: '* * * * *'
 env:
   GO_VERSION: "~1.22.2"
 
@@ -65,11 +63,21 @@ jobs:
     steps:
       - name: Checkout Repo
         uses: actions/checkout@v4
-      - name: Server env Setup
+      - name: Env Setup
         run: sudo apt-get update && sudo apt-get install -y clang llvm libbpf-dev
       - name: Build
         run: |
           make build
+      # - name: Upload build artifact
+      #   uses: actions/upload-artifact@v4
+      #   with:
+      #     name: otel-go-instrumentation
+      #     path: ./otel-go-instrumentation
+      - name: Cache binary
+        uses: actions/cache@v4
+        with:
+          path: ./otel-go-instrumentation
+          key: ${{ github.sha }}-otel-go-instrumentation
   offsets:
     runs-on: ubuntu-latest
     steps:
