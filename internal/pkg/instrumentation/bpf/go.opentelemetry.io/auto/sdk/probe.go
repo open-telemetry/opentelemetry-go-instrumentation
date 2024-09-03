@@ -64,11 +64,11 @@ func New(logger logr.Logger) probe.Probe {
 		},
 		Uprobes: []probe.Uprobe{
 			{
-				Sym:        "go.opentelemetry.io/auto/internal/sdk.(*Tracer).start",
+				Sym:        "go.opentelemetry.io/auto/sdk.(*tracer).start",
 				EntryProbe: "uprobe_Tracer_start",
 			},
 			{
-				Sym:        "go.opentelemetry.io/auto/internal/sdk.(*Span).ended",
+				Sym:        "go.opentelemetry.io/auto/sdk.(*span).ended",
 				EntryProbe: "uprobe_Span_ended",
 			},
 		},

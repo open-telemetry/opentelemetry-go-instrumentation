@@ -14,7 +14,7 @@ import (
 	"os/signal"
 	"time"
 
-	"go.opentelemetry.io/auto"
+	"go.opentelemetry.io/auto/sdk"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
@@ -27,7 +27,7 @@ const (
 )
 
 func main() {
-	otel.SetTracerProvider(auto.TracerProvider())
+	otel.SetTracerProvider(sdk.TracerProvider())
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer stop()
