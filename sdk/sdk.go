@@ -19,10 +19,6 @@ import (
 	"go.opentelemetry.io/otel/trace/embedded"
 )
 
-func GetTracerProvider() trace.TracerProvider {
-	return tracerProviderInstance
-}
-
 var tracerProviderInstance TracerProvider
 
 type TracerProvider struct {
