@@ -4,11 +4,27 @@
 package sdk
 
 import (
+	"context"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.opentelemetry.io/otel/trace"
 )
+
+func TestSpanSetName(t *testing.T) {
+	var s *span
+
+	const name = "span name"
+	assert.NotPanics(t, func() { s.SetName(name) }, "nil span")
+
+	s = new(span)
+	assert.NotPanics(t, func() { s.SetName(name) }, "unsampled span")
+
+	_, s = spanBuilder{Sampled: true}.Build(context.Background())
+	s.SetName(name)
+	assert.Equal(t, name, s.span.Name(), "sampled span name not set")
+}
 
 func TestSpanTracerProvider(t *testing.T) {
 	var s span
@@ -16,4 +32,32 @@ func TestSpanTracerProvider(t *testing.T) {
 	got := s.TracerProvider()
 	require.IsType(t, &tracerProvider{}, got)
 	assert.Same(t, got.(*tracerProvider), tracerProviderInstance)
+}
+
+type spanBuilder struct {
+	Name              string
+	Sampled           bool
+	SpanContext       trace.SpanContext
+	ParentSpanContext trace.SpanContext
+	Options           []trace.SpanStartOption
+
+	Tracer *tracer
+}
+
+func (b spanBuilder) Build(ctx context.Context) (context.Context, *span) {
+	if b.Tracer == nil {
+		b.Tracer = new(tracer)
+	}
+
+	s := &span{sampled: b.Sampled, spanContext: b.SpanContext}
+	s.traces, s.span = b.Tracer.traces(
+		ctx,
+		b.Name,
+		trace.NewSpanStartConfig(b.Options...),
+		s.spanContext,
+		b.ParentSpanContext,
+	)
+
+	ctx = trace.ContextWithSpan(ctx, s)
+	return ctx, s
 }
