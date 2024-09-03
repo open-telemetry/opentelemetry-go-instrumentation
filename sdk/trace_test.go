@@ -5,7 +5,9 @@ package sdk
 
 import (
 	"context"
+	"errors"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -13,6 +15,7 @@ import (
 	"go.opentelemetry.io/collector/pdata/ptrace"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
+	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -116,6 +119,35 @@ func TestSpanNilUnsampledGuards(t *testing.T) {
 	t.Run("TracerProvider", run(func(s *span) func() {
 		return func() { _ = s.TracerProvider() }
 	}))
+}
+
+func TestSpanRecordError(t *testing.T) {
+	_, s := spanBuilder{}.Build(context.Background())
+
+	want := ptrace.NewSpanEventSlice()
+	s.RecordError(nil)
+	require.Equal(t, want, s.span.Events(), "nil error recorded")
+
+	now := time.Now()
+	err := errors.New("test")
+	s.RecordError(
+		err,
+		trace.WithTimestamp(now),
+		trace.WithAttributes(attribute.Bool("testing", true)),
+	)
+	e := want.AppendEmpty()
+	e.SetName(semconv.ExceptionEventName)
+	e.SetTimestamp(pcommon.NewTimestampFromTime(now))
+	e.Attributes().PutBool("testing", true)
+	e.Attributes().PutStr(string(semconv.ExceptionTypeKey), "*errors.errorString")
+	e.Attributes().PutStr(string(semconv.ExceptionMessageKey), err.Error())
+	assert.Equal(t, want, s.span.Events(), "nil error recorded")
+
+	s.RecordError(err, trace.WithStackTrace(true))
+	require.Equal(t, 2, s.span.Events().Len(), "missing event")
+	e = s.span.Events().At(1)
+	_, ok := e.Attributes().Get(string(semconv.ExceptionStacktraceKey))
+	assert.True(t, ok, "missing stacktrace attribute")
 }
 
 func TestSpanSetStatus(t *testing.T) {
