@@ -28,15 +28,15 @@ import (
 // any trace telemetry.
 func GetTracerProvider() trace.TracerProvider { return tracerProviderInstance }
 
-var tracerProviderInstance tracerProvider
+var tracerProviderInstance = new(tracerProvider)
 
 type tracerProvider struct {
 	embedded.TracerProvider
 }
 
-var _ trace.TracerProvider = tracerProvider{}
+var _ trace.TracerProvider = (*tracerProvider)(nil)
 
-func (p tracerProvider) Tracer(name string, opts ...trace.TracerOption) trace.Tracer {
+func (p *tracerProvider) Tracer(name string, opts ...trace.TracerOption) trace.Tracer {
 	cfg := trace.NewTracerConfig(opts...)
 	return tracer{
 		name:      name,
