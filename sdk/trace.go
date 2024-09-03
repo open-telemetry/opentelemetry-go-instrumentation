@@ -29,34 +29,34 @@ import (
 // operations. No telemetry will be gathered, processed, nor exported.
 func GetTracerProvider() trace.TracerProvider { return tracerProviderInstance }
 
-var tracerProviderInstance TracerProvider
+var tracerProviderInstance tracerProvider
 
-type TracerProvider struct {
+type tracerProvider struct {
 	embedded.TracerProvider
 }
 
-var _ trace.TracerProvider = TracerProvider{}
+var _ trace.TracerProvider = tracerProvider{}
 
-func (p TracerProvider) Tracer(name string, opts ...trace.TracerOption) trace.Tracer {
+func (p tracerProvider) Tracer(name string, opts ...trace.TracerOption) trace.Tracer {
 	cfg := trace.NewTracerConfig(opts...)
-	return Tracer{
+	return tracer{
 		name:      name,
 		version:   cfg.InstrumentationVersion(),
 		schemaURL: cfg.SchemaURL(),
 	}
 }
 
-type Tracer struct {
+type tracer struct {
 	embedded.Tracer
 
 	name, schemaURL, version string
 }
 
-var _ trace.Tracer = Tracer{}
+var _ trace.Tracer = tracer{}
 
-func (t Tracer) Start(ctx context.Context, name string, opts ...trace.SpanStartOption) (context.Context, trace.Span) {
+func (t tracer) Start(ctx context.Context, name string, opts ...trace.SpanStartOption) (context.Context, trace.Span) {
 	var psc trace.SpanContext
-	span := &Span{sampled: true}
+	span := &span{sampled: true}
 
 	// Ask eBPF for sampling decision and span context info.
 	t.start(ctx, span, &psc, &span.sampled, &span.spanContext)
@@ -75,16 +75,16 @@ func (t Tracer) Start(ctx context.Context, name string, opts ...trace.SpanStartO
 // Expected to be implemented in eBPF.
 //
 //go:noinline
-func (t *Tracer) start(
+func (t *tracer) start(
 	ctx context.Context,
-	spanPtr *Span,
+	spanPtr *span,
 	psc *trace.SpanContext,
 	sampled *bool,
 	sc *trace.SpanContext,
 ) {
 }
 
-func (t Tracer) traces(ctx context.Context, name string, cfg trace.SpanConfig, sc, psc trace.SpanContext) (ptrace.Traces, ptrace.Span) {
+func (t tracer) traces(ctx context.Context, name string, cfg trace.SpanConfig, sc, psc trace.SpanContext) (ptrace.Traces, ptrace.Span) {
 	// TODO: pool this. It can be returned on end.
 	traces := ptrace.NewTraces()
 	traces.ResourceSpans().EnsureCapacity(1)
@@ -153,7 +153,7 @@ func spanKind(kind trace.SpanKind) ptrace.SpanKind {
 	return ptrace.SpanKindUnspecified
 }
 
-type Span struct {
+type span struct {
 	embedded.Span
 
 	sampled     bool
@@ -163,15 +163,15 @@ type Span struct {
 	span   ptrace.Span
 }
 
-func (s *Span) SpanContext() trace.SpanContext {
+func (s *span) SpanContext() trace.SpanContext {
 	return s.spanContext
 }
 
-func (s *Span) IsRecording() bool {
+func (s *span) IsRecording() bool {
 	return s.sampled
 }
 
-func (s *Span) SetStatus(c codes.Code, msg string) {
+func (s *span) SetStatus(c codes.Code, msg string) {
 	if s == nil || !s.sampled {
 		return
 	}
@@ -189,7 +189,7 @@ func (s *Span) SetStatus(c codes.Code, msg string) {
 	}
 }
 
-func (s *Span) SetAttributes(attrs ...attribute.KeyValue) {
+func (s *span) SetAttributes(attrs ...attribute.KeyValue) {
 	if s == nil || !s.sampled {
 		return
 	}
@@ -244,7 +244,7 @@ func setAttributes(dest pcommon.Map, attrs []attribute.KeyValue) {
 	}
 }
 
-func (s *Span) End(opts ...trace.SpanEndOption) {
+func (s *span) End(opts ...trace.SpanEndOption) {
 	if s == nil || !s.sampled {
 		return
 	}
@@ -269,9 +269,9 @@ func (s *Span) End(opts ...trace.SpanEndOption) {
 // Expected to be implemented in eBPF.
 //
 //go:noinline
-func (*Span) ended(buf []byte) {}
+func (*span) ended(buf []byte) {}
 
-func (s *Span) RecordError(err error, opts ...trace.EventOption) {
+func (s *span) RecordError(err error, opts ...trace.EventOption) {
 	if s == nil || err == nil || !s.sampled {
 		return
 	}
@@ -301,12 +301,12 @@ func typeStr(i any) string {
 	return fmt.Sprintf("%s.%s", t.PkgPath(), t.Name())
 }
 
-func (s *Span) AddEvent(name string, opts ...trace.EventOption) {
+func (s *span) AddEvent(name string, opts ...trace.EventOption) {
 	cfg := trace.NewEventConfig(opts...)
 	s.addEvent(name, cfg.Timestamp(), cfg.Attributes())
 }
 
-func (s *Span) addEvent(name string, tStamp time.Time, attrs []attribute.KeyValue) {
+func (s *span) addEvent(name string, tStamp time.Time, attrs []attribute.KeyValue) {
 	if tStamp.IsZero() {
 		tStamp = time.Now()
 	}
@@ -319,7 +319,7 @@ func (s *Span) addEvent(name string, tStamp time.Time, attrs []attribute.KeyValu
 	setAttributes(event.Attributes(), attrs)
 }
 
-func (s *Span) AddLink(link trace.Link) {
+func (s *span) AddLink(link trace.Link) {
 	if s == nil || !s.sampled {
 		return
 	}
@@ -341,11 +341,11 @@ func addLinks(dest ptrace.SpanLinkSlice, links ...trace.Link) {
 	}
 }
 
-func (s *Span) SetName(name string) {
+func (s *span) SetName(name string) {
 	if s == nil || !s.sampled {
 		return
 	}
 	s.span.SetName(name)
 }
 
-func (*Span) TracerProvider() trace.TracerProvider { return GetTracerProvider() }
+func (*span) TracerProvider() trace.TracerProvider { return GetTracerProvider() }
