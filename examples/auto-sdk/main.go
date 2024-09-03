@@ -27,7 +27,7 @@ const (
 )
 
 func main() {
-	otel.SetTracerProvider(sdk.TracerProvider())
+	otel.SetTracerProvider(sdk.GetTracerProvider())
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer stop()
