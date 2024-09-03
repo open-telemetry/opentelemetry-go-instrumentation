@@ -132,8 +132,8 @@ func convertEvent(e *event) []*probe.SpanEvent {
 	return []*probe.SpanEvent{
 		{
 			SpanName:          method,
-			StartTime:         int64(e.StartTime),
-			EndTime:           int64(e.EndTime),
+			StartTime:         utils.BootRelativeTime(e.StartTime),
+			EndTime:           utils.BootRelativeTime(e.EndTime),
 			Attributes:        attrs,
 			SpanContext:       &sc,
 			ParentSpanContext: pscPtr,

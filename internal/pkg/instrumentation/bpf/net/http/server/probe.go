@@ -18,6 +18,7 @@ import (
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/bpf/net/http"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/context"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/probe"
+	"go.opentelemetry.io/auto/internal/pkg/instrumentation/utils"
 	"go.opentelemetry.io/auto/internal/pkg/process"
 	"go.opentelemetry.io/auto/internal/pkg/structfield"
 )
@@ -211,8 +212,8 @@ func convertEvent(e *event) []*probe.SpanEvent {
 
 	spanEvent := &probe.SpanEvent{
 		SpanName:          spanName,
-		StartTime:         int64(e.StartTime),
-		EndTime:           int64(e.EndTime),
+		StartTime:         utils.BootRelativeTime(e.StartTime),
+		EndTime:           utils.BootRelativeTime(e.EndTime),
 		SpanContext:       &sc,
 		ParentSpanContext: pscPtr,
 		Attributes:        attributes,

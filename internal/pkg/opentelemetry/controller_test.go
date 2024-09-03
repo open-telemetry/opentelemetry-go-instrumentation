@@ -106,8 +106,8 @@ func TestTrace(t *testing.T) {
 				SpanEvents: []*probe.SpanEvent{
 					{
 						SpanName:     "testSpan",
-						StartTime:    startTime.Unix(),
-						EndTime:      endTime.Unix(),
+						StartTime:    startTime,
+						EndTime:      endTime,
 						SpanContext:  &spanContext,
 						TracerSchema: semconv.SchemaURL,
 					},
@@ -141,8 +141,8 @@ func TestTrace(t *testing.T) {
 				SpanEvents: []*probe.SpanEvent{
 					{
 						SpanName:    "GET",
-						StartTime:   startTime.Unix(),
-						EndTime:     endTime.Unix(),
+						StartTime:   startTime,
+						EndTime:     endTime,
 						SpanContext: &spanContext,
 						Attributes: []attribute.KeyValue{
 							semconv.HTTPRequestMethodKey.String("GET"),
@@ -187,8 +187,8 @@ func TestTrace(t *testing.T) {
 				SpanEvents: []*probe.SpanEvent{
 					{
 						SpanName:    "GET",
-						StartTime:   startTime.Unix(),
-						EndTime:     endTime.Unix(),
+						StartTime:   startTime,
+						EndTime:     endTime,
 						SpanContext: &spanContext,
 						Attributes: []attribute.KeyValue{
 							semconv.HTTPRequestMethodKey.String("GET"),
@@ -234,8 +234,8 @@ func TestTrace(t *testing.T) {
 				SpanEvents: []*probe.SpanEvent{
 					{
 						SpanName:    "very important span",
-						StartTime:   startTime.Unix(),
-						EndTime:     endTime.Unix(),
+						StartTime:   startTime,
+						EndTime:     endTime,
 						SpanContext: &spanContext,
 						Attributes: []attribute.KeyValue{
 							attribute.Int64("int.value", 42),

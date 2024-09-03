@@ -63,8 +63,8 @@ func TestProbeConvertEvent(t *testing.T) {
 	})
 	want1 := &probe.SpanEvent{
 		SpanName:    kafkaProducerSpanName("topic1"),
-		StartTime:   int64(start.UnixNano()),
-		EndTime:     int64(end.UnixNano()),
+		StartTime:   start,
+		EndTime:     end,
 		SpanContext: &sc1,
 		Attributes: []attribute.KeyValue{
 			semconv.MessagingKafkaMessageKey("key1"),
@@ -78,8 +78,8 @@ func TestProbeConvertEvent(t *testing.T) {
 
 	want2 := &probe.SpanEvent{
 		SpanName:    kafkaProducerSpanName("topic2"),
-		StartTime:   int64(start.UnixNano()),
-		EndTime:     int64(end.UnixNano()),
+		StartTime:   start,
+		EndTime:     end,
 		SpanContext: &sc2,
 		Attributes: []attribute.KeyValue{
 			semconv.MessagingKafkaMessageKey("key2"),

@@ -41,8 +41,8 @@ func TestProbeConvertEvent(t *testing.T) {
 	})
 	want := &probe.SpanEvent{
 		SpanName:    "DB",
-		StartTime:   int64(start.UnixNano()),
-		EndTime:     int64(end.UnixNano()),
+		StartTime:   start,
+		EndTime:     end,
 		SpanContext: &sc,
 		Attributes: []attribute.KeyValue{
 			semconv.DBQueryText("SELECT * FROM foo"),

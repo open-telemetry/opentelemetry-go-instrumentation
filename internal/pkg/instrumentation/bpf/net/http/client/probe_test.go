@@ -96,8 +96,8 @@ func TestConvertEvent(t *testing.T) {
 				{
 					SpanName:    methodString,
 					SpanContext: &spanContext,
-					StartTime:   startTime.Unix(),
-					EndTime:     endTime.Unix(),
+					StartTime:   startTime,
+					EndTime:     endTime,
 					Attributes: []attribute.KeyValue{
 						semconv.HTTPRequestMethodKey.String(methodString),
 						semconv.HTTPResponseStatusCodeKey.Int(200),
@@ -129,8 +129,8 @@ func TestConvertEvent(t *testing.T) {
 				{
 					SpanName:    methodString,
 					SpanContext: &spanContext,
-					StartTime:   startTime.Unix(),
-					EndTime:     endTime.Unix(),
+					StartTime:   startTime,
+					EndTime:     endTime,
 					Attributes: []attribute.KeyValue{
 						semconv.HTTPRequestMethodKey.String(methodString),
 						semconv.HTTPResponseStatusCodeKey.Int(400),
@@ -163,8 +163,8 @@ func TestConvertEvent(t *testing.T) {
 				{
 					SpanName:    methodString,
 					SpanContext: &spanContext,
-					StartTime:   startTime.Unix(),
-					EndTime:     endTime.Unix(),
+					StartTime:   startTime,
+					EndTime:     endTime,
 					Attributes: []attribute.KeyValue{
 						semconv.HTTPRequestMethodKey.String(methodString),
 						semconv.HTTPResponseStatusCodeKey.Int(500),
@@ -197,8 +197,8 @@ func TestConvertEvent(t *testing.T) {
 				{
 					SpanName:    methodString,
 					SpanContext: &spanContext,
-					StartTime:   startTime.Unix(),
-					EndTime:     endTime.Unix(),
+					StartTime:   startTime,
+					EndTime:     endTime,
 					Attributes: []attribute.KeyValue{
 						semconv.HTTPRequestMethodKey.String(methodString),
 						semconv.HTTPResponseStatusCodeKey.Int(200),
@@ -234,8 +234,8 @@ func TestConvertEvent(t *testing.T) {
 				{
 					SpanName:    methodString,
 					SpanContext: &spanContext,
-					StartTime:   startTime.Unix(),
-					EndTime:     endTime.Unix(),
+					StartTime:   startTime,
+					EndTime:     endTime,
 					Attributes: []attribute.KeyValue{
 						semconv.HTTPRequestMethodKey.String(methodString),
 						semconv.HTTPResponseStatusCodeKey.Int(200),
@@ -271,8 +271,8 @@ func TestConvertEvent(t *testing.T) {
 				{
 					SpanName:    methodString,
 					SpanContext: &spanContext,
-					StartTime:   startTime.Unix(),
-					EndTime:     endTime.Unix(),
+					StartTime:   startTime,
+					EndTime:     endTime,
 					Attributes: []attribute.KeyValue{
 						semconv.HTTPRequestMethodKey.String(methodString),
 						semconv.HTTPResponseStatusCodeKey.Int(200),

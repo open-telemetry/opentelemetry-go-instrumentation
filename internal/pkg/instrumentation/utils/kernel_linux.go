@@ -7,6 +7,7 @@ import (
 	"bufio"
 	"errors"
 	"fmt"
+	"math"
 	"os"
 	"runtime"
 	"strconv"
@@ -176,6 +177,21 @@ func GetCPUCount() (int, error) {
 	err = errors.Join(err, e)
 
 	return 0, err
+}
+
+var bootTimeOffset = func() int64 {
+	o, err := EstimateBootTimeOffset()
+	if err != nil {
+		panic(err)
+	}
+	return o
+}()
+
+func BootRelativeTime(t uint64) time.Time {
+	if t > math.MaxInt64 {
+		t = math.MaxInt64
+	}
+	return time.Unix(0, bootTimeOffset+int64(t))
 }
 
 func EstimateBootTimeOffset() (bootTimeOffset int64, err error) {

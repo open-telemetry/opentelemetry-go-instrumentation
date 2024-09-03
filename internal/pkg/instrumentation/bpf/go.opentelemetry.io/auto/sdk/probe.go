@@ -124,8 +124,8 @@ func (c *converter) convertEvent(e *event) []*probe.SpanEvent {
 	return []*probe.SpanEvent{{
 		SpanName:          span.Name(),
 		Attributes:        attributes(span.Attributes()),
-		StartTime:         span.StartTimestamp().AsTime().UnixNano(),
-		EndTime:           span.EndTimestamp().AsTime().UnixNano(),
+		StartTime:         span.StartTimestamp().AsTime(),
+		EndTime:           span.EndTimestamp().AsTime(),
 		SpanContext:       &sc,
 		ParentSpanContext: pscPtr,
 		Status:            status(span.Status()),
