@@ -19,14 +19,13 @@ import (
 	"go.opentelemetry.io/otel/trace/embedded"
 )
 
-// GetTracerProvider returns a [trace.TracerProvider] that will be
-// auto-instrumented by an [Instrumentation]. All trace telemetry produced will
-// be processed and handled by the [Instrumentation] that auto-instruments the
-// target process using the returned [trace.TracerProvider].
+// GetTracerProvider returns an auto-instrumentable [trace.TracerProvider].
 //
-// If no [Instrumentation] is running that targets the process using the
-// returned [trace.TracerProvider], that TracerProvider will perform no
-// operations. No telemetry will be gathered, processed, nor exported.
+// If an [go.opentelemetry.io/auto.Instrumentation] is configured to instrument
+// the process using the returned TracerProvider, all of the telemetry it
+// produces will be processed and handled by that Instrumentation. By default,
+// if no Instrumentation instruments the TracerProvider it will not generate
+// any trace telemetry.
 func GetTracerProvider() trace.TracerProvider { return tracerProviderInstance }
 
 var tracerProviderInstance tracerProvider
