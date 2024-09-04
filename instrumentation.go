@@ -227,7 +227,7 @@ type instConfig struct {
 	loadIndicator      chan struct{}
 	logLevel           LogLevel
 	cp                 config.Provider
-	otelController     otelauto.OpenTelemetryController
+	otelController     otelauto.Controller
 }
 
 func newInstConfig(ctx context.Context, opts []InstrumentationOption) (instConfig, error) {
@@ -344,7 +344,7 @@ func (o fnOpt) apply(ctx context.Context, c instConfig) (instConfig, error) { re
 
 // WithOpenTelemetryController returns an [InstrumentationOption] defining the
 // OpenTelemetryController used by [Instrumentation].
-func WithOpenTelemetryController(ctrl otelauto.OpenTelemetryController) InstrumentationOption {
+func WithOpenTelemetryController(ctrl otelauto.Controller) InstrumentationOption {
 	return fnOpt(func(_ context.Context, c instConfig) (instConfig, error) {
 		c.otelController = ctrl
 		return c, nil

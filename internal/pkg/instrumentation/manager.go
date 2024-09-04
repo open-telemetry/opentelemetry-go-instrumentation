@@ -49,7 +49,7 @@ const (
 type Manager struct {
 	logger          logr.Logger
 	probes          map[probe.ID]probe.Probe
-	otelController  otelauto.OpenTelemetryController
+	otelController  otelauto.Controller
 	globalImpl      bool
 	loadedIndicator chan struct{}
 	cp              config.Provider
@@ -63,7 +63,7 @@ type Manager struct {
 }
 
 // NewManager returns a new [Manager].
-func NewManager(logger logr.Logger, otelController otelauto.OpenTelemetryController, globalImpl bool, loadIndicator chan struct{}, cp config.Provider) (*Manager, error) {
+func NewManager(logger logr.Logger, otelController otelauto.Controller, globalImpl bool, loadIndicator chan struct{}, cp config.Provider) (*Manager, error) {
 	logger = logger.WithName("Manager")
 	m := &Manager{
 		logger:          logger,
