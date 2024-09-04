@@ -1,6 +1,8 @@
 module go.opentelemetry.io/auto/sdk
 
-go 1.23.0
+go 1.22.0
+
+toolchain go1.22.6
 
 require (
 	go.opentelemetry.io/collector/pdata v1.14.1
