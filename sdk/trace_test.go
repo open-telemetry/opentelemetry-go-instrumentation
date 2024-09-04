@@ -6,6 +6,7 @@ package sdk
 import (
 	"context"
 	"errors"
+	"math"
 	"testing"
 	"time"
 
@@ -65,7 +66,226 @@ var (
 
 		return m
 	}()
+
+	spanContext0 = trace.NewSpanContext(trace.SpanContextConfig{
+		TraceID:    trace.TraceID{0x1},
+		SpanID:     trace.SpanID{0x1},
+		TraceFlags: trace.FlagsSampled,
+	})
+	spanContext1 = trace.NewSpanContext(trace.SpanContextConfig{
+		TraceID:    trace.TraceID{0x2},
+		SpanID:     trace.SpanID{0x2},
+		TraceFlags: trace.FlagsSampled,
+	})
+
+	link0 = trace.Link{
+		SpanContext: spanContext0,
+		Attributes: []attribute.KeyValue{
+			attribute.Int("n", 0),
+		},
+	}
+	link1 = trace.Link{
+		SpanContext: spanContext1,
+		Attributes: []attribute.KeyValue{
+			attribute.Int("n", 1),
+		},
+	}
+
+	pLink0 = func() ptrace.SpanLink {
+		l := ptrace.NewSpanLink()
+		l.SetTraceID(pcommon.TraceID(spanContext0.TraceID()))
+		l.SetSpanID(pcommon.SpanID(spanContext0.SpanID()))
+		l.SetFlags(uint32(spanContext0.TraceFlags()))
+		l.Attributes().PutInt("n", 0)
+		return l
+	}()
+	pLink1 = func() ptrace.SpanLink {
+		l := ptrace.NewSpanLink()
+		l.SetTraceID(pcommon.TraceID(spanContext1.TraceID()))
+		l.SetSpanID(pcommon.SpanID(spanContext1.SpanID()))
+		l.SetFlags(uint32(spanContext1.TraceFlags()))
+		l.Attributes().PutInt("n", 1)
+		return l
+	}()
 )
+
+func TestSpanCreation(t *testing.T) {
+	const (
+		spanName   = "span name"
+		tracerName = "go.opentelemetry.io/otel/sdk/test"
+		tracerVer  = "v0.1.0"
+	)
+
+	ts := time.Now()
+
+	tracer := GetTracerProvider().Tracer(
+		tracerName,
+		trace.WithInstrumentationVersion(tracerVer),
+		trace.WithSchemaURL(semconv.SchemaURL),
+	)
+
+	assertTracer := func(traces ptrace.Traces) func(*testing.T) {
+		return func(t *testing.T) {
+			t.Helper()
+
+			rs := traces.ResourceSpans()
+			require.Equal(t, 1, rs.Len())
+			sss := rs.At(0).ScopeSpans()
+			require.Equal(t, 1, sss.Len())
+			ss := sss.At(0)
+			assert.Equal(t, tracerName, ss.Scope().Name(), "tracer name")
+			assert.Equal(t, tracerVer, ss.Scope().Version(), "tracer version")
+			assert.Equal(t, semconv.SchemaURL, ss.SchemaUrl(), "tracer schema URL")
+		}
+	}
+
+	testcases := []struct {
+		TestName string
+		SpanName string
+		Options  []trace.SpanStartOption
+		Setup    func(*testing.T)
+		Eval     func(*testing.T, context.Context, *span)
+	}{
+		{
+			TestName: "SampledByDefault",
+			Eval: func(t *testing.T, _ context.Context, s *span) {
+				assertTracer(s.traces)
+
+				assert.True(t, s.sampled, "not sampled by default.")
+			},
+		},
+		{
+			TestName: "ParentSpanContext",
+			Setup: func(t *testing.T) {
+				orig := start
+				t.Cleanup(func() { start = orig })
+				start = func(_ context.Context, _ *span, psc *trace.SpanContext, _ *bool, _ *trace.SpanContext) {
+					*psc = spanContext0
+				}
+			},
+			Eval: func(t *testing.T, _ context.Context, s *span) {
+				assertTracer(s.traces)
+
+				want := spanContext0.SpanID().String()
+				got := s.span.ParentSpanID().String()
+				assert.Equal(t, want, got)
+			},
+		},
+		{
+			TestName: "SpanContext",
+			Setup: func(t *testing.T) {
+				orig := start
+				t.Cleanup(func() { start = orig })
+				start = func(_ context.Context, _ *span, _ *trace.SpanContext, _ *bool, sc *trace.SpanContext) {
+					*sc = spanContext0
+				}
+			},
+			Eval: func(t *testing.T, _ context.Context, s *span) {
+				assertTracer(s.traces)
+
+				str := func(i interface{ String() string }) string {
+					return i.String()
+				}
+				assert.Equal(t, str(spanContext0.TraceID()), str(s.span.TraceID()), "trace ID")
+				assert.Equal(t, str(spanContext0.SpanID()), str(s.span.SpanID()), "span ID")
+				assert.Equal(t, uint32(spanContext0.TraceFlags()), s.span.Flags(), "flags")
+				assert.Equal(t, str(spanContext0.TraceState()), s.span.TraceState().AsRaw(), "tracestate")
+			},
+		},
+		{
+			TestName: "NotSampled",
+			Setup: func(t *testing.T) {
+				orig := start
+				t.Cleanup(func() { start = orig })
+				start = func(_ context.Context, _ *span, _ *trace.SpanContext, s *bool, _ *trace.SpanContext) {
+					*s = false
+				}
+			},
+			Eval: func(t *testing.T, _ context.Context, s *span) {
+				assert.False(t, s.sampled, "sampled")
+			},
+		},
+		{
+			TestName: "WithName",
+			SpanName: spanName,
+			Eval: func(t *testing.T, _ context.Context, s *span) {
+				assert.Equal(t, spanName, s.span.Name())
+			},
+		},
+		{
+			TestName: "WithSpanKind",
+			Options: []trace.SpanStartOption{
+				trace.WithSpanKind(trace.SpanKindClient),
+			},
+			Eval: func(t *testing.T, _ context.Context, s *span) {
+				assert.Equal(t, ptrace.SpanKindClient, s.span.Kind())
+			},
+		},
+		{
+			TestName: "WithTimestamp",
+			Options: []trace.SpanStartOption{
+				trace.WithTimestamp(ts),
+			},
+			Eval: func(t *testing.T, _ context.Context, s *span) {
+				assert.Equal(t, pcommon.NewTimestampFromTime(ts), s.span.StartTimestamp())
+			},
+		},
+		{
+			TestName: "WithAttributes",
+			Options: []trace.SpanStartOption{
+				trace.WithAttributes(attrs...),
+			},
+			Eval: func(t *testing.T, _ context.Context, s *span) {
+				assert.Equal(t, pAttrs, s.span.Attributes())
+			},
+		},
+		{
+			TestName: "WithLinks",
+			Options: []trace.SpanStartOption{
+				trace.WithLinks(link0, link1),
+			},
+			Eval: func(t *testing.T, _ context.Context, s *span) {
+				want := ptrace.NewSpanLinkSlice()
+				pLink0.CopyTo(want.AppendEmpty())
+				pLink1.CopyTo(want.AppendEmpty())
+				assert.Equal(t, want, s.span.Links())
+			},
+		},
+	}
+
+	ctx := context.Background()
+	for _, tc := range testcases {
+		t.Run(tc.TestName, func(t *testing.T) {
+			if tc.Setup != nil {
+				tc.Setup(t)
+			}
+
+			c, sIface := tracer.Start(ctx, tc.SpanName, tc.Options...)
+			require.IsType(t, &span{}, sIface)
+			s := sIface.(*span)
+
+			tc.Eval(t, c, s)
+		})
+	}
+}
+
+func TestSpanKindTransform(t *testing.T) {
+	tests := map[trace.SpanKind]ptrace.SpanKind{
+		trace.SpanKind(-1):          ptrace.SpanKindUnspecified,
+		trace.SpanKindUnspecified:   ptrace.SpanKindUnspecified,
+		trace.SpanKind(math.MaxInt): ptrace.SpanKindUnspecified,
+
+		trace.SpanKindInternal: ptrace.SpanKindInternal,
+		trace.SpanKindServer:   ptrace.SpanKindServer,
+		trace.SpanKindClient:   ptrace.SpanKindClient,
+		trace.SpanKindProducer: ptrace.SpanKindProducer,
+		trace.SpanKindConsumer: ptrace.SpanKindConsumer,
+	}
+
+	for in, want := range tests {
+		assert.Equal(t, want, spanKind(in), in.String())
+	}
+}
 
 func TestSpanNilUnsampledGuards(t *testing.T) {
 	run := func(f func(s *span) func()) func(*testing.T) {
@@ -121,6 +341,97 @@ func TestSpanNilUnsampledGuards(t *testing.T) {
 	}))
 }
 
+func TestSpanEnd(t *testing.T) {
+	orig := ended
+	t.Cleanup(func() { ended = orig })
+
+	var buf []byte
+	ended = func(b []byte) { buf = b }
+
+	timeNow := time.Now()
+
+	tests := []struct {
+		Name    string
+		Options []trace.SpanEndOption
+		Eval    func(*testing.T, pcommon.Timestamp)
+	}{
+		{
+			Name: "Now",
+			Eval: func(t *testing.T, ts pcommon.Timestamp) {
+				assert.False(t, ts.AsTime().IsZero(), "zero end time")
+			},
+		},
+		{
+			Name: "WithTimestamp",
+			Options: []trace.SpanEndOption{
+				trace.WithTimestamp(timeNow),
+			},
+			Eval: func(t *testing.T, ts pcommon.Timestamp) {
+				assert.True(t, ts.AsTime().Equal(timeNow), "end time not set")
+			},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.Name, func(t *testing.T) {
+			_, s := spanBuilder{}.Build(context.Background())
+			s.End(test.Options...)
+
+			assert.False(t, s.sampled, "ended span should not be sampled")
+			require.NotNil(t, buf, "no span data emitted")
+
+			var m ptrace.ProtoUnmarshaler
+			traces, err := m.UnmarshalTraces(buf)
+			require.NoError(t, err)
+
+			rs := traces.ResourceSpans()
+			require.Equal(t, 1, rs.Len())
+			ss := rs.At(0).ScopeSpans()
+			require.Equal(t, 1, ss.Len())
+			spans := ss.At(0).Spans()
+			require.Equal(t, 1, spans.Len())
+
+			test.Eval(t, spans.At(0).EndTimestamp())
+		})
+	}
+}
+
+func TestSpanAddEvent(t *testing.T) {
+	_, s := spanBuilder{}.Build(context.Background())
+
+	const name = "event name"
+	ts := time.Now()
+	s.AddEvent(name, trace.WithTimestamp(ts))
+
+	want := ptrace.NewSpanEventSlice()
+	e := want.AppendEmpty()
+	e.SetName(name)
+	e.SetTimestamp(pcommon.NewTimestampFromTime(ts))
+	require.Equal(t, want, s.span.Events())
+}
+
+func TestSpanAddLink(t *testing.T) {
+	_, s := spanBuilder{
+		Options: []trace.SpanStartOption{trace.WithLinks(link0)},
+	}.Build(context.Background())
+	s.AddLink(link1)
+
+	want := ptrace.NewSpanLinkSlice()
+	pLink0.CopyTo(want.AppendEmpty())
+	pLink1.CopyTo(want.AppendEmpty())
+	assert.Equal(t, want, s.span.Links())
+}
+
+func TestSpanIsRecording(t *testing.T) {
+	builder := spanBuilder{}
+	_, s := builder.Build(context.Background())
+	assert.True(t, s.IsRecording(), "sampled span should be recorded")
+
+	builder.NotSampled = true
+	_, s = builder.Build(context.Background())
+	assert.False(t, s.IsRecording(), "unsampled span should not be recorded")
+}
+
 func TestSpanRecordError(t *testing.T) {
 	_, s := spanBuilder{}.Build(context.Background())
 
@@ -128,16 +439,16 @@ func TestSpanRecordError(t *testing.T) {
 	s.RecordError(nil)
 	require.Equal(t, want, s.span.Events(), "nil error recorded")
 
-	now := time.Now()
+	ts := time.Now()
 	err := errors.New("test")
 	s.RecordError(
 		err,
-		trace.WithTimestamp(now),
+		trace.WithTimestamp(ts),
 		trace.WithAttributes(attribute.Bool("testing", true)),
 	)
 	e := want.AppendEmpty()
 	e.SetName(semconv.ExceptionEventName)
-	e.SetTimestamp(pcommon.NewTimestampFromTime(now))
+	e.SetTimestamp(pcommon.NewTimestampFromTime(ts))
 	e.Attributes().PutBool("testing", true)
 	e.Attributes().PutStr(string(semconv.ExceptionTypeKey), "*errors.errorString")
 	e.Attributes().PutStr(string(semconv.ExceptionMessageKey), err.Error())
@@ -148,6 +459,11 @@ func TestSpanRecordError(t *testing.T) {
 	e = s.span.Events().At(1)
 	_, ok := e.Attributes().Get(string(semconv.ExceptionStacktraceKey))
 	assert.True(t, ok, "missing stacktrace attribute")
+}
+
+func TestSpanSpanContext(t *testing.T) {
+	_, s := spanBuilder{SpanContext: spanContext0}.Build(context.Background())
+	assert.Equal(t, spanContext0, s.SpanContext())
 }
 
 func TestSpanSetStatus(t *testing.T) {

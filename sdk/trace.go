@@ -81,6 +81,11 @@ func (t *tracer) start(
 	sampled *bool,
 	sc *trace.SpanContext,
 ) {
+	start(ctx, spanPtr, psc, sampled, sc)
+}
+
+// start is used for testing.
+var start = func(context.Context, *span, *trace.SpanContext, *bool, *trace.SpanContext) {
 }
 
 func (t tracer) traces(ctx context.Context, name string, cfg trace.SpanConfig, sc, psc trace.SpanContext) (ptrace.Traces, ptrace.Span) {
@@ -88,32 +93,16 @@ func (t tracer) traces(ctx context.Context, name string, cfg trace.SpanConfig, s
 	traces := ptrace.NewTraces()
 	traces.ResourceSpans().EnsureCapacity(1)
 
-	var rs ptrace.ResourceSpans
-	if traces.ResourceSpans().Len() == 0 {
-		rs = traces.ResourceSpans().AppendEmpty()
-	} else {
-		rs = traces.ResourceSpans().At(0)
-	}
+	rs := traces.ResourceSpans().AppendEmpty()
 	rs.ScopeSpans().EnsureCapacity(1)
 
-	var ss ptrace.ScopeSpans
-	if rs.ScopeSpans().Len() == 0 {
-		ss = rs.ScopeSpans().AppendEmpty()
-	} else {
-		ss = rs.ScopeSpans().At(0)
-	}
+	ss := rs.ScopeSpans().AppendEmpty()
 	ss.Scope().SetName(t.name)
 	ss.Scope().SetVersion(t.version)
 	ss.SetSchemaUrl(t.schemaURL)
 	ss.Spans().EnsureCapacity(1)
 
-	var span ptrace.Span
-	if ss.Spans().Len() == 0 {
-		span = ss.Spans().AppendEmpty()
-	} else {
-		span = ss.Spans().At(0)
-	}
-
+	span := ss.Spans().AppendEmpty()
 	span.SetTraceID(pcommon.TraceID(sc.TraceID()))
 	span.SetSpanID(pcommon.SpanID(sc.SpanID()))
 	span.SetFlags(uint32(sc.TraceFlags()))
@@ -275,7 +264,10 @@ func (s *span) End(opts ...trace.SpanEndOption) {
 // Expected to be implemented in eBPF.
 //
 //go:noinline
-func (*span) ended(buf []byte) {}
+func (*span) ended(buf []byte) { ended(buf) }
+
+// ended is used for testing.
+var ended = func([]byte) {}
 
 func (s *span) RecordError(err error, opts ...trace.EventOption) {
 	if s == nil || err == nil || !s.sampled {
@@ -317,15 +309,12 @@ func (s *span) AddEvent(name string, opts ...trace.EventOption) {
 }
 
 func (s *span) addEvent(name string, tStamp time.Time, attrs []attribute.KeyValue) {
-	if tStamp.IsZero() {
-		tStamp = time.Now()
-	}
-
 	// TODO: handle link limits.
 
 	event := s.span.Events().AppendEmpty()
 	event.SetName(name)
-	event.SetTimestamp(pcommon.NewTimestampFromTime(tStamp))
+	ts := pcommon.NewTimestampFromTime(tStamp)
+	event.SetTimestamp(ts)
 	setAttributes(event.Attributes(), attrs)
 }
 
