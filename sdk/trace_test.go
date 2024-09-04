@@ -209,6 +209,7 @@ func TestSpanCreation(t *testing.T) {
 			TestName: "WithName",
 			SpanName: spanName,
 			Eval: func(t *testing.T, _ context.Context, s *span) {
+				assertTracer(s.traces)
 				assert.Equal(t, spanName, s.span.Name())
 			},
 		},
@@ -218,6 +219,7 @@ func TestSpanCreation(t *testing.T) {
 				trace.WithSpanKind(trace.SpanKindClient),
 			},
 			Eval: func(t *testing.T, _ context.Context, s *span) {
+				assertTracer(s.traces)
 				assert.Equal(t, ptrace.SpanKindClient, s.span.Kind())
 			},
 		},
@@ -227,6 +229,7 @@ func TestSpanCreation(t *testing.T) {
 				trace.WithTimestamp(ts),
 			},
 			Eval: func(t *testing.T, _ context.Context, s *span) {
+				assertTracer(s.traces)
 				assert.Equal(t, pcommon.NewTimestampFromTime(ts), s.span.StartTimestamp())
 			},
 		},
@@ -236,6 +239,7 @@ func TestSpanCreation(t *testing.T) {
 				trace.WithAttributes(attrs...),
 			},
 			Eval: func(t *testing.T, _ context.Context, s *span) {
+				assertTracer(s.traces)
 				assert.Equal(t, pAttrs, s.span.Attributes())
 			},
 		},
@@ -245,6 +249,7 @@ func TestSpanCreation(t *testing.T) {
 				trace.WithLinks(link0, link1),
 			},
 			Eval: func(t *testing.T, _ context.Context, s *span) {
+				assertTracer(s.traces)
 				want := ptrace.NewSpanLinkSlice()
 				pLink0.CopyTo(want.AppendEmpty())
 				pLink1.CopyTo(want.AppendEmpty())
@@ -288,57 +293,26 @@ func TestSpanKindTransform(t *testing.T) {
 }
 
 func TestSpanNilUnsampledGuards(t *testing.T) {
-	run := func(f func(s *span) func()) func(*testing.T) {
+	run := func(fn func(s *span)) func(*testing.T) {
 		return func(t *testing.T) {
 			t.Helper()
 
-			var s *span
-			assert.NotPanics(t, f(s), "nil span")
-
-			s = new(span)
-			assert.NotPanics(t, f(s), "unsampled span")
+			f := func(s *span) func() { return func() { fn(s) } }
+			assert.NotPanics(t, f(nil), "nil span")
+			assert.NotPanics(t, f(new(span)), "unsampled span")
 		}
 	}
 
-	t.Run("End", run(func(s *span) func() {
-		return func() { s.End() }
-	}))
-
-	t.Run("AddEvent", run(func(s *span) func() {
-		return func() { s.AddEvent("event name") }
-	}))
-
-	t.Run("AddLink", run(func(s *span) func() {
-		return func() { s.AddLink(trace.Link{}) }
-	}))
-
-	t.Run("IsRecording", run(func(s *span) func() {
-		return func() { _ = s.IsRecording() }
-	}))
-
-	t.Run("RecordError", run(func(s *span) func() {
-		return func() { s.RecordError(nil) }
-	}))
-
-	t.Run("SpanContext", run(func(s *span) func() {
-		return func() { _ = s.SpanContext() }
-	}))
-
-	t.Run("SetStatus", run(func(s *span) func() {
-		return func() { s.SetStatus(codes.Error, "test") }
-	}))
-
-	t.Run("SetName", run(func(s *span) func() {
-		return func() { s.SetName("span name") }
-	}))
-
-	t.Run("SetAttributes", run(func(s *span) func() {
-		return func() { s.SetAttributes(attribute.Bool("key", true)) }
-	}))
-
-	t.Run("TracerProvider", run(func(s *span) func() {
-		return func() { _ = s.TracerProvider() }
-	}))
+	t.Run("End", run(func(s *span) { s.End() }))
+	t.Run("AddEvent", run(func(s *span) { s.AddEvent("event name") }))
+	t.Run("AddLink", run(func(s *span) { s.AddLink(trace.Link{}) }))
+	t.Run("IsRecording", run(func(s *span) { _ = s.IsRecording() }))
+	t.Run("RecordError", run(func(s *span) { s.RecordError(nil) }))
+	t.Run("SpanContext", run(func(s *span) { _ = s.SpanContext() }))
+	t.Run("SetStatus", run(func(s *span) { s.SetStatus(codes.Error, "test") }))
+	t.Run("SetName", run(func(s *span) { s.SetName("span name") }))
+	t.Run("SetAttributes", run(func(s *span) { s.SetAttributes(attrs...) }))
+	t.Run("TracerProvider", run(func(s *span) { _ = s.TracerProvider() }))
 }
 
 func TestSpanEnd(t *testing.T) {
@@ -470,23 +444,20 @@ func TestSpanSetStatus(t *testing.T) {
 	s := spanBuilder{}.Build()
 
 	want := ptrace.NewStatus()
-	assert.Equal(t, want, s.span.Status())
+	assert.Equal(t, want, s.span.Status(), "empty status should not be set")
 
-	c, msg := codes.Error, "test"
+	msg := "test"
 	want.SetMessage(msg)
-	want.SetCode(ptrace.StatusCodeError)
-	s.SetStatus(c, msg)
-	assert.Equalf(t, want, s.span.Status(), "code: %s, msg: %s", c, msg)
 
-	c = codes.Ok
-	want.SetCode(ptrace.StatusCodeOk)
-	s.SetStatus(c, msg)
-	assert.Equalf(t, want, s.span.Status(), "code: %s, msg: %s", c, msg)
-
-	c = codes.Unset
-	want.SetCode(ptrace.StatusCodeUnset)
-	s.SetStatus(c, msg)
-	assert.Equalf(t, want, s.span.Status(), "code: %s, msg: %s", c, msg)
+	for c, p := range map[codes.Code]ptrace.StatusCode{
+		codes.Error: ptrace.StatusCodeError,
+		codes.Ok:    ptrace.StatusCodeOk,
+		codes.Unset: ptrace.StatusCodeUnset,
+	} {
+		want.SetCode(p)
+		s.SetStatus(c, msg)
+		assert.Equalf(t, want, s.span.Status(), "code: %s, msg: %s", c, msg)
+	}
 }
 
 func TestSpanSetName(t *testing.T) {

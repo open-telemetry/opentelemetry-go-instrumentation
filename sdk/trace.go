@@ -30,9 +30,7 @@ func GetTracerProvider() trace.TracerProvider { return tracerProviderInstance }
 
 var tracerProviderInstance = tracerProvider{}
 
-type tracerProvider struct {
-	embedded.TracerProvider
-}
+type tracerProvider struct{ embedded.TracerProvider }
 
 var _ trace.TracerProvider = tracerProvider{}
 
@@ -85,8 +83,7 @@ func (t *tracer) start(
 }
 
 // start is used for testing.
-var start = func(context.Context, *span, *trace.SpanContext, *bool, *trace.SpanContext) {
-}
+var start = func(context.Context, *span, *trace.SpanContext, *bool, *trace.SpanContext) {}
 
 func (t tracer) traces(ctx context.Context, name string, cfg trace.SpanConfig, sc, psc trace.SpanContext) (ptrace.Traces, ptrace.Span) {
 	// TODO: pool this. It can be returned on end.
@@ -155,7 +152,6 @@ func (s *span) SpanContext() trace.SpanContext {
 	if s == nil {
 		return trace.SpanContext{}
 	}
-
 	return s.spanContext
 }
 
@@ -309,7 +305,7 @@ func (s *span) AddEvent(name string, opts ...trace.EventOption) {
 }
 
 func (s *span) addEvent(name string, tStamp time.Time, attrs []attribute.KeyValue) {
-	// TODO: handle link limits.
+	// TODO: handle event limits.
 
 	event := s.span.Events().AppendEmpty()
 	event.SetName(name)
