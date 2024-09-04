@@ -523,8 +523,7 @@ func TestSpanTracerProvider(t *testing.T) {
 	var s span
 
 	got := s.TracerProvider()
-	require.IsType(t, &tracerProvider{}, got)
-	assert.Same(t, got.(*tracerProvider), tracerProviderInstance)
+	assert.IsType(t, tracerProvider{}, got)
 }
 
 type spanBuilder struct {
