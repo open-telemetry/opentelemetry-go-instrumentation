@@ -151,6 +151,7 @@ int uprobe_ClientConn_Invoke_Returns(struct pt_regs *ctx) {
 done:
     grpc_span->end_time = bpf_ktime_get_ns();
     output_span_event(ctx, grpc_span, sizeof(*grpc_span), &grpc_span->sc);
+    stop_tracking_span(&grpc_span->sc, &grpc_span->psc);
     bpf_map_delete_elem(&grpc_events, &key);
     return 0;
 }
