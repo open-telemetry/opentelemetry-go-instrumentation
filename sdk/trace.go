@@ -47,7 +47,10 @@ var _ trace.Tracer = tracer{}
 
 func (t tracer) Start(ctx context.Context, name string, opts ...trace.SpanStartOption) (context.Context, trace.Span) {
 	// TODO implement.
-	return ctx, &span{}
+	s := &span{}
+	s.traces, s.span = t.traces(ctx, "", trace.SpanConfig{}, trace.SpanContext{}, trace.SpanContext{})
+	t.start(ctx, s, nil, nil, nil)
+	return ctx, s
 }
 
 // Expected to be implemented in eBPF.
@@ -99,7 +102,10 @@ func (s *span) SetStatus(c codes.Code, msg string) { /* TODO: implement */ }
 
 func (s *span) SetAttributes(attrs ...attribute.KeyValue) { /* TODO: implement */ }
 
-func (s *span) End(opts ...trace.SpanEndOption) { /* TODO: implement. */ }
+func (s *span) End(opts ...trace.SpanEndOption) {
+	// TODO: implement.
+	s.ended(nil)
+}
 
 // Expected to be implemented in eBPF.
 //
