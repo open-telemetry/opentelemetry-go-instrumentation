@@ -374,7 +374,7 @@ func TestSpanEnd(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.Name, func(t *testing.T) {
-			_, s := spanBuilder{}.Build(context.Background())
+			s := spanBuilder{}.Build()
 			s.End(test.Options...)
 
 			assert.False(t, s.sampled, "ended span should not be sampled")
@@ -397,7 +397,7 @@ func TestSpanEnd(t *testing.T) {
 }
 
 func TestSpanAddEvent(t *testing.T) {
-	_, s := spanBuilder{}.Build(context.Background())
+	s := spanBuilder{}.Build()
 
 	const name = "event name"
 	ts := time.Now()
@@ -411,9 +411,9 @@ func TestSpanAddEvent(t *testing.T) {
 }
 
 func TestSpanAddLink(t *testing.T) {
-	_, s := spanBuilder{
+	s := spanBuilder{
 		Options: []trace.SpanStartOption{trace.WithLinks(link0)},
-	}.Build(context.Background())
+	}.Build()
 	s.AddLink(link1)
 
 	want := ptrace.NewSpanLinkSlice()
@@ -424,16 +424,16 @@ func TestSpanAddLink(t *testing.T) {
 
 func TestSpanIsRecording(t *testing.T) {
 	builder := spanBuilder{}
-	_, s := builder.Build(context.Background())
+	s := builder.Build()
 	assert.True(t, s.IsRecording(), "sampled span should be recorded")
 
 	builder.NotSampled = true
-	_, s = builder.Build(context.Background())
+	s = builder.Build()
 	assert.False(t, s.IsRecording(), "unsampled span should not be recorded")
 }
 
 func TestSpanRecordError(t *testing.T) {
-	_, s := spanBuilder{}.Build(context.Background())
+	s := spanBuilder{}.Build()
 
 	want := ptrace.NewSpanEventSlice()
 	s.RecordError(nil)
@@ -462,12 +462,12 @@ func TestSpanRecordError(t *testing.T) {
 }
 
 func TestSpanSpanContext(t *testing.T) {
-	_, s := spanBuilder{SpanContext: spanContext0}.Build(context.Background())
+	s := spanBuilder{SpanContext: spanContext0}.Build()
 	assert.Equal(t, spanContext0, s.SpanContext())
 }
 
 func TestSpanSetStatus(t *testing.T) {
-	_, s := spanBuilder{}.Build(context.Background())
+	s := spanBuilder{}.Build()
 
 	want := ptrace.NewStatus()
 	assert.Equal(t, want, s.span.Status())
@@ -493,12 +493,12 @@ func TestSpanSetName(t *testing.T) {
 	const name = "span name"
 	builder := spanBuilder{}
 
-	_, s := builder.Build(context.Background())
+	s := builder.Build()
 	s.SetName(name)
 	assert.Equal(t, name, s.span.Name(), "span name not set")
 
 	builder.Name = "alt"
-	_, s = builder.Build(context.Background())
+	s = builder.Build()
 	s.SetName(name)
 	assert.Equal(t, name, s.span.Name(), "SetName overrides default")
 }
@@ -506,7 +506,7 @@ func TestSpanSetName(t *testing.T) {
 func TestSpanSetAttributes(t *testing.T) {
 	builder := spanBuilder{}
 
-	_, s := builder.Build(context.Background())
+	s := builder.Build()
 	s.SetAttributes(attrs...)
 	assert.Equal(t, pAttrs, s.span.Attributes(), "span attributes not set")
 
@@ -514,7 +514,7 @@ func TestSpanSetAttributes(t *testing.T) {
 		trace.WithAttributes(attrs[0].Key.Bool(!attrs[0].Value.AsBool())),
 	}
 
-	_, s = builder.Build(context.Background())
+	s = builder.Build()
 	s.SetAttributes(attrs...)
 	assert.Equal(t, pAttrs, s.span.Attributes(), "SpanAttributes did not override")
 }
@@ -528,29 +528,22 @@ func TestSpanTracerProvider(t *testing.T) {
 }
 
 type spanBuilder struct {
-	Name              string
-	NotSampled        bool
-	SpanContext       trace.SpanContext
-	ParentSpanContext trace.SpanContext
-	Options           []trace.SpanStartOption
-
-	Tracer *tracer
+	Name        string
+	NotSampled  bool
+	SpanContext trace.SpanContext
+	Options     []trace.SpanStartOption
 }
 
-func (b spanBuilder) Build(ctx context.Context) (context.Context, *span) {
-	if b.Tracer == nil {
-		b.Tracer = new(tracer)
-	}
-
+func (b spanBuilder) Build() *span {
+	tracer := new(tracer)
 	s := &span{sampled: !b.NotSampled, spanContext: b.SpanContext}
-	s.traces, s.span = b.Tracer.traces(
-		ctx,
+	s.traces, s.span = tracer.traces(
+		context.Background(),
 		b.Name,
 		trace.NewSpanStartConfig(b.Options...),
 		s.spanContext,
-		b.ParentSpanContext,
+		trace.SpanContext{},
 	)
 
-	ctx = trace.ContextWithSpan(ctx, s)
-	return ctx, s
+	return s
 }
