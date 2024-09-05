@@ -1,7 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package config
+package auto
 
 import (
 	"errors"
@@ -30,19 +30,19 @@ const (
 	SamplerNameParentBasedTraceIDRatio = "parentbased_traceidratio"
 )
 
-// AlwaysOn is a Sampler that samples every trace.
+// AlwaysOnSampler is a Sampler that samples every trace.
 // Be careful about using this sampler in a production application with
 // significant traffic: a new trace will be started and exported for every
 // request.
-type AlwaysOn struct{}
+type AlwaysOnSampler struct{}
 
-var _ Sampler = AlwaysOn{}
+var _ Sampler = AlwaysOnSampler{}
 
-func (AlwaysOn) validate() error {
+func (AlwaysOnSampler) validate() error {
 	return nil
 }
 
-func (AlwaysOn) convert() (*sampling.Config, error) {
+func (AlwaysOnSampler) convert() (*sampling.Config, error) {
 	return &sampling.Config{
 		Samplers: map[sampling.SamplerID]sampling.SamplerConfig{
 			sampling.AlwaysOnID: {
@@ -53,16 +53,16 @@ func (AlwaysOn) convert() (*sampling.Config, error) {
 	}, nil
 }
 
-// AlwaysOff returns a Sampler that samples no traces.
-type AlwaysOff struct{}
+// AlwaysOffSampler returns a Sampler that samples no traces.
+type AlwaysOffSampler struct{}
 
-var _ Sampler = AlwaysOff{}
+var _ Sampler = AlwaysOffSampler{}
 
-func (AlwaysOff) validate() error {
+func (AlwaysOffSampler) validate() error {
 	return nil
 }
 
-func (AlwaysOff) convert() (*sampling.Config, error) {
+func (AlwaysOffSampler) convert() (*sampling.Config, error) {
 	return &sampling.Config{
 		Samplers: map[sampling.SamplerID]sampling.SamplerConfig{
 			sampling.AlwaysOffID: {
@@ -73,17 +73,17 @@ func (AlwaysOff) convert() (*sampling.Config, error) {
 	}, nil
 }
 
-// TraceIDRatio samples a given fraction of traces. Fraction should be in the closed interval [0, 1].
-// To respect the parent trace's SampledFlag, the TraceIDRatio sampler should be used
+// TraceIDRatioSampler samples a given fraction of traces. Fraction should be in the closed interval [0, 1].
+// To respect the parent trace's SampledFlag, the TraceIDRatioSampler sampler should be used
 // as a delegate of a [ParentBased] sampler.
-type TraceIDRatio struct {
+type TraceIDRatioSampler struct {
 	// Fraction is the fraction of traces to sample. This value needs to be in the interval [0, 1].
 	Fraction float64
 }
 
-var _ Sampler = TraceIDRatio{}
+var _ Sampler = TraceIDRatioSampler{}
 
-func (t TraceIDRatio) validate() error {
+func (t TraceIDRatioSampler) validate() error {
 	if t.Fraction < 0 || t.Fraction > 1 {
 		return errors.New("fraction in TraceIDRatio must be in the range [0, 1]")
 	}
@@ -91,7 +91,7 @@ func (t TraceIDRatio) validate() error {
 	return nil
 }
 
-func (t TraceIDRatio) convert() (*sampling.Config, error) {
+func (t TraceIDRatioSampler) convert() (*sampling.Config, error) {
 	tidConfig, err := sampling.NewTraceIDRatioConfig(t.Fraction)
 	if err != nil {
 		return nil, err
@@ -107,7 +107,7 @@ func (t TraceIDRatio) convert() (*sampling.Config, error) {
 	}, nil
 }
 
-// ParentBased is a [Sampler] which behaves differently,
+// ParentBasedSampler is a [Sampler] which behaves differently,
 // based on the parent of the span. If the span has no parent,
 // the Root sampler is used to make sampling decision. If the span has
 // a parent, depending on whether the parent is remote and whether it
@@ -116,7 +116,7 @@ func (t TraceIDRatio) convert() (*sampling.Config, error) {
 //   - RemoteNotSampled (default: [AlwaysOff])
 //   - LocalSampled (default: [AlwaysOn])
 //   - LocalNotSampled (default: [AlwaysOff])
-type ParentBased struct {
+type ParentBasedSampler struct {
 	// Root is the Sampler used when a span is created without a parent.
 	Root Sampler
 	// RemoteSampled is the Sampler used when the span parent is remote and sampled.
@@ -129,19 +129,19 @@ type ParentBased struct {
 	LocalNotSampled Sampler
 }
 
-var _ Sampler = ParentBased{}
+var _ Sampler = ParentBasedSampler{}
 
 func validateParentBasedComponent(s Sampler) error {
 	if s == nil {
 		return nil
 	}
-	if _, ok := s.(ParentBased); ok {
+	if _, ok := s.(ParentBasedSampler); ok {
 		return errors.New("parent-based sampler cannot wrap parent-based sampler")
 	}
 	return s.validate()
 }
 
-func (p ParentBased) validate() error {
+func (p ParentBasedSampler) validate() error {
 	var err error
 	return errors.Join(err,
 		validateParentBasedComponent(p.LocalNotSampled),
@@ -151,10 +151,10 @@ func (p ParentBased) validate() error {
 		validateParentBasedComponent(p.Root))
 }
 
-func (p ParentBased) convert() (*sampling.Config, error) {
+func (p ParentBasedSampler) convert() (*sampling.Config, error) {
 	pbc := sampling.DefaultParentBasedSampler()
 	samplers := make(map[sampling.SamplerID]sampling.SamplerConfig)
-	rootSampler, err := ConvertSamplerToConfig(p.Root)
+	rootSampler, err := convertSamplerToConfig(p.Root)
 	if err != nil {
 		return nil, err
 	}
@@ -165,7 +165,7 @@ func (p ParentBased) convert() (*sampling.Config, error) {
 		}
 	}
 
-	remoteSampledSampler, err := ConvertSamplerToConfig(p.RemoteSampled)
+	remoteSampledSampler, err := convertSamplerToConfig(p.RemoteSampled)
 	if err != nil {
 		return nil, err
 	}
@@ -176,7 +176,7 @@ func (p ParentBased) convert() (*sampling.Config, error) {
 		}
 	}
 
-	remoteNotSampledSampler, err := ConvertSamplerToConfig(p.RemoteNotSampled)
+	remoteNotSampledSampler, err := convertSamplerToConfig(p.RemoteNotSampled)
 	if err != nil {
 		return nil, err
 	}
@@ -187,7 +187,7 @@ func (p ParentBased) convert() (*sampling.Config, error) {
 		}
 	}
 
-	localSampledSamplers, err := ConvertSamplerToConfig(p.LocalSampled)
+	localSampledSamplers, err := convertSamplerToConfig(p.LocalSampled)
 	if err != nil {
 		return nil, err
 	}
@@ -198,7 +198,7 @@ func (p ParentBased) convert() (*sampling.Config, error) {
 		}
 	}
 
-	localNotSampledSampler, err := ConvertSamplerToConfig(p.LocalNotSampled)
+	localNotSampledSampler, err := convertSamplerToConfig(p.LocalNotSampled)
 	if err != nil {
 		return nil, err
 	}
@@ -227,12 +227,12 @@ func (p ParentBased) convert() (*sampling.Config, error) {
 //   - LocalSampled: AlwaysOn
 //   - LocalNotSampled: AlwaysOff
 func DefaultSampler() Sampler {
-	return ParentBased{
-		Root:             AlwaysOn{},
-		RemoteSampled:    AlwaysOn{},
-		RemoteNotSampled: AlwaysOff{},
-		LocalSampled:     AlwaysOn{},
-		LocalNotSampled:  AlwaysOff{},
+	return ParentBasedSampler{
+		Root:             AlwaysOnSampler{},
+		RemoteSampled:    AlwaysOnSampler{},
+		RemoteNotSampled: AlwaysOffSampler{},
+		LocalSampled:     AlwaysOnSampler{},
+		LocalNotSampled:  AlwaysOffSampler{},
 	}
 }
 
@@ -244,7 +244,7 @@ func NewSamplerFromEnv(lookupEnv func(string) (string, bool)) (Sampler, error) {
 		return nil, nil
 	}
 
-	defaultSampler := DefaultSampler().(ParentBased)
+	defaultSampler := DefaultSampler().(ParentBasedSampler)
 
 	samplerName = strings.ToLower(strings.TrimSpace(samplerName))
 	samplerArg, hasSamplerArg := lookupEnv(TracesSamplerArgKey)
@@ -252,42 +252,42 @@ func NewSamplerFromEnv(lookupEnv func(string) (string, bool)) (Sampler, error) {
 
 	switch samplerName {
 	case SamplerNameAlwaysOn:
-		return AlwaysOn{}, nil
+		return AlwaysOnSampler{}, nil
 	case SamplerNameAlwaysOff:
-		return AlwaysOff{}, nil
+		return AlwaysOffSampler{}, nil
 	case SamplerNameTraceIDRatio:
 		if hasSamplerArg {
 			ratio, err := strconv.ParseFloat(samplerArg, 64)
 			if err != nil {
 				return nil, err
 			}
-			return TraceIDRatio{Fraction: ratio}, nil
+			return TraceIDRatioSampler{Fraction: ratio}, nil
 		}
-		return TraceIDRatio{Fraction: 1}, nil
+		return TraceIDRatioSampler{Fraction: 1}, nil
 	case SamplerNameParentBasedAlwaysOn:
-		defaultSampler.Root = AlwaysOn{}
+		defaultSampler.Root = AlwaysOnSampler{}
 		return defaultSampler, nil
 	case SamplerNameParsedBasedAlwaysOff:
-		defaultSampler.Root = AlwaysOff{}
+		defaultSampler.Root = AlwaysOffSampler{}
 		return defaultSampler, nil
 	case SamplerNameParentBasedTraceIDRatio:
 		if !hasSamplerArg {
-			defaultSampler.Root = TraceIDRatio{Fraction: 1}
+			defaultSampler.Root = TraceIDRatioSampler{Fraction: 1}
 			return defaultSampler, nil
 		}
 		ratio, err := strconv.ParseFloat(samplerArg, 64)
 		if err != nil {
 			return nil, err
 		}
-		defaultSampler.Root = TraceIDRatio{Fraction: ratio}
+		defaultSampler.Root = TraceIDRatioSampler{Fraction: ratio}
 		return defaultSampler, nil
 	default:
 		return nil, errors.New("unknown sampler name")
 	}
 }
 
-// ConvertSamplerToConfig converts a Sampler its internal representation.
-func ConvertSamplerToConfig(s Sampler) (*sampling.Config, error) {
+// convertSamplerToConfig converts a Sampler its internal representation.
+func convertSamplerToConfig(s Sampler) (*sampling.Config, error) {
 	if s == nil {
 		return nil, nil
 	}

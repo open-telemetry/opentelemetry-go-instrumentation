@@ -1,12 +1,15 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package config
+package auto
 
 import (
 	"context"
+	"sync"
 
 	"go.opentelemetry.io/otel/trace"
+
+	"go.opentelemetry.io/auto/internal/pkg/instrumentation"
 )
 
 // InstrumentationLibraryID is used to identify an instrumentation library.
@@ -44,8 +47,8 @@ type InstrumentationConfig struct {
 	Sampler Sampler
 }
 
-// Provider provides the initial configuration and updates to the instrumentation configuration.
-type Provider interface {
+// ConfigProvider provides the initial configuration and updates to the instrumentation configuration.
+type ConfigProvider interface {
 	// InitialConfig returns the initial instrumentation configuration.
 	InitialConfig(ctx context.Context) InstrumentationConfig
 	// Watch returns a channel that receives updates to the instrumentation configuration.
@@ -60,7 +63,7 @@ type noopProvider struct {
 }
 
 // NewNoopProvider returns a provider that does not provide any updates and provide the default configuration as the initial one.
-func NewNoopProvider(s Sampler) Provider {
+func NewNoopConfigProvider(s Sampler) ConfigProvider {
 	return &noopProvider{Sampler: s}
 }
 
@@ -78,4 +81,54 @@ func (p *noopProvider) Watch() <-chan InstrumentationConfig {
 
 func (p *noopProvider) Shutdown(_ context.Context) error {
 	return nil
+}
+
+func convertConfigProvider(cp ConfigProvider) instrumentation.ConfigProvider {
+	return &converter{ConfigProvider: cp}
+}
+
+type converter struct {
+	ConfigProvider
+
+	ch     chan instrumentation.Config
+	chOnce sync.Once
+}
+
+func (c *converter) InitialConfig(ctx context.Context) instrumentation.Config {
+	return c.instrumentationConfig(c.ConfigProvider.InitialConfig(ctx))
+}
+
+func (c *converter) Watch() <-chan instrumentation.Config {
+	c.chOnce.Do(func() {
+		c.ch = make(chan instrumentation.Config)
+		inCh := c.ConfigProvider.Watch()
+		go func() {
+			for in := range inCh {
+				c.ch <- c.instrumentationConfig(in)
+			}
+			close(c.ch)
+		}()
+	})
+	return c.ch
+}
+
+func (c *converter) instrumentationConfig(ic InstrumentationConfig) instrumentation.Config {
+	var out instrumentation.Config
+
+	out.DefaultTracesDisabled = ic.DefaultTracesDisabled
+	if n := len(ic.InstrumentationLibraryConfigs); n > 0 {
+		out.InstrumentationLibraryConfigs = make(map[instrumentation.LibraryID]instrumentation.Library, len(ic.InstrumentationLibraryConfigs))
+		for k, v := range ic.InstrumentationLibraryConfigs {
+			id := instrumentation.LibraryID{
+				InstrumentedPkg: k.InstrumentedPkg,
+				SpanKind:        k.SpanKind,
+			}
+			out.InstrumentationLibraryConfigs[id] = instrumentation.Library{
+				TracesEnabled: v.TracesEnabled,
+			}
+		}
+	}
+	out.SamplingConfig, _ = convertSamplerToConfig(ic.Sampler)
+
+	return out
 }
