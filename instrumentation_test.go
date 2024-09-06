@@ -13,6 +13,9 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
+
+	"go.opentelemetry.io/auto/config"
+	"go.opentelemetry.io/auto/internal/pkg/instrumentation/probe/sampling"
 )
 
 func TestWithServiceName(t *testing.T) {
@@ -195,6 +198,90 @@ func TestWithLogLevel(t *testing.T) {
 		_, err := newInstConfig(context.Background(), []InstrumentationOption{WithLogLevel("invalid")})
 
 		require.Error(t, err)
+	})
+}
+
+func TestWithSampler(t *testing.T) {
+	t.Run("Default sampler", func(t *testing.T) {
+		c, err := newInstConfig(context.Background(), []InstrumentationOption{})
+		require.NoError(t, err)
+		sc, err := config.ConvertSamplerToConfig(c.sampler)
+		assert.NoError(t, err)
+		assert.Equal(t, sc.Samplers, sampling.DefaultConfig().Samplers)
+		assert.Equal(t, sc.ActiveSampler, sampling.ParentBasedID)
+		conf, ok := sc.Samplers[sampling.ParentBasedID]
+		assert.True(t, ok)
+		assert.Equal(t, conf.SamplerType, sampling.SamplerParentBased)
+		pbConfig, ok := conf.Config.(sampling.ParentBasedConfig)
+		assert.True(t, ok)
+		assert.Equal(t, pbConfig, sampling.DefaultParentBasedSampler())
+	})
+
+	t.Run("Env config", func(t *testing.T) {
+		mockEnv(t, map[string]string{
+			config.TracesSamplerKey:    config.SamplerNameParentBasedTraceIDRatio,
+			config.TracesSamplerArgKey: "0.42",
+		})
+
+		c, err := newInstConfig(context.Background(), []InstrumentationOption{WithEnv()})
+		require.NoError(t, err)
+		sc, err := config.ConvertSamplerToConfig(c.sampler)
+		assert.NoError(t, err)
+		assert.Equal(t, sc.ActiveSampler, sampling.ParentBasedID)
+		parentBasedConfig, ok := sc.Samplers[sampling.ParentBasedID]
+		assert.True(t, ok)
+		assert.Equal(t, parentBasedConfig.SamplerType, sampling.SamplerParentBased)
+		pbConfig, ok := parentBasedConfig.Config.(sampling.ParentBasedConfig)
+		assert.True(t, ok)
+		assert.Equal(t, pbConfig.Root, sampling.TraceIDRatioID)
+		tidRatio, ok := sc.Samplers[sampling.TraceIDRatioID]
+		assert.True(t, ok)
+		assert.Equal(t, tidRatio.SamplerType, sampling.SamplerTraceIDRatio)
+		config, ok := tidRatio.Config.(sampling.TraceIDRatioConfig)
+		assert.True(t, ok)
+		expected, _ := sampling.NewTraceIDRatioConfig(0.42)
+		assert.Equal(t, expected, config)
+	})
+
+	t.Run("Invalid Env config", func(t *testing.T) {
+		mockEnv(t, map[string]string{
+			config.TracesSamplerKey:    "invalid",
+			config.TracesSamplerArgKey: "0.42",
+		})
+
+		_, err := newInstConfig(context.Background(), []InstrumentationOption{WithEnv()})
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "unknown sampler name")
+	})
+
+	t.Run("WithSampler", func(t *testing.T) {
+		c, err := newInstConfig(context.Background(), []InstrumentationOption{
+			WithSampler(config.ParentBased{
+				Root: config.TraceIDRatio{Fraction: 0.42},
+			}),
+		})
+		require.NoError(t, err)
+		sc, err := config.ConvertSamplerToConfig(c.sampler)
+		assert.NoError(t, err)
+		assert.Equal(t, sc.ActiveSampler, sampling.ParentBasedID)
+		parentBasedConfig, ok := sc.Samplers[sampling.ParentBasedID]
+		assert.True(t, ok)
+		assert.Equal(t, parentBasedConfig.SamplerType, sampling.SamplerParentBased)
+		pbConfig, ok := parentBasedConfig.Config.(sampling.ParentBasedConfig)
+		assert.True(t, ok)
+		assert.Equal(t, pbConfig.Root, sampling.TraceIDRatioID)
+		assert.Equal(t, pbConfig.RemoteSampled, sampling.AlwaysOnID)
+		assert.Equal(t, pbConfig.RemoteNotSampled, sampling.AlwaysOffID)
+		assert.Equal(t, pbConfig.LocalSampled, sampling.AlwaysOnID)
+		assert.Equal(t, pbConfig.LocalNotSampled, sampling.AlwaysOffID)
+
+		tidRatio, ok := sc.Samplers[sampling.TraceIDRatioID]
+		assert.True(t, ok)
+		assert.Equal(t, tidRatio.SamplerType, sampling.SamplerTraceIDRatio)
+		config, ok := tidRatio.Config.(sampling.TraceIDRatioConfig)
+		assert.True(t, ok)
+		expected, _ := sampling.NewTraceIDRatioConfig(0.42)
+		assert.Equal(t, expected, config)
 	})
 }
 
