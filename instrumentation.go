@@ -258,7 +258,7 @@ func newInstConfig(ctx context.Context, opts []InstrumentationOption) (instConfi
 	}
 
 	if c.cp == nil {
-		c.cp = NewNoopConfigProvider(c.sampler)
+		c.cp = newNoopConfigProvider(c.sampler)
 	}
 
 	return c, err

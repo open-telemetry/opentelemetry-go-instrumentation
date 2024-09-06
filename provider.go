@@ -63,7 +63,7 @@ type noopProvider struct {
 }
 
 // NewNoopProvider returns a provider that does not provide any updates and provide the default configuration as the initial one.
-func NewNoopConfigProvider(s Sampler) ConfigProvider {
+func newNoopConfigProvider(s Sampler) ConfigProvider {
 	return &noopProvider{Sampler: s}
 }
 
