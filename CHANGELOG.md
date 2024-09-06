@@ -18,6 +18,9 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 - Introduce `config.Provider` as an option to set the initial configuration and update it in runtime. ([#1010](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1010))
 - Support `go.opentelemetry.io/otel@v1.29.0`. ([#1032](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1032))
 - Support `google.golang.org/grpc` `1.66.0`. ([#1046](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1046))
+- Support `golang.org/x/net` `v0.29.0`. ([#1051](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1051))
+- Support Go `1.22.7`.  ([#1051](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1051))
+- Support Go `1.23.1`.  ([#1051](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1051))
 
 ### Fixed
 
