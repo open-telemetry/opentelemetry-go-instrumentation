@@ -18,6 +18,7 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/hashicorp/go-version"
 
+	"go.opentelemetry.io/auto/config"
 	"go.opentelemetry.io/auto/internal/pkg/inject"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/bpffs"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/utils"
@@ -32,8 +33,11 @@ type Probe interface {
 	// the information about the package the Probe instruments.
 	Manifest() Manifest
 
-	// Load loads all instrumentation offsets.
-	Load(*link.Executable, *process.TargetDetails) error
+	// Load loads all the eBPF programs ans maps required by the Probe.
+	// It also attaches the eBPF programs to the target process.
+	// TODO: currently passing Sampler as an initial configuration - this will be
+	// updated to a more generic configuration in the future.
+	Load(*link.Executable, *process.TargetDetails, config.Sampler) error
 
 	// Run runs the events processing loop.
 	Run(eventsChan chan<- *Event)
@@ -97,7 +101,7 @@ func (i *Base[BPFObj, BPFEvent]) Spec() (*ebpf.CollectionSpec, error) {
 }
 
 // Load loads all instrumentation offsets.
-func (i *Base[BPFObj, BPFEvent]) Load(exec *link.Executable, td *process.TargetDetails) error {
+func (i *Base[BPFObj, BPFEvent]) Load(exec *link.Executable, td *process.TargetDetails, sampler config.Sampler) error {
 	spec, err := i.SpecFn()
 	if err != nil {
 		return err
@@ -122,6 +126,11 @@ func (i *Base[BPFObj, BPFEvent]) Load(exec *link.Executable, td *process.TargetD
 	if err != nil {
 		return err
 	}
+
+	// TODO: Initialize sampling manager based on the sampling configuration and the eBPF collection.
+	// The manager will be responsible for writing to eBPF maps - configuring the sampling.
+	// In addition the sampling manager will be responsible for handling updates for the configuration.
+
 	i.closers = append(i.closers, i.reader)
 
 	return nil

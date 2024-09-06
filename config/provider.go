@@ -39,6 +39,9 @@ type InstrumentationConfig struct {
 	// If set to false, traces are enabled by default for all libraries, unless the library is explicitly disabled.
 	// default is false - traces are enabled by default.
 	DefaultTracesDisabled bool
+
+	// Sampler is used to determine whether a trace should be sampled and exported.
+	Sampler Sampler
 }
 
 // Provider provides the initial configuration and updates to the instrumentation configuration.
@@ -52,15 +55,19 @@ type Provider interface {
 	Shutdown(ctx context.Context) error
 }
 
-type noopProvider struct{}
+type noopProvider struct {
+	Sampler Sampler
+}
 
 // NewNoopProvider returns a provider that does not provide any updates and provide the default configuration as the initial one.
-func NewNoopProvider() Provider {
-	return &noopProvider{}
+func NewNoopProvider(s Sampler) Provider {
+	return &noopProvider{Sampler: s}
 }
 
 func (p *noopProvider) InitialConfig(_ context.Context) InstrumentationConfig {
-	return InstrumentationConfig{}
+	return InstrumentationConfig{
+		Sampler: p.Sampler,
+	}
 }
 
 func (p *noopProvider) Watch() <-chan InstrumentationConfig {
