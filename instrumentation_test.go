@@ -218,8 +218,8 @@ func TestWithSampler(t *testing.T) {
 
 	t.Run("Env config", func(t *testing.T) {
 		mockEnv(t, map[string]string{
-			TracesSamplerKey:    SamplerNameParentBasedTraceIDRatio,
-			TracesSamplerArgKey: "0.42",
+			tracesSamplerKey:    samplerNameParentBasedTraceIDRatio,
+			tracesSamplerArgKey: "0.42",
 		})
 
 		c, err := newInstConfig(context.Background(), []InstrumentationOption{WithEnv()})
@@ -244,8 +244,8 @@ func TestWithSampler(t *testing.T) {
 
 	t.Run("Invalid Env config", func(t *testing.T) {
 		mockEnv(t, map[string]string{
-			TracesSamplerKey:    "invalid",
-			TracesSamplerArgKey: "0.42",
+			tracesSamplerKey:    "invalid",
+			tracesSamplerArgKey: "0.42",
 		})
 
 		_, err := newInstConfig(context.Background(), []InstrumentationOption{WithEnv()})

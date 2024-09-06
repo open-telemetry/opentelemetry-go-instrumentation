@@ -19,15 +19,15 @@ type Sampler interface {
 
 // OpenTelemetry spec-defined sampler names and environment variables for configuration.
 const (
-	TracesSamplerKey    = "OTEL_TRACES_SAMPLER"
-	TracesSamplerArgKey = "OTEL_TRACES_SAMPLER_ARG"
+	tracesSamplerKey    = "OTEL_TRACES_SAMPLER"
+	tracesSamplerArgKey = "OTEL_TRACES_SAMPLER_ARG"
 
-	SamplerNameAlwaysOn                = "always_on"
-	SamplerNameAlwaysOff               = "always_off"
-	SamplerNameTraceIDRatio            = "traceidratio"
-	SamplerNameParentBasedAlwaysOn     = "parentbased_always_on"
-	SamplerNameParsedBasedAlwaysOff    = "parentbased_always_off"
-	SamplerNameParentBasedTraceIDRatio = "parentbased_traceidratio"
+	samplerNameAlwaysOn                = "always_on"
+	samplerNameAlwaysOff               = "always_off"
+	samplerNameTraceIDRatio            = "traceidratio"
+	samplerNameParentBasedAlwaysOn     = "parentbased_always_on"
+	samplerNameParsedBasedAlwaysOff    = "parentbased_always_off"
+	samplerNameParentBasedTraceIDRatio = "parentbased_traceidratio"
 )
 
 // AlwaysOnSampler is a Sampler that samples every trace.
@@ -236,10 +236,10 @@ func DefaultSampler() Sampler {
 	}
 }
 
-// NewSamplerFromEnv creates a Sampler based on the environment variables.
+// newSamplerFromEnv creates a Sampler based on the environment variables.
 // If the environment variables are not set, it returns a nil Sampler.
-func NewSamplerFromEnv(lookupEnv func(string) (string, bool)) (Sampler, error) {
-	samplerName, ok := lookupEnv(TracesSamplerKey)
+func newSamplerFromEnv(lookupEnv func(string) (string, bool)) (Sampler, error) {
+	samplerName, ok := lookupEnv(tracesSamplerKey)
 	if !ok {
 		return nil, nil
 	}
@@ -247,15 +247,15 @@ func NewSamplerFromEnv(lookupEnv func(string) (string, bool)) (Sampler, error) {
 	defaultSampler := DefaultSampler().(ParentBasedSampler)
 
 	samplerName = strings.ToLower(strings.TrimSpace(samplerName))
-	samplerArg, hasSamplerArg := lookupEnv(TracesSamplerArgKey)
+	samplerArg, hasSamplerArg := lookupEnv(tracesSamplerArgKey)
 	samplerArg = strings.TrimSpace(samplerArg)
 
 	switch samplerName {
-	case SamplerNameAlwaysOn:
+	case samplerNameAlwaysOn:
 		return AlwaysOnSampler{}, nil
-	case SamplerNameAlwaysOff:
+	case samplerNameAlwaysOff:
 		return AlwaysOffSampler{}, nil
-	case SamplerNameTraceIDRatio:
+	case samplerNameTraceIDRatio:
 		if hasSamplerArg {
 			ratio, err := strconv.ParseFloat(samplerArg, 64)
 			if err != nil {
@@ -264,13 +264,13 @@ func NewSamplerFromEnv(lookupEnv func(string) (string, bool)) (Sampler, error) {
 			return TraceIDRatioSampler{Fraction: ratio}, nil
 		}
 		return TraceIDRatioSampler{Fraction: 1}, nil
-	case SamplerNameParentBasedAlwaysOn:
+	case samplerNameParentBasedAlwaysOn:
 		defaultSampler.Root = AlwaysOnSampler{}
 		return defaultSampler, nil
-	case SamplerNameParsedBasedAlwaysOff:
+	case samplerNameParsedBasedAlwaysOff:
 		defaultSampler.Root = AlwaysOffSampler{}
 		return defaultSampler, nil
-	case SamplerNameParentBasedTraceIDRatio:
+	case samplerNameParentBasedTraceIDRatio:
 		if !hasSamplerArg {
 			defaultSampler.Root = TraceIDRatioSampler{Fraction: 1}
 			return defaultSampler, nil
