@@ -80,7 +80,7 @@ func (a *Analyzer) Analyze(pid int, relevantFuncs map[string]interface{}) (*Targ
 	for _, dep := range a.BuildInfo.Deps {
 		depVersion, err := version.NewVersion(dep.Version)
 		if err != nil {
-			a.logger.Error(err, "error parsing module version")
+			a.logger.Error(err, "parsing dependency version", "dependency", dep)
 			continue
 		}
 		result.Libraries[dep.Path] = depVersion
