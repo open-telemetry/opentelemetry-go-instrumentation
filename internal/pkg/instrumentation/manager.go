@@ -211,7 +211,7 @@ func (m *Manager) applyConfig(c config.InstrumentationConfig) error {
 
 		if !currentlyEnabled && newEnabled {
 			m.logger.Info("Enabling probe", "id", id)
-			err = errors.Join(err, p.Load(m.exe, m.td))
+			err = errors.Join(err, p.Load(m.exe, m.td, c.Sampler))
 			if err == nil {
 				m.runProbe(p)
 			}
@@ -324,7 +324,7 @@ func (m *Manager) load(target *process.TargetDetails) error {
 	for name, i := range m.probes {
 		if isProbeEnabled(name, m.currentConfig) {
 			m.logger.V(0).Info("loading probe", "name", name)
-			err := i.Load(exe, target)
+			err := i.Load(exe, target, m.currentConfig.Sampler)
 			if err != nil {
 				m.logger.Error(err, "error while loading probes, cleaning up", "name", name)
 				return errors.Join(err, m.cleanup(target))

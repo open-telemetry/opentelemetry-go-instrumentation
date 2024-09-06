@@ -190,7 +190,7 @@ func fakeManager(t *testing.T) *Manager {
 	logger := stdr.New(log.New(os.Stderr, "", log.LstdFlags))
 	logger = logger.WithName("Instrumentation")
 
-	m, err := NewManager(logger, nil, true, nil, config.NewNoopProvider())
+	m, err := NewManager(logger, nil, true, nil, config.NewNoopProvider(nil))
 	assert.NoError(t, err)
 	assert.NotNil(t, m)
 
@@ -242,7 +242,7 @@ func TestRunStopping(t *testing.T) {
 		logger:         logger.WithName("Manager"),
 		probes:         map[probe.ID]probe.Probe{{}: p},
 		eventCh:        make(chan *probe.Event),
-		cp:             config.NewNoopProvider(),
+		cp:             config.NewNoopProvider(nil),
 	}
 
 	mockExeAndBpffs(t)
@@ -290,7 +290,7 @@ func newSlowProbe(stop chan struct{}) slowProbe {
 	}
 }
 
-func (p slowProbe) Load(*link.Executable, *process.TargetDetails) error {
+func (p slowProbe) Load(*link.Executable, *process.TargetDetails, config.Sampler) error {
 	return nil
 }
 
@@ -309,7 +309,7 @@ type noopProbe struct {
 
 var _ probe.Probe = (*noopProbe)(nil)
 
-func (p *noopProbe) Load(*link.Executable, *process.TargetDetails) error {
+func (p *noopProbe) Load(*link.Executable, *process.TargetDetails, config.Sampler) error {
 	p.loaded = true
 	return nil
 }
