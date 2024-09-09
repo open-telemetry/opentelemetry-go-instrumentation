@@ -24,6 +24,7 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 - Support `golang.org/x/net` `v0.29.0`. ([#1051](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1051))
 - Support Go `1.22.7`.  ([#1051](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1051))
 - Support Go `1.23.1`.  ([#1051](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1051))
+- Log version information in the CLI. ([#1077](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1077))
 
 ### Changed
 
