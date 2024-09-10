@@ -14,7 +14,6 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
 
-	"go.opentelemetry.io/auto/config"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/probe/sampling"
 )
 
@@ -205,7 +204,7 @@ func TestWithSampler(t *testing.T) {
 	t.Run("Default sampler", func(t *testing.T) {
 		c, err := newInstConfig(context.Background(), []InstrumentationOption{})
 		require.NoError(t, err)
-		sc, err := config.ConvertSamplerToConfig(c.sampler)
+		sc, err := convertSamplerToConfig(c.sampler)
 		assert.NoError(t, err)
 		assert.Equal(t, sc.Samplers, sampling.DefaultConfig().Samplers)
 		assert.Equal(t, sc.ActiveSampler, sampling.ParentBasedID)
@@ -219,13 +218,13 @@ func TestWithSampler(t *testing.T) {
 
 	t.Run("Env config", func(t *testing.T) {
 		mockEnv(t, map[string]string{
-			config.TracesSamplerKey:    config.SamplerNameParentBasedTraceIDRatio,
-			config.TracesSamplerArgKey: "0.42",
+			tracesSamplerKey:    samplerNameParentBasedTraceIDRatio,
+			tracesSamplerArgKey: "0.42",
 		})
 
 		c, err := newInstConfig(context.Background(), []InstrumentationOption{WithEnv()})
 		require.NoError(t, err)
-		sc, err := config.ConvertSamplerToConfig(c.sampler)
+		sc, err := convertSamplerToConfig(c.sampler)
 		assert.NoError(t, err)
 		assert.Equal(t, sc.ActiveSampler, sampling.ParentBasedID)
 		parentBasedConfig, ok := sc.Samplers[sampling.ParentBasedID]
@@ -245,8 +244,8 @@ func TestWithSampler(t *testing.T) {
 
 	t.Run("Invalid Env config", func(t *testing.T) {
 		mockEnv(t, map[string]string{
-			config.TracesSamplerKey:    "invalid",
-			config.TracesSamplerArgKey: "0.42",
+			tracesSamplerKey:    "invalid",
+			tracesSamplerArgKey: "0.42",
 		})
 
 		_, err := newInstConfig(context.Background(), []InstrumentationOption{WithEnv()})
@@ -256,12 +255,12 @@ func TestWithSampler(t *testing.T) {
 
 	t.Run("WithSampler", func(t *testing.T) {
 		c, err := newInstConfig(context.Background(), []InstrumentationOption{
-			WithSampler(config.ParentBased{
-				Root: config.TraceIDRatio{Fraction: 0.42},
+			WithSampler(ParentBasedSampler{
+				Root: TraceIDRatioSampler{Fraction: 0.42},
 			}),
 		})
 		require.NoError(t, err)
-		sc, err := config.ConvertSamplerToConfig(c.sampler)
+		sc, err := convertSamplerToConfig(c.sampler)
 		assert.NoError(t, err)
 		assert.Equal(t, sc.ActiveSampler, sampling.ParentBasedID)
 		parentBasedConfig, ok := sc.Samplers[sampling.ParentBasedID]

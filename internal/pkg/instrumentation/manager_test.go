@@ -20,8 +20,8 @@ import (
 
 	"go.opentelemetry.io/otel/trace"
 
-	"go.opentelemetry.io/auto/config"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/probe"
+	"go.opentelemetry.io/auto/internal/pkg/instrumentation/probe/sampling"
 	"go.opentelemetry.io/auto/internal/pkg/opentelemetry"
 	"go.opentelemetry.io/auto/internal/pkg/process"
 	"go.opentelemetry.io/auto/internal/pkg/process/binary"
@@ -190,7 +190,7 @@ func fakeManager(t *testing.T) *Manager {
 	logger := stdr.New(log.New(os.Stderr, "", log.LstdFlags))
 	logger = logger.WithName("Instrumentation")
 
-	m, err := NewManager(logger, nil, true, nil, config.NewNoopProvider(nil))
+	m, err := NewManager(logger, nil, true, nil, NewNoopConfigProvider(nil))
 	assert.NoError(t, err)
 	assert.NotNil(t, m)
 
@@ -242,7 +242,7 @@ func TestRunStopping(t *testing.T) {
 		logger:         logger.WithName("Manager"),
 		probes:         map[probe.ID]probe.Probe{{}: p},
 		eventCh:        make(chan *probe.Event),
-		cp:             config.NewNoopProvider(nil),
+		cp:             NewNoopConfigProvider(nil),
 	}
 
 	mockExeAndBpffs(t)
@@ -290,7 +290,7 @@ func newSlowProbe(stop chan struct{}) slowProbe {
 	}
 }
 
-func (p slowProbe) Load(*link.Executable, *process.TargetDetails, config.Sampler) error {
+func (p slowProbe) Load(*link.Executable, *process.TargetDetails, *sampling.Config) error {
 	return nil
 }
 
@@ -309,7 +309,7 @@ type noopProbe struct {
 
 var _ probe.Probe = (*noopProbe)(nil)
 
-func (p *noopProbe) Load(*link.Executable, *process.TargetDetails, config.Sampler) error {
+func (p *noopProbe) Load(*link.Executable, *process.TargetDetails, *sampling.Config) error {
 	p.loaded = true
 	return nil
 }
@@ -330,22 +330,22 @@ func (p *noopProbe) Manifest() probe.Manifest {
 }
 
 type dummyProvider struct {
-	initial config.InstrumentationConfig
-	ch      chan config.InstrumentationConfig
+	initial Config
+	ch      chan Config
 }
 
-func newDummyProvider(initialConfig config.InstrumentationConfig) config.Provider {
+func newDummyProvider(initialConfig Config) ConfigProvider {
 	return &dummyProvider{
-		ch:      make(chan config.InstrumentationConfig),
+		ch:      make(chan Config),
 		initial: initialConfig,
 	}
 }
 
-func (p *dummyProvider) InitialConfig(_ context.Context) config.InstrumentationConfig {
+func (p *dummyProvider) InitialConfig(_ context.Context) Config {
 	return p.initial
 }
 
-func (p *dummyProvider) Watch() <-chan config.InstrumentationConfig {
+func (p *dummyProvider) Watch() <-chan Config {
 	return p.ch
 }
 
@@ -354,7 +354,7 @@ func (p *dummyProvider) Shutdown(_ context.Context) error {
 	return nil
 }
 
-func (p *dummyProvider) sendConfig(c config.InstrumentationConfig) {
+func (p *dummyProvider) sendConfig(c Config) {
 	p.ch <- c
 }
 
@@ -367,8 +367,8 @@ func TestConfigProvider(t *testing.T) {
 	netHTTPServerProbeID := probe.ID{InstrumentedPkg: "net/http", SpanKind: trace.SpanKindServer}
 	somePackageProducerProbeID := probe.ID{InstrumentedPkg: "some/package", SpanKind: trace.SpanKindProducer}
 
-	netHTTPClientLibID := config.InstrumentationLibraryID{InstrumentedPkg: "net/http", SpanKind: trace.SpanKindClient}
-	netHTTPLibID := config.InstrumentationLibraryID{InstrumentedPkg: "net/http"}
+	netHTTPClientLibID := LibraryID{InstrumentedPkg: "net/http", SpanKind: trace.SpanKindClient}
+	netHTTPLibID := LibraryID{InstrumentedPkg: "net/http"}
 	falseVal := false
 
 	m := &Manager{
@@ -379,8 +379,8 @@ func TestConfigProvider(t *testing.T) {
 			somePackageProducerProbeID: &noopProbe{},
 		},
 		eventCh: make(chan *probe.Event),
-		cp: newDummyProvider(config.InstrumentationConfig{
-			InstrumentationLibraryConfigs: map[config.InstrumentationLibraryID]config.InstrumentationLibrary{
+		cp: newDummyProvider(Config{
+			InstrumentationLibraryConfigs: map[LibraryID]Library{
 				netHTTPClientLibID: {TracesEnabled: &falseVal},
 			},
 		}),
@@ -419,7 +419,7 @@ func TestConfigProvider(t *testing.T) {
 	assert.True(t, probeRunning(somePackageProducerProbeID))
 
 	// Send a new config that enables the net/http client probe by removing the explicit disable
-	m.cp.(*dummyProvider).sendConfig(config.InstrumentationConfig{})
+	m.cp.(*dummyProvider).sendConfig(Config{})
 	assert.Eventually(t, func() bool {
 		return probeRunning(netHTTPClientProbeID)
 	}, time.Second, 10*time.Millisecond)
@@ -427,8 +427,8 @@ func TestConfigProvider(t *testing.T) {
 	assert.True(t, probeRunning(somePackageProducerProbeID))
 
 	// Send a new config that disables the net/http client and server probes
-	m.cp.(*dummyProvider).sendConfig(config.InstrumentationConfig{
-		InstrumentationLibraryConfigs: map[config.InstrumentationLibraryID]config.InstrumentationLibrary{
+	m.cp.(*dummyProvider).sendConfig(Config{
+		InstrumentationLibraryConfigs: map[LibraryID]Library{
 			netHTTPLibID: {TracesEnabled: &falseVal},
 		},
 	})
@@ -439,7 +439,7 @@ func TestConfigProvider(t *testing.T) {
 	assert.True(t, probeRunning(somePackageProducerProbeID))
 
 	// Send a new config the disables all probes by default
-	m.cp.(*dummyProvider).sendConfig(config.InstrumentationConfig{
+	m.cp.(*dummyProvider).sendConfig(Config{
 		DefaultTracesDisabled: true,
 	})
 	assert.Eventually(t, func() bool {
@@ -449,7 +449,7 @@ func TestConfigProvider(t *testing.T) {
 	}, time.Second, 10*time.Millisecond)
 
 	// Send a new config that enables all probes by default
-	m.cp.(*dummyProvider).sendConfig(config.InstrumentationConfig{})
+	m.cp.(*dummyProvider).sendConfig(Config{})
 	assert.Eventually(t, func() bool {
 		return probeRunning(netHTTPClientProbeID) &&
 			probeRunning(netHTTPServerProbeID) &&
@@ -465,6 +465,6 @@ func TestConfigProvider(t *testing.T) {
 
 	// Send a config to enable all probes, but the manager is stopped - this should panic
 	assert.Panics(t, func() {
-		m.cp.(*dummyProvider).sendConfig(config.InstrumentationConfig{})
+		m.cp.(*dummyProvider).sendConfig(Config{})
 	})
 }
