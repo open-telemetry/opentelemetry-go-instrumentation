@@ -18,9 +18,9 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/hashicorp/go-version"
 
-	"go.opentelemetry.io/auto/config"
 	"go.opentelemetry.io/auto/internal/pkg/inject"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/bpffs"
+	"go.opentelemetry.io/auto/internal/pkg/instrumentation/probe/sampling"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/utils"
 	"go.opentelemetry.io/auto/internal/pkg/process"
 	"go.opentelemetry.io/auto/internal/pkg/structfield"
@@ -33,11 +33,11 @@ type Probe interface {
 	// the information about the package the Probe instruments.
 	Manifest() Manifest
 
-	// Load loads all the eBPF programs ans maps required by the Probe.
+	// Load loads all the eBPF programs and maps required by the Probe.
 	// It also attaches the eBPF programs to the target process.
 	// TODO: currently passing Sampler as an initial configuration - this will be
 	// updated to a more generic configuration in the future.
-	Load(*link.Executable, *process.TargetDetails, config.Sampler) error
+	Load(*link.Executable, *process.TargetDetails, *sampling.Config) error
 
 	// Run runs the events processing loop.
 	Run(eventsChan chan<- *Event)
@@ -101,7 +101,7 @@ func (i *Base[BPFObj, BPFEvent]) Spec() (*ebpf.CollectionSpec, error) {
 }
 
 // Load loads all instrumentation offsets.
-func (i *Base[BPFObj, BPFEvent]) Load(exec *link.Executable, td *process.TargetDetails, sampler config.Sampler) error {
+func (i *Base[BPFObj, BPFEvent]) Load(exec *link.Executable, td *process.TargetDetails, sampler *sampling.Config) error {
 	spec, err := i.SpecFn()
 	if err != nil {
 		return err
