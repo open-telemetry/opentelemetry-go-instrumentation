@@ -15,7 +15,6 @@ import (
 
 	"go.opentelemetry.io/otel/trace"
 
-	"go.opentelemetry.io/auto/config"
 	dbSql "go.opentelemetry.io/auto/internal/pkg/instrumentation/bpf/database/sql"
 	kafkaConsumer "go.opentelemetry.io/auto/internal/pkg/instrumentation/bpf/github.com/segmentio/kafka-go/consumer"
 	kafkaProducer "go.opentelemetry.io/auto/internal/pkg/instrumentation/bpf/github.com/segmentio/kafka-go/producer"
@@ -53,18 +52,18 @@ type Manager struct {
 	otelController  *opentelemetry.Controller
 	globalImpl      bool
 	loadedIndicator chan struct{}
-	cp              config.Provider
+	cp              ConfigProvider
 	exe             *link.Executable
 	td              *process.TargetDetails
 	runningProbesWG sync.WaitGroup
 	eventCh         chan *probe.Event
-	currentConfig   config.InstrumentationConfig
+	currentConfig   Config
 	probeMu         sync.Mutex
 	state           managerState
 }
 
 // NewManager returns a new [Manager].
-func NewManager(logger logr.Logger, otelController *opentelemetry.Controller, globalImpl bool, loadIndicator chan struct{}, cp config.Provider) (*Manager, error) {
+func NewManager(logger logr.Logger, otelController *opentelemetry.Controller, globalImpl bool, loadIndicator chan struct{}, cp ConfigProvider) (*Manager, error) {
 	logger = logger.WithName("Manager")
 	m := &Manager{
 		logger:          logger,
@@ -154,8 +153,8 @@ func (m *Manager) FilterUnusedProbes(target *process.TargetDetails) {
 	}
 }
 
-func getProbeConfig(id probe.ID, c config.InstrumentationConfig) (config.InstrumentationLibrary, bool) {
-	libKindID := config.InstrumentationLibraryID{
+func getProbeConfig(id probe.ID, c Config) (Library, bool) {
+	libKindID := LibraryID{
 		InstrumentedPkg: id.InstrumentedPkg,
 		SpanKind:        id.SpanKind,
 	}
@@ -164,7 +163,7 @@ func getProbeConfig(id probe.ID, c config.InstrumentationConfig) (config.Instrum
 		return lib, true
 	}
 
-	libID := config.InstrumentationLibraryID{
+	libID := LibraryID{
 		InstrumentedPkg: id.InstrumentedPkg,
 		SpanKind:        trace.SpanKindUnspecified,
 	}
@@ -173,17 +172,17 @@ func getProbeConfig(id probe.ID, c config.InstrumentationConfig) (config.Instrum
 		return lib, true
 	}
 
-	return config.InstrumentationLibrary{}, false
+	return Library{}, false
 }
 
-func isProbeEnabled(id probe.ID, c config.InstrumentationConfig) bool {
+func isProbeEnabled(id probe.ID, c Config) bool {
 	if pc, ok := getProbeConfig(id, c); ok && pc.TracesEnabled != nil {
 		return *pc.TracesEnabled
 	}
 	return !c.DefaultTracesDisabled
 }
 
-func (m *Manager) applyConfig(c config.InstrumentationConfig) error {
+func (m *Manager) applyConfig(c Config) error {
 	if m.td == nil {
 		return errors.New("failed to apply config: target details not set")
 	}
@@ -211,7 +210,7 @@ func (m *Manager) applyConfig(c config.InstrumentationConfig) error {
 
 		if !currentlyEnabled && newEnabled {
 			m.logger.Info("Enabling probe", "id", id)
-			err = errors.Join(err, p.Load(m.exe, m.td, c.Sampler))
+			err = errors.Join(err, p.Load(m.exe, m.td, c.SamplingConfig))
 			if err == nil {
 				m.runProbe(p)
 			}
@@ -324,7 +323,7 @@ func (m *Manager) load(target *process.TargetDetails) error {
 	for name, i := range m.probes {
 		if isProbeEnabled(name, m.currentConfig) {
 			m.logger.V(0).Info("loading probe", "name", name)
-			err := i.Load(exe, target, m.currentConfig.Sampler)
+			err := i.Load(exe, target, m.currentConfig.SamplingConfig)
 			if err != nil {
 				m.logger.Error(err, "error while loading probes, cleaning up", "name", name)
 				return errors.Join(err, m.cleanup(target))

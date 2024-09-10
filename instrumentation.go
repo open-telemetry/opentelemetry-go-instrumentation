@@ -28,7 +28,6 @@ import (
 	"go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
 
-	"go.opentelemetry.io/auto/config"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation"
 	"go.opentelemetry.io/auto/internal/pkg/opentelemetry"
 	"go.opentelemetry.io/auto/internal/pkg/process"
@@ -131,7 +130,8 @@ func NewInstrumentation(ctx context.Context, opts ...InstrumentationOption) (*In
 		return nil, err
 	}
 
-	mngr, err := instrumentation.NewManager(logger, ctrl, c.globalImpl, c.loadIndicator, c.cp)
+	cp := convertConfigProvider(c.cp)
+	mngr, err := instrumentation.NewManager(logger, ctrl, c.globalImpl, c.loadIndicator, cp)
 	if err != nil {
 		return nil, err
 	}
@@ -221,8 +221,8 @@ type instConfig struct {
 	globalImpl         bool
 	loadIndicator      chan struct{}
 	logLevel           LogLevel
-	sampler            config.Sampler
-	cp                 config.Provider
+	sampler            Sampler
+	cp                 ConfigProvider
 }
 
 func newInstConfig(ctx context.Context, opts []InstrumentationOption) (instConfig, error) {
@@ -250,7 +250,7 @@ func newInstConfig(ctx context.Context, opts []InstrumentationOption) (instConfi
 	}
 
 	if c.sampler == nil {
-		c.sampler = config.DefaultSampler()
+		c.sampler = DefaultSampler()
 	}
 
 	if c.logLevel == logLevelUndefined {
@@ -258,7 +258,7 @@ func newInstConfig(ctx context.Context, opts []InstrumentationOption) (instConfi
 	}
 
 	if c.cp == nil {
-		c.cp = config.NewNoopProvider(c.sampler)
+		c.cp = newNoopConfigProvider(c.sampler)
 	}
 
 	return c, err
@@ -451,7 +451,7 @@ func WithEnv() InstrumentationOption {
 
 			err = errors.Join(err, e)
 		}
-		if s, e := config.NewSamplerFromEnv(lookupEnv); e != nil {
+		if s, e := newSamplerFromEnv(lookupEnv); e != nil {
 			err = errors.Join(err, e)
 		} else {
 			c.sampler = s
@@ -509,7 +509,7 @@ func WithTraceExporter(exp trace.SpanExporter) InstrumentationOption {
 
 // WithSampler returns an [InstrumentationOption] that will configure
 // an [Instrumentation] to use the provided sampler to sample OpenTelemetry traces.
-func WithSampler(sampler config.Sampler) InstrumentationOption {
+func WithSampler(sampler Sampler) InstrumentationOption {
 	return fnOpt(func(_ context.Context, c instConfig) (instConfig, error) {
 		c.sampler = sampler
 		return c, nil
@@ -579,10 +579,10 @@ func WithLogLevel(level LogLevel) InstrumentationOption {
 }
 
 // WithConfigProvider returns an [InstrumentationOption] that will configure
-// an [Instrumentation] to use the provided config.Provider. The config.Provider
+// an [Instrumentation] to use the provided ConfigProvider. The ConfigProvider
 // is used to provide the initial configuration and update the configuration of
 // the instrumentation in runtime.
-func WithConfigProvider(cp config.Provider) InstrumentationOption {
+func WithConfigProvider(cp ConfigProvider) InstrumentationOption {
 	return fnOpt(func(_ context.Context, c instConfig) (instConfig, error) {
 		c.cp = cp
 		return c, nil
