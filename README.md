@@ -49,7 +49,7 @@ For technical and design info, see [How it works](docs/how-it-works.md).
 
 ## Configuration
 
-For a list of supported environment variables that you can use to configure your Go automatic instrumentation, see [Configuration](docs/configuration.md).
+To configure your Go automatic instrumentation, see [Configuration](docs/configuration.md).
 
 ## Contributing
 
