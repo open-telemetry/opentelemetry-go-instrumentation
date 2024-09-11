@@ -74,7 +74,9 @@ SCOPE="go.opentelemetry.io/auto/google.golang.org/grpc"
 }
 
 @test "client :: trace ID present and valid in all spans" {
-  trace_id=$(client_spans_from_scope_named ${SCOPE} | jq ".traceId" | uniq)
+  trace_id=$(client_spans_from_scope_named ${SCOPE} | jq ".traceId" | jq -Rn '[inputs]' | jq -r .[0])
+  assert_regex "$trace_id" ${MATCH_A_TRACE_ID}
+  trace_id=$(client_spans_from_scope_named ${SCOPE} | jq ".traceId" | jq -Rn '[inputs]' | jq -r .[1])
   assert_regex "$trace_id" ${MATCH_A_TRACE_ID}
 }
 
