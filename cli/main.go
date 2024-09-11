@@ -83,7 +83,11 @@ func main() {
 		}
 	}()
 
-	logger.Info("building OpenTelemetry Go instrumentation ...", "globalImpl", globalImpl)
+	logger.Info(
+		"building OpenTelemetry Go instrumentation ...",
+		"globalImpl", globalImpl,
+		"version", newVersion(),
+	)
 
 	loadedIndicator := make(chan struct{})
 	instOptions := []auto.InstrumentationOption{auto.WithEnv(), auto.WithLoadedIndicator(loadedIndicator)}
