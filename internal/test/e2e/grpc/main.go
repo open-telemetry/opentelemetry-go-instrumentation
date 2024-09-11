@@ -71,6 +71,13 @@ func main() {
 	s.GracefulStop()
 	<-done
 
+	// try making a request after the server has stopped to generate an error status
+	_, err = c.SayHello(ctx, &pb.HelloRequest{Name: "world"})
+	if err == nil {
+		log.Fatalf("expected an error but none was returned")
+	}
+	log.Printf("received expected error: %+v", err)
+
 	// Give time for auto-instrumentation to do the dew.
 	time.Sleep(5 * time.Second)
 }
