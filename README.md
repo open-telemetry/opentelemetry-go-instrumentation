@@ -49,7 +49,7 @@ For technical and design info, see [How it works](docs/how-it-works.md).
 
 ## Configuration
 
-To configure your Go automatic instrumentation, see [Configuration](docs/configuration.md).
+See the [configuration documentation](docs/configuration.md).
 
 ## Contributing
 
