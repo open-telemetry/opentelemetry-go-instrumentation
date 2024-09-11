@@ -53,6 +53,10 @@ func TestOffsets(t *testing.T) {
 	assert.True(t, ok, "did not get 1.2.1")
 	assert.Equal(t, OffsetKey{Offset: 2, Valid: true}, off, "invalid value for 1.2.1")
 
+	off, ver := o.getLatest()
+	assert.Equal(t, v121, ver.ToVersion(), "invalid version for latest")
+	assert.Equal(t, OffsetKey{Offset: 2, Valid: true}, off, "invalid value for latest")
+
 	o.Put(v120, OffsetKey{Offset: 1, Valid: true})
 	off, ok = o.Get(v120)
 	assert.True(t, ok, "did not get 1.2.0 after reset")
@@ -122,4 +126,22 @@ func TestIndexUnmarshalJSON(t *testing.T) {
 	var got Index
 	require.NoError(t, json.NewDecoder(f).Decode(&got))
 	assert.Equal(t, index, &got)
+}
+
+func TestGetLatestOffsetFromIndex(t *testing.T) {
+	off, ver := index.GetLatestOffset(NewID("std", "net/http", "Request", "Method"))
+	assert.Equal(t, v130, ver, "invalid version for Request.Method")
+	assert.Equal(t, OffsetKey{Offset: 1, Valid: true}, off, "invalid value for Request.Method")
+
+	off, ver = index.GetLatestOffset(NewID("std", "net/http", "Request", "URL"))
+	assert.Equal(t, v130, ver, "invalid version for Request.URL")
+	assert.Equal(t, OffsetKey{Offset: 2, Valid: true}, off, "invalid value for Request.URL")
+
+	off, ver = index.GetLatestOffset(NewID("std", "net/http", "Response", "Status"))
+	assert.Equal(t, v120, ver, "invalid version for Response.Status")
+	assert.Equal(t, OffsetKey{Offset: 0, Valid: true}, off, "invalid value for Response.Status")
+
+	off, ver = index.GetLatestOffset(NewID("google.golang.org/grpc", "google.golang.org/grpc", "ClientConn", "target"))
+	assert.Equal(t, v120, ver, "invalid version for ClientConn.target")
+	assert.Equal(t, OffsetKey{Offset: 0, Valid: true}, off, "invalid value for ClientConn.target")
 }

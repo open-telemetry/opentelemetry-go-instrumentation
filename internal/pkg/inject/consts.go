@@ -139,3 +139,7 @@ func WithOffset(key string, id structfield.ID, ver *version.Version) Option {
 	}
 	return WithKeyValue(key, off.Offset)
 }
+
+func GetLatestOffset(id structfield.ID) (structfield.OffsetKey, *version.Version) {
+	return offsets.GetLatestOffset(id)
+}
