@@ -153,10 +153,10 @@
                   }
                 }
               ],
-              "flags": 768,
+              "flags": 256,
               "kind": 3,
               "name": "/helloworld.Greeter/SayHello",
-              "parentSpanId": "xxxxx",
+              "parentSpanId": "",
               "spanId": "xxxxx",
               "status": {
                 "code": 2
