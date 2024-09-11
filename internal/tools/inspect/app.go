@@ -10,9 +10,9 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"os"
 
-	"github.com/go-logr/logr"
 	"github.com/hashicorp/go-version"
 
 	"go.opentelemetry.io/auto/internal/pkg/structfield"
@@ -25,7 +25,7 @@ type app struct {
 	AppVer   *version.Version
 	Fields   []structfield.ID
 
-	log    logr.Logger
+	log    *slog.Logger
 	tmpDir string
 	exec   string
 	data   *dwarf.Data
@@ -36,13 +36,13 @@ type app struct {
 // The new app is built in a temp directory. It is up to the caller to ensure
 // the returned app's Close method is called when it is no longer needed so
 // all temp directory resources are cleaned up.
-func newApp(ctx context.Context, l logr.Logger, j job) (*app, error) {
+func newApp(ctx context.Context, l *slog.Logger, j job) (*app, error) {
 	a := &app{
 		Renderer: j.Renderer,
 		Builder:  j.Builder,
 		AppVer:   j.AppVer,
 		Fields:   j.Fields,
-		log:      l.WithName("app"),
+		log:      l,
 	}
 
 	var err error
@@ -79,14 +79,14 @@ func newApp(ctx context.Context, l logr.Logger, j job) (*app, error) {
 		return nil, err
 	}
 
-	a.log.V(1).Info("built app", "binary", a.exec)
+	a.log.Debug("built app", "binary", a.exec)
 	return a, nil
 }
 
 // GetOffset returnst the struct field offset for sf. It uses the DWARF data
 // of the app's built binary to find this value.
 func (a *app) GetOffset(id structfield.ID) (uint64, bool) {
-	a.log.V(1).Info("analyzing binary...", "id", id, "binary", a.exec)
+	a.log.Debug("analyzing binary...", "id", id, "binary", a.exec)
 
 	strct := fmt.Sprintf("%s.%s", id.PkgPath, id.Struct)
 	r := a.data.Reader()

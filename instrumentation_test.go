@@ -73,21 +73,6 @@ func TestWithEnv(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, name, c.serviceName)
 	})
-
-	t.Run("OTEL_LOG_LEVEL", func(t *testing.T) {
-		const name = "debug"
-		mockEnv(t, map[string]string{"OTEL_LOG_LEVEL": name})
-
-		c, err := newInstConfig(context.Background(), []InstrumentationOption{WithEnv()})
-		require.NoError(t, err)
-		assert.Equal(t, LogLevelDebug, c.logLevel)
-
-		const wrong = "invalid"
-
-		mockEnv(t, map[string]string{"OTEL_LOG_LEVEL": wrong})
-		_, err = newInstConfig(context.Background(), []InstrumentationOption{WithEnv()})
-		require.Error(t, err)
-	})
 }
 
 func TestOptionPrecedence(t *testing.T) {
@@ -175,28 +160,6 @@ func TestWithResourceAttributes(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, nameAttr.Value.AsString(), c.serviceName)
 		assert.Equal(t, []attribute.KeyValue{attr2, attr3}, c.additionalResAttrs)
-	})
-}
-
-func TestWithLogLevel(t *testing.T) {
-	t.Run("With Valid Input", func(t *testing.T) {
-		c, err := newInstConfig(context.Background(), []InstrumentationOption{WithLogLevel("error")})
-
-		require.NoError(t, err)
-
-		assert.Equal(t, LogLevelError, c.logLevel)
-
-		c, err = newInstConfig(context.Background(), []InstrumentationOption{WithLogLevel(LogLevelInfo)})
-
-		require.NoError(t, err)
-
-		assert.Equal(t, LogLevelInfo, c.logLevel)
-	})
-
-	t.Run("Will Validate Input", func(t *testing.T) {
-		_, err := newInstConfig(context.Background(), []InstrumentationOption{WithLogLevel("invalid")})
-
-		require.Error(t, err)
 	})
 }
 

@@ -6,8 +6,7 @@ package opentelemetry
 import (
 	"context"
 	"fmt"
-	"log"
-	"os"
+	"log/slog"
 	"runtime"
 	"strconv"
 	"strings"
@@ -15,8 +14,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/go-logr/logr/testr"
-	"github.com/go-logr/stdr"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -62,7 +59,6 @@ func instResource() *resource.Resource {
 func TestTrace(t *testing.T) {
 	startTime := time.Now()
 	endTime := startTime.Add(1 * time.Second)
-	logger := stdr.New(log.New(os.Stderr, "", log.LstdFlags))
 
 	exporter := tracetest.NewInMemoryExporter()
 	tp := sdktrace.NewTracerProvider(
@@ -75,7 +71,7 @@ func TestTrace(t *testing.T) {
 		assert.NoError(t, err)
 	}()
 
-	ctrl, err := NewController(logger, tp, "test")
+	ctrl, err := NewController(slog.Default(), tp, "test")
 	assert.NoError(t, err)
 
 	convertedStartTime := ctrl.convertTime(startTime.Unix())
@@ -297,8 +293,6 @@ func TestTrace(t *testing.T) {
 }
 
 func TestGetTracer(t *testing.T) {
-	logger := stdr.New(log.New(os.Stderr, "", log.LstdFlags))
-
 	exporter := tracetest.NewInMemoryExporter()
 	tp := sdktrace.NewTracerProvider(
 		sdktrace.WithSampler(sdktrace.AlwaysSample()),
@@ -310,7 +304,7 @@ func TestGetTracer(t *testing.T) {
 		assert.NoError(t, err)
 	}()
 
-	ctrl, err := NewController(logger, tp, "test")
+	ctrl, err := NewController(slog.Default(), tp, "test")
 	assert.NoError(t, err)
 
 	t1 := ctrl.getTracer("foo/bar", "test", "v1", "schema")
@@ -361,7 +355,7 @@ func TestShutdown(t *testing.T) {
 
 	tp := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(batcher))
 
-	ctrl, err := NewController(testr.New(t), tp, "test")
+	ctrl, err := NewController(slog.Default(), tp, "test")
 	require.NoError(t, err)
 
 	ctx := context.Background()

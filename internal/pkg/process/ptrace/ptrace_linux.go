@@ -5,6 +5,7 @@ package ptrace
 
 import (
 	"fmt"
+	"log/slog"
 	"os"
 	"strconv"
 	"strings"
@@ -12,7 +13,6 @@ import (
 
 	"golang.org/x/sys/unix"
 
-	"github.com/go-logr/logr"
 	"github.com/hashicorp/go-version"
 	"github.com/pkg/errors"
 
@@ -38,7 +38,7 @@ type TracedProgram struct {
 	backupRegs *syscall.PtraceRegs
 	backupCode []byte
 
-	logger logr.Logger
+	logger *slog.Logger
 }
 
 // Pid return the pid of traced program.
@@ -59,9 +59,7 @@ func waitPid(pid int) error {
 }
 
 // NewTracedProgram ptrace all threads of a process.
-func NewTracedProgram(pid int, logger logr.Logger) (*TracedProgram, error) {
-	logger = logger.WithName("TracedProgram")
-
+func NewTracedProgram(pid int, logger *slog.Logger) (*TracedProgram, error) {
 	tidMap := make(map[int]bool)
 	retryCount := make(map[int]int)
 
@@ -105,7 +103,7 @@ func NewTracedProgram(pid int, logger logr.Logger) (*TracedProgram, error) {
 					retryCount[tid]++
 				}
 				if retryCount[tid] < threadRetryLimit {
-					logger.V(1).Info("retry attaching thread", "tid", tid, "retryCount", retryCount[tid], "limit", threadRetryLimit)
+					logger.Debug("retry attaching thread", "tid", tid, "retryCount", retryCount[tid], "limit", threadRetryLimit)
 					continue
 				}
 
@@ -119,12 +117,12 @@ func NewTracedProgram(pid int, logger logr.Logger) (*TracedProgram, error) {
 			if err != nil {
 				e := syscall.PtraceDetach(tid)
 				if e != nil && !strings.Contains(e.Error(), "no such process") {
-					logger.Error(e, "detach failed", "tid", tid)
+					logger.Error("detach failed", "error", e, "tid", tid)
 				}
 				return nil, errors.WithStack(err)
 			}
 
-			logger.V(1).Info("attach successfully", "tid", tid)
+			logger.Debug("attach successfully", "tid", tid)
 			tids[tid] = true
 			tidMap[tid] = true
 		}
@@ -236,7 +234,7 @@ func (p *TracedProgram) Madvise(addr uint64, length uint64) error {
 	}
 
 	minVersion := version.Must(version.NewVersion("5.14"))
-	p.logger.V(1).Info("Detected linux kernel version", "version", ver)
+	p.logger.Debug("Detected linux kernel version", "version", ver)
 	if ver.GreaterThanOrEqual(minVersion) {
 		advice = syscall.MADV_WILLNEED | MadvisePopulateRead | MadvisePopulateWrite
 	}
@@ -248,6 +246,6 @@ func (p *TracedProgram) Madvise(addr uint64, length uint64) error {
 // Mlock runs mlock syscall.
 func (p *TracedProgram) Mlock(addr uint64, length uint64) error {
 	ret, err := p.Syscall(syscall.SYS_MLOCK, addr, length, 0, 0, 0, 0)
-	p.logger.V(1).Info("mlock ret", "ret", ret)
+	p.logger.Debug("mlock ret", "ret", ret)
 	return err
 }

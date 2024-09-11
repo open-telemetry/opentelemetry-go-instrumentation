@@ -29,15 +29,31 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 - Add gRPC status code attribute for client spans (`rpc.grpc.status_code`). ([#1044](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1044))
 - Support `google.golang.org/grpc` `1.68.0-dev`. ([#1044](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1044))
 - Support `go.opentelemetry.io/otel@v1.30.0`. ([#1044](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1044))
+- The `WithLogger` `InstrumentationOption` is added as a replacement for `WithLogLevel`.
+  An `slog.Logger` can now be configured by the user any way they want and then passed to the `Instrumentation` for its logging with this option.
+  By default, if this is not provided, the default `slog` `Logger` will be used. ([#1080](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1080))
 
 ### Changed
 
 - The `WithSampler` option function now accepts the new `Sampler` interface instead of `trace.Sampler`. ([#982](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/982))
+- The `WithEnv` `InstrumentationOption` no longer supports the `OTEL_LOG_LEVEL` environment variable.
+  This is now configured by the user via the logger they pass using the added `WithLogger` option. ([#1080](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1080))
 
 ### Fixed
 
 - Fix dirty shutdown caused by panic. ([#980](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/980))
 - Flush pending span exports on shutdown. ([#1028](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1028))
+
+### Removed
+
+- `WithLogLevel` is removed.
+  Use `WithLogger` instead. ([#1080](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1080))
+- The unused `LogLevelDebug` constant is removed. ([#1080](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1080))
+- The unused `LogLevelInfo` constant is removed. ([#1080](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1080))
+- The unused `LogLevelWarn` constant is removed. ([#1080](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1080))
+- The unused `LogLevelError` constant is removed. ([#1080](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1080))
+- The unused `LogLevel` type is removed. ([#1080](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1080))
+- The unused `ParseLogLevel` function is removed. ([#1080](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1080))
 
 ## [v0.14.0-alpha] - 2024-07-15
 

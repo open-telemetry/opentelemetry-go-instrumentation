@@ -5,9 +5,9 @@ package inspect
 
 import (
 	"encoding/json"
+	"log/slog"
 	"os"
 
-	"github.com/go-logr/logr"
 	"github.com/hashicorp/go-version"
 
 	"go.opentelemetry.io/auto/internal/pkg/structfield"
@@ -15,13 +15,13 @@ import (
 
 // Cache is a cache of struct field offsets.
 type Cache struct {
-	log  logr.Logger
+	log  *slog.Logger
 	data *structfield.Index
 }
 
 // NewCache loads struct field offsets from offsetFile and returns them as a
 // new Cache.
-func NewCache(l logr.Logger, offsetFile string) (*Cache, error) {
+func NewCache(l *slog.Logger, offsetFile string) (*Cache, error) {
 	c := newCache(l)
 
 	f, err := os.Open(offsetFile)
@@ -35,8 +35,8 @@ func NewCache(l logr.Logger, offsetFile string) (*Cache, error) {
 	return c, err
 }
 
-func newCache(l logr.Logger) *Cache {
-	return &Cache{log: l.WithName("cache")}
+func newCache(l *slog.Logger) *Cache {
+	return &Cache{log: l}
 }
 
 // GetOffset returns the cached offset key and true for the id at the specified
@@ -54,6 +54,6 @@ func (c *Cache) GetOffset(ver *version.Version, id structfield.ID) (structfield.
 	} else {
 		msg += "miss"
 	}
-	c.log.V(1).Info(msg, "version", ver, "id", id)
+	c.log.Debug(msg, "version", ver, "id", id)
 	return off, ok
 }

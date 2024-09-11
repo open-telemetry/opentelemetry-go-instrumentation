@@ -8,18 +8,13 @@ import (
 	"debug/buildinfo"
 	"errors"
 	"fmt"
-	"log"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"runtime"
 	"strconv"
 	"strings"
 	"sync"
-
-	"github.com/go-logr/logr"
-	"github.com/go-logr/stdr"
-	"github.com/go-logr/zapr"
-	"go.uber.org/zap"
 
 	"go.opentelemetry.io/contrib/exporters/autoexport"
 	"go.opentelemetry.io/otel/attribute"
@@ -48,8 +43,6 @@ const (
 	// envOtelGlobalImplKey is the key for the environment variable value enabling to opt-in for the
 	// OpenTelemetry global implementation. It should be a boolean value.
 	envOtelGlobalImplKey = "OTEL_GO_AUTO_GLOBAL"
-	// envLogLevelKey is the key for the environment variable value containing the log level.
-	envLogLevelKey = "OTEL_LOG_LEVEL"
 )
 
 // Instrumentation manages and controls all OpenTelemetry Go
@@ -68,33 +61,6 @@ type Instrumentation struct {
 // binary or pid.
 var errUndefinedTarget = fmt.Errorf("undefined target Go binary, consider setting the %s environment variable pointing to the target binary to instrument", envTargetExeKey)
 
-func newLogger(logLevel LogLevel) logr.Logger {
-	level, logErr := zap.ParseAtomicLevel(logLevel.String())
-	if logErr != nil {
-		level, _ = zap.ParseAtomicLevel(LogLevelInfo.String())
-	}
-
-	c := zap.NewProductionConfig()
-
-	c.Level.SetLevel(level.Level())
-
-	zapLog, err := c.Build()
-
-	var logger logr.Logger
-	if err != nil {
-		// Fallback to stdr logger.
-		logger = stdr.New(log.New(os.Stderr, "", log.LstdFlags))
-	} else {
-		logger = zapr.NewLogger(zapLog)
-	}
-
-	if logErr != nil {
-		logger.Error(logErr, "invalid log level; using LevelInfo instead", zap.Error(logErr), zap.String("input", logLevel.String()))
-	}
-
-	return logger
-}
-
 // NewInstrumentation returns a new [Instrumentation] configured with the
 // provided opts.
 //
@@ -109,12 +75,7 @@ func NewInstrumentation(ctx context.Context, opts ...InstrumentationOption) (*In
 		return nil, err
 	}
 
-	// We likely want to use slog instead of logr in the longterm. Wait until
-	// that package has enough Go version support
-	logger := newLogger(c.logLevel)
-	logger = logger.WithName("Instrumentation")
-
-	pa := process.NewAnalyzer(logger)
+	pa := process.NewAnalyzer(c.logger)
 	pid, err := pa.DiscoverProcessID(ctx, &c.target)
 	if err != nil {
 		return nil, err
@@ -125,13 +86,13 @@ func NewInstrumentation(ctx context.Context, opts ...InstrumentationOption) (*In
 		return nil, err
 	}
 
-	ctrl, err := opentelemetry.NewController(logger, c.tracerProvider(pa.BuildInfo), Version())
+	ctrl, err := opentelemetry.NewController(c.logger, c.tracerProvider(pa.BuildInfo), Version())
 	if err != nil {
 		return nil, err
 	}
 
 	cp := convertConfigProvider(c.cp)
-	mngr, err := instrumentation.NewManager(logger, ctrl, c.globalImpl, c.loadIndicator, cp)
+	mngr, err := instrumentation.NewManager(c.logger, ctrl, c.globalImpl, c.loadIndicator, cp)
 	if err != nil {
 		return nil, err
 	}
@@ -141,13 +102,13 @@ func NewInstrumentation(ctx context.Context, opts ...InstrumentationOption) (*In
 		return nil, err
 	}
 
-	allocDetails, err := process.Allocate(logger, pid)
+	allocDetails, err := process.Allocate(c.logger, pid)
 	if err != nil {
 		return nil, err
 	}
 	td.AllocationDetails = allocDetails
 
-	logger.Info(
+	c.logger.Info(
 		"target process analysis completed",
 		"pid", td.PID,
 		"go_version", td.GoVersion,
@@ -220,7 +181,7 @@ type instConfig struct {
 	additionalResAttrs []attribute.KeyValue
 	globalImpl         bool
 	loadIndicator      chan struct{}
-	logLevel           LogLevel
+	logger             *slog.Logger
 	sampler            Sampler
 	cp                 ConfigProvider
 }
@@ -253,8 +214,8 @@ func newInstConfig(ctx context.Context, opts []InstrumentationOption) (instConfi
 		c.sampler = DefaultSampler()
 	}
 
-	if c.logLevel == logLevelUndefined {
-		c.logLevel = LogLevelInfo
+	if c.logger == nil {
+		c.logger = slog.Default()
 	}
 
 	if c.cp == nil {
@@ -402,12 +363,11 @@ var lookupEnv = os.LookupEnv
 //   - OTEL_SERVICE_NAME (or OTEL_RESOURCE_ATTRIBUTES): sets the service name
 //   - OTEL_TRACES_EXPORTER: sets the trace exporter
 //   - OTEL_GO_AUTO_GLOBAL: enables the OpenTelemetry global implementation
-//   - OTEL_LOG_LEVEL: sets the log level
 //   - OTEL_TRACES_SAMPLER: sets the trace sampler
 //   - OTEL_TRACES_SAMPLER_ARG: optionally sets the trace sampler argument
 //
 // This option may conflict with [WithTarget], [WithPID], [WithTraceExporter],
-// [WithServiceName], [WithGlobal], [WithLogLevel] and [WithSampler] if their respective environment variable is defined.
+// [WithServiceName], [WithGlobal], and [WithSampler] if their respective environment variable is defined.
 // If more than one of these options are used, the last one provided to an
 // [Instrumentation] will be used.
 //
@@ -440,16 +400,6 @@ func WithEnv() InstrumentationOption {
 			if err == nil {
 				c.globalImpl = boolVal
 			}
-		}
-		if l, ok := lookupEnv(envLogLevelKey); ok {
-			var e error
-			level, e := ParseLogLevel(l)
-
-			if e == nil {
-				c.logLevel = level
-			}
-
-			err = errors.Join(err, e)
 		}
 		if s, e := newSamplerFromEnv(lookupEnv); e != nil {
 			err = errors.Join(err, e)
@@ -564,16 +514,11 @@ func WithLoadedIndicator(indicator chan struct{}) InstrumentationOption {
 	})
 }
 
-// WithLogLevel returns an [InstrumentationOption] that will configure
-// an [Instrumentation] to use the provided logging level.
-func WithLogLevel(level LogLevel) InstrumentationOption {
-	return fnOpt(func(ctx context.Context, c instConfig) (instConfig, error) {
-		if err := level.validate(); err != nil {
-			return c, err
-		}
-
-		c.logLevel = level
-
+// WithLogger returns an [InstrumentationOption] that will configure an
+// [Instrumentation] to use the provided logger.
+func WithLogger(logger *slog.Logger) InstrumentationOption {
+	return fnOpt(func(_ context.Context, c instConfig) (instConfig, error) {
+		c.logger = logger
 		return c, nil
 	})
 }
