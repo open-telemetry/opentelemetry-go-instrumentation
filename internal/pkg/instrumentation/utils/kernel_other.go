@@ -30,6 +30,6 @@ func GetCPUCount() (int, error) {
 	return 0, nil
 }
 
-func EstimateBootTimeOffset() (bootTimeOffset int64, err error) {
+func estimateBootTimeOffset() (bootTimeOffset int64, err error) {
 	return 0, nil
 }

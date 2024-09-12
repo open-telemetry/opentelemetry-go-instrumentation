@@ -78,9 +78,6 @@ func TestTrace(t *testing.T) {
 	ctrl, err := NewController(logger, tp, "test")
 	assert.NoError(t, err)
 
-	convertedStartTime := ctrl.convertTime(startTime.Unix())
-	convertedEndTime := ctrl.convertTime(endTime.Unix())
-
 	spId, err := trace.SpanIDFromHex("00f067aa0ba902b7")
 	assert.NoError(t, err)
 	trId, err := trace.TraceIDFromHex("00f067aa0ba902b700f067aa0ba902b7")
@@ -106,8 +103,8 @@ func TestTrace(t *testing.T) {
 				SpanEvents: []*probe.SpanEvent{
 					{
 						SpanName:     "testSpan",
-						StartTime:    startTime.Unix(),
-						EndTime:      endTime.Unix(),
+						StartTime:    startTime,
+						EndTime:      endTime,
 						SpanContext:  &spanContext,
 						TracerSchema: semconv.SchemaURL,
 					},
@@ -117,8 +114,8 @@ func TestTrace(t *testing.T) {
 				{
 					Name:      "testSpan",
 					SpanKind:  trace.SpanKindClient,
-					StartTime: convertedStartTime,
-					EndTime:   convertedEndTime,
+					StartTime: startTime,
+					EndTime:   endTime,
 					Resource:  instResource(),
 					InstrumentationLibrary: instrumentation.Scope{
 						Name:      "go.opentelemetry.io/auto/foo/bar",
@@ -141,8 +138,8 @@ func TestTrace(t *testing.T) {
 				SpanEvents: []*probe.SpanEvent{
 					{
 						SpanName:    "GET",
-						StartTime:   startTime.Unix(),
-						EndTime:     endTime.Unix(),
+						StartTime:   startTime,
+						EndTime:     endTime,
 						SpanContext: &spanContext,
 						Attributes: []attribute.KeyValue{
 							semconv.HTTPRequestMethodKey.String("GET"),
@@ -158,8 +155,8 @@ func TestTrace(t *testing.T) {
 				{
 					Name:      "GET",
 					SpanKind:  trace.SpanKindClient,
-					StartTime: convertedStartTime,
-					EndTime:   convertedEndTime,
+					StartTime: startTime,
+					EndTime:   endTime,
 					Resource:  instResource(),
 					InstrumentationLibrary: instrumentation.Scope{
 						Name:    "go.opentelemetry.io/auto/net/http",
@@ -187,8 +184,8 @@ func TestTrace(t *testing.T) {
 				SpanEvents: []*probe.SpanEvent{
 					{
 						SpanName:    "GET",
-						StartTime:   startTime.Unix(),
-						EndTime:     endTime.Unix(),
+						StartTime:   startTime,
+						EndTime:     endTime,
 						SpanContext: &spanContext,
 						Attributes: []attribute.KeyValue{
 							semconv.HTTPRequestMethodKey.String("GET"),
@@ -205,8 +202,8 @@ func TestTrace(t *testing.T) {
 				{
 					Name:      "GET",
 					SpanKind:  trace.SpanKindClient,
-					StartTime: convertedStartTime,
-					EndTime:   convertedEndTime,
+					StartTime: startTime,
+					EndTime:   endTime,
 					Resource:  instResource(),
 					InstrumentationLibrary: instrumentation.Scope{
 						Name:    "go.opentelemetry.io/auto/net/http",
@@ -234,8 +231,8 @@ func TestTrace(t *testing.T) {
 				SpanEvents: []*probe.SpanEvent{
 					{
 						SpanName:    "very important span",
-						StartTime:   startTime.Unix(),
-						EndTime:     endTime.Unix(),
+						StartTime:   startTime,
+						EndTime:     endTime,
 						SpanContext: &spanContext,
 						Attributes: []attribute.KeyValue{
 							attribute.Int64("int.value", 42),
@@ -254,8 +251,8 @@ func TestTrace(t *testing.T) {
 				{
 					Name:      "very important span",
 					SpanKind:  trace.SpanKindClient,
-					StartTime: convertedStartTime,
-					EndTime:   convertedEndTime,
+					StartTime: startTime,
+					EndTime:   endTime,
 					Resource:  instResource(),
 					InstrumentationLibrary: instrumentation.Scope{
 						Name:      "user-tracer",
