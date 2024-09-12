@@ -119,15 +119,6 @@ updates:
       interval: weekly
       day: sunday
   - package-ecosystem: gomod
-    directory: /examples/auto-sdk
-    labels:
-      - dependencies
-      - go
-      - Skip Changelog
-    schedule:
-      interval: weekly
-      day: sunday
-  - package-ecosystem: gomod
     directory: /examples/httpPlusdb
     labels:
       - dependencies
@@ -228,6 +219,15 @@ updates:
       day: sunday
   - package-ecosystem: gomod
     directory: /internal/tools
+    labels:
+      - dependencies
+      - go
+      - Skip Changelog
+    schedule:
+      interval: weekly
+      day: sunday
+  - package-ecosystem: gomod
+    directory: /sdk
     labels:
       - dependencies
       - go
