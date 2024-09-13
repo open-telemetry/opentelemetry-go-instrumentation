@@ -146,6 +146,7 @@ Any [Maintainer] can merge the PR once the above criteria have been met.
 
 - [Aaron Clawson](https://github.com/MadVikingGod), LightStep
 - [Dinesh Gurumurthy](https://github.com/dineshg13), DataDog
+- [Nikola Grcevski](https://github.com/grcevski), Grafana Labs
 - [Robert Pająk](https://github.com/pellared), Splunk
 
 ### Maintainers

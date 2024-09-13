@@ -32,6 +32,7 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 - The `WithLogger` `InstrumentationOption` is added as a replacement for `WithLogLevel`.
   An `slog.Logger` can now be configured by the user any way they want and then passed to the `Instrumentation` for its logging with this option.
   By default, if this is not provided, the default `slog` `Logger` will be used. ([#1080](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1080))
+- Support `google.golang.org/grpc` `1.66.2`. ([#1083](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1083))
 
 ### Changed
 
