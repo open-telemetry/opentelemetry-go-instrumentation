@@ -17,7 +17,7 @@ var bootTimeOffset = func() int64 {
 }()
 
 // BootOffsetToTime returns the timestamp that is nsec number of nanoseconds
-// after the estimated boot time of the process.
+// after the estimated boot time of the system.
 func BootOffsetToTime(nsec uint64) time.Time {
 	if nsec > math.MaxInt64 {
 		nsec = math.MaxInt64
