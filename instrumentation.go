@@ -43,6 +43,8 @@ const (
 	// envOtelGlobalImplKey is the key for the environment variable value enabling to opt-in for the
 	// OpenTelemetry global implementation. It should be a boolean value.
 	envOtelGlobalImplKey = "OTEL_GO_AUTO_GLOBAL"
+	// envLogLevelKey is the key for the environment variable value containing the log level.
+	envLogLevelKey = "OTEL_LOG_LEVEL"
 )
 
 // Instrumentation manages and controls all OpenTelemetry Go
@@ -215,7 +217,7 @@ func newInstConfig(ctx context.Context, opts []InstrumentationOption) (instConfi
 	}
 
 	if c.logger == nil {
-		c.logger = slog.Default()
+		c.logger = newLogger(nil)
 	}
 
 	if c.cp == nil {
@@ -296,6 +298,15 @@ func (c instConfig) res(bi *buildinfo.BuildInfo) *resource.Resource {
 	)
 }
 
+// newLogger is used for testing.
+var newLogger = newLoggerFunc
+
+func newLoggerFunc(level slog.Leveler) *slog.Logger {
+	opts := &slog.HandlerOptions{AddSource: true, Level: level}
+	h := slog.NewJSONHandler(os.Stderr, opts)
+	return slog.New(h)
+}
+
 type fnOpt func(context.Context, instConfig) (instConfig, error)
 
 func (o fnOpt) apply(ctx context.Context, c instConfig) (instConfig, error) { return o(ctx, c) }
@@ -363,6 +374,7 @@ var lookupEnv = os.LookupEnv
 //   - OTEL_SERVICE_NAME (or OTEL_RESOURCE_ATTRIBUTES): sets the service name
 //   - OTEL_TRACES_EXPORTER: sets the trace exporter
 //   - OTEL_GO_AUTO_GLOBAL: enables the OpenTelemetry global implementation
+//   - OTEL_LOG_LEVEL: sets the default logger's minimum logging level
 //   - OTEL_TRACES_SAMPLER: sets the trace sampler
 //   - OTEL_TRACES_SAMPLER_ARG: optionally sets the trace sampler argument
 //
@@ -370,6 +382,14 @@ var lookupEnv = os.LookupEnv
 // [WithServiceName], [WithGlobal], and [WithSampler] if their respective environment variable is defined.
 // If more than one of these options are used, the last one provided to an
 // [Instrumentation] will be used.
+//
+// If [WithLogger] is used, OTEL_LOG_LEVEL will not be used for the
+// [Instrumentation] logger. Instead, the [slog.Logger] passed to that option
+// will be used as-is.
+//
+// If [WithLogger] is not used, OTEL_LOG_LEVEL will be parsed and the default
+// logger used by the configured [Instrumentation] will use that level as its
+// minimum logging level.
 //
 // The OTEL_TRACES_EXPORTER environment variable value is resolved using the
 // [autoexport] package. See that package's documentation for information on
@@ -399,6 +419,15 @@ func WithEnv() InstrumentationOption {
 			boolVal, err := strconv.ParseBool(val)
 			if err == nil {
 				c.globalImpl = boolVal
+			}
+		}
+		if val, ok := lookupEnv(envLogLevelKey); c.logger == nil && ok {
+			var level slog.Level
+			if e := level.UnmarshalText([]byte(val)); e != nil {
+				e = fmt.Errorf("parse log level %q: %w", val, e)
+				err = errors.Join(err, e)
+			} else {
+				c.logger = newLogger(level)
 			}
 		}
 		if s, e := newSamplerFromEnv(lookupEnv); e != nil {
@@ -516,6 +545,13 @@ func WithLoadedIndicator(indicator chan struct{}) InstrumentationOption {
 
 // WithLogger returns an [InstrumentationOption] that will configure an
 // [Instrumentation] to use the provided logger.
+//
+// If this option is used and [WithEnv] is also used, OTEL_LOG_LEVEL is ignored
+// by the configured [Instrumentation]. This passed logger takes precedence and
+// is used as-is.
+//
+// If this option is not used, the [Instrumentation] will use an [slog.Loogger]
+// backed by an [slog.JSONHandler] outputting to STDERR as a default.
 func WithLogger(logger *slog.Logger) InstrumentationOption {
 	return fnOpt(func(_ context.Context, c instConfig) (instConfig, error) {
 		c.logger = logger

@@ -6,6 +6,7 @@ package auto
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -72,6 +73,27 @@ func TestWithEnv(t *testing.T) {
 		c, err := newInstConfig(context.Background(), []InstrumentationOption{WithEnv()})
 		require.NoError(t, err)
 		assert.Equal(t, name, c.serviceName)
+	})
+
+	t.Run("OTEL_LOG_LEVEL", func(t *testing.T) {
+		orig := newLogger
+		var got slog.Leveler
+		newLogger = func(level slog.Leveler) *slog.Logger {
+			got = level
+			return newLoggerFunc(level)
+		}
+		t.Cleanup(func() { newLogger = orig })
+
+		t.Setenv(envLogLevelKey, "debug")
+		ctx, opts := context.Background(), []InstrumentationOption{WithEnv()}
+		_, err := newInstConfig(ctx, opts)
+		require.NoError(t, err)
+
+		assert.Equal(t, slog.LevelDebug, got)
+
+		t.Setenv(envLogLevelKey, "invalid")
+		_, err = newInstConfig(ctx, opts)
+		require.ErrorContains(t, err, `parse log level "invalid"`)
 	})
 }
 
@@ -161,6 +183,15 @@ func TestWithResourceAttributes(t *testing.T) {
 		assert.Equal(t, nameAttr.Value.AsString(), c.serviceName)
 		assert.Equal(t, []attribute.KeyValue{attr2, attr3}, c.additionalResAttrs)
 	})
+}
+
+func TestWithLogger(t *testing.T) {
+	l := slog.New(slog.Default().Handler())
+	opts := []InstrumentationOption{WithLogger(l)}
+	c, err := newInstConfig(context.Background(), opts)
+	require.NoError(t, err)
+
+	assert.Same(t, l, c.logger)
 }
 
 func TestWithSampler(t *testing.T) {
