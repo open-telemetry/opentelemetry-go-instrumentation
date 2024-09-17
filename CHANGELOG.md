@@ -30,15 +30,12 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 - Support `google.golang.org/grpc` `1.68.0-dev`. ([#1044](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1044))
 - Support `go.opentelemetry.io/otel@v1.30.0`. ([#1044](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1044))
 - The `WithLogger` `InstrumentationOption` is added as a replacement for `WithLogLevel`.
-  An `slog.Logger` can now be configured by the user any way they want and then passed to the `Instrumentation` for its logging with this option.
-  By default, if this is not provided, the default `slog` `Logger` will be used. ([#1080](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1080))
+  An `slog.Logger` can now be configured by the user any way they want and then passed to the `Instrumentation` for its logging with this option. ([#1080](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1080))
 - Support `google.golang.org/grpc` `1.66.2`. ([#1083](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1083))
 
 ### Changed
 
 - The `WithSampler` option function now accepts the new `Sampler` interface instead of `trace.Sampler`. ([#982](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/982))
-- The `WithEnv` `InstrumentationOption` no longer supports the `OTEL_LOG_LEVEL` environment variable.
-  This is now configured by the user via the logger they pass using the added `WithLogger` option. ([#1080](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1080))
 
 ### Fixed
 
