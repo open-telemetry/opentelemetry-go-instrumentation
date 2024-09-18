@@ -178,7 +178,7 @@ func GetCPUCount() (int, error) {
 	return 0, err
 }
 
-func EstimateBootTimeOffset() (bootTimeOffset int64, err error) {
+func estimateBootTimeOffset() (bootTimeOffset int64, err error) {
 	// The datapath is currently using ktime_get_boot_ns for the pcap timestamp,
 	// which corresponds to CLOCK_BOOTTIME. To be able to convert the the
 	// CLOCK_BOOTTIME to CLOCK_REALTIME (i.e. a unix timestamp).
