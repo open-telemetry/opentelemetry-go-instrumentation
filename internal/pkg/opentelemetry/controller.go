@@ -6,7 +6,6 @@ package opentelemetry
 import (
 	"context"
 	"log/slog"
-	"time"
 
 	"go.opentelemetry.io/otel/trace"
 
