@@ -11,7 +11,6 @@ import (
 	"go.opentelemetry.io/otel/trace"
 
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/probe"
-	"go.opentelemetry.io/auto/internal/pkg/instrumentation/utils"
 )
 
 // Controller handles OpenTelemetry telemetry generation for events.
@@ -20,7 +19,6 @@ type Controller struct {
 	version        string
 	tracerProvider trace.TracerProvider
 	tracersMap     map[tracerID]trace.Tracer
-	bootTime       int64
 }
 
 type tracerID struct{ name, version, schema string }
@@ -75,29 +73,19 @@ func (c *Controller) Trace(event *probe.Event) {
 			Start(ctx, se.SpanName,
 				trace.WithAttributes(se.Attributes...),
 				trace.WithSpanKind(event.Kind),
-				trace.WithTimestamp(c.convertTime(se.StartTime)))
+				trace.WithTimestamp(se.StartTime))
 		span.SetStatus(se.Status.Code, se.Status.Description)
-		span.End(trace.WithTimestamp(c.convertTime(se.EndTime)))
+		span.End(trace.WithTimestamp(se.EndTime))
 	}
-}
-
-func (c *Controller) convertTime(t int64) time.Time {
-	return time.Unix(0, c.bootTime+t)
 }
 
 // NewController returns a new initialized [Controller].
 func NewController(logger *slog.Logger, tracerProvider trace.TracerProvider, ver string) (*Controller, error) {
-	bt, err := utils.EstimateBootTimeOffset()
-	if err != nil {
-		return nil, err
-	}
-
 	return &Controller{
 		logger:         logger,
 		version:        ver,
 		tracerProvider: tracerProvider,
 		tracersMap:     make(map[tracerID]trace.Tracer),
-		bootTime:       bt,
 	}, nil
 }
 
