@@ -15,11 +15,16 @@ import (
 
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/context"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/probe"
+	"go.opentelemetry.io/auto/internal/pkg/instrumentation/utils"
 )
 
 func TestConvertEvent(t *testing.T) {
-	startTime := time.Now()
+	startTime := time.Unix(0, time.Now().UnixNano()) // No wall clock.
 	endTime := startTime.Add(1 * time.Second)
+
+	startTimeOffset := utils.TimeToBootOffset(startTime)
+	endTimeOffset := utils.TimeToBootOffset(endTime)
+
 	hostString := "google.com"
 	protoString := "HTTP/1.1"
 	protoFooString := "foo/2.2"
@@ -87,8 +92,8 @@ func TestConvertEvent(t *testing.T) {
 				Path:       path,
 				Scheme:     scheme,
 				BaseSpanProperties: context.BaseSpanProperties{
-					StartTime:   uint64(startTime.Unix()),
-					EndTime:     uint64(endTime.Unix()),
+					StartTime:   startTimeOffset,
+					EndTime:     endTimeOffset,
 					SpanContext: context.EBPFSpanContext{TraceID: trId, SpanID: spId},
 				},
 			},
@@ -120,8 +125,8 @@ func TestConvertEvent(t *testing.T) {
 				Path:       path,
 				Scheme:     scheme,
 				BaseSpanProperties: context.BaseSpanProperties{
-					StartTime:   uint64(startTime.Unix()),
-					EndTime:     uint64(endTime.Unix()),
+					StartTime:   startTimeOffset,
+					EndTime:     endTimeOffset,
 					SpanContext: context.EBPFSpanContext{TraceID: trId, SpanID: spId},
 				},
 			},
@@ -154,8 +159,8 @@ func TestConvertEvent(t *testing.T) {
 				Path:       path,
 				Scheme:     scheme,
 				BaseSpanProperties: context.BaseSpanProperties{
-					StartTime:   uint64(startTime.Unix()),
-					EndTime:     uint64(endTime.Unix()),
+					StartTime:   startTimeOffset,
+					EndTime:     endTimeOffset,
 					SpanContext: context.EBPFSpanContext{TraceID: trId, SpanID: spId},
 				},
 			},
@@ -188,8 +193,8 @@ func TestConvertEvent(t *testing.T) {
 				Path:       path,
 				Scheme:     fooScheme,
 				BaseSpanProperties: context.BaseSpanProperties{
-					StartTime:   uint64(startTime.Unix()),
-					EndTime:     uint64(endTime.Unix()),
+					StartTime:   startTimeOffset,
+					EndTime:     endTimeOffset,
 					SpanContext: context.EBPFSpanContext{TraceID: trId, SpanID: spId},
 				},
 			},
@@ -225,8 +230,8 @@ func TestConvertEvent(t *testing.T) {
 				RawQuery:   rawQuery,
 				Fragment:   fragment,
 				BaseSpanProperties: context.BaseSpanProperties{
-					StartTime:   uint64(startTime.Unix()),
-					EndTime:     uint64(endTime.Unix()),
+					StartTime:   startTimeOffset,
+					EndTime:     endTimeOffset,
 					SpanContext: context.EBPFSpanContext{TraceID: trId, SpanID: spId},
 				},
 			},
@@ -262,8 +267,8 @@ func TestConvertEvent(t *testing.T) {
 				ForceQuery: 1,
 				OmitHost:   1,
 				BaseSpanProperties: context.BaseSpanProperties{
-					StartTime:   uint64(startTime.Unix()),
-					EndTime:     uint64(endTime.Unix()),
+					StartTime:   startTimeOffset,
+					EndTime:     endTimeOffset,
 					SpanContext: context.EBPFSpanContext{TraceID: trId, SpanID: spId},
 				},
 			},

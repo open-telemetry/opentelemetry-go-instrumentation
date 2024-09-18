@@ -7,7 +7,6 @@ import (
 	"bufio"
 	"errors"
 	"fmt"
-	"math"
 	"os"
 	"runtime"
 	"strconv"
@@ -179,22 +178,7 @@ func GetCPUCount() (int, error) {
 	return 0, err
 }
 
-var bootTimeOffset = func() int64 {
-	o, err := EstimateBootTimeOffset()
-	if err != nil {
-		panic(err)
-	}
-	return o
-}()
-
-func BootRelativeTime(t uint64) time.Time {
-	if t > math.MaxInt64 {
-		t = math.MaxInt64
-	}
-	return time.Unix(0, bootTimeOffset+int64(t))
-}
-
-func EstimateBootTimeOffset() (bootTimeOffset int64, err error) {
+func estimateBootTimeOffset() (bootTimeOffset int64, err error) {
 	// The datapath is currently using ktime_get_boot_ns for the pcap timestamp,
 	// which corresponds to CLOCK_BOOTTIME. To be able to convert the the
 	// CLOCK_BOOTTIME to CLOCK_REALTIME (i.e. a unix timestamp).

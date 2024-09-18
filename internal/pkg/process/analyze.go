@@ -80,7 +80,7 @@ func (a *Analyzer) Analyze(pid int, relevantFuncs map[string]interface{}) (*Targ
 	for _, dep := range a.BuildInfo.Deps {
 		depVersion, err := version.NewVersion(dep.Version)
 		if err != nil {
-			a.logger.Error(err, "parsing dependency version", "dependency", dep)
+			a.logger.Error("parsing dependency version", "error", err, "dependency", dep)
 			continue
 		}
 		result.Libraries[dep.Path] = depVersion
@@ -92,7 +92,7 @@ func (a *Analyzer) Analyze(pid int, relevantFuncs map[string]interface{}) (*Targ
 		return nil, err
 	}
 	for _, fn := range funcs {
-		a.logger.V(1).Info("found function", "function_name", fn)
+		a.logger.Debug("found function", "function_name", fn)
 	}
 
 	result.Functions = funcs
@@ -134,7 +134,7 @@ func (a *Analyzer) findFunctions(elfF *elf.File, relevantFuncs map[string]interf
 	result, err := binary.FindFunctionsUnStripped(elfF, relevantFuncs)
 	if err != nil {
 		if errors.Is(err, elf.ErrNoSymbols) {
-			a.logger.V(1).Info("No symbols found in binary, trying to find functions using .gosymtab")
+			a.logger.Debug("No symbols found in binary, trying to find functions using .gosymtab")
 			return binary.FindFunctionsStripped(elfF, relevantFuncs)
 		}
 		return nil, err

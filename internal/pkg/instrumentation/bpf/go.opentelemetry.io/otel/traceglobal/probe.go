@@ -6,6 +6,7 @@ package global
 import (
 	"encoding/binary"
 	"fmt"
+	"log/slog"
 	"math"
 
 	"go.opentelemetry.io/auto/internal/pkg/inject"
@@ -14,7 +15,6 @@ import (
 	"go.opentelemetry.io/auto/internal/pkg/process"
 	"go.opentelemetry.io/auto/internal/pkg/structfield"
 
-	"github.com/go-logr/logr"
 	"github.com/hashicorp/go-version"
 	"golang.org/x/sys/unix"
 
@@ -33,14 +33,14 @@ const (
 )
 
 // New returns a new [probe.Probe].
-func New(logger logr.Logger) probe.Probe {
+func New(logger *slog.Logger) probe.Probe {
 	id := probe.ID{
 		SpanKind:        trace.SpanKindClient,
 		InstrumentedPkg: pkg,
 	}
 	return &probe.Base[bpfObjects, event]{
 		ID:     id,
-		Logger: logger.WithName(id.String()),
+		Logger: logger,
 		Consts: []probe.Const{
 			probe.RegistersABIConst{},
 			probe.AllocationConst{},
@@ -208,8 +208,8 @@ func convertEvent(e *event) []*probe.SpanEvent {
 	return []*probe.SpanEvent{
 		{
 			SpanName:          spanName,
-			StartTime:         utils.BootRelativeTime(e.StartTime),
-			EndTime:           utils.BootRelativeTime(e.EndTime),
+			StartTime:         utils.BootOffsetToTime(e.StartTime),
+			EndTime:           utils.BootOffsetToTime(e.EndTime),
 			Attributes:        convertAttributes(e.Attributes),
 			SpanContext:       &sc,
 			ParentSpanContext: pscPtr,

@@ -5,8 +5,8 @@ package opentelemetry
 
 import (
 	"context"
+	"log/slog"
 
-	"github.com/go-logr/logr"
 	"go.opentelemetry.io/otel/trace"
 
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/probe"
@@ -14,7 +14,7 @@ import (
 
 // Controller handles OpenTelemetry telemetry generation for events.
 type Controller struct {
-	logger         logr.Logger
+	logger         *slog.Logger
 	version        string
 	tracerProvider trace.TracerProvider
 	tracersMap     map[tracerID]trace.Tracer
@@ -54,10 +54,11 @@ func (c *Controller) getTracer(pkg, tracerName, version, schema string) trace.Tr
 func (c *Controller) Trace(event *probe.Event) {
 	c.logger.V(1).Info("got event", "kind", event.Kind.String(), "pkg", event.Package)
 	for _, se := range event.SpanEvents {
+		c.logger.Debug("got event", "kind", event.Kind.String(), "pkg", event.Package, "attrs", se.Attributes, "traceID", se.SpanContext.TraceID().String(), "spanID", se.SpanContext.SpanID().String())
 		ctx := context.Background()
 
 		if se.SpanContext == nil {
-			c.logger.V(1).Info("got event without context - dropping")
+			c.logger.Debug("got event without context - dropping")
 			return
 		}
 
@@ -66,35 +67,20 @@ func (c *Controller) Trace(event *probe.Event) {
 			ctx = trace.ContextWithSpanContext(ctx, *se.ParentSpanContext)
 		}
 
-		c.logger.V(1).Info("processing event", "SpanEvent", se)
-
-		kind := se.Kind
-		if kind == trace.SpanKindUnspecified {
-			kind = event.Kind
-		}
-
 		ctx = ContextWithEBPFEvent(ctx, *se)
-		tracer := c.getTracer(event.Package, se.TracerName, se.TracerVersion, se.TracerSchema)
-		_, span := tracer.Start(
-			ctx,
-			se.SpanName,
-			trace.WithAttributes(se.Attributes...),
-			trace.WithSpanKind(kind),
-			trace.WithTimestamp(se.StartTime),
-			trace.WithLinks(se.Links...),
-		)
-		for name, opts := range se.Events {
-			span.AddEvent(name, opts...)
-		}
+		c.logger.Debug("getting tracer", "name", se.TracerName, "version", se.TracerVersion, "schema", se.TracerSchema)
+		_, span := c.getTracer(event.Package, se.TracerName, se.TracerVersion, se.TracerSchema).
+			Start(ctx, se.SpanName,
+				trace.WithAttributes(se.Attributes...),
+				trace.WithSpanKind(event.Kind),
+				trace.WithTimestamp(se.StartTime))
 		span.SetStatus(se.Status.Code, se.Status.Description)
 		span.End(trace.WithTimestamp(se.EndTime))
 	}
 }
 
 // NewController returns a new initialized [Controller].
-func NewController(logger logr.Logger, tracerProvider trace.TracerProvider, ver string) (*Controller, error) {
-	logger = logger.WithName("Controller")
-
+func NewController(logger *slog.Logger, tracerProvider trace.TracerProvider, ver string) (*Controller, error) {
 	return &Controller{
 		logger:         logger,
 		version:        ver,

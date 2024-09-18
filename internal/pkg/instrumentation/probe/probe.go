@@ -10,12 +10,12 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"os"
 
 	"github.com/cilium/ebpf"
 	"github.com/cilium/ebpf/link"
 	"github.com/cilium/ebpf/perf"
-	"github.com/go-logr/logr"
 	"github.com/hashicorp/go-version"
 
 	"go.opentelemetry.io/auto/internal/pkg/inject"
@@ -55,7 +55,7 @@ type Base[BPFObj any, BPFEvent any] struct {
 	// ID is a unique identifier for the probe.
 	ID ID
 	// Logger is used to log operations and errors.
-	Logger logr.Logger
+	Logger *slog.Logger
 
 	// Consts are the constants that need to be injected into the eBPF program
 	// that is run by this Probe.
@@ -149,7 +149,7 @@ func (i *Base[BPFObj, BPFEvent]) loadUprobes(exec *link.Executable, td *process.
 		links, err := up.load(exec, td, i.collection)
 		if err != nil {
 			if up.Optional {
-				i.Logger.V(1).Info("failed to attach optional uprobe", "probe", i.ID, "symbol", up.Sym, "error", err)
+				i.Logger.Debug("failed to attach optional uprobe", "probe", i.ID, "symbol", up.Sym, "error", err)
 				continue
 			}
 			return err
@@ -202,18 +202,18 @@ func (i *Base[BPFObj, BPFEvent]) Run(dest chan<- *Event) {
 			if errors.Is(err, perf.ErrClosed) {
 				return
 			}
-			i.Logger.Error(err, "error reading from perf reader")
+			i.Logger.Error("error reading from perf reader", "error", err)
 			continue
 		}
 
 		if record.LostSamples != 0 {
-			i.Logger.V(1).Info("perf event ring buffer full", "dropped", record.LostSamples)
+			i.Logger.Debug("perf event ring buffer full", "dropped", record.LostSamples)
 			continue
 		}
 
 		se, err := i.processRecord(record)
 		if err != nil {
-			i.Logger.Error(err, "failed to process perf record")
+			i.Logger.Error("failed to process perf record", "error", err)
 		}
 		e := &Event{
 			Package:    i.ID.InstrumentedPkg,
@@ -246,7 +246,7 @@ func (i *Base[BPFObj, BPFEvent]) Close() error {
 		err = errors.Join(err, c.Close())
 	}
 	if err == nil {
-		i.Logger.V(1).Info("Closed", "Probe", i.ID)
+		i.Logger.Debug("Closed", "Probe", i.ID)
 	}
 	return err
 }
