@@ -14,11 +14,12 @@ import (
 	"os/signal"
 	"time"
 
-	"go.opentelemetry.io/auto/sdk"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/trace"
+
+	"go.opentelemetry.io/auto/sdk"
 )
 
 const (
@@ -52,7 +53,7 @@ func main() {
 	log.Println("Backend started.")
 
 	log.Println("Starting client")
-	run(ctx, listenAddr)
+	_ = run(ctx, listenAddr)
 }
 
 func run(ctx context.Context, addr string) error {
@@ -145,12 +146,10 @@ func wait(ctx context.Context, d time.Duration) {
 
 	c := doTick(ctx, d)
 
-	select {
-	case err := <-c:
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, "timeout")
-		}
+	err := <-c
+	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "timeout")
 	}
 }
 

@@ -109,9 +109,8 @@ func setUserScore(ctx context.Context, db *sql.DB, name string, score int) (err 
 		if errors.Is(err, errUser) {
 			u.Score = score
 			return addUser(ctx, db, u)
-		} else {
-			return err
 		}
+		return err
 	}
 
 	_, err = db.ExecContext(ctx, updateScore, score, u.ID)

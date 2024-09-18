@@ -52,7 +52,6 @@ func (c *Controller) getTracer(pkg, tracerName, version, schema string) trace.Tr
 
 // Trace creates a trace span for event.
 func (c *Controller) Trace(event *probe.Event) {
-	c.logger.V(1).Info("got event", "kind", event.Kind.String(), "pkg", event.Package)
 	for _, se := range event.SpanEvents {
 		c.logger.Debug("got event", "kind", event.Kind.String(), "pkg", event.Package, "attrs", se.Attributes, "traceID", se.SpanContext.TraceID().String(), "spanID", se.SpanContext.SpanID().String())
 		ctx := context.Background()

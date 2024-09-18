@@ -5,13 +5,13 @@ package sdk
 
 import (
 	"fmt"
+	"log/slog"
 
-	"go.opentelemetry.io/auto/internal/pkg/instrumentation/probe"
-	"go.opentelemetry.io/auto/internal/pkg/structfield"
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/ptrace"
 
-	"github.com/go-logr/logr"
+	"go.opentelemetry.io/auto/internal/pkg/instrumentation/probe"
+	"go.opentelemetry.io/auto/internal/pkg/structfield"
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
@@ -25,13 +25,12 @@ import (
 const maxSize = 1024
 
 // New returns a new [probe.Probe].
-func New(logger logr.Logger) probe.Probe {
+func New(logger *slog.Logger) probe.Probe {
 	id := probe.ID{
 		SpanKind:        trace.SpanKindClient,
 		InstrumentedPkg: "go.opentelemetry.io/auto",
 	}
-	logger = logger.WithName(id.String())
-	c := &converter{logger: logger.WithName("converter")}
+	c := &converter{logger: logger}
 	return &probe.Base[bpfObjects, event]{
 		ID:     id,
 		Logger: logger,
@@ -87,14 +86,14 @@ type event struct {
 }
 
 type converter struct {
-	logger logr.Logger
+	logger *slog.Logger
 }
 
 func (c *converter) convertEvent(e *event) []*probe.SpanEvent {
 	var m ptrace.ProtoUnmarshaler
 	traces, err := m.UnmarshalTraces(e.SpanData[:e.Size])
 	if err != nil {
-		c.logger.Error(err, "failed to unmarshal span data")
+		c.logger.Error("failed to unmarshal span data", "error", err)
 		return nil
 	}
 
@@ -104,7 +103,7 @@ func (c *converter) convertEvent(e *event) []*probe.SpanEvent {
 	raw := span.TraceState().AsRaw()
 	ts, err := trace.ParseTraceState(raw)
 	if err != nil {
-		c.logger.Error(err, "failed to parse tracestate", "tracestate", raw)
+		c.logger.Error("failed to parse tracestate", "error", err, "tracestate", raw)
 	}
 
 	var pscPtr *trace.SpanContext
@@ -172,7 +171,7 @@ func (c *converter) links(links ptrace.SpanLinkSlice) []trace.Link {
 		raw := l.TraceState().AsRaw()
 		ts, err := trace.ParseTraceState(raw)
 		if err != nil {
-			c.logger.Error(err, "failed to parse link tracestate", "tracestate", raw)
+			c.logger.Error("failed to parse link tracestate", "error", err, "tracestate", raw)
 		}
 
 		out[i] = trace.Link{

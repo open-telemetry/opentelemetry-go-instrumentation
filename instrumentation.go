@@ -435,11 +435,6 @@ func WithEnv() InstrumentationOption {
 		} else {
 			c.sampler = s
 		}
-		if s, e := newSamplerFromEnv(lookupEnv); e != nil {
-			err = errors.Join(err, e)
-		} else {
-			c.sampler = s
-		}
 		return c, err
 	})
 }
