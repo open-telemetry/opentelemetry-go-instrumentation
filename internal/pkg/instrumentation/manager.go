@@ -7,11 +7,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"sync"
 
 	"github.com/cilium/ebpf/link"
 	"github.com/cilium/ebpf/rlimit"
-	"github.com/go-logr/logr"
 
 	"go.opentelemetry.io/otel/trace"
 
@@ -46,7 +46,7 @@ const (
 
 // Manager handles the management of [probe.Probe] instances.
 type Manager struct {
-	logger          logr.Logger
+	logger          *slog.Logger
 	probes          map[probe.ID]probe.Probe
 	otelController  *opentelemetry.Controller
 	globalImpl      bool
@@ -62,8 +62,7 @@ type Manager struct {
 }
 
 // NewManager returns a new [Manager].
-func NewManager(logger logr.Logger, otelController *opentelemetry.Controller, globalImpl bool, loadIndicator chan struct{}, cp ConfigProvider) (*Manager, error) {
-	logger = logger.WithName("Manager")
+func NewManager(logger *slog.Logger, otelController *opentelemetry.Controller, globalImpl bool, loadIndicator chan struct{}, cp ConfigProvider) (*Manager, error) {
 	m := &Manager{
 		logger:          logger,
 		probes:          make(map[probe.ID]probe.Probe),
@@ -146,7 +145,7 @@ func (m *Manager) FilterUnusedProbes(target *process.TargetDetails) {
 		}
 
 		if !funcsFound {
-			m.logger.V(1).Info("no functions found for probe, removing", "name", name)
+			m.logger.Debug("no functions found for probe, removing", "name", name)
 			delete(m.probes, name)
 		}
 	}
@@ -240,7 +239,7 @@ func (m *Manager) ConfigLoop(ctx context.Context) {
 			}
 			err := m.applyConfig(c)
 			if err != nil {
-				m.logger.Error(err, "Failed to apply config")
+				m.logger.Error("Failed to apply config", "error", err)
 				continue
 			}
 			m.currentConfig = c
@@ -282,7 +281,7 @@ func (m *Manager) Run(ctx context.Context, target *process.TargetDetails) error 
 		case <-ctx.Done():
 			m.probeMu.Lock()
 
-			m.logger.V(1).Info("Shutting down all probes")
+			m.logger.Debug("Shutting down all probes")
 			err := m.cleanup(target)
 
 			// Wait for all probes to stop before closing the chan they send on.
@@ -321,24 +320,24 @@ func (m *Manager) load(target *process.TargetDetails) error {
 	// Load probes
 	for name, i := range m.probes {
 		if isProbeEnabled(name, m.currentConfig) {
-			m.logger.V(0).Info("loading probe", "name", name)
+			m.logger.Info("loading probe", "name", name)
 			err := i.Load(exe, target, m.currentConfig.SamplingConfig)
 			if err != nil {
-				m.logger.Error(err, "error while loading probes, cleaning up", "name", name)
+				m.logger.Error("error while loading probes, cleaning up", "error", err, "name", name)
 				return errors.Join(err, m.cleanup(target))
 			}
 		}
 	}
 
-	m.logger.V(1).Info("loaded probes to memory", "total_probes", len(m.probes))
+	m.logger.Debug("loaded probes to memory", "total_probes", len(m.probes))
 	return nil
 }
 
 func (m *Manager) mount(target *process.TargetDetails) error {
 	if target.AllocationDetails != nil {
-		m.logger.V(1).Info("Mounting bpffs", "allocations_details", target.AllocationDetails)
+		m.logger.Debug("Mounting bpffs", "allocations_details", target.AllocationDetails)
 	} else {
-		m.logger.V(1).Info("Mounting bpffs")
+		m.logger.Debug("Mounting bpffs")
 	}
 	return bpffsMount(target)
 }
@@ -356,12 +355,12 @@ func (m *Manager) cleanup(target *process.TargetDetails) error {
 		err = errors.Join(err, m.otelController.Shutdown(ctx))
 	}
 
-	m.logger.V(1).Info("Cleaning bpffs")
+	m.logger.Debug("Cleaning bpffs")
 	return errors.Join(err, bpffsCleanup(target))
 }
 
 //nolint:revive // ignoring linter complaint about control flag
-func availableProbes(l logr.Logger, withTraceGlobal bool) []probe.Probe {
+func availableProbes(l *slog.Logger, withTraceGlobal bool) []probe.Probe {
 	insts := []probe.Probe{
 		grpcClient.New(l),
 		grpcServer.New(l),

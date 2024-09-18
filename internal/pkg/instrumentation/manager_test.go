@@ -7,13 +7,11 @@ package instrumentation
 
 import (
 	"context"
-	"log"
-	"os"
+	"log/slog"
 	"testing"
 	"time"
 
 	"github.com/cilium/ebpf/link"
-	"github.com/go-logr/stdr"
 	"github.com/hashicorp/go-version"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -187,10 +185,7 @@ func TestDependencyChecks(t *testing.T) {
 }
 
 func fakeManager(t *testing.T) *Manager {
-	logger := stdr.New(log.New(os.Stderr, "", log.LstdFlags))
-	logger = logger.WithName("Instrumentation")
-
-	m, err := NewManager(logger, nil, true, nil, NewNoopConfigProvider(nil))
+	m, err := NewManager(slog.Default(), nil, true, nil, NewNoopConfigProvider(nil))
 	assert.NoError(t, err)
 	assert.NotNil(t, m)
 
@@ -230,16 +225,13 @@ func TestRunStopping(t *testing.T) {
 	probeStop := make(chan struct{})
 	p := newSlowProbe(probeStop)
 
-	logger := stdr.New(log.New(os.Stderr, "", log.LstdFlags))
-	logger = logger.WithName("Instrumentation")
-
 	tp := new(shutdownTracerProvider)
-	ctrl, err := opentelemetry.NewController(logger, tp, "")
+	ctrl, err := opentelemetry.NewController(slog.Default(), tp, "")
 	require.NoError(t, err)
 
 	m := &Manager{
 		otelController: ctrl,
-		logger:         logger.WithName("Manager"),
+		logger:         slog.Default(),
 		probes:         map[probe.ID]probe.Probe{{}: p},
 		eventCh:        make(chan *probe.Event),
 		cp:             NewNoopConfigProvider(nil),
@@ -359,8 +351,6 @@ func (p *dummyProvider) sendConfig(c Config) {
 }
 
 func TestConfigProvider(t *testing.T) {
-	logger := stdr.New(log.New(os.Stderr, "", log.LstdFlags))
-	logger = logger.WithName("Instrumentation")
 	loadedIndicator := make(chan struct{})
 
 	netHTTPClientProbeID := probe.ID{InstrumentedPkg: "net/http", SpanKind: trace.SpanKindClient}
@@ -372,7 +362,7 @@ func TestConfigProvider(t *testing.T) {
 	falseVal := false
 
 	m := &Manager{
-		logger: logger.WithName("Manager"),
+		logger: slog.Default(),
 		probes: map[probe.ID]probe.Probe{
 			netHTTPClientProbeID:       &noopProbe{},
 			netHTTPServerProbeID:       &noopProbe{},

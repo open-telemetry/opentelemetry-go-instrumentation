@@ -4,9 +4,9 @@
 package server
 
 import (
+	"log/slog"
 	"strings"
 
-	"github.com/go-logr/logr"
 	"github.com/hashicorp/go-version"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
@@ -31,14 +31,14 @@ const (
 )
 
 // New returns a new [probe.Probe].
-func New(logger logr.Logger) probe.Probe {
+func New(logger *slog.Logger) probe.Probe {
 	id := probe.ID{
 		SpanKind:        trace.SpanKindServer,
 		InstrumentedPkg: pkg,
 	}
 	return &probe.Base[bpfObjects, event]{
 		ID:     id,
-		Logger: logger.WithName(id.String()),
+		Logger: logger,
 		Consts: []probe.Const{
 			probe.RegistersABIConst{},
 			probe.StructFieldConst{

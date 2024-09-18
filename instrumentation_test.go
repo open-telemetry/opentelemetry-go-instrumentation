@@ -6,6 +6,7 @@ package auto
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -75,18 +76,24 @@ func TestWithEnv(t *testing.T) {
 	})
 
 	t.Run("OTEL_LOG_LEVEL", func(t *testing.T) {
-		const name = "debug"
-		mockEnv(t, map[string]string{"OTEL_LOG_LEVEL": name})
+		orig := newLogger
+		var got slog.Leveler
+		newLogger = func(level slog.Leveler) *slog.Logger {
+			got = level
+			return newLoggerFunc(level)
+		}
+		t.Cleanup(func() { newLogger = orig })
 
-		c, err := newInstConfig(context.Background(), []InstrumentationOption{WithEnv()})
+		t.Setenv(envLogLevelKey, "debug")
+		ctx, opts := context.Background(), []InstrumentationOption{WithEnv()}
+		_, err := newInstConfig(ctx, opts)
 		require.NoError(t, err)
-		assert.Equal(t, LogLevelDebug, c.logLevel)
 
-		const wrong = "invalid"
+		assert.Equal(t, slog.LevelDebug, got)
 
-		mockEnv(t, map[string]string{"OTEL_LOG_LEVEL": wrong})
-		_, err = newInstConfig(context.Background(), []InstrumentationOption{WithEnv()})
-		require.Error(t, err)
+		t.Setenv(envLogLevelKey, "invalid")
+		_, err = newInstConfig(ctx, opts)
+		require.ErrorContains(t, err, `parse log level "invalid"`)
 	})
 }
 
@@ -178,26 +185,13 @@ func TestWithResourceAttributes(t *testing.T) {
 	})
 }
 
-func TestWithLogLevel(t *testing.T) {
-	t.Run("With Valid Input", func(t *testing.T) {
-		c, err := newInstConfig(context.Background(), []InstrumentationOption{WithLogLevel("error")})
+func TestWithLogger(t *testing.T) {
+	l := slog.New(slog.Default().Handler())
+	opts := []InstrumentationOption{WithLogger(l)}
+	c, err := newInstConfig(context.Background(), opts)
+	require.NoError(t, err)
 
-		require.NoError(t, err)
-
-		assert.Equal(t, LogLevelError, c.logLevel)
-
-		c, err = newInstConfig(context.Background(), []InstrumentationOption{WithLogLevel(LogLevelInfo)})
-
-		require.NoError(t, err)
-
-		assert.Equal(t, LogLevelInfo, c.logLevel)
-	})
-
-	t.Run("Will Validate Input", func(t *testing.T) {
-		_, err := newInstConfig(context.Background(), []InstrumentationOption{WithLogLevel("invalid")})
-
-		require.Error(t, err)
-	})
+	assert.Same(t, l, c.logger)
 }
 
 func TestWithSampler(t *testing.T) {

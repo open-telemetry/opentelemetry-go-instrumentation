@@ -5,8 +5,8 @@ package opentelemetry
 
 import (
 	"context"
+	"log/slog"
 
-	"github.com/go-logr/logr"
 	"go.opentelemetry.io/otel/trace"
 
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/probe"
@@ -14,7 +14,7 @@ import (
 
 // Controller handles OpenTelemetry telemetry generation for events.
 type Controller struct {
-	logger         logr.Logger
+	logger         *slog.Logger
 	version        string
 	tracerProvider trace.TracerProvider
 	tracersMap     map[tracerID]trace.Tracer
@@ -53,11 +53,11 @@ func (c *Controller) getTracer(pkg, tracerName, version, schema string) trace.Tr
 // Trace creates a trace span for event.
 func (c *Controller) Trace(event *probe.Event) {
 	for _, se := range event.SpanEvents {
-		c.logger.V(1).Info("got event", "kind", event.Kind.String(), "pkg", event.Package, "attrs", se.Attributes, "traceID", se.SpanContext.TraceID().String(), "spanID", se.SpanContext.SpanID().String())
+		c.logger.Debug("got event", "kind", event.Kind.String(), "pkg", event.Package, "attrs", se.Attributes, "traceID", se.SpanContext.TraceID().String(), "spanID", se.SpanContext.SpanID().String())
 		ctx := context.Background()
 
 		if se.SpanContext == nil {
-			c.logger.V(1).Info("got event without context - dropping")
+			c.logger.Debug("got event without context - dropping")
 			return
 		}
 
@@ -67,7 +67,7 @@ func (c *Controller) Trace(event *probe.Event) {
 		}
 
 		ctx = ContextWithEBPFEvent(ctx, *se)
-		c.logger.V(1).Info("getting tracer", "name", se.TracerName, "version", se.TracerVersion, "schema", se.TracerSchema)
+		c.logger.Debug("getting tracer", "name", se.TracerName, "version", se.TracerVersion, "schema", se.TracerSchema)
 		_, span := c.getTracer(event.Package, se.TracerName, se.TracerVersion, se.TracerSchema).
 			Start(ctx, se.SpanName,
 				trace.WithAttributes(se.Attributes...),
@@ -79,9 +79,7 @@ func (c *Controller) Trace(event *probe.Event) {
 }
 
 // NewController returns a new initialized [Controller].
-func NewController(logger logr.Logger, tracerProvider trace.TracerProvider, ver string) (*Controller, error) {
-	logger = logger.WithName("Controller")
-
+func NewController(logger *slog.Logger, tracerProvider trace.TracerProvider, ver string) (*Controller, error) {
 	return &Controller{
 		logger:         logger,
 		version:        ver,

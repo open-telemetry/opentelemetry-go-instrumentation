@@ -8,13 +8,12 @@ import (
 	"debug/buildinfo"
 	"errors"
 	"io"
+	"log/slog"
 	"os"
 	"path"
 	"strconv"
 	"strings"
 	"time"
-
-	"github.com/go-logr/logr"
 )
 
 var (
@@ -29,15 +28,13 @@ var (
 
 // Analyzer is used to find actively running processes.
 type Analyzer struct {
-	logger    logr.Logger
+	logger    *slog.Logger
 	BuildInfo *buildinfo.BuildInfo
 }
 
 // NewAnalyzer returns a new [ProcessAnalyzer].
-func NewAnalyzer(logger logr.Logger) *Analyzer {
-	return &Analyzer{
-		logger: logger.WithName("Analyzer"),
-	}
+func NewAnalyzer(logger *slog.Logger) *Analyzer {
+	return &Analyzer{logger: logger}
 }
 
 // DiscoverProcessID searches for the target as an actively running process,
@@ -59,18 +56,18 @@ func (a *Analyzer) DiscoverProcessID(ctx context.Context, target *TargetArgs) (i
 	for {
 		select {
 		case <-ctx.Done():
-			a.logger.V(1).Info("stopping process id discovery due to kill signal")
+			a.logger.Debug("stopping process id discovery due to kill signal")
 			return 0, ErrInterrupted
 		case <-t.C:
 			pid, err := a.findProcessID(target, proc)
 			if err == nil {
-				a.logger.V(0).Info("found process", "pid", pid)
+				a.logger.Info("found process", "pid", pid)
 				return pid, nil
 			}
 			if err == ErrProcessNotFound {
-				a.logger.V(1).Info("process not found yet, trying again soon", "exe_path", target.ExePath)
+				a.logger.Debug("process not found yet, trying again soon", "exe_path", target.ExePath)
 			} else {
-				a.logger.Error(err, "error while searching for process", "exe_path", target.ExePath)
+				a.logger.Error("error while searching for process", "error", err, "exe_path", target.ExePath)
 			}
 
 			// Reset the file offset for next iteration
