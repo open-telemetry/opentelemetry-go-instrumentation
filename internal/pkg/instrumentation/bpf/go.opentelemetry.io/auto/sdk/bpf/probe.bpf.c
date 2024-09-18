@@ -27,13 +27,6 @@ struct otel_span_t {
 };
 
 struct {
-    __uint(type, BPF_MAP_TYPE_PERCPU_ARRAY);
-    __uint(key_size, sizeof(u32));
-    __uint(value_size, sizeof(struct otel_span_t));
-    __uint(max_entries, 2);
-} otel_span_storage_map SEC(".maps");
-
-struct {
 	__uint(type, BPF_MAP_TYPE_HASH);
 	__type(key, void*);
 	__type(value, struct otel_span_t);
@@ -56,44 +49,7 @@ struct {
 	__uint(type, BPF_MAP_TYPE_PERF_EVENT_ARRAY);
 } events SEC(".maps");
 
-// zero_span will zero out the passed otel_span.
-static __always_inline long zero_span(struct otel_span_t *otel_span) {
-	// eBPF does not support using memset structs greater than 1024 bytes in
-	// size. Instead, use the otel_span_storage_map. The otel_span_storage_map
-	// is designed to hold two entries:
-	//   - a zero span
-	//   - an active span
-	//
-	// What we are doing here is:
-	//
-	//   1. Get a copy of the zero span.
-	//   2. Set our copy of the zero span to the active span.
-	//   3. Set *otel_span to the active span.
-	//
-	// This approach is not concurrent safe and requires synchronization on the
-	// thread this is called from.
-
-    u32 zero_key = 0;
-    struct otel_span_t *zero = bpf_map_lookup_elem(&otel_span_storage_map, &zero_key);
-    if (zero == NULL) {
-		// Invalid otel_span_storage_map setup.
-		return -1;
-    }
-
-    u32 active_key = 1;
-    bpf_map_update_elem(&otel_span_storage_map, &active_key, zero, 0);
-
-    struct otel_span_t *active_span = bpf_map_lookup_elem(&otel_span_storage_map, &active_key);
-    if (active_span == NULL) {
-		return -2;
-    }
-
-	*otel_span = *active_span;
-	return 0;
-}
-
 static __always_inline long write_span_context(void *go_sc, struct span_context *sc) {
-	bpf_printk("write_span_context: go_sc: %p", go_sc);
 	if (go_sc == NULL) {
 		bpf_printk("write_span_context: NULL go_sc");
 		return -1;
@@ -162,11 +118,8 @@ int uprobe_Tracer_start(struct pt_regs *ctx) {
     struct go_iface go_context = {0};
     get_Go_context(ctx, 2, 0, true, &go_context);
 
-	struct otel_span_t otel_span = {0};
-	long rc = zero_span(&otel_span) < 0;
-	if (rc != 0) {
-		return -1;
-	}
+	struct otel_span_t otel_span;
+    __builtin_memset(&otel_span, 0, sizeof(struct otel_span_t));
 
     start_span_params_t params = {
         .ctx = ctx,
@@ -180,7 +133,7 @@ int uprobe_Tracer_start(struct pt_regs *ctx) {
     start_span(&params);
 
 	void *parent_span_context = get_argument(ctx, 5);
-	rc = write_span_context(parent_span_context, &otel_span.psc);
+	long rc = write_span_context(parent_span_context, &otel_span.psc);
 	if (rc != 0) {
 		bpf_printk("failed to write parent span context: %ld", rc);
 	}
