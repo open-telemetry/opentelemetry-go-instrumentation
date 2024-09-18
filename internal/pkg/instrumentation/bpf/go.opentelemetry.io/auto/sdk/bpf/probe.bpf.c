@@ -10,7 +10,11 @@
 char __license[] SEC("license") = "Dual MIT/GPL";
 
 #define MAX_CONCURRENT 50
-#define MAX_SIZE 412
+// TODO: tune this. This is a just a guess, but we should be able to determine
+// the maximum size of a span (based on limits) and set this. Ideally, we could
+// also look into a tiered allocation strategy so we do not over allocate
+// space (i.e. small, medium, large data sizes).
+#define MAX_SIZE 1024
 
 // Injected const.
 volatile const u64 span_context_trace_id_pos;
@@ -36,10 +40,17 @@ struct {
 	__uint(max_entries, MAX_CONCURRENT);
 } active_spans_by_span_ptr SEC(".maps");
 
-struct event {
+struct event_t {
 	u32 size;
 	char data[MAX_SIZE];
 };
+
+struct {
+    __uint(type, BPF_MAP_TYPE_PERCPU_ARRAY);
+    __uint(key_size, sizeof(u32));
+    __uint(value_size, sizeof(struct event_t));
+    __uint(max_entries, 1);
+} new_event SEC(".maps");
 
 struct {
 	__uint(type, BPF_MAP_TYPE_PERF_EVENT_ARRAY);
@@ -216,7 +227,7 @@ int uprobe_Span_ended(struct pt_regs *ctx) {
 
 	u64 len = (u64)get_argument(ctx, 3);
 	if (len > MAX_SIZE) {
-		bpf_printk("span data too large: %d\n", len);
+		bpf_printk("span data too large: %d", len);
 		return -1;
 	}
 	if (len == 0) {
@@ -224,19 +235,32 @@ int uprobe_Span_ended(struct pt_regs *ctx) {
 		return 0;
 	}
 
-	struct event event;
-	event.size = (u32)len;
-
 	void *data_ptr = get_argument(ctx, 2);
 	if (data_ptr == NULL) {
 		bpf_printk("empty span data");
 		return 0;
 	}
 
-	__builtin_memset(&event.data, 0, MAX_SIZE);
-	bpf_probe_read(&event.data, (u32)event.size, data_ptr);
+	u32 key = 0;
+	struct event_t *event = bpf_map_lookup_elem(&new_event, &key);
+	if (event == NULL) {
+		bpf_printk("failed to initialize new event");
+		return -2;
+	}
+	event->size = (u32)len;
 
-	bpf_perf_event_output(ctx, &events, BPF_F_CURRENT_CPU, &event, sizeof(event));
+	if (event->size < MAX_SIZE) {
+		long rc = bpf_probe_read(&event->data, event->size, data_ptr);
+		if (rc < 0) {
+			bpf_printk("failed to read encoded span data");
+			return -3;
+		}
+	} else {
+		bpf_printk("read too large: %d", event->size);
+		return -4;
+	}
+
+	bpf_perf_event_output(ctx, &events, BPF_F_CURRENT_CPU, event, sizeof(*event));
 
 	return 0;
 }

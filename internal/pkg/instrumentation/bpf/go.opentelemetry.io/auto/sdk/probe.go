@@ -20,6 +20,10 @@ import (
 
 //go:generate go run github.com/cilium/ebpf/cmd/bpf2go -target amd64,arm64 -cc clang -cflags $CFLAGS bpf ./bpf/probe.bpf.c
 
+// maxSize is the maximum payload size of binary data transported in an event.
+// This needs to remain in sync with the eBPF program.
+const maxSize = 1024
+
 // New returns a new [probe.Probe].
 func New(logger logr.Logger) probe.Probe {
 	id := probe.ID{
@@ -79,7 +83,7 @@ func New(logger logr.Logger) probe.Probe {
 
 type event struct {
 	Size     uint32
-	SpanData [412]byte
+	SpanData [maxSize]byte
 }
 
 type converter struct {

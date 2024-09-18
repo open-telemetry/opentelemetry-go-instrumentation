@@ -79,6 +79,7 @@ type bpfMapSpecs struct {
 	AllocMap             *ebpf.MapSpec `ebpf:"alloc_map"`
 	Events               *ebpf.MapSpec `ebpf:"events"`
 	GoContextToSc        *ebpf.MapSpec `ebpf:"go_context_to_sc"`
+	NewEvent             *ebpf.MapSpec `ebpf:"new_event"`
 	OtelSpanStorageMap   *ebpf.MapSpec `ebpf:"otel_span_storage_map"`
 	SliceArrayBuffMap    *ebpf.MapSpec `ebpf:"slice_array_buff_map"`
 	TrackedSpansBySc     *ebpf.MapSpec `ebpf:"tracked_spans_by_sc"`
@@ -107,6 +108,7 @@ type bpfMaps struct {
 	AllocMap             *ebpf.Map `ebpf:"alloc_map"`
 	Events               *ebpf.Map `ebpf:"events"`
 	GoContextToSc        *ebpf.Map `ebpf:"go_context_to_sc"`
+	NewEvent             *ebpf.Map `ebpf:"new_event"`
 	OtelSpanStorageMap   *ebpf.Map `ebpf:"otel_span_storage_map"`
 	SliceArrayBuffMap    *ebpf.Map `ebpf:"slice_array_buff_map"`
 	TrackedSpansBySc     *ebpf.Map `ebpf:"tracked_spans_by_sc"`
@@ -118,6 +120,7 @@ func (m *bpfMaps) Close() error {
 		m.AllocMap,
 		m.Events,
 		m.GoContextToSc,
+		m.NewEvent,
 		m.OtelSpanStorageMap,
 		m.SliceArrayBuffMap,
 		m.TrackedSpansBySc,
