@@ -163,6 +163,24 @@ func manifests() ([]inspect.Manifest, error) {
 				structfield.NewID("go.opentelemetry.io/otel", "go.opentelemetry.io/otel/internal/global", "tracer", "name"),
 				structfield.NewID("go.opentelemetry.io/otel", "go.opentelemetry.io/otel/internal/global", "tracer", "provider"),
 				structfield.NewID("go.opentelemetry.io/otel", "go.opentelemetry.io/otel/internal/global", "tracerProvider", "tracers"),
+				structfield.NewID(
+					"go.opentelemetry.io/otel",
+					"go.opentelemetry.io/otel/trace",
+					"SpanContext",
+					"traceID",
+				),
+				structfield.NewID(
+					"go.opentelemetry.io/otel",
+					"go.opentelemetry.io/otel/trace",
+					"SpanContext",
+					"spanID",
+				),
+				structfield.NewID(
+					"go.opentelemetry.io/otel",
+					"go.opentelemetry.io/otel/trace",
+					"SpanContext",
+					"traceFlags",
+				),
 			},
 		},
 		{

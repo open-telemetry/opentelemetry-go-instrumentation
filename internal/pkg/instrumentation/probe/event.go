@@ -25,6 +25,7 @@ type Status struct {
 
 type SpanEvent struct {
 	SpanName          string
+	Kind              trace.SpanKind
 	Attributes        []attribute.KeyValue
 	StartTime         time.Time
 	EndTime           time.Time
@@ -34,4 +35,6 @@ type SpanEvent struct {
 	TracerName        string
 	TracerVersion     string
 	TracerSchema      string
+	Events            map[string][]trace.EventOption
+	Links             []trace.Link
 }
