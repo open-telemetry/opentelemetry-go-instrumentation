@@ -94,15 +94,38 @@ type span struct {
 	span   ptrace.Span
 }
 
-func (s *span) SpanContext() trace.SpanContext { return s.spanContext }
+func (s *span) SpanContext() trace.SpanContext {
+	if s == nil {
+		return trace.SpanContext{}
+	}
+	return s.spanContext
+}
 
-func (s *span) IsRecording() bool { return s.sampled }
+func (s *span) IsRecording() bool {
+	if s == nil {
+		return false
+	}
+	return s.sampled
+}
 
-func (s *span) SetStatus(c codes.Code, msg string) { /* TODO: implement */ }
+func (s *span) SetStatus(c codes.Code, msg string) {
+	if s == nil || !s.sampled {
+		return
+	}
+	/* TODO: implement */
+}
 
-func (s *span) SetAttributes(attrs ...attribute.KeyValue) { /* TODO: implement */ }
+func (s *span) SetAttributes(attrs ...attribute.KeyValue) {
+	if s == nil || !s.sampled {
+		return
+	}
+	/* TODO: implement */
+}
 
 func (s *span) End(opts ...trace.SpanEndOption) {
+	if s == nil || !s.sampled {
+		return
+	}
 	// TODO: implement.
 	s.ended(nil)
 }
@@ -112,12 +135,34 @@ func (s *span) End(opts ...trace.SpanEndOption) {
 //go:noinline
 func (*span) ended(buf []byte) {}
 
-func (s *span) RecordError(err error, opts ...trace.EventOption) { /* TODO: implement */ }
+func (s *span) RecordError(err error, opts ...trace.EventOption) {
+	if s == nil || err == nil || !s.sampled {
+		return
+	}
+	/* TODO: implement */
+}
 
-func (s *span) AddEvent(name string, opts ...trace.EventOption) { /* TODO: implement */ }
+func (s *span) AddEvent(name string, opts ...trace.EventOption) {
+	if s == nil || !s.sampled {
+		return
+	}
+	/* TODO: implement */
+}
 
-func (s *span) AddLink(link trace.Link) { /* TODO: implement */ }
+func (s *span) AddLink(link trace.Link) {
+	if s == nil || !s.sampled {
+		return
+	}
+	/* TODO: implement */
+}
 
-func (s *span) SetName(name string) { /* TODO: implement */ }
+func (s *span) SetName(name string) {
+	if s == nil || !s.sampled {
+		return
+	}
+	/* TODO: implement */
+}
 
-func (*span) TracerProvider() trace.TracerProvider { return GetTracerProvider() }
+func (*span) TracerProvider() trace.TracerProvider {
+	return GetTracerProvider()
+}
