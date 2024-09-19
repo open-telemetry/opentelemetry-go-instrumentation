@@ -4,6 +4,7 @@
 package sdk
 
 import (
+	"context"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -46,4 +47,39 @@ func TestSpanNilUnsampledGuards(t *testing.T) {
 	t.Run("SetName", run(func(s *span) { s.SetName("span name") }))
 	t.Run("SetAttributes", run(func(s *span) { s.SetAttributes(attrs...) }))
 	t.Run("TracerProvider", run(func(s *span) { _ = s.TracerProvider() }))
+}
+
+func TestSpanSetName(t *testing.T) {
+	const name = "span name"
+	builder := spanBuilder{}
+
+	s := builder.Build()
+	s.SetName(name)
+	assert.Equal(t, name, s.span.Name(), "span name not set")
+
+	builder.Name = "alt"
+	s = builder.Build()
+	s.SetName(name)
+	assert.Equal(t, name, s.span.Name(), "SetName overrides default")
+}
+
+type spanBuilder struct {
+	Name        string
+	NotSampled  bool
+	SpanContext trace.SpanContext
+	Options     []trace.SpanStartOption
+}
+
+func (b spanBuilder) Build() *span {
+	tracer := new(tracer)
+	s := &span{sampled: !b.NotSampled, spanContext: b.SpanContext}
+	s.traces, s.span = tracer.traces(
+		context.Background(),
+		b.Name,
+		trace.NewSpanStartConfig(b.Options...),
+		s.spanContext,
+		trace.SpanContext{},
+	)
+
+	return s
 }
