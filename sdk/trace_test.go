@@ -4,9 +4,11 @@
 package sdk
 
 import (
+	"context"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"go.opentelemetry.io/collector/pdata/ptrace"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/trace"
@@ -46,4 +48,45 @@ func TestSpanNilUnsampledGuards(t *testing.T) {
 	t.Run("SetName", run(func(s *span) { s.SetName("span name") }))
 	t.Run("SetAttributes", run(func(s *span) { s.SetAttributes(attrs...) }))
 	t.Run("TracerProvider", run(func(s *span) { _ = s.TracerProvider() }))
+}
+
+func TestSpanSetStatus(t *testing.T) {
+	s := spanBuilder{}.Build()
+
+	want := ptrace.NewStatus()
+	assert.Equal(t, want, s.span.Status(), "empty status should not be set")
+
+	msg := "test"
+	want.SetMessage(msg)
+
+	for c, p := range map[codes.Code]ptrace.StatusCode{
+		codes.Error: ptrace.StatusCodeError,
+		codes.Ok:    ptrace.StatusCodeOk,
+		codes.Unset: ptrace.StatusCodeUnset,
+	} {
+		want.SetCode(p)
+		s.SetStatus(c, msg)
+		assert.Equalf(t, want, s.span.Status(), "code: %s, msg: %s", c, msg)
+	}
+}
+
+type spanBuilder struct {
+	Name        string
+	NotSampled  bool
+	SpanContext trace.SpanContext
+	Options     []trace.SpanStartOption
+}
+
+func (b spanBuilder) Build() *span {
+	tracer := new(tracer)
+	s := &span{sampled: !b.NotSampled, spanContext: b.SpanContext}
+	s.traces, s.span = tracer.traces(
+		context.Background(),
+		b.Name,
+		trace.NewSpanStartConfig(b.Options...),
+		s.spanContext,
+		trace.SpanContext{},
+	)
+
+	return s
 }

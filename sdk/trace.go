@@ -112,7 +112,18 @@ func (s *span) SetStatus(c codes.Code, msg string) {
 	if s == nil || !s.sampled {
 		return
 	}
-	/* TODO: implement */
+
+	stat := s.span.Status()
+	stat.SetMessage(msg)
+
+	switch c {
+	case codes.Unset:
+		stat.SetCode(ptrace.StatusCodeUnset)
+	case codes.Error:
+		stat.SetCode(ptrace.StatusCodeError)
+	case codes.Ok:
+		stat.SetCode(ptrace.StatusCodeOk)
+	}
 }
 
 func (s *span) SetAttributes(attrs ...attribute.KeyValue) {
