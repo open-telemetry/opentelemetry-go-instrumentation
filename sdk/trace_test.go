@@ -47,3 +47,10 @@ func TestSpanNilUnsampledGuards(t *testing.T) {
 	t.Run("SetAttributes", run(func(s *span) { s.SetAttributes(attrs...) }))
 	t.Run("TracerProvider", run(func(s *span) { _ = s.TracerProvider() }))
 }
+
+func TestSpanTracerProvider(t *testing.T) {
+	var s span
+
+	got := s.TracerProvider()
+	assert.IsType(t, tracerProvider{}, got)
+}
