@@ -60,7 +60,7 @@ func TestSpanSetName(t *testing.T) {
 	builder.Name = "alt"
 	s = builder.Build()
 	s.SetName(name)
-	assert.Equal(t, name, s.span.Name(), "SetName overrides default")
+	assert.Equal(t, name, s.span.Name(), "SetName did not overwrite")
 }
 
 type spanBuilder struct {
