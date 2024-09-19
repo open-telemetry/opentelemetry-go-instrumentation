@@ -164,7 +164,11 @@ fixture-kafka-go: fixtures/kafka-go
 fixtures/%: LIBRARY=$*
 fixtures/%:
 	$(MAKE) docker-build
-	docker build -t sample-app -f internal/test/e2e/$(LIBRARY)/Dockerfile .
+	if [ -f ./internal/test/e2e/$(LIBRARY)/build.sh ]; then \
+		./internal/test/e2e/$(LIBRARY)/build.sh; \
+	else \
+		cd internal/test/e2e/$(LIBRARY) && docker build --build-context ../../../../ -t sample-app . ;\
+	fi
 	kind create cluster
 	kind load docker-image otel-go-instrumentation sample-app
 	helm repo add open-telemetry https://open-telemetry.github.io/opentelemetry-helm-charts
@@ -174,7 +178,7 @@ fixtures/%:
 	if [ -f ./internal/test/e2e/$(LIBRARY)/collector-helm-values.yml ]; then \
 		helm install test -f ./internal/test/e2e/$(LIBRARY)/collector-helm-values.yml opentelemetry-helm-charts/charts/opentelemetry-collector; \
 	else \
-		helm install test -f .github/workflows/e2e/k8s/collector-helm-values.yml opentelemetry-helm-charts/opentelemetry-collector; \
+		helm install test -f .github/workflows/e2e/k8s/collector-helm-values.yml opentelemetry-helm-charts/charts/opentelemetry-collector; \
 	fi
 	while : ; do \
 		kubectl get pod/test-opentelemetry-collector-0 && break; \
