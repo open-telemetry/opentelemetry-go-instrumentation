@@ -6,7 +6,7 @@ on:
   pull_request:
 
 env:
-  go_version: '~1.22'
+  go_version: '~1.23'
   CGO_ENABLED: '0'
 
 jobs:
