@@ -249,6 +249,13 @@ func TestSpanNilUnsampledGuards(t *testing.T) {
 	t.Run("TracerProvider", run(func(s *span) { _ = s.TracerProvider() }))
 }
 
+func TestSpanTracerProvider(t *testing.T) {
+	var s span
+
+	got := s.TracerProvider()
+	assert.IsType(t, tracerProvider{}, got)
+}
+
 type spanBuilder struct {
 	Name        string
 	NotSampled  bool
