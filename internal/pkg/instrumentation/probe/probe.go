@@ -69,6 +69,10 @@ type Base[BPFObj any, BPFEvent any] struct {
 	SpecFn func() (*ebpf.CollectionSpec, error)
 	// ProcessFn processes probe events into a uniform Event type.
 	ProcessFn func(*BPFEvent) []*SpanEvent
+	// ProcessRecord is an optional processing function for the probe. If nil,
+	// all records will be read directly into a new BPFEvent using the
+	// encoding/binary package.
+	ProcessRecord func(perf.Record) (BPFEvent, error)
 
 	reader     *perf.Reader
 	collection *ebpf.Collection
@@ -213,7 +217,7 @@ func (i *Base[BPFObj, BPFEvent]) Run(dest chan<- *Event) {
 
 		se, err := i.processRecord(record)
 		if err != nil {
-			i.Logger.Error("failed to process perf record", "error", err)
+			i.Logger.Error("failed to process perf record", "error", err, "pkg", i.ID.InstrumentedPkg)
 		}
 		e := &Event{
 			Package:    i.ID.InstrumentedPkg,
@@ -226,13 +230,22 @@ func (i *Base[BPFObj, BPFEvent]) Run(dest chan<- *Event) {
 }
 
 func (i *Base[BPFObj, BPFEvent]) processRecord(record perf.Record) ([]*SpanEvent, error) {
-	buf := bytes.NewBuffer(record.RawSample)
+	var (
+		event BPFEvent
+		err   error
+	)
 
-	var event BPFEvent
-	err := binary.Read(buf, binary.LittleEndian, &event)
+	if i.ProcessRecord != nil {
+		event, err = i.ProcessRecord(record)
+	} else {
+		buf := bytes.NewReader(record.RawSample)
+		err = binary.Read(buf, binary.LittleEndian, &event)
+	}
+
 	if err != nil {
 		return nil, err
 	}
+
 	return i.ProcessFn(&event), nil
 }
 

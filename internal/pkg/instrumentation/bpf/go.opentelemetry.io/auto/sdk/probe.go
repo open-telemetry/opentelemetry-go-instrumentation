@@ -4,8 +4,11 @@
 package sdk
 
 import (
+	"bytes"
+	"encoding/binary"
 	"log/slog"
 
+	"github.com/cilium/ebpf/perf"
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/ptrace"
 
@@ -16,10 +19,6 @@ import (
 )
 
 //go:generate go run github.com/cilium/ebpf/cmd/bpf2go -target amd64,arm64 -cc clang -cflags $CFLAGS bpf ./bpf/probe.bpf.c
-
-// maxSize is the maximum payload size of binary data transported in an event.
-// This needs to remain in sync with the eBPF program.
-const maxSize = 1024
 
 // New returns a new [probe.Probe].
 func New(logger *slog.Logger) probe.Probe {
@@ -72,18 +71,40 @@ func New(logger *slog.Logger) probe.Probe {
 				EntryProbe: "uprobe_Span_ended",
 			},
 		},
-		SpecFn:    loadBpf,
-		ProcessFn: c.convertEvent,
+		SpecFn:        loadBpf,
+		ProcessFn:     c.convertEvent,
+		ProcessRecord: c.decodeEvent,
 	}
 }
 
 type event struct {
 	Size     uint32
-	SpanData [maxSize]byte
+	SpanData []byte
 }
 
 type converter struct {
 	logger *slog.Logger
+}
+
+func (c *converter) decodeEvent(record perf.Record) (event, error) {
+	reader := bytes.NewReader(record.RawSample)
+
+	var e event
+	err := binary.Read(reader, binary.LittleEndian, &e.Size)
+	if err != nil {
+		c.logger.Error("failed to decode size", "error", err)
+		return event{}, err
+	}
+	c.logger.Debug("decoded size", "size", e.Size)
+
+	e.SpanData = make([]byte, e.Size)
+	_, err = reader.Read(e.SpanData)
+	if err != nil {
+		c.logger.Error("failed to read span data", "error", err)
+		return event{}, err
+	}
+	c.logger.Debug("decoded span data", "size", e.Size)
+	return e, nil
 }
 
 func (c *converter) convertEvent(e *event) []*probe.SpanEvent {

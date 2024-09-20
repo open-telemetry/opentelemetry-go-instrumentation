@@ -147,6 +147,9 @@ int uprobe_Span_ended(struct pt_regs *ctx) {
     stop_tracking_span(&span->sc, &span->psc);
     bpf_map_delete_elem(&active_spans_by_span_ptr, &span_ptr);
 
+	// Do not output un-sampled span data.
+	if (!is_sampled(&span->sc)) return 0;
+
 	u64 len = (u64)get_argument(ctx, 3);
 	if (len > MAX_SIZE) {
 		bpf_printk("span data too large: %d", len);
@@ -184,8 +187,10 @@ int uprobe_Span_ended(struct pt_regs *ctx) {
 
 	// Do not send the whole size.buf if it is not needed.
 	u64 size = sizeof(event->size) + event->size;
-	long rc = output_span_event(ctx, event, size, &span->sc);
-	if (rc != 0) return -5;
-
-	return 0;
+	// Make the verifier happy, ensure no unbounded memory access.
+	if (size < sizeof(struct event_t)+1) {
+		return bpf_perf_event_output(ctx, &events, BPF_F_CURRENT_CPU, event, size);
+	}
+	bpf_printk("write too large: %d", event->size);
+	return -5;
 }
