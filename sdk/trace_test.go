@@ -63,6 +63,13 @@ func TestSpanSetName(t *testing.T) {
 	assert.Equal(t, name, s.span.Name(), "SetName did not overwrite")
 }
 
+func TestSpanTracerProvider(t *testing.T) {
+	var s span
+
+	got := s.TracerProvider()
+	assert.IsType(t, tracerProvider{}, got)
+}
+
 type spanBuilder struct {
 	Name        string
 	NotSampled  bool

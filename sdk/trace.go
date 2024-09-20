@@ -163,6 +163,4 @@ func (s *span) SetName(name string) {
 	s.span.SetName(name)
 }
 
-func (*span) TracerProvider() trace.TracerProvider {
-	return GetTracerProvider()
-}
+func (*span) TracerProvider() trace.TracerProvider { return GetTracerProvider() }
