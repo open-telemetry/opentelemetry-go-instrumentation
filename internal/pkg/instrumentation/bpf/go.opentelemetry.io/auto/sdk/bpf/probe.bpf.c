@@ -79,6 +79,9 @@ static __always_inline long write_span_context(void *go_sc, struct span_context 
 	return 0;
 }
 
+// This instrumentation attaches a uprobe to the following function:
+// func (t *tracer) start(ctx context.Context, spanPtr *span, parentSpanCtx *trace.SpanContext, sampled *bool, spanCtx *trace.SpanContext) {
+// https://github.com/open-telemetry/opentelemetry-go-instrumentation/blob/effdec9ac23e56e9e9655663d386600e62b10871/sdk/trace.go#L56-L66
 SEC("uprobe/Tracer_start")
 int uprobe_Tracer_start(struct pt_regs *ctx) {
     struct go_iface go_context = {0};
@@ -134,6 +137,9 @@ int uprobe_Tracer_start(struct pt_regs *ctx) {
 	return 0;
 }
 
+// This instrumentation attaches a uprobe to the following function:
+// func (*span) ended(buf []byte) {}
+// https://github.com/open-telemetry/opentelemetry-go-instrumentation/blob/effdec9ac23e56e9e9655663d386600e62b10871/sdk/trace.go#L133-L136
 SEC("uprobe/Span_ended")
 int uprobe_Span_ended(struct pt_regs *ctx) {
     void *span_ptr = get_argument(ctx, 1);
