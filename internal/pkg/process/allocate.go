@@ -5,11 +5,10 @@ package process
 
 import (
 	"fmt"
+	"log/slog"
 	"math"
 	"os"
 	"runtime"
-
-	"github.com/go-logr/logr"
 
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/utils"
 	"go.opentelemetry.io/auto/internal/pkg/process/ptrace"
@@ -23,9 +22,7 @@ type AllocationDetails struct {
 }
 
 // Allocate allocates memory for the instrumented process.
-func Allocate(logger logr.Logger, pid int) (*AllocationDetails, error) {
-	logger = logger.WithName("Allocate")
-
+func Allocate(logger *slog.Logger, pid int) (*AllocationDetails, error) {
 	// runtime.NumCPU doesn't query any kind of hardware or OS state,
 	// but merely uses affinity APIs to count what CPUs the given go process is available to run on.
 	// Go's implementation of runtime.NumCPU (https://github.com/golang/go/blob/48d899dcdbed4534ed942f7ec2917cf86b18af22/src/runtime/os_linux.go#L97)
@@ -37,7 +34,7 @@ func Allocate(logger logr.Logger, pid int) (*AllocationDetails, error) {
 	}
 
 	mapSize := uint64(os.Getpagesize() * nCPU * 8)
-	logger.V(1).Info(
+	logger.Debug(
 		"Requesting memory allocation",
 		"size", mapSize,
 		"page size", os.Getpagesize(),
@@ -48,7 +45,7 @@ func Allocate(logger logr.Logger, pid int) (*AllocationDetails, error) {
 		return nil, err
 	}
 
-	logger.V(1).Info(
+	logger.Debug(
 		"mmaped remote memory",
 		"start_addr", fmt.Sprintf("0x%x", addr),
 		"end_addr", fmt.Sprintf("0x%x", addr+mapSize),
@@ -61,7 +58,7 @@ func Allocate(logger logr.Logger, pid int) (*AllocationDetails, error) {
 	}, nil
 }
 
-func remoteAllocate(logger logr.Logger, pid int, mapSize uint64) (uint64, error) {
+func remoteAllocate(logger *slog.Logger, pid int, mapSize uint64) (uint64, error) {
 	runtime.LockOSThread()
 	defer runtime.UnlockOSThread()
 	program, err := ptrace.NewTracedProgram(pid, logger)
@@ -70,17 +67,17 @@ func remoteAllocate(logger logr.Logger, pid int, mapSize uint64) (uint64, error)
 	}
 
 	defer func() {
-		logger.V(0).Info("Detaching from process", "pid", pid)
+		logger.Info("Detaching from process", "pid", pid)
 		err := program.Detach()
 		if err != nil {
-			logger.Error(err, "Failed to detach ptrace", "pid", pid)
+			logger.Error("Failed to detach ptrace", "error", err, "pid", pid)
 		}
 	}()
 
 	if err := program.SetMemLockInfinity(); err != nil {
-		logger.Error(err, "Failed to set memlock on process")
+		logger.Error("Failed to set memlock on process", "error", err)
 	} else {
-		logger.V(1).Info("Set memlock on process successfully")
+		logger.Debug("Set memlock on process successfully")
 	}
 
 	fd := -1

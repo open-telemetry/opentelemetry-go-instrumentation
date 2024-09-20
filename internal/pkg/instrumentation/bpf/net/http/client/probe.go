@@ -5,12 +5,12 @@ package client
 
 import (
 	"fmt"
+	"log/slog"
 	"net/url"
 	"os"
 	"strings"
 
 	"github.com/cilium/ebpf"
-	"github.com/go-logr/logr"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
@@ -33,7 +33,7 @@ const (
 )
 
 // New returns a new [probe.Probe].
-func New(logger logr.Logger) probe.Probe {
+func New(logger *slog.Logger) probe.Probe {
 	id := probe.ID{
 		SpanKind:        trace.SpanKindClient,
 		InstrumentedPkg: pkg,
@@ -64,7 +64,7 @@ func New(logger logr.Logger) probe.Probe {
 
 	return &probe.Base[bpfObjects, event]{
 		ID:     id,
-		Logger: logger.WithName(id.String()),
+		Logger: logger,
 		Consts: []probe.Const{
 			probe.RegistersABIConst{},
 			probe.AllocationConst{},
@@ -274,8 +274,8 @@ func convertEvent(e *event) []*probe.SpanEvent {
 
 	spanEvent := &probe.SpanEvent{
 		SpanName:          method,
-		StartTime:         int64(e.StartTime),
-		EndTime:           int64(e.EndTime),
+		StartTime:         utils.BootOffsetToTime(e.StartTime),
+		EndTime:           utils.BootOffsetToTime(e.EndTime),
 		SpanContext:       &sc,
 		Attributes:        attrs,
 		ParentSpanContext: pscPtr,

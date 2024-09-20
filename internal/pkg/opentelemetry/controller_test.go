@@ -6,8 +6,7 @@ package opentelemetry
 import (
 	"context"
 	"fmt"
-	"log"
-	"os"
+	"log/slog"
 	"runtime"
 	"strconv"
 	"strings"
@@ -15,8 +14,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/go-logr/logr/testr"
-	"github.com/go-logr/stdr"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -62,7 +59,6 @@ func instResource() *resource.Resource {
 func TestTrace(t *testing.T) {
 	startTime := time.Now()
 	endTime := startTime.Add(1 * time.Second)
-	logger := stdr.New(log.New(os.Stderr, "", log.LstdFlags))
 
 	exporter := tracetest.NewInMemoryExporter()
 	tp := sdktrace.NewTracerProvider(
@@ -75,11 +71,8 @@ func TestTrace(t *testing.T) {
 		assert.NoError(t, err)
 	}()
 
-	ctrl, err := NewController(logger, tp, "test")
+	ctrl, err := NewController(slog.Default(), tp, "test")
 	assert.NoError(t, err)
-
-	convertedStartTime := ctrl.convertTime(startTime.Unix())
-	convertedEndTime := ctrl.convertTime(endTime.Unix())
 
 	spId, err := trace.SpanIDFromHex("00f067aa0ba902b7")
 	assert.NoError(t, err)
@@ -106,8 +99,8 @@ func TestTrace(t *testing.T) {
 				SpanEvents: []*probe.SpanEvent{
 					{
 						SpanName:     "testSpan",
-						StartTime:    startTime.Unix(),
-						EndTime:      endTime.Unix(),
+						StartTime:    startTime,
+						EndTime:      endTime,
 						SpanContext:  &spanContext,
 						TracerSchema: semconv.SchemaURL,
 					},
@@ -117,8 +110,8 @@ func TestTrace(t *testing.T) {
 				{
 					Name:      "testSpan",
 					SpanKind:  trace.SpanKindClient,
-					StartTime: convertedStartTime,
-					EndTime:   convertedEndTime,
+					StartTime: startTime,
+					EndTime:   endTime,
 					Resource:  instResource(),
 					InstrumentationLibrary: instrumentation.Scope{
 						Name:      "go.opentelemetry.io/auto/foo/bar",
@@ -141,8 +134,8 @@ func TestTrace(t *testing.T) {
 				SpanEvents: []*probe.SpanEvent{
 					{
 						SpanName:    "GET",
-						StartTime:   startTime.Unix(),
-						EndTime:     endTime.Unix(),
+						StartTime:   startTime,
+						EndTime:     endTime,
 						SpanContext: &spanContext,
 						Attributes: []attribute.KeyValue{
 							semconv.HTTPRequestMethodKey.String("GET"),
@@ -158,8 +151,8 @@ func TestTrace(t *testing.T) {
 				{
 					Name:      "GET",
 					SpanKind:  trace.SpanKindClient,
-					StartTime: convertedStartTime,
-					EndTime:   convertedEndTime,
+					StartTime: startTime,
+					EndTime:   endTime,
 					Resource:  instResource(),
 					InstrumentationLibrary: instrumentation.Scope{
 						Name:    "go.opentelemetry.io/auto/net/http",
@@ -187,8 +180,8 @@ func TestTrace(t *testing.T) {
 				SpanEvents: []*probe.SpanEvent{
 					{
 						SpanName:    "GET",
-						StartTime:   startTime.Unix(),
-						EndTime:     endTime.Unix(),
+						StartTime:   startTime,
+						EndTime:     endTime,
 						SpanContext: &spanContext,
 						Attributes: []attribute.KeyValue{
 							semconv.HTTPRequestMethodKey.String("GET"),
@@ -205,8 +198,8 @@ func TestTrace(t *testing.T) {
 				{
 					Name:      "GET",
 					SpanKind:  trace.SpanKindClient,
-					StartTime: convertedStartTime,
-					EndTime:   convertedEndTime,
+					StartTime: startTime,
+					EndTime:   endTime,
 					Resource:  instResource(),
 					InstrumentationLibrary: instrumentation.Scope{
 						Name:    "go.opentelemetry.io/auto/net/http",
@@ -234,8 +227,8 @@ func TestTrace(t *testing.T) {
 				SpanEvents: []*probe.SpanEvent{
 					{
 						SpanName:    "very important span",
-						StartTime:   startTime.Unix(),
-						EndTime:     endTime.Unix(),
+						StartTime:   startTime,
+						EndTime:     endTime,
 						SpanContext: &spanContext,
 						Attributes: []attribute.KeyValue{
 							attribute.Int64("int.value", 42),
@@ -254,8 +247,8 @@ func TestTrace(t *testing.T) {
 				{
 					Name:      "very important span",
 					SpanKind:  trace.SpanKindClient,
-					StartTime: convertedStartTime,
-					EndTime:   convertedEndTime,
+					StartTime: startTime,
+					EndTime:   endTime,
 					Resource:  instResource(),
 					InstrumentationLibrary: instrumentation.Scope{
 						Name:      "user-tracer",
@@ -297,8 +290,6 @@ func TestTrace(t *testing.T) {
 }
 
 func TestGetTracer(t *testing.T) {
-	logger := stdr.New(log.New(os.Stderr, "", log.LstdFlags))
-
 	exporter := tracetest.NewInMemoryExporter()
 	tp := sdktrace.NewTracerProvider(
 		sdktrace.WithSampler(sdktrace.AlwaysSample()),
@@ -310,7 +301,7 @@ func TestGetTracer(t *testing.T) {
 		assert.NoError(t, err)
 	}()
 
-	ctrl, err := NewController(logger, tp, "test")
+	ctrl, err := NewController(slog.Default(), tp, "test")
 	assert.NoError(t, err)
 
 	t1 := ctrl.getTracer("foo/bar", "test", "v1", "schema")
@@ -361,7 +352,7 @@ func TestShutdown(t *testing.T) {
 
 	tp := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(batcher))
 
-	ctrl, err := NewController(testr.New(t), tp, "test")
+	ctrl, err := NewController(slog.Default(), tp, "test")
 	require.NoError(t, err)
 
 	ctx := context.Background()

@@ -5,8 +5,8 @@ package server
 
 import (
 	"fmt"
+	"log/slog"
 
-	"github.com/go-logr/logr"
 	"github.com/hashicorp/go-version"
 	"go.opentelemetry.io/otel/attribute"
 	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
@@ -16,6 +16,7 @@ import (
 	"go.opentelemetry.io/auto/internal/pkg/inject"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/context"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/probe"
+	"go.opentelemetry.io/auto/internal/pkg/instrumentation/utils"
 	"go.opentelemetry.io/auto/internal/pkg/process"
 	"go.opentelemetry.io/auto/internal/pkg/structfield"
 )
@@ -28,14 +29,14 @@ const (
 )
 
 // New returns a new [probe.Probe].
-func New(logger logr.Logger) probe.Probe {
+func New(logger *slog.Logger) probe.Probe {
 	id := probe.ID{
 		SpanKind:        trace.SpanKindServer,
 		InstrumentedPkg: pkg,
 	}
 	return &probe.Base[bpfObjects, event]{
 		ID:     id,
-		Logger: logger.WithName(id.String()),
+		Logger: logger,
 		Consts: []probe.Const{
 			probe.RegistersABIConst{},
 			probe.AllocationConst{},
@@ -127,8 +128,8 @@ func convertEvent(e *event) []*probe.SpanEvent {
 	return []*probe.SpanEvent{
 		{
 			SpanName:  method,
-			StartTime: int64(e.StartTime),
-			EndTime:   int64(e.EndTime),
+			StartTime: utils.BootOffsetToTime(e.StartTime),
+			EndTime:   utils.BootOffsetToTime(e.EndTime),
 			Attributes: []attribute.KeyValue{
 				semconv.RPCSystemKey.String("grpc"),
 				semconv.RPCServiceKey.String(method),

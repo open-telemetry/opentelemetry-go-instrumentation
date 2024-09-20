@@ -6,8 +6,6 @@ toolchain go1.22.6
 
 require (
 	github.com/docker/docker v27.2.1+incompatible
-	github.com/go-logr/logr v1.4.2
-	github.com/go-logr/stdr v1.2.2
 	github.com/golangci/golangci-lint v1.61.0
 	github.com/google/go-licenses/v2 v2.0.0-alpha.1
 	github.com/hashicorp/go-version v1.7.0
@@ -77,6 +75,8 @@ require (
 	github.com/go-git/gcfg v1.5.1-0.20230307220236-3a3c6141e376 // indirect
 	github.com/go-git/go-billy/v5 v5.5.0 // indirect
 	github.com/go-git/go-git/v5 v5.12.0 // indirect
+	github.com/go-logr/logr v1.4.2 // indirect
+	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/go-toolsmith/astcast v1.1.0 // indirect
 	github.com/go-toolsmith/astcopy v1.1.0 // indirect
 	github.com/go-toolsmith/astequal v1.2.0 // indirect

@@ -4,10 +4,10 @@
 package sql
 
 import (
+	"log/slog"
 	"os"
 	"strconv"
 
-	"github.com/go-logr/logr"
 	"go.opentelemetry.io/otel/attribute"
 	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
 	"go.opentelemetry.io/otel/trace"
@@ -15,6 +15,7 @@ import (
 
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/context"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/probe"
+	"go.opentelemetry.io/auto/internal/pkg/instrumentation/utils"
 )
 
 //go:generate go run github.com/cilium/ebpf/cmd/bpf2go -target amd64,arm64 -cc clang -cflags $CFLAGS bpf ./bpf/probe.bpf.c
@@ -28,14 +29,14 @@ const (
 )
 
 // New returns a new [probe.Probe].
-func New(logger logr.Logger) probe.Probe {
+func New(logger *slog.Logger) probe.Probe {
 	id := probe.ID{
 		SpanKind:        trace.SpanKindClient,
 		InstrumentedPkg: pkg,
 	}
 	return &probe.Base[bpfObjects, event]{
 		ID:     id,
-		Logger: logger.WithName(id.String()),
+		Logger: logger,
 		Consts: []probe.Const{
 			probe.RegistersABIConst{},
 			probe.AllocationConst{},
@@ -96,8 +97,8 @@ func convertEvent(e *event) []*probe.SpanEvent {
 	return []*probe.SpanEvent{
 		{
 			SpanName:    "DB",
-			StartTime:   int64(e.StartTime),
-			EndTime:     int64(e.EndTime),
+			StartTime:   utils.BootOffsetToTime(e.StartTime),
+			EndTime:     utils.BootOffsetToTime(e.EndTime),
 			SpanContext: &sc,
 			Attributes: []attribute.KeyValue{
 				semconv.DBQueryText(query),

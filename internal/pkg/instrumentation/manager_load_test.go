@@ -6,11 +6,9 @@
 package instrumentation
 
 import (
-	"log"
-	"os"
+	"log/slog"
 	"testing"
 
-	"github.com/go-logr/stdr"
 	"github.com/hashicorp/go-version"
 	"github.com/stretchr/testify/assert"
 	"go.opentelemetry.io/auto/internal/pkg/inject"
@@ -46,10 +44,7 @@ func TestLoadProbes(t *testing.T) {
 }
 
 func fakeManager(t *testing.T) *Manager {
-	logger := stdr.New(log.New(os.Stderr, "", log.LstdFlags))
-	logger = logger.WithName("Instrumentation")
-
-	m, err := NewManager(logger, nil, true, nil, NewNoopConfigProvider(nil))
+	m, err := NewManager(slog.Default(), nil, true, nil, NewNoopConfigProvider(nil))
 	assert.NoError(t, err)
 	assert.NotNil(t, m)
 

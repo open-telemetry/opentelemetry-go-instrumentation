@@ -5,9 +5,9 @@ package consumer
 
 import (
 	"fmt"
+	"log/slog"
 	"strconv"
 
-	"github.com/go-logr/logr"
 	"go.opentelemetry.io/otel/attribute"
 	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
 	"go.opentelemetry.io/otel/trace"
@@ -15,6 +15,7 @@ import (
 
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/context"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/probe"
+	"go.opentelemetry.io/auto/internal/pkg/instrumentation/utils"
 	"go.opentelemetry.io/auto/internal/pkg/structfield"
 )
 
@@ -26,14 +27,14 @@ const (
 )
 
 // New returns a new [probe.Probe].
-func New(logger logr.Logger) probe.Probe {
+func New(logger *slog.Logger) probe.Probe {
 	id := probe.ID{
 		SpanKind:        trace.SpanKindConsumer,
 		InstrumentedPkg: pkg,
 	}
 	return &probe.Base[bpfObjects, event]{
 		ID:     id,
-		Logger: logger.WithName(id.String()),
+		Logger: logger,
 		Consts: []probe.Const{
 			probe.RegistersABIConst{},
 			probe.AllocationConst{},
@@ -122,8 +123,8 @@ func convertEvent(e *event) []*probe.SpanEvent {
 	return []*probe.SpanEvent{
 		{
 			SpanName:          kafkaConsumerSpanName(topic),
-			StartTime:         int64(e.StartTime),
-			EndTime:           int64(e.EndTime),
+			StartTime:         utils.BootOffsetToTime(e.StartTime),
+			EndTime:           utils.BootOffsetToTime(e.EndTime),
 			SpanContext:       &sc,
 			ParentSpanContext: pscPtr,
 			Attributes:        attributes,

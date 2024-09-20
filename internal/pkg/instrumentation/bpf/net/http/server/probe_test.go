@@ -16,11 +16,15 @@ import (
 
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/context"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/probe"
+	"go.opentelemetry.io/auto/internal/pkg/instrumentation/utils"
 )
 
 func TestProbeConvertEvent(t *testing.T) {
-	start := time.Now()
+	start := time.Unix(0, time.Now().UnixNano()) // No wall clock.
 	end := start.Add(1 * time.Second)
+
+	startOffset := utils.TimeToBootOffset(start)
+	endOffset := utils.TimeToBootOffset(end)
 
 	traceID := trace.TraceID{1}
 	spanID := trace.SpanID{1}
@@ -39,8 +43,8 @@ func TestProbeConvertEvent(t *testing.T) {
 			name: "basic server test",
 			event: &event{
 				BaseSpanProperties: context.BaseSpanProperties{
-					StartTime:   uint64(start.UnixNano()),
-					EndTime:     uint64(end.UnixNano()),
+					StartTime:   startOffset,
+					EndTime:     endOffset,
 					SpanContext: context.EBPFSpanContext{TraceID: traceID, SpanID: spanID},
 				},
 				StatusCode: 200,
@@ -58,8 +62,8 @@ func TestProbeConvertEvent(t *testing.T) {
 			expected: []*probe.SpanEvent{
 				{
 					SpanName:    "GET",
-					StartTime:   int64(start.UnixNano()),
-					EndTime:     int64(end.UnixNano()),
+					StartTime:   start,
+					EndTime:     end,
 					SpanContext: &sc,
 					Attributes: []attribute.KeyValue{
 						semconv.HTTPRequestMethodKey.String("GET"),
@@ -79,8 +83,8 @@ func TestProbeConvertEvent(t *testing.T) {
 			name: "proto name added when not HTTP",
 			event: &event{
 				BaseSpanProperties: context.BaseSpanProperties{
-					StartTime:   uint64(start.UnixNano()),
-					EndTime:     uint64(end.UnixNano()),
+					StartTime:   startOffset,
+					EndTime:     endOffset,
 					SpanContext: context.EBPFSpanContext{TraceID: traceID, SpanID: spanID},
 				},
 				StatusCode: 200,
@@ -98,8 +102,8 @@ func TestProbeConvertEvent(t *testing.T) {
 			expected: []*probe.SpanEvent{
 				{
 					SpanName:    "GET",
-					StartTime:   int64(start.UnixNano()),
-					EndTime:     int64(end.UnixNano()),
+					StartTime:   start,
+					EndTime:     end,
 					SpanContext: &sc,
 					Attributes: []attribute.KeyValue{
 						semconv.HTTPRequestMethodKey.String("GET"),
@@ -120,8 +124,8 @@ func TestProbeConvertEvent(t *testing.T) {
 			name: "server statuscode 400 doesn't set span.Status",
 			event: &event{
 				BaseSpanProperties: context.BaseSpanProperties{
-					StartTime:   uint64(start.UnixNano()),
-					EndTime:     uint64(end.UnixNano()),
+					StartTime:   startOffset,
+					EndTime:     endOffset,
 					SpanContext: context.EBPFSpanContext{TraceID: traceID, SpanID: spanID},
 				},
 				StatusCode: 400,
@@ -139,8 +143,8 @@ func TestProbeConvertEvent(t *testing.T) {
 			expected: []*probe.SpanEvent{
 				{
 					SpanName:    "GET",
-					StartTime:   int64(start.UnixNano()),
-					EndTime:     int64(end.UnixNano()),
+					StartTime:   start,
+					EndTime:     end,
 					SpanContext: &sc,
 					Attributes: []attribute.KeyValue{
 						semconv.HTTPRequestMethodKey.String("GET"),
@@ -160,8 +164,8 @@ func TestProbeConvertEvent(t *testing.T) {
 			name: "server statuscode 500 sets span.Status",
 			event: &event{
 				BaseSpanProperties: context.BaseSpanProperties{
-					StartTime:   uint64(start.UnixNano()),
-					EndTime:     uint64(end.UnixNano()),
+					StartTime:   startOffset,
+					EndTime:     endOffset,
 					SpanContext: context.EBPFSpanContext{TraceID: traceID, SpanID: spanID},
 				},
 				StatusCode: 500,
@@ -179,8 +183,8 @@ func TestProbeConvertEvent(t *testing.T) {
 			expected: []*probe.SpanEvent{
 				{
 					SpanName:    "GET",
-					StartTime:   int64(start.UnixNano()),
-					EndTime:     int64(end.UnixNano()),
+					StartTime:   start,
+					EndTime:     end,
 					SpanContext: &sc,
 					Attributes: []attribute.KeyValue{
 						semconv.HTTPRequestMethodKey.String("GET"),

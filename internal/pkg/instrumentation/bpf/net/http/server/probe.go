@@ -4,9 +4,9 @@
 package server
 
 import (
+	"log/slog"
 	"strings"
 
-	"github.com/go-logr/logr"
 	"github.com/hashicorp/go-version"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
@@ -18,6 +18,7 @@ import (
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/bpf/net/http"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/context"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/probe"
+	"go.opentelemetry.io/auto/internal/pkg/instrumentation/utils"
 	"go.opentelemetry.io/auto/internal/pkg/process"
 	"go.opentelemetry.io/auto/internal/pkg/structfield"
 )
@@ -30,14 +31,14 @@ const (
 )
 
 // New returns a new [probe.Probe].
-func New(logger logr.Logger) probe.Probe {
+func New(logger *slog.Logger) probe.Probe {
 	id := probe.ID{
 		SpanKind:        trace.SpanKindServer,
 		InstrumentedPkg: pkg,
 	}
 	return &probe.Base[bpfObjects, event]{
 		ID:     id,
-		Logger: logger.WithName(id.String()),
+		Logger: logger,
 		Consts: []probe.Const{
 			probe.RegistersABIConst{},
 			probe.StructFieldConst{
@@ -211,8 +212,8 @@ func convertEvent(e *event) []*probe.SpanEvent {
 
 	spanEvent := &probe.SpanEvent{
 		SpanName:          spanName,
-		StartTime:         int64(e.StartTime),
-		EndTime:           int64(e.EndTime),
+		StartTime:         utils.BootOffsetToTime(e.StartTime),
+		EndTime:           utils.BootOffsetToTime(e.EndTime),
 		SpanContext:       &sc,
 		ParentSpanContext: pscPtr,
 		Attributes:        attributes,

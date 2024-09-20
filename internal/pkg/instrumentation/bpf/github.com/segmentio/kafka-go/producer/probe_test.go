@@ -15,17 +15,21 @@ import (
 
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/context"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/probe"
+	"go.opentelemetry.io/auto/internal/pkg/instrumentation/utils"
 )
 
 func TestProbeConvertEvent(t *testing.T) {
-	start := time.Now()
+	start := time.Unix(0, time.Now().UnixNano()) // No wall clock.
 	end := start.Add(1 * time.Second)
+
+	startOffset := utils.TimeToBootOffset(start)
+	endOffset := utils.TimeToBootOffset(end)
 
 	traceID := trace.TraceID{1}
 
 	got := convertEvent(&event{
-		StartTime: uint64(start.UnixNano()),
-		EndTime:   uint64(end.UnixNano()),
+		StartTime: startOffset,
+		EndTime:   endOffset,
 		Messages: [10]messageAttributes{
 			{
 				// topic1
@@ -63,8 +67,8 @@ func TestProbeConvertEvent(t *testing.T) {
 	})
 	want1 := &probe.SpanEvent{
 		SpanName:    kafkaProducerSpanName("topic1"),
-		StartTime:   int64(start.UnixNano()),
-		EndTime:     int64(end.UnixNano()),
+		StartTime:   start,
+		EndTime:     end,
 		SpanContext: &sc1,
 		Attributes: []attribute.KeyValue{
 			semconv.MessagingKafkaMessageKey("key1"),
@@ -78,8 +82,8 @@ func TestProbeConvertEvent(t *testing.T) {
 
 	want2 := &probe.SpanEvent{
 		SpanName:    kafkaProducerSpanName("topic2"),
-		StartTime:   int64(start.UnixNano()),
-		EndTime:     int64(end.UnixNano()),
+		StartTime:   start,
+		EndTime:     end,
 		SpanContext: &sc2,
 		Attributes: []attribute.KeyValue{
 			semconv.MessagingKafkaMessageKey("key2"),
