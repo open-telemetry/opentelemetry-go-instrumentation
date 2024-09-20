@@ -59,6 +59,13 @@ func TestSpanIsRecording(t *testing.T) {
 	assert.False(t, s.IsRecording(), "unsampled span should not be recorded")
 }
 
+func TestSpanTracerProvider(t *testing.T) {
+	var s span
+
+	got := s.TracerProvider()
+	assert.IsType(t, tracerProvider{}, got)
+}
+
 type spanBuilder struct {
 	Name        string
 	NotSampled  bool
