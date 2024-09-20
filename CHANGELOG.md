@@ -53,6 +53,7 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 - The unused `LogLevelError` constant is removed. ([#1080](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1080))
 - The unused `LogLevel` type is removed. ([#1080](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1080))
 - The unused `ParseLogLevel` function is removed. ([#1080](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1080))
+- Drop agent build support for Go 1.21. ([#1115](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1115))
 
 ## [v0.14.0-alpha] - 2024-07-15
 
