@@ -62,6 +62,13 @@ func TestSpanSpanContext(t *testing.T) {
 	assert.Equal(t, spanContext0, s.SpanContext())
 }
 
+func TestSpanTracerProvider(t *testing.T) {
+	var s span
+
+	got := s.TracerProvider()
+	assert.IsType(t, tracerProvider{}, got)
+}
+
 type spanBuilder struct {
 	Name        string
 	NotSampled  bool
