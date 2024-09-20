@@ -55,29 +55,28 @@ static __always_inline long write_span_context(void *go_sc, struct span_context 
 		return -1;
 	}
 
-	long rc = 0;
 	void *tid = (void *)(go_sc + span_context_trace_id_pos);
 	long ret = bpf_probe_write_user(tid, &sc->TraceID, TRACE_ID_SIZE);
 	if (ret != 0) {
-		rc--;
 		bpf_printk("write_span_context: failed to write trace ID: %ld", ret);
+		return -2;
 	}
 
 	void *sid = (void *)(go_sc + span_context_span_id_pos);
 	ret = bpf_probe_write_user(sid, &sc->SpanID, SPAN_ID_SIZE);
 	if (ret != 0) {
-		rc--;
 		bpf_printk("write_span_context: failed to write span ID: %ld", ret);
+		return -3;
 	}
 
 	void *flags = (void *)(go_sc + span_context_trace_flags_pos);
 	ret = bpf_probe_write_user(flags, &sc->TraceFlags, TRACE_FLAGS_SIZE);
 	if (ret != 0) {
-		rc--;
 		bpf_printk("write_span_context: failed to write trace flags: %ld", ret);
+		return -4;
 	}
 
-	return rc;
+	return 0;
 }
 
 static __always_inline long span_context_from_Go(void *go_span_context, struct span_context *sc) {
