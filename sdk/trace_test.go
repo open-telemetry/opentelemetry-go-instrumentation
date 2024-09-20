@@ -4,6 +4,7 @@
 package sdk
 
 import (
+	"context"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -48,9 +49,40 @@ func TestSpanNilUnsampledGuards(t *testing.T) {
 	t.Run("TracerProvider", run(func(s *span) { _ = s.TracerProvider() }))
 }
 
+func TestSpanIsRecording(t *testing.T) {
+	builder := spanBuilder{}
+	s := builder.Build()
+	assert.True(t, s.IsRecording(), "sampled span should be recorded")
+
+	builder.NotSampled = true
+	s = builder.Build()
+	assert.False(t, s.IsRecording(), "unsampled span should not be recorded")
+}
+
 func TestSpanTracerProvider(t *testing.T) {
 	var s span
 
 	got := s.TracerProvider()
 	assert.IsType(t, tracerProvider{}, got)
+}
+
+type spanBuilder struct {
+	Name        string
+	NotSampled  bool
+	SpanContext trace.SpanContext
+	Options     []trace.SpanStartOption
+}
+
+func (b spanBuilder) Build() *span {
+	tracer := new(tracer)
+	s := &span{sampled: !b.NotSampled, spanContext: b.SpanContext}
+	s.traces, s.span = tracer.traces(
+		context.Background(),
+		b.Name,
+		trace.NewSpanStartConfig(b.Options...),
+		s.spanContext,
+		trace.SpanContext{},
+	)
+
+	return s
 }
