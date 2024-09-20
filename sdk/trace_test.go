@@ -70,6 +70,13 @@ func TestSpanSetStatus(t *testing.T) {
 	}
 }
 
+func TestSpanTracerProvider(t *testing.T) {
+	var s span
+
+	got := s.TracerProvider()
+	assert.IsType(t, tracerProvider{}, got)
+}
+
 type spanBuilder struct {
 	Name        string
 	NotSampled  bool
