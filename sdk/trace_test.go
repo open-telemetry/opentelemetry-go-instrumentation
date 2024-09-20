@@ -85,6 +85,16 @@ func TestSpanNilUnsampledGuards(t *testing.T) {
 	t.Run("TracerProvider", run(func(s *span) { _ = s.TracerProvider() }))
 }
 
+func TestSpanIsRecording(t *testing.T) {
+	builder := spanBuilder{}
+	s := builder.Build()
+	assert.True(t, s.IsRecording(), "sampled span should be recorded")
+
+	builder.NotSampled = true
+	s = builder.Build()
+	assert.False(t, s.IsRecording(), "unsampled span should not be recorded")
+}
+
 func TestSpanSetAttributes(t *testing.T) {
 	builder := spanBuilder{}
 
