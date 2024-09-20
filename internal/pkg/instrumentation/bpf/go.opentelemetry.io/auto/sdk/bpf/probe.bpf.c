@@ -182,7 +182,10 @@ int uprobe_Span_ended(struct pt_regs *ctx) {
 		return -4;
 	}
 
-	output_span_event(ctx, event, sizeof(*event), &span->sc);
+	// Do not send the whole size.buf if it is not needed.
+	u64 size = sizeof(event->size) + event->size;
+	long rc = output_span_event(ctx, event, size, &span->sc);
+	if (rc != 0) return -5;
 
 	return 0;
 }
