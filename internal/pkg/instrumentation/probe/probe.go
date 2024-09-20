@@ -90,14 +90,19 @@ const (
 
 // Manifest returns the Probe's instrumentation Manifest.
 func (i *Base[BPFObj, BPFEvent]) Manifest() Manifest {
-	structfields := consts(i.Consts).structFields()
+	var structFieldIds []structfield.ID
+	for _, cnst := range i.Consts {
+		if sfc, ok := cnst.(StructFieldConst); ok {
+			structFieldIds = append(structFieldIds, sfc.Val)
+		}
+	}
 
 	symbols := make([]FunctionSymbol, 0, len(i.Uprobes))
 	for _, up := range i.Uprobes {
 		symbols = append(symbols, FunctionSymbol{Symbol: up.Sym, DependsOn: up.DependsOn})
 	}
 
-	return NewManifest(i.ID, structfields, symbols)
+	return NewManifest(i.ID, structFieldIds, symbols)
 }
 
 func (i *Base[BPFObj, BPFEvent]) Spec() (*ebpf.CollectionSpec, error) {
@@ -141,10 +146,19 @@ func (i *Base[BPFObj, BPFEvent]) Load(exec *link.Executable, td *process.TargetD
 }
 
 func (i *Base[BPFObj, BPFEvent]) InjectConsts(td *process.TargetDetails, spec *ebpf.CollectionSpec) error {
-	opts, err := consts(i.Consts).injectOpts(td)
+	var err error
+	var opts []inject.Option
+	for _, cnst := range i.Consts {
+		o, e := cnst.InjectOption(td)
+		err = errors.Join(err, e)
+		if e == nil && o != nil {
+			opts = append(opts, o)
+		}
+	}
 	if err != nil {
 		return err
 	}
+
 	return inject.Constants(spec, opts...)
 }
 
@@ -330,33 +344,6 @@ type Const interface {
 	// InjectOption returns the inject.Option to run for the Const when running
 	// inject.Constants.
 	InjectOption(td *process.TargetDetails) (inject.Option, error)
-}
-
-type consts []Const
-
-func (c consts) structFields() []structfield.ID {
-	var out []structfield.ID
-	for _, cnst := range c {
-		if sfc, ok := cnst.(StructFieldConst); ok {
-			out = append(out, sfc.Val)
-		}
-	}
-	return out
-}
-
-func (c consts) injectOpts(td *process.TargetDetails) ([]inject.Option, error) {
-	var (
-		out []inject.Option
-		err error
-	)
-	for _, cnst := range c {
-		o, e := cnst.InjectOption(td)
-		err = errors.Join(err, e)
-		if e == nil && o != nil {
-			out = append(out, o)
-		}
-	}
-	return out, err
 }
 
 // StructFieldConst is a [Const] for a struct field offset. These struct field
