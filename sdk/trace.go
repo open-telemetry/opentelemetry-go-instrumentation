@@ -212,6 +212,4 @@ func (s *span) SetName(name string) {
 	/* TODO: implement */
 }
 
-func (*span) TracerProvider() trace.TracerProvider {
-	return GetTracerProvider()
-}
+func (*span) TracerProvider() trace.TracerProvider { return GetTracerProvider() }

@@ -101,6 +101,13 @@ func TestSpanSetAttributes(t *testing.T) {
 	assert.Equal(t, pAttrs, s.span.Attributes(), "SpanAttributes did not override")
 }
 
+func TestSpanTracerProvider(t *testing.T) {
+	var s span
+
+	got := s.TracerProvider()
+	assert.IsType(t, tracerProvider{}, got)
+}
+
 type spanBuilder struct {
 	Name        string
 	NotSampled  bool
