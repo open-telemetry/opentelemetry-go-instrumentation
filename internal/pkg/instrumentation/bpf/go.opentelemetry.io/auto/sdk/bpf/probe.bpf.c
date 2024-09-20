@@ -6,6 +6,7 @@
 #include "go_types.h"
 #include "trace/span_context.h"
 #include "trace/start_span.h"
+#include "trace/span_output.h"
 
 char __license[] SEC("license") = "Dual MIT/GPL";
 
@@ -44,10 +45,6 @@ struct {
     __uint(value_size, sizeof(struct event_t));
     __uint(max_entries, 1);
 } new_event SEC(".maps");
-
-struct {
-	__uint(type, BPF_MAP_TYPE_PERF_EVENT_ARRAY);
-} events SEC(".maps");
 
 static __always_inline long write_span_context(void *go_sc, struct span_context *sc) {
 	if (go_sc == NULL) {
@@ -185,7 +182,7 @@ int uprobe_Span_ended(struct pt_regs *ctx) {
 		return -4;
 	}
 
-	bpf_perf_event_output(ctx, &events, BPF_F_CURRENT_CPU, event, sizeof(*event));
+	output_span_event(ctx, event, sizeof(*event), &span->sc);
 
 	return 0;
 }
