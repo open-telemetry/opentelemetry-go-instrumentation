@@ -144,11 +144,12 @@ int uprobe_Span_ended(struct pt_regs *ctx) {
     if (span == NULL) {
         return 0;
     }
+    bool sampled = is_sampled(&span->sc);
     stop_tracking_span(&span->sc, &span->psc);
     bpf_map_delete_elem(&active_spans_by_span_ptr, &span_ptr);
 
     // Do not output un-sampled span data.
-    if (!is_sampled(&span->sc)) return 0;
+    if (!sampled) return 0;
 
     u64 len = (u64)get_argument(ctx, 3);
     if (len > MAX_SIZE) {
