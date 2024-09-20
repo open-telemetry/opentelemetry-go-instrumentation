@@ -79,39 +79,6 @@ static __always_inline long write_span_context(void *go_sc, struct span_context 
 	return 0;
 }
 
-static __always_inline long span_context_from_Go(void *go_span_context, struct span_context *sc) {
-	if (go_span_context == NULL) {
-		bpf_printk("span_context_from_Go: empty span context");
-		struct span_context zero = {0};
-		*sc = zero;
-		return 0;
-	}
-
-	long rc = 0;
-	void *tid = (void *)(go_span_context + span_context_trace_id_pos);
-	long ret = bpf_probe_read(&sc->TraceID, TRACE_ID_SIZE, tid);
-	if (ret != 0) {
-		rc--;
-		bpf_printk("span_context_from_Go: failed to read trace ID", ret);
-	}
-
-	void *sid = (void *)(go_span_context + span_context_span_id_pos);
-	ret = bpf_probe_read(&sc->SpanID, SPAN_ID_SIZE, sid);
-	if (ret != 0) {
-		rc--;
-		bpf_printk("span_context_from_Go: failed to read span ID", ret);
-	}
-
-	void *flags = (void *)(go_span_context + span_context_trace_flags_pos);
-	ret = bpf_probe_read(&sc->TraceFlags, TRACE_FLAGS_SIZE, flags);
-	if (ret != 0) {
-		rc--;
-		bpf_printk("span_context_from_Go: failed to read trace flags", ret);
-	}
-
-	return rc;
-}
-
 SEC("uprobe/Tracer_start")
 int uprobe_Tracer_start(struct pt_regs *ctx) {
     struct go_iface go_context = {0};
