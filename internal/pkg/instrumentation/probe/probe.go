@@ -90,10 +90,10 @@ const (
 
 // Manifest returns the Probe's instrumentation Manifest.
 func (i *Base[BPFObj, BPFEvent]) Manifest() Manifest {
-	var structFieldIds []structfield.ID
+	var structFieldIDs []structfield.ID
 	for _, cnst := range i.Consts {
 		if sfc, ok := cnst.(StructFieldConst); ok {
-			structFieldIds = append(structFieldIds, sfc.Val)
+			structFieldIDs = append(structFieldIDs, sfc.Val)
 		}
 	}
 
@@ -102,7 +102,7 @@ func (i *Base[BPFObj, BPFEvent]) Manifest() Manifest {
 		symbols = append(symbols, FunctionSymbol{Symbol: up.Sym, DependsOn: up.DependsOn})
 	}
 
-	return NewManifest(i.ID, structFieldIds, symbols)
+	return NewManifest(i.ID, structFieldIDs, symbols)
 }
 
 func (i *Base[BPFObj, BPFEvent]) Spec() (*ebpf.CollectionSpec, error) {
