@@ -5,7 +5,7 @@ go 1.22.1
 toolchain go1.22.6
 
 require (
-	github.com/docker/docker v27.2.1+incompatible
+	github.com/docker/docker v27.3.1+incompatible
 	github.com/golangci/golangci-lint v1.61.0
 	github.com/google/go-licenses/v2 v2.0.0-alpha.1
 	github.com/hashicorp/go-version v1.7.0
