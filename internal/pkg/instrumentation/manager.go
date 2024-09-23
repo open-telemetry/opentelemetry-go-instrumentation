@@ -26,6 +26,7 @@ import (
 	httpServer "go.opentelemetry.io/auto/internal/pkg/instrumentation/bpf/net/http/server"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/bpffs"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/probe"
+	"go.opentelemetry.io/auto/internal/pkg/instrumentation/utils"
 	"go.opentelemetry.io/auto/internal/pkg/opentelemetry"
 	"go.opentelemetry.io/auto/internal/pkg/process"
 )
@@ -366,8 +367,16 @@ func availableProbes(l *slog.Logger, withTraceGlobal bool) []probe.Probe {
 		grpcClient.New(l),
 		grpcServer.New(l),
 		httpServer.New(l),
-		httpClient.New(l),
-		dbSql.New(l),
+		httpClient.New(l,
+			&httpClient.Config{
+				SupportsContextPropagation: utils.SupportsContextPropagation(),
+			},
+		),
+		dbSql.New(l,
+			&dbSql.Config{
+				IncludeQueryText: true, //example
+			},
+		),
 		kafkaProducer.New(l),
 		kafkaConsumer.New(l),
 		autosdk.New(l),
