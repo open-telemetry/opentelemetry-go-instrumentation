@@ -32,6 +32,39 @@ var (
 		attribute.StringSlice("string slice", []string{"one", "two"}),
 	}
 
+	pAttrs = func() pcommon.Map {
+		m := pcommon.NewMap()
+		m.PutBool("bool", true)
+		m.PutInt("int", -1)
+		m.PutInt("int64", 43)
+		m.PutDouble("float64", 0.3)
+		m.PutStr("string", "value")
+
+		s := m.PutEmptySlice("bool slice")
+		s.AppendEmpty().SetBool(true)
+		s.AppendEmpty().SetBool(false)
+		s.AppendEmpty().SetBool(true)
+
+		s = m.PutEmptySlice("int slice")
+		s.AppendEmpty().SetInt(-1)
+		s.AppendEmpty().SetInt(-30)
+		s.AppendEmpty().SetInt(328)
+
+		s = m.PutEmptySlice("int64 slice")
+		s.AppendEmpty().SetInt(1030)
+		s.AppendEmpty().SetInt(0)
+		s.AppendEmpty().SetInt(0)
+
+		s = m.PutEmptySlice("float64 slice")
+		s.AppendEmpty().SetDouble(1e9)
+
+		s = m.PutEmptySlice("string slice")
+		s.AppendEmpty().SetStr("one")
+		s.AppendEmpty().SetStr("two")
+
+		return m
+	}()
+
 	spanContext0 = trace.NewSpanContext(trace.SpanContextConfig{
 		TraceID:    trace.TraceID{0x1},
 		SpanID:     trace.SpanID{0x1},
@@ -277,6 +310,22 @@ func TestSpanSetStatus(t *testing.T) {
 		s.SetStatus(c, msg)
 		assert.Equalf(t, want, s.span.Status(), "code: %s, msg: %s", c, msg)
 	}
+}
+
+func TestSpanSetAttributes(t *testing.T) {
+	builder := spanBuilder{}
+
+	s := builder.Build()
+	s.SetAttributes(attrs...)
+	assert.Equal(t, pAttrs, s.span.Attributes(), "span attributes not set")
+
+	builder.Options = []trace.SpanStartOption{
+		trace.WithAttributes(attrs[0].Key.Bool(!attrs[0].Value.AsBool())),
+	}
+
+	s = builder.Build()
+	s.SetAttributes(attrs...)
+	assert.Equal(t, pAttrs, s.span.Attributes(), "SpanAttributes did not override")
 }
 
 func TestSpanTracerProvider(t *testing.T) {
