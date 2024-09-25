@@ -23,9 +23,8 @@ Currently, OpenTelemetry Go Automatic Instrumentation is tested for the followin
 
 | OS      | Go Version | Architecture |
 | ------- | ---------- | ------------ |
+| Ubuntu  | 1.23       | amd64        |
 | Ubuntu  | 1.22       | amd64        |
-| Ubuntu  | 1.21       | amd64        |
-| Ubuntu  | 1.20       | amd64        |
 
 Automatic instrumentation should work on any Linux kernel above 4.4.
 

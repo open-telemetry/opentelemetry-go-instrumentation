@@ -69,6 +69,10 @@ type Base[BPFObj any, BPFEvent any] struct {
 	SpecFn func() (*ebpf.CollectionSpec, error)
 	// ProcessFn processes probe events into a uniform Event type.
 	ProcessFn func(*BPFEvent) []*SpanEvent
+	// ProcessRecord is an optional processing function for the probe. If nil,
+	// all records will be read directly into a new BPFEvent using the
+	// encoding/binary package.
+	ProcessRecord func(perf.Record) (BPFEvent, error)
 
 	reader     *perf.Reader
 	collection *ebpf.Collection
@@ -86,14 +90,19 @@ const (
 
 // Manifest returns the Probe's instrumentation Manifest.
 func (i *Base[BPFObj, BPFEvent]) Manifest() Manifest {
-	structfields := consts(i.Consts).structFields()
+	var structFieldIDs []structfield.ID
+	for _, cnst := range i.Consts {
+		if sfc, ok := cnst.(StructFieldConst); ok {
+			structFieldIDs = append(structFieldIDs, sfc.Val)
+		}
+	}
 
 	symbols := make([]FunctionSymbol, 0, len(i.Uprobes))
 	for _, up := range i.Uprobes {
 		symbols = append(symbols, FunctionSymbol{Symbol: up.Sym, DependsOn: up.DependsOn})
 	}
 
-	return NewManifest(i.ID, structfields, symbols)
+	return NewManifest(i.ID, structFieldIDs, symbols)
 }
 
 func (i *Base[BPFObj, BPFEvent]) Spec() (*ebpf.CollectionSpec, error) {
@@ -137,10 +146,19 @@ func (i *Base[BPFObj, BPFEvent]) Load(exec *link.Executable, td *process.TargetD
 }
 
 func (i *Base[BPFObj, BPFEvent]) InjectConsts(td *process.TargetDetails, spec *ebpf.CollectionSpec) error {
-	opts, err := consts(i.Consts).injectOpts(td)
+	var err error
+	var opts []inject.Option
+	for _, cnst := range i.Consts {
+		o, e := cnst.InjectOption(td)
+		err = errors.Join(err, e)
+		if e == nil && o != nil {
+			opts = append(opts, o)
+		}
+	}
 	if err != nil {
 		return err
 	}
+
 	return inject.Constants(spec, opts...)
 }
 
@@ -213,7 +231,7 @@ func (i *Base[BPFObj, BPFEvent]) Run(dest chan<- *Event) {
 
 		se, err := i.processRecord(record)
 		if err != nil {
-			i.Logger.Error("failed to process perf record", "error", err)
+			i.Logger.Error("failed to process perf record", "error", err, "pkg", i.ID.InstrumentedPkg)
 		}
 		e := &Event{
 			Package:    i.ID.InstrumentedPkg,
@@ -226,13 +244,22 @@ func (i *Base[BPFObj, BPFEvent]) Run(dest chan<- *Event) {
 }
 
 func (i *Base[BPFObj, BPFEvent]) processRecord(record perf.Record) ([]*SpanEvent, error) {
-	buf := bytes.NewBuffer(record.RawSample)
+	var (
+		event BPFEvent
+		err   error
+	)
 
-	var event BPFEvent
-	err := binary.Read(buf, binary.LittleEndian, &event)
+	if i.ProcessRecord != nil {
+		event, err = i.ProcessRecord(record)
+	} else {
+		buf := bytes.NewReader(record.RawSample)
+		err = binary.Read(buf, binary.LittleEndian, &event)
+	}
+
 	if err != nil {
 		return nil, err
 	}
+
 	return i.ProcessFn(&event), nil
 }
 
@@ -317,33 +344,6 @@ type Const interface {
 	// InjectOption returns the inject.Option to run for the Const when running
 	// inject.Constants.
 	InjectOption(td *process.TargetDetails) (inject.Option, error)
-}
-
-type consts []Const
-
-func (c consts) structFields() []structfield.ID {
-	var out []structfield.ID
-	for _, cnst := range c {
-		if sfc, ok := cnst.(StructFieldConst); ok {
-			out = append(out, sfc.Val)
-		}
-	}
-	return out
-}
-
-func (c consts) injectOpts(td *process.TargetDetails) ([]inject.Option, error) {
-	var (
-		out []inject.Option
-		err error
-	)
-	for _, cnst := range c {
-		o, e := cnst.InjectOption(td)
-		err = errors.Join(err, e)
-		if e == nil && o != nil {
-			out = append(out, o)
-		}
-	}
-	return out, err
 }
 
 // StructFieldConst is a [Const] for a struct field offset. These struct field
