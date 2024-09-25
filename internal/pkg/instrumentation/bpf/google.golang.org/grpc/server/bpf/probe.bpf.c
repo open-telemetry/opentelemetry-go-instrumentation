@@ -19,6 +19,7 @@ struct grpc_request_t
 {
     BASE_SPAN_PROPERTIES
     char method[MAX_SIZE];
+    u32 status_code;
 };
 
 struct
@@ -59,6 +60,8 @@ volatile const u64 frame_stream_id_pod;
 volatile const u64 stream_id_pos;
 volatile const u64 stream_ctx_pos;
 volatile const bool is_new_frame_pos;
+volatile const u64 status_s_pos;
+volatile const u64 status_code_pos;
 
 static __always_inline long dummy_extract_span_context_from_headers(void *stream_id, struct span_context *parent_span_context) {
     return 0;
@@ -113,14 +116,14 @@ int uprobe_server_handleStream(struct pt_regs *ctx)
     if (!get_go_string_from_user_ptr((void *)(stream_ptr + stream_method_ptr_pos), grpcReq->method, sizeof(grpcReq->method)))
     {
         bpf_printk("Failed to read gRPC method from stream");
-        goto done;
+        bpf_map_delete_elem(&streamid_to_grpc_events, &stream_id);
+        return 0;
     }
 
     // Write event
     bpf_map_update_elem(&grpc_events, &key, grpcReq, 0);
     start_tracking_span(go_context.data, &grpcReq->sc);
-done:
-    bpf_map_delete_elem(&streamid_to_grpc_events, &stream_id);
+
     return 0;
 }
 
@@ -166,4 +169,49 @@ int uprobe_http2Server_operateHeader(struct pt_regs *ctx)
     }
 
     return 0;
+}
+
+static __always_inline int get_status_code(struct pt_regs *ctx) {
+    struct go_iface go_context = {0};
+    get_Go_context(ctx, 2, stream_ctx_pos, true, &go_context);
+    void *key = get_consistent_key(ctx, go_context.data);
+
+    // Get parent context if exists
+    void *stream_ptr = get_argument(ctx, 2);
+    u32 stream_id = 0;
+    bpf_probe_read(&stream_id, sizeof(stream_id), (void *)(stream_ptr + stream_id_pos));
+    struct grpc_request_t *grpcReq = bpf_map_lookup_elem(&streamid_to_grpc_events, &stream_id);
+    if (grpcReq == NULL) {
+        // No parent span context, generate new span context
+        u32 zero = 0;
+        grpcReq = bpf_map_lookup_elem(&grpc_storage_map, &zero);
+        if (grpcReq == NULL) {
+            bpf_printk("failed to get grpcReq from storage map");
+            return 0;
+        }
+    }
+
+    void *status_ptr = get_argument(ctx, 3);
+    void *s_ptr = 0;
+    bpf_probe_read_user(&s_ptr, sizeof(s_ptr), (void *)(status_ptr + status_s_pos));
+    // Get status code from Status.s pointer
+    bpf_probe_read_user(&grpcReq->status_code, sizeof(grpcReq->status_code), (void *)(s_ptr + status_code_pos));
+
+    bpf_map_update_elem(&grpc_events, &key, grpcReq, 0);
+    bpf_map_delete_elem(&streamid_to_grpc_events, &stream_id);
+    return 0;
+}
+
+// func (ht *serverHandlerTransport) WriteStatus(s *Stream, st *status.Status)
+// https://github.com/grpc/grpc-go/blob/bcf9171a20e44ed81a6eb152e3ca9e35b2c02c5d/internal/transport/handler_server.go#L228
+SEC("uprobe/serverHandlerTransport_WriteStatus")
+int uprobe_serverHandlerTransport_WriteStatus(struct pt_regs *ctx) {
+    return get_status_code(ctx);
+}
+
+// func (ht *serverHandlerTransport) WriteStatus(s *Stream, st *status.Status)
+// https://github.com/grpc/grpc-go/blob/bcf9171a20e44ed81a6eb152e3ca9e35b2c02c5d/internal/transport/http2_server.go#L1049
+SEC("uprobe/http2Server_WriteStatus")
+int uprobe_http2Server_WriteStatus(struct pt_regs *ctx) {
+    return get_status_code(ctx);
 }
