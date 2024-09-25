@@ -187,7 +187,7 @@ static __always_inline int get_status_code(struct pt_regs *ctx) {
         grpcReq = bpf_map_lookup_elem(&grpc_storage_map, &zero);
         if (grpcReq == NULL) {
             bpf_printk("failed to get grpcReq from storage map");
-            return 0;
+            return -1;
         }
     }
 
