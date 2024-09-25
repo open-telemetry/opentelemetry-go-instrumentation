@@ -153,7 +153,55 @@ func (s *span) SetAttributes(attrs ...attribute.KeyValue) {
 	if s == nil || !s.sampled {
 		return
 	}
-	/* TODO: implement */
+
+	// TODO: handle attribute limits.
+
+	setAttributes(s.span.Attributes(), attrs)
+}
+
+func setAttributes(dest pcommon.Map, attrs []attribute.KeyValue) {
+	dest.EnsureCapacity(len(attrs))
+	for _, attr := range attrs {
+		key := string(attr.Key)
+		switch attr.Value.Type() {
+		case attribute.BOOL:
+			dest.PutBool(key, attr.Value.AsBool())
+		case attribute.INT64:
+			dest.PutInt(key, attr.Value.AsInt64())
+		case attribute.FLOAT64:
+			dest.PutDouble(key, attr.Value.AsFloat64())
+		case attribute.STRING:
+			dest.PutStr(key, attr.Value.AsString())
+		case attribute.BOOLSLICE:
+			val := attr.Value.AsBoolSlice()
+			s := dest.PutEmptySlice(key)
+			s.EnsureCapacity(len(val))
+			for _, v := range val {
+				s.AppendEmpty().SetBool(v)
+			}
+		case attribute.INT64SLICE:
+			val := attr.Value.AsInt64Slice()
+			s := dest.PutEmptySlice(key)
+			s.EnsureCapacity(len(val))
+			for _, v := range val {
+				s.AppendEmpty().SetInt(v)
+			}
+		case attribute.FLOAT64SLICE:
+			val := attr.Value.AsFloat64Slice()
+			s := dest.PutEmptySlice(key)
+			s.EnsureCapacity(len(val))
+			for _, v := range val {
+				s.AppendEmpty().SetDouble(v)
+			}
+		case attribute.STRINGSLICE:
+			val := attr.Value.AsStringSlice()
+			s := dest.PutEmptySlice(key)
+			s.EnsureCapacity(len(val))
+			for _, v := range val {
+				s.AppendEmpty().SetStr(v)
+			}
+		}
+	}
 }
 
 func (s *span) End(opts ...trace.SpanEndOption) {
