@@ -292,6 +292,11 @@ func TestSpanIsRecording(t *testing.T) {
 	assert.False(t, s.IsRecording(), "unsampled span should not be recorded")
 }
 
+func TestSpanSpanContext(t *testing.T) {
+	s := spanBuilder{SpanContext: spanContext0}.Build()
+	assert.Equal(t, spanContext0, s.SpanContext())
+}
+
 func TestSpanSetStatus(t *testing.T) {
 	s := spanBuilder{}.Build()
 
