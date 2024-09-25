@@ -292,6 +292,26 @@ func TestSpanIsRecording(t *testing.T) {
 	assert.False(t, s.IsRecording(), "unsampled span should not be recorded")
 }
 
+func TestSpanSetStatus(t *testing.T) {
+	s := spanBuilder{}.Build()
+
+	want := ptrace.NewStatus()
+	assert.Equal(t, want, s.span.Status(), "empty status should not be set")
+
+	msg := "test"
+	want.SetMessage(msg)
+
+	for c, p := range map[codes.Code]ptrace.StatusCode{
+		codes.Error: ptrace.StatusCodeError,
+		codes.Ok:    ptrace.StatusCodeOk,
+		codes.Unset: ptrace.StatusCodeUnset,
+	} {
+		want.SetCode(p)
+		s.SetStatus(c, msg)
+		assert.Equalf(t, want, s.span.Status(), "code: %s, msg: %s", c, msg)
+	}
+}
+
 func TestSpanSetAttributes(t *testing.T) {
 	builder := spanBuilder{}
 
