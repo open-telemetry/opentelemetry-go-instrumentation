@@ -270,7 +270,7 @@ func (s *span) SetName(name string) {
 	if s == nil || !s.sampled {
 		return
 	}
-	/* TODO: implement */
+	s.span.SetName(name)
 }
 
 func (*span) TracerProvider() trace.TracerProvider { return GetTracerProvider() }

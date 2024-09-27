@@ -317,6 +317,20 @@ func TestSpanSetStatus(t *testing.T) {
 	}
 }
 
+func TestSpanSetName(t *testing.T) {
+	const name = "span name"
+	builder := spanBuilder{}
+
+	s := builder.Build()
+	s.SetName(name)
+	assert.Equal(t, name, s.span.Name(), "span name not set")
+
+	builder.Name = "alt"
+	s = builder.Build()
+	s.SetName(name)
+	assert.Equal(t, name, s.span.Name(), "SetName did not overwrite")
+}
+
 func TestSpanSetAttributes(t *testing.T) {
 	builder := spanBuilder{}
 
