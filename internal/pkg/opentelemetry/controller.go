@@ -66,12 +66,17 @@ func (c *Controller) Trace(event *probe.Event) {
 			ctx = trace.ContextWithSpanContext(ctx, *se.ParentSpanContext)
 		}
 
+		kind := se.Kind
+		if kind == trace.SpanKindUnspecified {
+			kind = event.Kind
+		}
+
 		ctx = ContextWithEBPFEvent(ctx, *se)
 		c.logger.Debug("getting tracer", "name", se.TracerName, "version", se.TracerVersion, "schema", se.TracerSchema)
 		_, span := c.getTracer(event.Package, se.TracerName, se.TracerVersion, se.TracerSchema).
 			Start(ctx, se.SpanName,
 				trace.WithAttributes(se.Attributes...),
-				trace.WithSpanKind(event.Kind),
+				trace.WithSpanKind(kind),
 				trace.WithTimestamp(se.StartTime))
 		span.SetStatus(se.Status.Code, se.Status.Description)
 		span.End(trace.WithTimestamp(se.EndTime))
