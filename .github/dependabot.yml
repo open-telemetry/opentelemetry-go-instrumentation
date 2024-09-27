@@ -47,6 +47,15 @@ updates:
       interval: weekly
       day: sunday
   - package-ecosystem: docker
+    directory: /internal/test/e2e/autosdk
+    labels:
+      - dependencies
+      - docker
+      - Skip Changelog
+    schedule:
+      interval: weekly
+      day: sunday
+  - package-ecosystem: docker
     directory: /internal/test/e2e/databasesql
     labels:
       - dependencies
@@ -147,6 +156,15 @@ updates:
       day: sunday
   - package-ecosystem: gomod
     directory: /examples/rolldice
+    labels:
+      - dependencies
+      - go
+      - Skip Changelog
+    schedule:
+      interval: weekly
+      day: sunday
+  - package-ecosystem: gomod
+    directory: /internal/test/e2e/autosdk
     labels:
       - dependencies
       - go

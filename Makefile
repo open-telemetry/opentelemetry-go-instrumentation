@@ -152,18 +152,23 @@ license-header-check:
 	           exit 1; \
 	   fi
 
-.PHONY: fixture-nethttp fixture-gin fixture-databasesql fixture-nethttp-custom fixture-otelglobal fixture-kafka-go
+.PHONY: fixture-nethttp fixture-gin fixture-databasesql fixture-nethttp-custom fixture-otelglobal fixture-autosdk fixture-kafka-go
 fixture-nethttp-custom: fixtures/nethttp_custom
 fixture-nethttp: fixtures/nethttp
 fixture-gin: fixtures/gin
 fixture-databasesql: fixtures/databasesql
 fixture-grpc: fixtures/grpc
 fixture-otelglobal: fixtures/otelglobal
+fixture-autosdk: fixtures/autosdk
 fixture-kafka-go: fixtures/kafka-go
 fixtures/%: LIBRARY=$*
 fixtures/%:
 	$(MAKE) docker-build
-	cd internal/test/e2e/$(LIBRARY) && docker build -t sample-app .
+	if [ -f ./internal/test/e2e/$(LIBRARY)/build.sh ]; then \
+		./internal/test/e2e/$(LIBRARY)/build.sh; \
+	else \
+		cd internal/test/e2e/$(LIBRARY) && docker build --build-context ../../../../ -t sample-app . ;\
+	fi
 	kind create cluster
 	kind load docker-image otel-go-instrumentation sample-app
 	helm repo add open-telemetry https://open-telemetry.github.io/opentelemetry-helm-charts
