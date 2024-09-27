@@ -5,12 +5,16 @@ package sdk
 
 import (
 	"context"
+	"fmt"
+	"reflect"
+	"runtime"
 	"time"
 
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/ptrace"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
+	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
 	"go.opentelemetry.io/otel/trace"
 	"go.opentelemetry.io/otel/trace/embedded"
 )
@@ -265,14 +269,49 @@ func (s *span) RecordError(err error, opts ...trace.EventOption) {
 	if s == nil || err == nil || !s.sampled {
 		return
 	}
-	/* TODO: implement */
+
+	cfg := trace.NewEventConfig(opts...)
+
+	attrs := cfg.Attributes()
+	attrs = append(attrs,
+		semconv.ExceptionType(typeStr(err)),
+		semconv.ExceptionMessage(err.Error()),
+	)
+	if cfg.StackTrace() {
+		buf := make([]byte, 2048)
+		n := runtime.Stack(buf, false)
+		attrs = append(attrs, semconv.ExceptionStacktrace(string(buf[0:n])))
+	}
+
+	s.addEvent(semconv.ExceptionEventName, cfg.Timestamp(), attrs)
+}
+
+func typeStr(i any) string {
+	t := reflect.TypeOf(i)
+	if t.PkgPath() == "" && t.Name() == "" {
+		// Likely a builtin type.
+		return t.String()
+	}
+	return fmt.Sprintf("%s.%s", t.PkgPath(), t.Name())
 }
 
 func (s *span) AddEvent(name string, opts ...trace.EventOption) {
 	if s == nil || !s.sampled {
 		return
 	}
-	/* TODO: implement */
+
+	cfg := trace.NewEventConfig(opts...)
+	s.addEvent(name, cfg.Timestamp(), cfg.Attributes())
+}
+
+func (s *span) addEvent(name string, tStamp time.Time, attrs []attribute.KeyValue) {
+	// TODO: handle event limits.
+
+	event := s.span.Events().AppendEmpty()
+	event.SetName(name)
+	ts := pcommon.NewTimestampFromTime(tStamp)
+	event.SetTimestamp(ts)
+	setAttributes(event.Attributes(), attrs)
 }
 
 func (s *span) AddLink(link trace.Link) {
