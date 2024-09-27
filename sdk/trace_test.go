@@ -186,6 +186,16 @@ func TestSpanCreation(t *testing.T) {
 				assert.Equal(t, pcommon.NewTimestampFromTime(ts), s.span.StartTimestamp())
 			},
 		},
+		{
+			TestName: "WithAttributes",
+			Options: []trace.SpanStartOption{
+				trace.WithAttributes(attrs...),
+			},
+			Eval: func(t *testing.T, _ context.Context, s *span) {
+				assertTracer(s.traces)
+				assert.Equal(t, pAttrs, s.span.Attributes())
+			},
+		},
 	}
 
 	ctx := context.Background()

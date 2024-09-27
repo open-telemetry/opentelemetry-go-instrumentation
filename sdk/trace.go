@@ -112,7 +112,7 @@ func (t tracer) traces(ctx context.Context, name string, cfg trace.SpanConfig, s
 	}
 	span.SetStartTimestamp(start)
 
-	// TODO: Set Attributes.
+	setAttributes(span.Attributes(), cfg.Attributes())
 	// TODO: Add Links.
 
 	return traces, span
