@@ -49,6 +49,27 @@ SCOPE="go.opentelemetry.io/auto/internal/test/e2e/autosdk"
   assert_equal "$kind" "3"
 }
 
+@test "autosdk :: main span :: event" {
+  event=$(span_events ${SCOPE} "main")
+
+  assert_equal $(echo "$event" | jq ".timeUnixNano") '"946684802000000000"'
+  assert_equal $(echo "$event" | jq ".name") '"exception"'
+
+  attrs=$(echo "$event" | jq ".attributes[]")
+
+  impact=$(echo "$attrs" | jq "select(.key == \"impact\").value.intValue")
+  assert_equal "$impact" '"11"'
+
+  type=$(echo "$attrs" | jq "select(.key == \"exception.type\").value.stringValue")
+  assert_equal "$type" '"*errors.errorString"'
+
+  msg=$(echo "$attrs" | jq "select(.key == \"exception.message\").value.stringValue")
+  assert_equal "$msg" '"broken"'
+
+  st=$(echo "$attrs" | jq "select(.key == \"exception.stacktrace\")")
+  assert_not_empty "$st"
+}
+
 @test "autosdk :: Run span :: trace ID" {
   trace_id=$(spans_from_scope_named ${SCOPE} | jq "select(.name == \"Run\")" | jq ".traceId")
   assert_regex "$trace_id" ${MATCH_A_TRACE_ID}

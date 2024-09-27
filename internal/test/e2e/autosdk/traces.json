@@ -63,6 +63,38 @@
               "kind": 1,
               "startTimeUnixNano": "946684800500000000",
               "endTimeUnixNano": "946684801000000000",
+              "events": [
+                {
+                  "timeUnixNano": "946684802000000000",
+                  "name": "exception",
+                  "attributes": [
+                    {
+                      "key": "impact",
+                      "value": {
+                        "intValue": "11"
+                      }
+                    },
+                    {
+                      "key": "exception.type",
+                      "value": {
+                        "stringValue": "*errors.errorString"
+                      }
+                    },
+                    {
+                      "key": "exception.message",
+                      "value": {
+                        "stringValue": "broken"
+                      }
+                    },
+                    {
+                      "key": "exception.stacktrace",
+                      "value": {
+                        "stringValue": "xxxxx"
+                      }
+                    }
+                  ]
+                }
+              ],
               "attributes": [
                 {
                   "key": "user",
