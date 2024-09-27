@@ -57,7 +57,7 @@
             {
               "traceId": "xxxxx",
               "spanId": "xxxxx",
-              "parentSpanId": "a54305f9b1e4f87a",
+              "parentSpanId": "xxxxx",
               "flags": 256,
               "name": "sig",
               "kind": 3,
