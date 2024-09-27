@@ -63,7 +63,21 @@
               "kind": 3,
               "startTimeUnixNano": "946684800500000000",
               "endTimeUnixNano": "946684801000000000",
-              "status": {}
+              "attributes": [
+                {
+                  "key": "user",
+                  "value": {
+                    "stringValue": "Alice"
+                  }
+                },
+                {
+                  "key": "admin",
+                  "value": {
+                    "boolValue": true
+                  }
+                }
+              ],
+              "status": {},
             },
             {
               "traceId": "xxxxx",

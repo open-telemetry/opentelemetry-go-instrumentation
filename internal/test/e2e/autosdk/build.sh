@@ -15,7 +15,7 @@ usage() {
     OPTIONS:
         -t --tag            Docker tag to use ["sample-app"]
         -h --help           Show this help message
-    EOF
+EOF
 }
 
 parse_opts() {
