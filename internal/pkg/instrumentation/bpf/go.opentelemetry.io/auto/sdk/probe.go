@@ -155,7 +155,6 @@ func (c *converter) convertEvent(e *event) []*probe.SpanEvent {
 		TracerSchema:      ss.SchemaUrl(),
 		Attributes:        attributes(span.Attributes()),
 		// TODO: Status.
-		// TODO: Attributes.
 		// TODO: Events.
 		// TODO: Links.
 		// TODO: Span Kind.
