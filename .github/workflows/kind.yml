@@ -22,6 +22,12 @@ jobs:
       - name: Build auto-instrumentation
         run: |
           IMG=otel-go-instrumentation:latest make docker-build
+          docker save otel-go-instrumentation:latest -o otel-go-instrumentation.tar
+      - name: Upload Docker image artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: otel-go-instrumentation
+          path: otel-go-instrumentation.tar
   kubernetes-test:
     needs:
       - build-auto-instrumentation
@@ -58,6 +64,13 @@ jobs:
           kubectl cluster-info --context kind-chart-testing
           kubectl get node
           docker ps -a --filter label=io.x-k8s.kind.cluster=chart-testing
+      - name: Download Docker image artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: otel-go-instrumentation
+      - name: Load Docker image
+        run: |
+          docker load -i otel-go-instrumentation.tar
       - name: Kind load images
         run: |
           kind load docker-image otel-go-instrumentation --name chart-testing
