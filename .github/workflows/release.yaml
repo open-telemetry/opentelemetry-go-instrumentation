@@ -42,7 +42,7 @@ jobs:
             ghcr.io/${{ github.repository }}/${{ env.IMAGE_NAME }}
 
       - name: Build and push
-        uses: docker/build-push-action@v6.7.0
+        uses: docker/build-push-action@v6.8.0
         with:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
