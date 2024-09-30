@@ -8,6 +8,7 @@ import (
 	"errors"
 	"os"
 	"os/signal"
+	"syscall"
 	"time"
 
 	"go.opentelemetry.io/otel/attribute"
@@ -76,8 +77,18 @@ func sig(ctx context.Context) <-chan msg {
 }
 
 func main() {
-	// give time for auto-instrumentation to start up
-	time.Sleep(5 * time.Second)
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
+	defer stop()
+
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, syscall.SIGCONT)
+
+	// Wait for auto-instrumentation.
+	select {
+	case <-ctx.Done():
+		os.Exit(1)
+	case <-sigChan:
+	}
 
 	provider := sdk.TracerProvider()
 	tracer := provider.Tracer(
@@ -86,9 +97,6 @@ func main() {
 		trace.WithSchemaURL(schemaURL),
 	)
 	app := app{tracer: tracer}
-
-	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
-	defer stop()
 
 	ctx, span := tracer.Start(ctx, "main", trace.WithTimestamp(y2k))
 
@@ -104,7 +112,4 @@ func main() {
 	}
 
 	span.End(trace.WithTimestamp(y2k.Add(5 * time.Second)))
-
-	// give time for auto-instrumentation to report signal
-	time.Sleep(5 * time.Second)
 }
