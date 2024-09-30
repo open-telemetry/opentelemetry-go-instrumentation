@@ -22,6 +22,7 @@ import (
 func main() {
 	logLevel := flag.String("log-level", "debug", `logging level ("debug", "info", "warn", "error")`)
 	binPath := flag.String("bin", "", "Path to the target binary")
+	outPath := flag.String("out", "traces.json", "Path to out generated traces")
 	flag.Parse()
 
 	logger := newLogger(*logLevel)
@@ -36,7 +37,7 @@ func main() {
 	defer stop()
 
 	app := App{logger: logger}
-	if err := app.Run(ctx, *binPath); err != nil {
+	if err := app.Run(ctx, *binPath, *outPath); err != nil {
 		logger.Error("failed to run", "error", err)
 		os.Exit(1)
 	}
@@ -66,8 +67,8 @@ type App struct {
 	logger *slog.Logger
 }
 
-func (a *App) Run(ctx context.Context, binPath string) error {
-	exp, err := a.newExporter(ctx)
+func (a *App) Run(ctx context.Context, binPath, outPath string) error {
+	exp, err := a.newExporter(ctx, outPath)
 	if err != nil {
 		return err
 	}
@@ -128,13 +129,13 @@ func (a *App) Run(ctx context.Context, binPath string) error {
 	return inst.Close()
 }
 
-func (a *App) newExporter(ctx context.Context) (trace.SpanExporter, error) {
+func (a *App) newExporter(ctx context.Context, outPath string) (trace.SpanExporter, error) {
 	f := fileexporter.NewFactory()
 	factory, err := collex.NewFactory(f, nil)
 	if err != nil {
 		return nil, err
 	}
 	c := f.CreateDefaultConfig().(*fileexporter.Config)
-	c.Path = "traces.json"
+	c.Path = outPath
 	return factory.SpanExporter(ctx, c)
 }
