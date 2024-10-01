@@ -5,18 +5,19 @@ package sdk
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"reflect"
 	"runtime"
 	"time"
 
-	"go.opentelemetry.io/collector/pdata/pcommon"
-	"go.opentelemetry.io/collector/pdata/ptrace"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
 	"go.opentelemetry.io/otel/trace"
 	"go.opentelemetry.io/otel/trace/embedded"
+
+	"go.opentelemetry.io/auto/sdk/telemetry"
 )
 
 // GetTracerProvider returns an auto-instrumentable [trace.TracerProvider].
@@ -85,56 +86,58 @@ func (t *tracer) start(
 // start is used for testing.
 var start = func(context.Context, *span, *trace.SpanContext, *bool, *trace.SpanContext) {}
 
-func (t tracer) traces(ctx context.Context, name string, cfg trace.SpanConfig, sc, psc trace.SpanContext) (ptrace.Traces, ptrace.Span) {
-	// TODO: pool this. It can be returned on end.
-	traces := ptrace.NewTraces()
-	traces.ResourceSpans().EnsureCapacity(1)
-
-	rs := traces.ResourceSpans().AppendEmpty()
-	rs.ScopeSpans().EnsureCapacity(1)
-
-	ss := rs.ScopeSpans().AppendEmpty()
-	ss.Scope().SetName(t.name)
-	ss.Scope().SetVersion(t.version)
-	ss.SetSchemaUrl(t.schemaURL)
-	ss.Spans().EnsureCapacity(1)
-
-	span := ss.Spans().AppendEmpty()
-	span.SetTraceID(pcommon.TraceID(sc.TraceID()))
-	span.SetSpanID(pcommon.SpanID(sc.SpanID()))
-	span.SetFlags(uint32(sc.TraceFlags()))
-	span.TraceState().FromRaw(sc.TraceState().String())
-	span.SetParentSpanID(pcommon.SpanID(psc.SpanID()))
-	span.SetName(name)
-	span.SetKind(spanKind(cfg.SpanKind()))
-
-	var start pcommon.Timestamp
-	if t := cfg.Timestamp(); !t.IsZero() {
-		start = pcommon.NewTimestampFromTime(cfg.Timestamp())
-	} else {
-		start = pcommon.NewTimestampFromTime(time.Now())
+func (t tracer) traces(ctx context.Context, name string, cfg trace.SpanConfig, sc, psc trace.SpanContext) (*telemetry.Traces, *telemetry.Span) {
+	// TODO: configure span.
+	span := &telemetry.Span{
+		TraceID:      telemetry.TraceID(sc.TraceID()),
+		SpanID:       telemetry.SpanID(sc.SpanID()),
+		Flags:        uint32(sc.TraceFlags()),
+		TraceState:   sc.TraceState().String(),
+		ParentSpanID: telemetry.SpanID(psc.SpanID()),
+		Name:         name,
+		Kind:         spanKind(cfg.SpanKind()),
+		Attrs:        convAttrs(cfg.Attributes()),
+		Links:        convLinks(cfg.Links()),
 	}
-	span.SetStartTimestamp(start)
-	addLinks(span.Links(), cfg.Links()...)
-	setAttributes(span.Attributes(), cfg.Attributes())
 
-	return traces, span
+	if t := cfg.Timestamp(); !t.IsZero() {
+		span.StartTime = cfg.Timestamp()
+	} else {
+		span.StartTime = time.Now()
+	}
+
+	return &telemetry.Traces{
+		ResourceSpans: []*telemetry.ResourceSpans{
+			{
+				ScopeSpans: []*telemetry.ScopeSpans{
+					{
+						Scope: &telemetry.Scope{
+							Name:    t.version,
+							Version: t.version,
+						},
+						Spans:     []*telemetry.Span{span},
+						SchemaURL: t.schemaURL,
+					},
+				},
+			},
+		},
+	}, span
 }
 
-func spanKind(kind trace.SpanKind) ptrace.SpanKind {
+func spanKind(kind trace.SpanKind) telemetry.SpanKind {
 	switch kind {
 	case trace.SpanKindInternal:
-		return ptrace.SpanKindInternal
+		return telemetry.SpanKindInternal
 	case trace.SpanKindServer:
-		return ptrace.SpanKindServer
+		return telemetry.SpanKindServer
 	case trace.SpanKindClient:
-		return ptrace.SpanKindClient
+		return telemetry.SpanKindClient
 	case trace.SpanKindProducer:
-		return ptrace.SpanKindProducer
+		return telemetry.SpanKindProducer
 	case trace.SpanKindConsumer:
-		return ptrace.SpanKindConsumer
+		return telemetry.SpanKindConsumer
 	}
-	return ptrace.SpanKindUnspecified
+	return telemetry.SpanKind(0) // undefined.
 }
 
 type span struct {
@@ -143,8 +146,8 @@ type span struct {
 	sampled     bool
 	spanContext trace.SpanContext
 
-	traces ptrace.Traces
-	span   ptrace.Span
+	traces *telemetry.Traces
+	span   *telemetry.Span
 }
 
 func (s *span) SpanContext() trace.SpanContext {
@@ -166,16 +169,19 @@ func (s *span) SetStatus(c codes.Code, msg string) {
 		return
 	}
 
-	stat := s.span.Status()
-	stat.SetMessage(msg)
+	if s.span.Status == nil {
+		s.span.Status = new(telemetry.Status)
+	}
+
+	s.span.Status.Message = msg
 
 	switch c {
 	case codes.Unset:
-		stat.SetCode(ptrace.StatusCodeUnset)
+		s.span.Status.Code = telemetry.StatusCodeUnset
 	case codes.Error:
-		stat.SetCode(ptrace.StatusCodeError)
+		s.span.Status.Code = telemetry.StatusCodeError
 	case codes.Ok:
-		stat.SetCode(ptrace.StatusCodeOk)
+		s.span.Status.Code = telemetry.StatusCodeOK
 	}
 }
 
@@ -186,52 +192,85 @@ func (s *span) SetAttributes(attrs ...attribute.KeyValue) {
 
 	// TODO: handle attribute limits.
 
-	setAttributes(s.span.Attributes(), attrs)
-}
+	m := make(map[string]int)
+	for i, a := range s.span.Attrs {
+		m[a.Key] = i
+	}
 
-func setAttributes(dest pcommon.Map, attrs []attribute.KeyValue) {
-	dest.EnsureCapacity(len(attrs))
-	for _, attr := range attrs {
-		key := string(attr.Key)
-		switch attr.Value.Type() {
-		case attribute.BOOL:
-			dest.PutBool(key, attr.Value.AsBool())
-		case attribute.INT64:
-			dest.PutInt(key, attr.Value.AsInt64())
-		case attribute.FLOAT64:
-			dest.PutDouble(key, attr.Value.AsFloat64())
-		case attribute.STRING:
-			dest.PutStr(key, attr.Value.AsString())
-		case attribute.BOOLSLICE:
-			val := attr.Value.AsBoolSlice()
-			s := dest.PutEmptySlice(key)
-			s.EnsureCapacity(len(val))
-			for _, v := range val {
-				s.AppendEmpty().SetBool(v)
+	for _, a := range attrs {
+		val := convAttrValue(a.Value)
+		if val.Empty() {
+			continue
+		}
+
+		if idx, ok := m[string(a.Key)]; ok {
+			s.span.Attrs[idx] = telemetry.Attr{
+				Key:   string(a.Key),
+				Value: val,
 			}
-		case attribute.INT64SLICE:
-			val := attr.Value.AsInt64Slice()
-			s := dest.PutEmptySlice(key)
-			s.EnsureCapacity(len(val))
-			for _, v := range val {
-				s.AppendEmpty().SetInt(v)
-			}
-		case attribute.FLOAT64SLICE:
-			val := attr.Value.AsFloat64Slice()
-			s := dest.PutEmptySlice(key)
-			s.EnsureCapacity(len(val))
-			for _, v := range val {
-				s.AppendEmpty().SetDouble(v)
-			}
-		case attribute.STRINGSLICE:
-			val := attr.Value.AsStringSlice()
-			s := dest.PutEmptySlice(key)
-			s.EnsureCapacity(len(val))
-			for _, v := range val {
-				s.AppendEmpty().SetStr(v)
-			}
+		} else {
+			s.span.Attrs = append(s.span.Attrs, telemetry.Attr{
+				Key:   string(a.Key),
+				Value: val,
+			})
+			m[string(a.Key)] = len(s.span.Attrs) - 1
 		}
 	}
+}
+
+func convAttrs(attrs []attribute.KeyValue) []telemetry.Attr {
+	out := make([]telemetry.Attr, 0, len(attrs))
+	for _, attr := range attrs {
+		key := string(attr.Key)
+		val := convAttrValue(attr.Value)
+		if val.Empty() {
+			continue
+		}
+		out = append(out, telemetry.Attr{Key: key, Value: val})
+	}
+	return out
+}
+
+func convAttrValue(value attribute.Value) telemetry.Value {
+	switch value.Type() {
+	case attribute.BOOL:
+		return telemetry.BoolValue(value.AsBool())
+	case attribute.INT64:
+		return telemetry.Int64Value(value.AsInt64())
+	case attribute.FLOAT64:
+		return telemetry.Float64Value(value.AsFloat64())
+	case attribute.STRING:
+		return telemetry.StringValue(value.AsString())
+	case attribute.BOOLSLICE:
+		slice := value.AsBoolSlice()
+		out := make([]telemetry.Value, 0, len(slice))
+		for _, v := range slice {
+			out = append(out, telemetry.BoolValue(v))
+		}
+		return telemetry.SliceValue(out...)
+	case attribute.INT64SLICE:
+		slice := value.AsInt64Slice()
+		out := make([]telemetry.Value, 0, len(slice))
+		for _, v := range slice {
+			out = append(out, telemetry.Int64Value(v))
+		}
+		return telemetry.SliceValue(out...)
+	case attribute.FLOAT64SLICE:
+		slice := value.AsFloat64Slice()
+		out := make([]telemetry.Value, 0, len(slice))
+		for _, v := range slice {
+			out = append(out, telemetry.Float64Value(v))
+		}
+		return telemetry.SliceValue(out...)
+	case attribute.STRINGSLICE:
+		slice := value.AsStringSlice()
+		out := make([]telemetry.Value, 0, len(slice))
+		for _, v := range slice {
+			out = append(out, telemetry.StringValue(v))
+		}
+		return telemetry.SliceValue(out...)
+	}
+	return telemetry.Value{}
 }
 
 func (s *span) End(opts ...trace.SpanEndOption) {
@@ -240,16 +279,13 @@ func (s *span) End(opts ...trace.SpanEndOption) {
 	}
 
 	cfg := trace.NewSpanEndConfig(opts...)
-	var end time.Time
 	if t := cfg.Timestamp(); !t.IsZero() {
-		end = t
+		s.span.EndTime = cfg.Timestamp()
 	} else {
-		end = time.Now()
+		s.span.EndTime = time.Now()
 	}
-	s.span.SetEndTimestamp(pcommon.NewTimestampFromTime(end))
 
-	var m ptrace.ProtoMarshaler
-	b, _ := m.MarshalTraces(s.traces) // TODO: do not ignore this error.
+	b, _ := json.Marshal(s.traces) // TODO: do not ignore this error.
 
 	s.sampled = false
 
@@ -306,11 +342,11 @@ func (s *span) AddEvent(name string, opts ...trace.EventOption) {
 func (s *span) addEvent(name string, tStamp time.Time, attrs []attribute.KeyValue) {
 	// TODO: handle event limits.
 
-	event := s.span.Events().AppendEmpty()
-	event.SetName(name)
-	ts := pcommon.NewTimestampFromTime(tStamp)
-	event.SetTimestamp(ts)
-	setAttributes(event.Attributes(), attrs)
+	s.span.Events = append(s.span.Events, &telemetry.SpanEvent{
+		Time:  tStamp,
+		Name:  name,
+		Attrs: convAttrs(attrs),
+	})
 }
 
 func (s *span) AddLink(link trace.Link) {
@@ -320,18 +356,24 @@ func (s *span) AddLink(link trace.Link) {
 
 	// TODO: handle link limits.
 
-	addLinks(s.span.Links(), link)
+	s.span.Links = append(s.span.Links, convLink(link))
 }
 
-func addLinks(dest ptrace.SpanLinkSlice, links ...trace.Link) {
-	dest.EnsureCapacity(len(links))
+func convLinks(links []trace.Link) []*telemetry.SpanLink {
+	out := make([]*telemetry.SpanLink, 0, len(links))
 	for _, link := range links {
-		l := dest.AppendEmpty()
-		l.SetTraceID(pcommon.TraceID(link.SpanContext.TraceID()))
-		l.SetSpanID(pcommon.SpanID(link.SpanContext.SpanID()))
-		l.SetFlags(uint32(link.SpanContext.TraceFlags()))
-		l.TraceState().FromRaw(link.SpanContext.TraceState().String())
-		setAttributes(l.Attributes(), link.Attributes)
+		out = append(out, convLink(link))
+	}
+	return out
+}
+
+func convLink(link trace.Link) *telemetry.SpanLink {
+	return &telemetry.SpanLink{
+		TraceID:    telemetry.TraceID(link.SpanContext.TraceID()),
+		SpanID:     telemetry.SpanID(link.SpanContext.SpanID()),
+		TraceState: link.SpanContext.TraceState().String(),
+		Attrs:      convAttrs(link.Attributes),
+		Flags:      uint32(link.SpanContext.TraceFlags()),
 	}
 }
 
@@ -339,7 +381,7 @@ func (s *span) SetName(name string) {
 	if s == nil || !s.sampled {
 		return
 	}
-	s.span.SetName(name)
+	s.span.Name = name
 }
 
 func (*span) TracerProvider() trace.TracerProvider { return GetTracerProvider() }
