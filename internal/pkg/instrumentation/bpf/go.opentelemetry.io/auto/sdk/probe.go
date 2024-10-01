@@ -156,7 +156,6 @@ func (c *converter) convertEvent(e *event) []*probe.SpanEvent {
 		// TODO: Attributes.
 		// TODO: Events.
 		// TODO: Links.
-		// TODO: Span Kind.
 	}}
 }
 
