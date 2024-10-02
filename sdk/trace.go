@@ -102,7 +102,7 @@ func (t tracer) traces(ctx context.Context, name string, cfg trace.SpanConfig, s
 	span.TraceState().FromRaw(sc.TraceState().String())
 	span.SetParentSpanID(pcommon.SpanID(psc.SpanID()))
 	span.SetName(name)
-	// TODO Set Kind.
+	span.SetKind(spanKind(cfg.SpanKind()))
 
 	var start pcommon.Timestamp
 	if t := cfg.Timestamp(); !t.IsZero() {
@@ -112,10 +112,26 @@ func (t tracer) traces(ctx context.Context, name string, cfg trace.SpanConfig, s
 	}
 	span.SetStartTimestamp(start)
 
-	// TODO: Set Attributes.
+	setAttributes(span.Attributes(), cfg.Attributes())
 	// TODO: Add Links.
 
 	return traces, span
+}
+
+func spanKind(kind trace.SpanKind) ptrace.SpanKind {
+	switch kind {
+	case trace.SpanKindInternal:
+		return ptrace.SpanKindInternal
+	case trace.SpanKindServer:
+		return ptrace.SpanKindServer
+	case trace.SpanKindClient:
+		return ptrace.SpanKindClient
+	case trace.SpanKindProducer:
+		return ptrace.SpanKindProducer
+	case trace.SpanKindConsumer:
+		return ptrace.SpanKindConsumer
+	}
+	return ptrace.SpanKindUnspecified
 }
 
 type span struct {

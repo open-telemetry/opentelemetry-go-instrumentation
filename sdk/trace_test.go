@@ -5,6 +5,7 @@ package sdk
 
 import (
 	"context"
+	"math"
 	"testing"
 	"time"
 
@@ -177,6 +178,16 @@ func TestSpanCreation(t *testing.T) {
 			},
 		},
 		{
+			TestName: "WithSpanKind",
+			Options: []trace.SpanStartOption{
+				trace.WithSpanKind(trace.SpanKindClient),
+			},
+			Eval: func(t *testing.T, _ context.Context, s *span) {
+				assertTracer(s.traces)
+				assert.Equal(t, ptrace.SpanKindClient, s.span.Kind())
+			},
+		},
+		{
 			TestName: "WithTimestamp",
 			Options: []trace.SpanStartOption{
 				trace.WithTimestamp(ts),
@@ -184,6 +195,16 @@ func TestSpanCreation(t *testing.T) {
 			Eval: func(t *testing.T, _ context.Context, s *span) {
 				assertTracer(s.traces)
 				assert.Equal(t, pcommon.NewTimestampFromTime(ts), s.span.StartTimestamp())
+			},
+		},
+		{
+			TestName: "WithAttributes",
+			Options: []trace.SpanStartOption{
+				trace.WithAttributes(attrs...),
+			},
+			Eval: func(t *testing.T, _ context.Context, s *span) {
+				assertTracer(s.traces)
+				assert.Equal(t, pAttrs, s.span.Attributes())
 			},
 		},
 	}
@@ -201,6 +222,24 @@ func TestSpanCreation(t *testing.T) {
 
 			tc.Eval(t, c, s)
 		})
+	}
+}
+
+func TestSpanKindTransform(t *testing.T) {
+	tests := map[trace.SpanKind]ptrace.SpanKind{
+		trace.SpanKind(-1):          ptrace.SpanKindUnspecified,
+		trace.SpanKindUnspecified:   ptrace.SpanKindUnspecified,
+		trace.SpanKind(math.MaxInt): ptrace.SpanKindUnspecified,
+
+		trace.SpanKindInternal: ptrace.SpanKindInternal,
+		trace.SpanKindServer:   ptrace.SpanKindServer,
+		trace.SpanKindClient:   ptrace.SpanKindClient,
+		trace.SpanKindProducer: ptrace.SpanKindProducer,
+		trace.SpanKindConsumer: ptrace.SpanKindConsumer,
+	}
+
+	for in, want := range tests {
+		assert.Equal(t, want, spanKind(in), in.String())
 	}
 }
 
