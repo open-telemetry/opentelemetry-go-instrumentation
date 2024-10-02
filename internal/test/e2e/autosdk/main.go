@@ -33,6 +33,7 @@ func (a *app) Run(ctx context.Context, user string, admin bool) error {
 			attribute.Bool("admin", admin),
 		),
 		trace.WithTimestamp(y2k.Add(500 * time.Microsecond)),
+		trace.WithSpanKind(trace.SpanKindInternal),
 	}
 	_, span := a.tracer.Start(ctx, "Run", opts...)
 	defer span.End(trace.WithTimestamp(y2k.Add(1 * time.Second)))

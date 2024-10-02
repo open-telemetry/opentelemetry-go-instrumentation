@@ -60,7 +60,7 @@
               "parentSpanId": "xxxxx",
               "flags": 256,
               "name": "Run",
-              "kind": 3,
+              "kind": 1,
               "startTimeUnixNano": "946684800500000000",
               "endTimeUnixNano": "946684801000000000",
               "attributes": [

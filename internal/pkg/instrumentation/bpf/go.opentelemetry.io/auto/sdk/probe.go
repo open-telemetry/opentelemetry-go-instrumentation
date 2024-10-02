@@ -153,12 +153,29 @@ func (c *converter) convertEvent(e *event) []*probe.SpanEvent {
 		TracerName:        ss.Scope().Name(),
 		TracerVersion:     ss.Scope().Version(),
 		TracerSchema:      ss.SchemaUrl(),
+		Kind:              spanKind(span.Kind()),
 		Attributes:        attributes(span.Attributes()),
 		// TODO: Status.
 		// TODO: Events.
 		// TODO: Links.
-		// TODO: Span Kind.
 	}}
+}
+
+func spanKind(kind ptrace.SpanKind) trace.SpanKind {
+	switch kind {
+	case ptrace.SpanKindInternal:
+		return trace.SpanKindInternal
+	case ptrace.SpanKindServer:
+		return trace.SpanKindServer
+	case ptrace.SpanKindClient:
+		return trace.SpanKindClient
+	case ptrace.SpanKindProducer:
+		return trace.SpanKindProducer
+	case ptrace.SpanKindConsumer:
+		return trace.SpanKindConsumer
+	default:
+		return trace.SpanKindUnspecified
+	}
 }
 
 func attributes(m pcommon.Map) []attribute.KeyValue {
