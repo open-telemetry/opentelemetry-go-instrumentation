@@ -88,7 +88,10 @@
               "kind": 3,
               "startTimeUnixNano": "946684800000000000",
               "endTimeUnixNano": "946684805000000000",
-              "status": {}
+              "status": {
+                "message": "application error",
+                "code": 2
+              }
             }
           ],
           "schemaUrl": "https://some_schema"
