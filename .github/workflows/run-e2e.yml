@@ -1,0 +1,76 @@
+name: Reusable e2e tester
+
+on:
+  workflow_call:
+    inputs:
+      name:
+        required: true
+        type: string
+
+jobs:
+  run-sample-app:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Download docker image artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: sample-app-${{ inputs.name }}
+    - name: Docker -- load image
+      run: docker load -i sample-app-${{ inputs.name }}.tar
+    - name: Kind -- load image
+      run: |
+        kind load docker-image sample-app-${{ inputs.name }} \
+          --name chart-testing
+    - name: Install local collector
+      if: ${{ hashFiles(format('internal/test/e2e/{0}/collector-helm-values.yml', name)) != '' }}
+      run: |
+        helm install test \
+          -n "${{ inputs.name }}" --create-namespace \
+          -f "./internal/test/e2e/${{ inputs.name }}/collector-helm-values.yml" \
+          opentelemetry-helm-charts/opentelemetry-collector
+    - name: Install generic collector
+      if: ${{ hashFiles(format('internal/test/e2e/{0}/collector-helm-values.yml', name)) == '' }}
+      run: |
+        helm install test \
+          -n "${{ inputs.name }}" --create-namespace \
+          -f .github/workflows/e2e/k8s/collector-helm-values.yml \
+          opentelemetry-helm-charts/opentelemetry-collector
+    - name: check collector status
+      # The loop is needed if the pod is not created yet
+      # once https://github.com/kubernetes/kubectl/issues/1516 is fixed we can remove the loop
+      run: |
+        while : ; do
+          kubectl get -n "${{ inputs.name }}" pod/test-opentelemetry-collector-0 && break
+          sleep 5
+        done
+        kubectl wait -n "${{ inputs.name }}" --for=condition=Ready --timeout=60s pod/test-opentelemetry-collector-0
+    - name: start sample job
+      run: |
+        helm install run \
+          -n "${{ inputs.name }}" \
+          --set image.repository=sample-app-${{ inputs.name }} \
+          .github/workflows/e2e/k8s/sample-app
+    - name: check job status
+      id: job-status
+      run: |
+        kubectl wait \
+          -n "${{ inputs.name }}" \
+          --for=condition=Complete \
+          --timeout=60s \
+          job/run-sample-job
+    - name: copy telemetry trace output
+      if: always() && steps.job-status.outcome == 'success'
+      run: |
+        kubectl cp \
+          -n "${{ inputs.name }}" \
+          -c filecp ${{ inputs.name }}/test-opentelemetry-collector-0:tmp/trace.json \
+          ./internal/test/e2e/${{ matrix.library }}/traces-orig.json
+    - name: print auto-instrumentation logs
+      if: always() && steps.job-status.outcome == 'failure'
+      run: |
+        kubectl logs -l app=sample -c auto-instrumentation --tail=300
+        exit 1
+    - name: verify output and redact to traces.json
+      run: |
+        bats ./internal/test/e2e/${{ matrix.library }}/verify.bats
+      if: always() && steps.job-status.outcome == 'success'
