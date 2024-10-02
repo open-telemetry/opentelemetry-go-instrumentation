@@ -33,6 +33,10 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
   An `slog.Logger` can now be configured by the user any way they want and then passed to the `Instrumentation` for its logging with this option. ([#1080](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1080))
 - Support `google.golang.org/grpc` `1.66.2`. ([#1083](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1083))
 - Support `google.golang.org/grpc` `1.67.0`. ([#1116](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1116))
+- Support `google.golang.org/grpc` `1.66.3`. ([#1143](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1143))
+- Support `google.golang.org/grpc` `1.67.1`. ([#1143](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1143))
+- Support Go `1.22.8`. ([#1143](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1143))
+- Support Go `1.23.2`. ([#1143](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1143))
 
 ### Changed
 
