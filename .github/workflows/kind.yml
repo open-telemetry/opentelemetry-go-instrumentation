@@ -32,10 +32,10 @@ jobs:
       - name: Checkout Repo
         uses: actions/checkout@v4
       - name: Build Image From Script
-        if: ${{ hashFiles('./internal/test/e2e/${{ matrix.library }}/build.sh') != '' }}
+        if: ${{ hashFiles(format('internal/test/e2e/{0}/build.sh', matrix.library)) != '' }}
         run: ./internal/test/e2e/${{ matrix.library }}/build.sh -t sample-app-${{ matrix.library }}
       - name: Build Image
-        if: ${{ hashFiles('./internal/test/e2e/${{ matrix.library }}/build.sh') == '' }}
+        if: ${{ hashFiles(format('internal/test/e2e/{0}/build.sh', matrix.library)) == '' }}
         working-directory: ./internal/test/e2e/${{ matrix.library }}
         run: docker build -t sample-app-${{ matrix.library }} .
       - name: Save Image
