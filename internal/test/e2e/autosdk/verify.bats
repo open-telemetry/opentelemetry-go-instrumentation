@@ -68,3 +68,13 @@ SCOPE="go.opentelemetry.io/auto/internal/test/e2e/autosdk"
   timestamp=$(spans_from_scope_named ${SCOPE} | jq "select(.name == \"Run\")" | jq ".endTimeUnixNano")
   assert_regex "$timestamp" "946684801000000000"
 }
+
+@test "autosdk :: Run span :: attribute :: user" {
+  result=$(span_attributes_for ${SCOPE} | jq "select(.key == \"user\").value.stringValue")
+  assert_equal "$result" '"Alice"'
+}
+
+@test "autosdk :: Run span :: attribute :: admin" {
+  result=$(span_attributes_for ${SCOPE} | jq "select(.key == \"admin\").value.boolValue")
+  assert_equal "$result" 'true'
+}

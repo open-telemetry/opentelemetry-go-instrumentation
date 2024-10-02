@@ -15,11 +15,11 @@ usage() {
     OPTIONS:
         -t --tag            Docker tag to use ["sample-app"]
         -h --help           Show this help message
-    EOF
+EOF
 }
 
 parse_opts() {
-    # Make sure getopts starts at the begining
+    # Make sure getopts starts at the beginning
     OPTIND=1
 
     local deliminator option
@@ -100,9 +100,9 @@ main() {
 
     # Check dependencies
     hash git 2>/dev/null\
-        || { echo >&2 "Requrired git client not found"; exit 1; }
+        || { echo >&2 "Required git client not found"; exit 1; }
     hash docker 2>/dev/null\
-        || { echo >&2 "Requrired docker client not found"; exit 1; }
+        || { echo >&2 "Required docker client not found"; exit 1; }
 
     parse_opts "$@"
 

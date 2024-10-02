@@ -6,6 +6,7 @@ package sdk
 import (
 	"bytes"
 	"encoding/binary"
+	"fmt"
 	"log/slog"
 
 	"github.com/cilium/ebpf/perf"
@@ -15,6 +16,7 @@ import (
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/probe"
 	"go.opentelemetry.io/auto/internal/pkg/structfield"
 
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -151,10 +153,84 @@ func (c *converter) convertEvent(e *event) []*probe.SpanEvent {
 		TracerName:        ss.Scope().Name(),
 		TracerVersion:     ss.Scope().Version(),
 		TracerSchema:      ss.SchemaUrl(),
+		Attributes:        attributes(span.Attributes()),
 		// TODO: Status.
-		// TODO: Attributes.
 		// TODO: Events.
 		// TODO: Links.
 		// TODO: Span Kind.
 	}}
+}
+
+func attributes(m pcommon.Map) []attribute.KeyValue {
+	out := make([]attribute.KeyValue, 0, m.Len())
+	m.Range(func(key string, val pcommon.Value) bool {
+		out = append(out, attribute.KeyValue{
+			Key:   attribute.Key(key),
+			Value: attributeValue(val),
+		})
+		return true
+	})
+	return out
+}
+
+func attributeValue(val pcommon.Value) (out attribute.Value) {
+	switch val.Type() {
+	case pcommon.ValueTypeEmpty:
+	case pcommon.ValueTypeStr:
+		out = attribute.StringValue(val.AsString())
+	case pcommon.ValueTypeInt:
+		out = attribute.Int64Value(val.Int())
+	case pcommon.ValueTypeDouble:
+		out = attribute.Float64Value(val.Double())
+	case pcommon.ValueTypeBool:
+		out = attribute.BoolValue(val.Bool())
+	case pcommon.ValueTypeSlice:
+		s := val.Slice()
+		if s.Len() == 0 {
+			// Undetectable slice type.
+			out = attribute.StringValue("<empty slice>")
+			return out
+		}
+
+		// Validate homogeneity before allocating.
+		t := s.At(0).Type()
+		for i := 1; i < s.Len(); i++ {
+			if s.At(i).Type() != t {
+				out = attribute.StringValue("<inhomogeneous slice>")
+				return out
+			}
+		}
+
+		switch t {
+		case pcommon.ValueTypeBool:
+			v := make([]bool, s.Len())
+			for i := 0; i < s.Len(); i++ {
+				v[i] = s.At(i).Bool()
+			}
+			out = attribute.BoolSliceValue(v)
+		case pcommon.ValueTypeStr:
+			v := make([]string, s.Len())
+			for i := 0; i < s.Len(); i++ {
+				v[i] = s.At(i).Str()
+			}
+			out = attribute.StringSliceValue(v)
+		case pcommon.ValueTypeInt:
+			v := make([]int64, s.Len())
+			for i := 0; i < s.Len(); i++ {
+				v[i] = s.At(i).Int()
+			}
+			out = attribute.Int64SliceValue(v)
+		case pcommon.ValueTypeDouble:
+			v := make([]float64, s.Len())
+			for i := 0; i < s.Len(); i++ {
+				v[i] = s.At(i).Double()
+			}
+			out = attribute.Float64SliceValue(v)
+		default:
+			out = attribute.StringValue(fmt.Sprintf("<invalid slice type %s>", t.String()))
+		}
+	default:
+		out = attribute.StringValue(fmt.Sprintf("<unknown: %#v>", val.AsRaw()))
+	}
+	return out
 }
