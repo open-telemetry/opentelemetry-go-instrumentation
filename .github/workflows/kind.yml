@@ -85,6 +85,7 @@ jobs:
         run: |
           docker load -i otel-go-instrumentation.tar
           docker load -i sample-app-${{ matrix.library }}.tar
+          docker tag sample-app-${{ matrix.library }} sample-app
       - name: Kind load images
         run: |
           kind load docker-image otel-go-instrumentation --name chart-testing
