@@ -29,7 +29,7 @@ jobs:
     strategy:
       matrix:
         k8s-version: ["v1.26.0"]
-        library: ["nethttp", "nethttp_custom", "gin", "databasesql", "grpc", "otelglobal", "kafka-go"]
+        library: ["autosdk", "nethttp", "nethttp_custom", "gin", "databasesql", "grpc", "otelglobal", "kafka-go"]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repo
