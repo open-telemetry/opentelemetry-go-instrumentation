@@ -22,12 +22,17 @@ Alternatively, you can add support for additional or different configurations by
 | `OTEL_SERVICE_NAME`         | Sets the value of the [service.name](https://github.com/open-telemetry/semantic-conventions/blob/main/docs/resource/README.md#service) resource attribute. If `service.name` is provided in `OTEL_RESOURCE_ATTRIBUTES`, the value of `OTEL_SERVICE_NAME` takes precedence. |               |
 | `OTEL_RESOURCE_ATTRIBUTES`  | Key-value pairs to be used as resource attributes. See [Resource SDK](https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/resource/sdk.md#specifying-resource-information-via-an-environment-variable) for details. | See [Resource semantic conventions](https://github.com/open-telemetry/semantic-conventions/blob/main/docs/resource/README.md#semantic-attributes-with-sdk-provided-default-value) for details. |
 
+## Instrumentation options
+
+| Environment variable                | Description                                            | Default value |
+|-------------------------------------|--------------------------------------------------------|---------------|
+| `OTEL_GO_AUTO_INCLUDE_DB_STATEMENT` | Sets whether to include SQL queries in the trace data. |               |
+
 ## Traces exporter
 
 | Environment variable                     | Description                                                                                                                                                                                                 | Default value |
 |------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|---------------|
 | `OTEL_TRACES_EXPORTER`                   | Comma-separated list of propagators. Supported values: `otlp`, `zipkin`, `console`, `logging`, `none`. See [the OpenTelemetry specification](https://github.com/open-telemetry/opentelemetry-specification/blob/v1.35.0/specification/configuration/sdk-environment-variables.md#exporter-selection) for details. | `otlp`        |
-| `OTEL_GO_AUTO_INCLUDE_DB_STATEMENT`      | Sets whether to include SQL queries in the trace data.                                                                                                                                                       |               |
 | `OTEL_SPAN_ATTRIBUTE_VALUE_LENGTH_LIMIT` | Maximum allowed attribute value size.                                                                                                                                                                        | No limit      |
 | `OTEL_SPAN_ATTRIBUTE_COUNT_LIMIT`        | Maximum allowed span attribute count.                                                                                                                                                                        | `128`         |
 | `OTEL_SPAN_LINK_COUNT_LIMIT`             | Maximum allowed span link count.                                                                                                                                                                             | `128`         |
