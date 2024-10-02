@@ -78,3 +78,13 @@ SCOPE="go.opentelemetry.io/auto/internal/test/e2e/autosdk"
   kind=$(spans_from_scope_named ${SCOPE} | jq "select(.name == \"Run\")" | jq ".kind")
   assert_equal "$kind" "1"
 }
+
+@test "autosdk :: Run span :: attribute :: user" {
+  result=$(span_attributes_for ${SCOPE} | jq "select(.key == \"user\").value.stringValue")
+  assert_equal "$result" '"Alice"'
+}
+
+@test "autosdk :: Run span :: attribute :: admin" {
+  result=$(span_attributes_for ${SCOPE} | jq "select(.key == \"admin\").value.boolValue")
+  assert_equal "$result" 'true'
+}
