@@ -3,7 +3,7 @@
 
 module-sets:
   alpha:
-    version: v0.14.0-alpha
+    version: v0.15.0-alpha
     modules:
       - go.opentelemetry.io/auto
 excluded-modules:
@@ -13,6 +13,7 @@ excluded-modules:
   - go.opentelemetry.io/auto/examples/kafka-go/producer
   - go.opentelemetry.io/auto/examples/kafka-go/consumer
   - go.opentelemetry.io/auto/examples/rolldice
+  - go.opentelemetry.io/auto/internal/test/e2e/autosdk
   - go.opentelemetry.io/auto/internal/test/e2e/databasesql
   - go.opentelemetry.io/auto/internal/test/e2e/gin
   - go.opentelemetry.io/auto/internal/test/e2e/grpc
