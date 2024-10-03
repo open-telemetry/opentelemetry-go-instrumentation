@@ -46,6 +46,10 @@ You can also try the [Tutorial](docs/tutorial) for a guide on setting up a sampl
 
 For technical and design info, see [How it works](docs/how-it-works.md).
 
+## Configuration
+
+See the [configuration documentation](docs/configuration.md).
+
 ## Contributing
 
 See the [contributing documentation](./CONTRIBUTING.md).
