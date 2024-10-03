@@ -156,9 +156,9 @@ func (c *converter) convertEvent(e *event) []*probe.SpanEvent {
 		TracerSchema:      ss.SchemaUrl(),
 		Kind:              spanKind(span.Kind()),
 		Attributes:        attributes(span.Attributes()),
+		Links:             c.links(span.Links()),
 		Status:            status(span.Status()),
 		// TODO: Events.
-		// TODO: Links.
 	}}
 }
 
@@ -177,6 +177,35 @@ func spanKind(kind ptrace.SpanKind) trace.SpanKind {
 	default:
 		return trace.SpanKindUnspecified
 	}
+}
+
+func (c *converter) links(links ptrace.SpanLinkSlice) []trace.Link {
+	n := links.Len()
+	if n == 0 {
+		return nil
+	}
+
+	out := make([]trace.Link, n)
+	for i := range out {
+		l := links.At(i)
+
+		raw := l.TraceState().AsRaw()
+		ts, err := trace.ParseTraceState(raw)
+		if err != nil {
+			c.logger.Error("failed to parse link tracestate", "error", err, "tracestate", raw)
+		}
+
+		out[i] = trace.Link{
+			SpanContext: trace.NewSpanContext(trace.SpanContextConfig{
+				TraceID:    trace.TraceID(l.TraceID()),
+				SpanID:     trace.SpanID(l.SpanID()),
+				TraceFlags: trace.TraceFlags(l.Flags()),
+				TraceState: ts,
+			}),
+			Attributes: attributes(l.Attributes()),
+		}
+	}
+	return out
 }
 
 func attributes(m pcommon.Map) []attribute.KeyValue {

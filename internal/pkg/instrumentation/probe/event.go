@@ -35,4 +35,5 @@ type SpanEvent struct {
 	TracerName        string
 	TracerVersion     string
 	TracerSchema      string
+	Links             []trace.Link
 }
