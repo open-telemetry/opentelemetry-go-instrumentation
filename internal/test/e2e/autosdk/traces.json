@@ -64,7 +64,7 @@
               "startTimeUnixNano": "946684800000010000",
               "endTimeUnixNano": "946684800000110000",
               "status": {}
-             }
+            },
             {
               "traceId": "xxxxx",
               "spanId": "xxxxx",
@@ -135,7 +135,7 @@
                   }
                 }
               ],
-              "status": {},
+              "status": {}
             },
             {
               "traceId": "xxxxx",

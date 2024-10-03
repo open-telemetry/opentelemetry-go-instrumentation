@@ -200,7 +200,7 @@ func events(e ptrace.SpanEventSlice) map[string][]trace.EventOption {
 	}
 	return out
 }
-  
+
 func (c *converter) links(links ptrace.SpanLinkSlice) []trace.Link {
 	n := links.Len()
 	if n == 0 {
