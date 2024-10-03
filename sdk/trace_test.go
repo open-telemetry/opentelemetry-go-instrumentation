@@ -72,6 +72,41 @@ var (
 		SpanID:     trace.SpanID{0x1},
 		TraceFlags: trace.FlagsSampled,
 	})
+	spanContext1 = trace.NewSpanContext(trace.SpanContextConfig{
+		TraceID:    trace.TraceID{0x2},
+		SpanID:     trace.SpanID{0x2},
+		TraceFlags: trace.FlagsSampled,
+	})
+
+	link0 = trace.Link{
+		SpanContext: spanContext0,
+		Attributes: []attribute.KeyValue{
+			attribute.Int("n", 0),
+		},
+	}
+	link1 = trace.Link{
+		SpanContext: spanContext1,
+		Attributes: []attribute.KeyValue{
+			attribute.Int("n", 1),
+		},
+	}
+
+	pLink0 = func() ptrace.SpanLink {
+		l := ptrace.NewSpanLink()
+		l.SetTraceID(pcommon.TraceID(spanContext0.TraceID()))
+		l.SetSpanID(pcommon.SpanID(spanContext0.SpanID()))
+		l.SetFlags(uint32(spanContext0.TraceFlags()))
+		l.Attributes().PutInt("n", 0)
+		return l
+	}()
+	pLink1 = func() ptrace.SpanLink {
+		l := ptrace.NewSpanLink()
+		l.SetTraceID(pcommon.TraceID(spanContext1.TraceID()))
+		l.SetSpanID(pcommon.SpanID(spanContext1.SpanID()))
+		l.SetFlags(uint32(spanContext1.TraceFlags()))
+		l.Attributes().PutInt("n", 1)
+		return l
+	}()
 )
 
 func TestSpanCreation(t *testing.T) {
@@ -208,6 +243,19 @@ func TestSpanCreation(t *testing.T) {
 				assert.Equal(t, pAttrs, s.span.Attributes())
 			},
 		},
+		{
+			TestName: "WithLinks",
+			Options: []trace.SpanStartOption{
+				trace.WithLinks(link0, link1),
+			},
+			Eval: func(t *testing.T, _ context.Context, s *span) {
+				assertTracer(s.traces)
+				want := ptrace.NewSpanLinkSlice()
+				pLink0.CopyTo(want.AppendEmpty())
+				pLink1.CopyTo(want.AppendEmpty())
+				assert.Equal(t, want, s.span.Links())
+			},
+		},
 	}
 
 	ctx := context.Background()
@@ -320,6 +368,18 @@ func TestSpanNilUnsampledGuards(t *testing.T) {
 	t.Run("SetName", run(func(s *span) { s.SetName("span name") }))
 	t.Run("SetAttributes", run(func(s *span) { s.SetAttributes(attrs...) }))
 	t.Run("TracerProvider", run(func(s *span) { _ = s.TracerProvider() }))
+}
+
+func TestSpanAddLink(t *testing.T) {
+	s := spanBuilder{
+		Options: []trace.SpanStartOption{trace.WithLinks(link0)},
+	}.Build()
+	s.AddLink(link1)
+
+	want := ptrace.NewSpanLinkSlice()
+	pLink0.CopyTo(want.AppendEmpty())
+	pLink1.CopyTo(want.AppendEmpty())
+	assert.Equal(t, want, s.span.Links())
 }
 
 func TestSpanIsRecording(t *testing.T) {

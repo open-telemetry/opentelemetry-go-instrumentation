@@ -75,6 +75,13 @@ span_events() {
 	spans_from_scope_named $1 | jq "select(.name == \"$2\").events[]"
 }
 
+# Returns an array of all span links emitted by a given library/scope and span.
+# $1 - library/scope name
+# $2 - span name
+span_links() {
+	spans_from_scope_named $1 | jq "select(.name == \"$2\").links[]"
+}
+
 # Returns an array of all spans emitted by a given library/scope
 	# $1 - library/scope name
 spans_from_scope_named() {

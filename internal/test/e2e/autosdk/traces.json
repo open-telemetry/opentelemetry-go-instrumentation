@@ -59,6 +59,17 @@
               "spanId": "xxxxx",
               "parentSpanId": "xxxxx",
               "flags": 256,
+              "name": "sig",
+              "kind": 3,
+              "startTimeUnixNano": "946684800000010000",
+              "endTimeUnixNano": "946684800000110000",
+              "status": {}
+             }
+            {
+              "traceId": "xxxxx",
+              "spanId": "xxxxx",
+              "parentSpanId": "xxxxx",
+              "flags": 256,
               "name": "Run",
               "kind": 1,
               "startTimeUnixNano": "946684800500000000",
@@ -93,6 +104,21 @@
                       }
                     }
                   ]
+                }
+              ],
+              "links": [
+                {
+                  "traceId": "xxxxx",
+                  "spanId": "xxxxx",
+                  "attributes": [
+                    {
+                      "key": "data",
+                      "value": {
+                        "stringValue": "Hello World"
+                      }
+                    }
+                  ],
+                  "flags": 256
                 }
               ],
               "attributes": [
