@@ -17,6 +17,7 @@ import (
 	"go.opentelemetry.io/auto/internal/pkg/structfield"
 
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -156,7 +157,7 @@ func (c *converter) convertEvent(e *event) []*probe.SpanEvent {
 		Kind:              spanKind(span.Kind()),
 		Attributes:        attributes(span.Attributes()),
 		Events:            events(span.Events()),
-		// TODO: Status.
+		Status:            status(span.Status()),
 		// TODO: Links.
 	}}
 }
@@ -272,4 +273,20 @@ func attributeValue(val pcommon.Value) (out attribute.Value) {
 		out = attribute.StringValue(fmt.Sprintf("<unknown: %#v>", val.AsRaw()))
 	}
 	return out
+}
+
+func status(stat ptrace.Status) probe.Status {
+	var c codes.Code
+	switch stat.Code() {
+	case ptrace.StatusCodeUnset:
+		c = codes.Unset
+	case ptrace.StatusCodeOk:
+		c = codes.Ok
+	case ptrace.StatusCodeError:
+		c = codes.Error
+	}
+	return probe.Status{
+		Code:        c,
+		Description: stat.Message(),
+	}
 }
