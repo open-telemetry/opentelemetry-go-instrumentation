@@ -49,10 +49,56 @@ SCOPE="go.opentelemetry.io/auto/internal/test/e2e/autosdk"
   assert_equal "$kind" "3"
 }
 
+@test "autosdk :: main span :: event" {
+  event=$(span_events ${SCOPE} "main")
+
+  assert_equal $(echo "$event" | jq ".timeUnixNano") '"946684802000000000"'
+  assert_equal $(echo "$event" | jq ".name") '"exception"'
+
+  attrs=$(echo "$event" | jq ".attributes[]")
+
+  impact=$(echo "$attrs" | jq "select(.key == \"impact\").value.intValue")
+  assert_equal "$impact" '"11"'
+
+  type=$(echo "$attrs" | jq "select(.key == \"exception.type\").value.stringValue")
+  assert_equal "$type" '"*errors.errorString"'
+
+  msg=$(echo "$attrs" | jq "select(.key == \"exception.message\").value.stringValue")
+  assert_equal "$msg" '"broken"'
+
+  st=$(echo "$attrs" | jq "select(.key == \"exception.stacktrace\")")
+  assert_not_empty "$st"
+}
+
 @test "autosdk :: main span :: status" {
   status=$(spans_from_scope_named ${SCOPE} | jq "select(.name == \"main\")" | jq ".status")
   assert_equal "$(echo $status | jq ".code")" "2"
   assert_equal "$(echo $status | jq ".message")" '"application error"'
+}
+
+@test "autosdk :: sig span :: trace ID" {
+  trace_id=$(spans_from_scope_named ${SCOPE} | jq "select(.name == \"sig\")" | jq ".traceId")
+  assert_regex "$trace_id" ${MATCH_A_TRACE_ID}
+}
+
+@test "autosdk :: sig span :: span ID" {
+  trace_id=$(spans_from_scope_named ${SCOPE} | jq "select(.name == \"sig\")" | jq ".spanId")
+  assert_regex "$trace_id" ${MATCH_A_SPAN_ID}
+}
+
+@test "autosdk :: sig span :: parent span ID" {
+  parent_span_id=$(spans_from_scope_named ${SCOPE} | jq "select(.name == \"sig\")" | jq ".parentSpanId")
+  assert_regex "$parent_span_id" ${MATCH_A_SPAN_ID}
+}
+
+@test "autosdk :: sig span :: start time" {
+  timestamp=$(spans_from_scope_named ${SCOPE} | jq "select(.name == \"sig\")" | jq ".startTimeUnixNano")
+  assert_regex "$timestamp" "946684800000010000"
+}
+
+@test "autosdk :: sig span :: end time" {
+  timestamp=$(spans_from_scope_named ${SCOPE} | jq "select(.name == \"sig\")" | jq ".endTimeUnixNano")
+  assert_regex "$timestamp" "946684800000110000"
 }
 
 @test "autosdk :: Run span :: trace ID" {
@@ -93,4 +139,21 @@ SCOPE="go.opentelemetry.io/auto/internal/test/e2e/autosdk"
 @test "autosdk :: Run span :: attribute :: admin" {
   result=$(span_attributes_for ${SCOPE} | jq "select(.key == \"admin\").value.boolValue")
   assert_equal "$result" 'true'
+}
+
+@test "autosdk :: Run span :: link :: traceID" {
+  want=$(spans_from_scope_named ${SCOPE} | jq "select(.name == \"sig\")" | jq ".traceId")
+  got=$(span_links ${SCOPE} "Run" | jq ".traceId")
+  assert_equal "$got" "$want"
+}
+
+@test "autosdk :: Run span :: link :: spanID" {
+  want=$(spans_from_scope_named ${SCOPE} | jq "select(.name == \"sig\")" | jq ".spanId")
+  got=$(span_links ${SCOPE} "Run" | jq ".spanId")
+  assert_equal "$got" "$want"
+}
+
+@test "autosdk :: Run span :: link :: attributes" {
+  got=$(span_links ${SCOPE} "Run" | jq ".attributes[] | select(.key == \"data\").value.stringValue")
+  assert_equal "$got" '"Hello World"'
 }

@@ -5,12 +5,16 @@ package sdk
 
 import (
 	"context"
+	"fmt"
+	"reflect"
+	"runtime"
 	"time"
 
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/ptrace"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
+	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
 	"go.opentelemetry.io/otel/trace"
 	"go.opentelemetry.io/otel/trace/embedded"
 )
@@ -111,9 +115,8 @@ func (t tracer) traces(ctx context.Context, name string, cfg trace.SpanConfig, s
 		start = pcommon.NewTimestampFromTime(time.Now())
 	}
 	span.SetStartTimestamp(start)
-
+	addLinks(span.Links(), cfg.Links()...)
 	setAttributes(span.Attributes(), cfg.Attributes())
-	// TODO: Add Links.
 
 	return traces, span
 }
@@ -265,21 +268,71 @@ func (s *span) RecordError(err error, opts ...trace.EventOption) {
 	if s == nil || err == nil || !s.sampled {
 		return
 	}
-	/* TODO: implement */
+
+	cfg := trace.NewEventConfig(opts...)
+
+	attrs := cfg.Attributes()
+	attrs = append(attrs,
+		semconv.ExceptionType(typeStr(err)),
+		semconv.ExceptionMessage(err.Error()),
+	)
+	if cfg.StackTrace() {
+		buf := make([]byte, 2048)
+		n := runtime.Stack(buf, false)
+		attrs = append(attrs, semconv.ExceptionStacktrace(string(buf[0:n])))
+	}
+
+	s.addEvent(semconv.ExceptionEventName, cfg.Timestamp(), attrs)
+}
+
+func typeStr(i any) string {
+	t := reflect.TypeOf(i)
+	if t.PkgPath() == "" && t.Name() == "" {
+		// Likely a builtin type.
+		return t.String()
+	}
+	return fmt.Sprintf("%s.%s", t.PkgPath(), t.Name())
 }
 
 func (s *span) AddEvent(name string, opts ...trace.EventOption) {
 	if s == nil || !s.sampled {
 		return
 	}
-	/* TODO: implement */
+
+	cfg := trace.NewEventConfig(opts...)
+	s.addEvent(name, cfg.Timestamp(), cfg.Attributes())
+}
+
+func (s *span) addEvent(name string, tStamp time.Time, attrs []attribute.KeyValue) {
+	// TODO: handle event limits.
+
+	event := s.span.Events().AppendEmpty()
+	event.SetName(name)
+	ts := pcommon.NewTimestampFromTime(tStamp)
+	event.SetTimestamp(ts)
+	setAttributes(event.Attributes(), attrs)
 }
 
 func (s *span) AddLink(link trace.Link) {
 	if s == nil || !s.sampled {
 		return
 	}
-	/* TODO: implement */
+
+	// TODO: handle link limits.
+
+	addLinks(s.span.Links(), link)
+}
+
+func addLinks(dest ptrace.SpanLinkSlice, links ...trace.Link) {
+	dest.EnsureCapacity(len(links))
+	for _, link := range links {
+		l := dest.AppendEmpty()
+		l.SetTraceID(pcommon.TraceID(link.SpanContext.TraceID()))
+		l.SetSpanID(pcommon.SpanID(link.SpanContext.SpanID()))
+		l.SetFlags(uint32(link.SpanContext.TraceFlags()))
+		l.TraceState().FromRaw(link.SpanContext.TraceState().String())
+		setAttributes(l.Attributes(), link.Attributes)
+	}
 }
 
 func (s *span) SetName(name string) {
