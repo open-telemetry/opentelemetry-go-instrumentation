@@ -17,6 +17,7 @@ import (
 	"go.opentelemetry.io/auto/internal/pkg/structfield"
 
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -155,9 +156,9 @@ func (c *converter) convertEvent(e *event) []*probe.SpanEvent {
 		TracerSchema:      ss.SchemaUrl(),
 		Kind:              spanKind(span.Kind()),
 		Attributes:        attributes(span.Attributes()),
-		// TODO: Status.
+		Links:             c.links(span.Links()),
+		Status:            status(span.Status()),
 		// TODO: Events.
-		// TODO: Links.
 	}}
 }
 
@@ -176,6 +177,35 @@ func spanKind(kind ptrace.SpanKind) trace.SpanKind {
 	default:
 		return trace.SpanKindUnspecified
 	}
+}
+
+func (c *converter) links(links ptrace.SpanLinkSlice) []trace.Link {
+	n := links.Len()
+	if n == 0 {
+		return nil
+	}
+
+	out := make([]trace.Link, n)
+	for i := range out {
+		l := links.At(i)
+
+		raw := l.TraceState().AsRaw()
+		ts, err := trace.ParseTraceState(raw)
+		if err != nil {
+			c.logger.Error("failed to parse link tracestate", "error", err, "tracestate", raw)
+		}
+
+		out[i] = trace.Link{
+			SpanContext: trace.NewSpanContext(trace.SpanContextConfig{
+				TraceID:    trace.TraceID(l.TraceID()),
+				SpanID:     trace.SpanID(l.SpanID()),
+				TraceFlags: trace.TraceFlags(l.Flags()),
+				TraceState: ts,
+			}),
+			Attributes: attributes(l.Attributes()),
+		}
+	}
+	return out
 }
 
 func attributes(m pcommon.Map) []attribute.KeyValue {
@@ -250,4 +280,20 @@ func attributeValue(val pcommon.Value) (out attribute.Value) {
 		out = attribute.StringValue(fmt.Sprintf("<unknown: %#v>", val.AsRaw()))
 	}
 	return out
+}
+
+func status(stat ptrace.Status) probe.Status {
+	var c codes.Code
+	switch stat.Code() {
+	case ptrace.StatusCodeUnset:
+		c = codes.Unset
+	case ptrace.StatusCodeOk:
+		c = codes.Ok
+	case ptrace.StatusCodeError:
+		c = codes.Error
+	}
+	return probe.Status{
+		Code:        c,
+		Description: stat.Message(),
+	}
 }

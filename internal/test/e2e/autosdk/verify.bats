@@ -49,6 +49,37 @@ SCOPE="go.opentelemetry.io/auto/internal/test/e2e/autosdk"
   assert_equal "$kind" "3"
 }
 
+@test "autosdk :: main span :: status" {
+  status=$(spans_from_scope_named ${SCOPE} | jq "select(.name == \"main\")" | jq ".status")
+  assert_equal "$(echo $status | jq ".code")" "2"
+  assert_equal "$(echo $status | jq ".message")" '"application error"'
+}
+
+@test "autosdk :: sig span :: trace ID" {
+  trace_id=$(spans_from_scope_named ${SCOPE} | jq "select(.name == \"sig\")" | jq ".traceId")
+  assert_regex "$trace_id" ${MATCH_A_TRACE_ID}
+}
+
+@test "autosdk :: sig span :: span ID" {
+  trace_id=$(spans_from_scope_named ${SCOPE} | jq "select(.name == \"sig\")" | jq ".spanId")
+  assert_regex "$trace_id" ${MATCH_A_SPAN_ID}
+}
+
+@test "autosdk :: sig span :: parent span ID" {
+  parent_span_id=$(spans_from_scope_named ${SCOPE} | jq "select(.name == \"sig\")" | jq ".parentSpanId")
+  assert_regex "$parent_span_id" ${MATCH_A_SPAN_ID}
+}
+
+@test "autosdk :: sig span :: start time" {
+  timestamp=$(spans_from_scope_named ${SCOPE} | jq "select(.name == \"sig\")" | jq ".startTimeUnixNano")
+  assert_regex "$timestamp" "946684800000010000"
+}
+
+@test "autosdk :: sig span :: end time" {
+  timestamp=$(spans_from_scope_named ${SCOPE} | jq "select(.name == \"sig\")" | jq ".endTimeUnixNano")
+  assert_regex "$timestamp" "946684800000110000"
+}
+
 @test "autosdk :: Run span :: trace ID" {
   trace_id=$(spans_from_scope_named ${SCOPE} | jq "select(.name == \"Run\")" | jq ".traceId")
   assert_regex "$trace_id" ${MATCH_A_TRACE_ID}
@@ -87,4 +118,21 @@ SCOPE="go.opentelemetry.io/auto/internal/test/e2e/autosdk"
 @test "autosdk :: Run span :: attribute :: admin" {
   result=$(span_attributes_for ${SCOPE} | jq "select(.key == \"admin\").value.boolValue")
   assert_equal "$result" 'true'
+}
+
+@test "autosdk :: Run span :: link :: traceID" {
+  want=$(spans_from_scope_named ${SCOPE} | jq "select(.name == \"sig\")" | jq ".traceId")
+  got=$(span_links ${SCOPE} "Run" | jq ".traceId")
+  assert_equal "$got" "$want"
+}
+
+@test "autosdk :: Run span :: link :: spanID" {
+  want=$(spans_from_scope_named ${SCOPE} | jq "select(.name == \"sig\")" | jq ".spanId")
+  got=$(span_links ${SCOPE} "Run" | jq ".spanId")
+  assert_equal "$got" "$want"
+}
+
+@test "autosdk :: Run span :: link :: attributes" {
+  got=$(span_links ${SCOPE} "Run" | jq ".attributes[] | select(.key == \"data\").value.stringValue")
+  assert_equal "$got" '"Hello World"'
 }

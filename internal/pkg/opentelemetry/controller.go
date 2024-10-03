@@ -77,7 +77,9 @@ func (c *Controller) Trace(event *probe.Event) {
 			Start(ctx, se.SpanName,
 				trace.WithAttributes(se.Attributes...),
 				trace.WithSpanKind(kind),
-				trace.WithTimestamp(se.StartTime))
+				trace.WithTimestamp(se.StartTime),
+				trace.WithLinks(se.Links...),
+			)
 		span.SetStatus(se.Status.Code, se.Status.Description)
 		span.End(trace.WithTimestamp(se.EndTime))
 	}
