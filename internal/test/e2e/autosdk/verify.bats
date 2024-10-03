@@ -49,6 +49,12 @@ SCOPE="go.opentelemetry.io/auto/internal/test/e2e/autosdk"
   assert_equal "$kind" "3"
 }
 
+@test "autosdk :: main span :: status" {
+  status=$(spans_from_scope_named ${SCOPE} | jq "select(.name == \"main\")" | jq ".status")
+  assert_equal "$(echo $status | jq ".code")" "2"
+  assert_equal "$(echo $status | jq ".message")" '"application error"'
+}
+
 @test "autosdk :: Run span :: trace ID" {
   trace_id=$(spans_from_scope_named ${SCOPE} | jq "select(.name == \"Run\")" | jq ".traceId")
   assert_regex "$trace_id" ${MATCH_A_TRACE_ID}
