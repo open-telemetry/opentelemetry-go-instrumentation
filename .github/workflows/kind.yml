@@ -9,7 +9,23 @@ on:
   pull_request:
 
 jobs:
+  build-auto-instrumentation:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v4
+      - name: Build auto-instrumentation
+        run: |
+          IMG=otel-go-instrumentation:latest make docker-build
+          docker save otel-go-instrumentation:latest -o otel-go-instrumentation.tar
+      - name: Upload Docker image artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: otel-go-instrumentation
+          path: otel-go-instrumentation.tar
   kubernetes-test:
+    needs:
+      - build-auto-instrumentation
     strategy:
       matrix:
         k8s-version: ["v1.26.0"]
@@ -18,16 +34,8 @@ jobs:
     steps:
       - name: Checkout Repo
         uses: actions/checkout@v4
-      - name: Setup Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: "~1.23.1"
-          check-latest: true
       - name: Setup BATS
         uses: mig4/setup-bats@v1
-      - name: Build auto-instrumentation
-        run: |
-          IMG=otel-go-instrumentation:latest make docker-build
       - name: Build sample app
         run: |
           cd internal/test/e2e/${{ matrix.library }}
@@ -46,6 +54,13 @@ jobs:
           kubectl cluster-info --context kind-chart-testing
           kubectl get node
           docker ps -a --filter label=io.x-k8s.kind.cluster=chart-testing
+      - name: Download Docker image artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: otel-go-instrumentation
+      - name: Load Docker image
+        run: |
+          docker load -i otel-go-instrumentation.tar
       - name: Kind load images
         run: |
           kind load docker-image otel-go-instrumentation --name chart-testing

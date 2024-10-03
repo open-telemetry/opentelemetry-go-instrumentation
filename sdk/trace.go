@@ -102,7 +102,7 @@ func (t tracer) traces(ctx context.Context, name string, cfg trace.SpanConfig, s
 	span.TraceState().FromRaw(sc.TraceState().String())
 	span.SetParentSpanID(pcommon.SpanID(psc.SpanID()))
 	span.SetName(name)
-	// TODO Set Kind.
+	span.SetKind(spanKind(cfg.SpanKind()))
 
 	var start pcommon.Timestamp
 	if t := cfg.Timestamp(); !t.IsZero() {
@@ -112,10 +112,26 @@ func (t tracer) traces(ctx context.Context, name string, cfg trace.SpanConfig, s
 	}
 	span.SetStartTimestamp(start)
 
-	// TODO: Set Attributes.
+	setAttributes(span.Attributes(), cfg.Attributes())
 	// TODO: Add Links.
 
 	return traces, span
+}
+
+func spanKind(kind trace.SpanKind) ptrace.SpanKind {
+	switch kind {
+	case trace.SpanKindInternal:
+		return ptrace.SpanKindInternal
+	case trace.SpanKindServer:
+		return ptrace.SpanKindServer
+	case trace.SpanKindClient:
+		return ptrace.SpanKindClient
+	case trace.SpanKindProducer:
+		return ptrace.SpanKindProducer
+	case trace.SpanKindConsumer:
+		return ptrace.SpanKindConsumer
+	}
+	return ptrace.SpanKindUnspecified
 }
 
 type span struct {
@@ -146,14 +162,73 @@ func (s *span) SetStatus(c codes.Code, msg string) {
 	if s == nil || !s.sampled {
 		return
 	}
-	/* TODO: implement */
+
+	stat := s.span.Status()
+	stat.SetMessage(msg)
+
+	switch c {
+	case codes.Unset:
+		stat.SetCode(ptrace.StatusCodeUnset)
+	case codes.Error:
+		stat.SetCode(ptrace.StatusCodeError)
+	case codes.Ok:
+		stat.SetCode(ptrace.StatusCodeOk)
+	}
 }
 
 func (s *span) SetAttributes(attrs ...attribute.KeyValue) {
 	if s == nil || !s.sampled {
 		return
 	}
-	/* TODO: implement */
+
+	// TODO: handle attribute limits.
+
+	setAttributes(s.span.Attributes(), attrs)
+}
+
+func setAttributes(dest pcommon.Map, attrs []attribute.KeyValue) {
+	dest.EnsureCapacity(len(attrs))
+	for _, attr := range attrs {
+		key := string(attr.Key)
+		switch attr.Value.Type() {
+		case attribute.BOOL:
+			dest.PutBool(key, attr.Value.AsBool())
+		case attribute.INT64:
+			dest.PutInt(key, attr.Value.AsInt64())
+		case attribute.FLOAT64:
+			dest.PutDouble(key, attr.Value.AsFloat64())
+		case attribute.STRING:
+			dest.PutStr(key, attr.Value.AsString())
+		case attribute.BOOLSLICE:
+			val := attr.Value.AsBoolSlice()
+			s := dest.PutEmptySlice(key)
+			s.EnsureCapacity(len(val))
+			for _, v := range val {
+				s.AppendEmpty().SetBool(v)
+			}
+		case attribute.INT64SLICE:
+			val := attr.Value.AsInt64Slice()
+			s := dest.PutEmptySlice(key)
+			s.EnsureCapacity(len(val))
+			for _, v := range val {
+				s.AppendEmpty().SetInt(v)
+			}
+		case attribute.FLOAT64SLICE:
+			val := attr.Value.AsFloat64Slice()
+			s := dest.PutEmptySlice(key)
+			s.EnsureCapacity(len(val))
+			for _, v := range val {
+				s.AppendEmpty().SetDouble(v)
+			}
+		case attribute.STRINGSLICE:
+			val := attr.Value.AsStringSlice()
+			s := dest.PutEmptySlice(key)
+			s.EnsureCapacity(len(val))
+			for _, v := range val {
+				s.AppendEmpty().SetStr(v)
+			}
+		}
+	}
 }
 
 func (s *span) End(opts ...trace.SpanEndOption) {
@@ -211,7 +286,7 @@ func (s *span) SetName(name string) {
 	if s == nil || !s.sampled {
 		return
 	}
-	/* TODO: implement */
+	s.span.SetName(name)
 }
 
 func (*span) TracerProvider() trace.TracerProvider { return GetTracerProvider() }

@@ -1,0 +1,100 @@
+{
+  "resourceSpans": [
+    {
+      "resource": {
+        "attributes": [
+          {
+            "key": "process.runtime.description",
+            "value": {
+              "stringValue": "go version 1.23.1 linux/amd64"
+            }
+          },
+          {
+            "key": "process.runtime.name",
+            "value": {
+              "stringValue": "go"
+            }
+          },
+          {
+            "key": "process.runtime.version",
+            "value": {
+              "stringValue": "1.23.1"
+            }
+          },
+          {
+            "key": "service.name",
+            "value": {
+              "stringValue": "sample-app"
+            }
+          },
+          {
+            "key": "telemetry.distro.name",
+            "value": {
+              "stringValue": "opentelemetry-go-instrumentation"
+            }
+          },
+          {
+            "key": "telemetry.distro.version",
+            "value": {
+              "stringValue": "v0.14.0-alpha"
+            }
+          },
+          {
+            "key": "telemetry.sdk.language",
+            "value": {
+              "stringValue": "go"
+            }
+          }
+        ]
+      },
+      "scopeSpans": [
+        {
+          "scope": {
+            "name": "go.opentelemetry.io/auto/internal/test/e2e/autosdk",
+            "version": "v1.23.42"
+          },
+          "spans": [
+            {
+              "traceId": "xxxxx",
+              "spanId": "xxxxx",
+              "parentSpanId": "xxxxx",
+              "flags": 256,
+              "name": "Run",
+              "kind": 1,
+              "startTimeUnixNano": "946684800500000000",
+              "endTimeUnixNano": "946684801000000000",
+              "attributes": [
+                {
+                  "key": "user",
+                  "value": {
+                    "stringValue": "Alice"
+                  }
+                },
+                {
+                  "key": "admin",
+                  "value": {
+                    "boolValue": true
+                  }
+                }
+              ],
+              "status": {},
+            },
+            {
+              "traceId": "xxxxx",
+              "spanId": "xxxxx",
+              "parentSpanId": "",
+              "flags": 256,
+              "name": "main",
+              "kind": 3,
+              "startTimeUnixNano": "946684800000000000",
+              "endTimeUnixNano": "946684805000000000",
+              "status": {}
+            }
+          ],
+          "schemaUrl": "https://some_schema"
+        }
+      ],
+      "schemaUrl": "https://opentelemetry.io/schemas/1.26.0"
+    }
+  ]
+}

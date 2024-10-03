@@ -5,6 +5,7 @@ package sdk
 
 import (
 	"context"
+	"math"
 	"testing"
 	"time"
 
@@ -31,6 +32,39 @@ var (
 		attribute.Float64Slice("float64 slice", []float64{1e9}),
 		attribute.StringSlice("string slice", []string{"one", "two"}),
 	}
+
+	pAttrs = func() pcommon.Map {
+		m := pcommon.NewMap()
+		m.PutBool("bool", true)
+		m.PutInt("int", -1)
+		m.PutInt("int64", 43)
+		m.PutDouble("float64", 0.3)
+		m.PutStr("string", "value")
+
+		s := m.PutEmptySlice("bool slice")
+		s.AppendEmpty().SetBool(true)
+		s.AppendEmpty().SetBool(false)
+		s.AppendEmpty().SetBool(true)
+
+		s = m.PutEmptySlice("int slice")
+		s.AppendEmpty().SetInt(-1)
+		s.AppendEmpty().SetInt(-30)
+		s.AppendEmpty().SetInt(328)
+
+		s = m.PutEmptySlice("int64 slice")
+		s.AppendEmpty().SetInt(1030)
+		s.AppendEmpty().SetInt(0)
+		s.AppendEmpty().SetInt(0)
+
+		s = m.PutEmptySlice("float64 slice")
+		s.AppendEmpty().SetDouble(1e9)
+
+		s = m.PutEmptySlice("string slice")
+		s.AppendEmpty().SetStr("one")
+		s.AppendEmpty().SetStr("two")
+
+		return m
+	}()
 
 	spanContext0 = trace.NewSpanContext(trace.SpanContextConfig{
 		TraceID:    trace.TraceID{0x1},
@@ -144,6 +178,16 @@ func TestSpanCreation(t *testing.T) {
 			},
 		},
 		{
+			TestName: "WithSpanKind",
+			Options: []trace.SpanStartOption{
+				trace.WithSpanKind(trace.SpanKindClient),
+			},
+			Eval: func(t *testing.T, _ context.Context, s *span) {
+				assertTracer(s.traces)
+				assert.Equal(t, ptrace.SpanKindClient, s.span.Kind())
+			},
+		},
+		{
 			TestName: "WithTimestamp",
 			Options: []trace.SpanStartOption{
 				trace.WithTimestamp(ts),
@@ -151,6 +195,16 @@ func TestSpanCreation(t *testing.T) {
 			Eval: func(t *testing.T, _ context.Context, s *span) {
 				assertTracer(s.traces)
 				assert.Equal(t, pcommon.NewTimestampFromTime(ts), s.span.StartTimestamp())
+			},
+		},
+		{
+			TestName: "WithAttributes",
+			Options: []trace.SpanStartOption{
+				trace.WithAttributes(attrs...),
+			},
+			Eval: func(t *testing.T, _ context.Context, s *span) {
+				assertTracer(s.traces)
+				assert.Equal(t, pAttrs, s.span.Attributes())
 			},
 		},
 	}
@@ -168,6 +222,24 @@ func TestSpanCreation(t *testing.T) {
 
 			tc.Eval(t, c, s)
 		})
+	}
+}
+
+func TestSpanKindTransform(t *testing.T) {
+	tests := map[trace.SpanKind]ptrace.SpanKind{
+		trace.SpanKind(-1):          ptrace.SpanKindUnspecified,
+		trace.SpanKindUnspecified:   ptrace.SpanKindUnspecified,
+		trace.SpanKind(math.MaxInt): ptrace.SpanKindUnspecified,
+
+		trace.SpanKindInternal: ptrace.SpanKindInternal,
+		trace.SpanKindServer:   ptrace.SpanKindServer,
+		trace.SpanKindClient:   ptrace.SpanKindClient,
+		trace.SpanKindProducer: ptrace.SpanKindProducer,
+		trace.SpanKindConsumer: ptrace.SpanKindConsumer,
+	}
+
+	for in, want := range tests {
+		assert.Equal(t, want, spanKind(in), in.String())
 	}
 }
 
@@ -257,6 +329,61 @@ func TestSpanIsRecording(t *testing.T) {
 	builder.NotSampled = true
 	s = builder.Build()
 	assert.False(t, s.IsRecording(), "unsampled span should not be recorded")
+}
+
+func TestSpanSpanContext(t *testing.T) {
+	s := spanBuilder{SpanContext: spanContext0}.Build()
+	assert.Equal(t, spanContext0, s.SpanContext())
+}
+
+func TestSpanSetStatus(t *testing.T) {
+	s := spanBuilder{}.Build()
+
+	want := ptrace.NewStatus()
+	assert.Equal(t, want, s.span.Status(), "empty status should not be set")
+
+	msg := "test"
+	want.SetMessage(msg)
+
+	for c, p := range map[codes.Code]ptrace.StatusCode{
+		codes.Error: ptrace.StatusCodeError,
+		codes.Ok:    ptrace.StatusCodeOk,
+		codes.Unset: ptrace.StatusCodeUnset,
+	} {
+		want.SetCode(p)
+		s.SetStatus(c, msg)
+		assert.Equalf(t, want, s.span.Status(), "code: %s, msg: %s", c, msg)
+	}
+}
+
+func TestSpanSetName(t *testing.T) {
+	const name = "span name"
+	builder := spanBuilder{}
+
+	s := builder.Build()
+	s.SetName(name)
+	assert.Equal(t, name, s.span.Name(), "span name not set")
+
+	builder.Name = "alt"
+	s = builder.Build()
+	s.SetName(name)
+	assert.Equal(t, name, s.span.Name(), "SetName did not overwrite")
+}
+
+func TestSpanSetAttributes(t *testing.T) {
+	builder := spanBuilder{}
+
+	s := builder.Build()
+	s.SetAttributes(attrs...)
+	assert.Equal(t, pAttrs, s.span.Attributes(), "span attributes not set")
+
+	builder.Options = []trace.SpanStartOption{
+		trace.WithAttributes(attrs[0].Key.Bool(!attrs[0].Value.AsBool())),
+	}
+
+	s = builder.Build()
+	s.SetAttributes(attrs...)
+	assert.Equal(t, pAttrs, s.span.Attributes(), "SpanAttributes did not override")
 }
 
 func TestSpanTracerProvider(t *testing.T) {

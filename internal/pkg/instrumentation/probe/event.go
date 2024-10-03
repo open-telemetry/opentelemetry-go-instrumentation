@@ -25,6 +25,7 @@ type Status struct {
 
 type SpanEvent struct {
 	SpanName          string
+	Kind              trace.SpanKind
 	Attributes        []attribute.KeyValue
 	StartTime         time.Time
 	EndTime           time.Time
