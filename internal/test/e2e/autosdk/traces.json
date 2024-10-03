@@ -64,7 +64,7 @@
               "startTimeUnixNano": "946684800000010000",
               "endTimeUnixNano": "946684800000110000",
               "status": {}
-             }
+            },
             {
               "traceId": "xxxxx",
               "spanId": "xxxxx",
@@ -74,6 +74,38 @@
               "kind": 1,
               "startTimeUnixNano": "946684800500000000",
               "endTimeUnixNano": "946684801000000000",
+              "events": [
+                {
+                  "timeUnixNano": "946684802000000000",
+                  "name": "exception",
+                  "attributes": [
+                    {
+                      "key": "impact",
+                      "value": {
+                        "intValue": "11"
+                      }
+                    },
+                    {
+                      "key": "exception.type",
+                      "value": {
+                        "stringValue": "*errors.errorString"
+                      }
+                    },
+                    {
+                      "key": "exception.message",
+                      "value": {
+                        "stringValue": "broken"
+                      }
+                    },
+                    {
+                      "key": "exception.stacktrace",
+                      "value": {
+                        "stringValue": "xxxxx"
+                      }
+                    }
+                  ]
+                }
+              ],
               "links": [
                 {
                   "traceId": "xxxxx",
@@ -88,7 +120,7 @@
                   ],
                   "flags": 256
                 }
-              ]
+              ],
               "attributes": [
                 {
                   "key": "user",
@@ -103,7 +135,7 @@
                   }
                 }
               ],
-              "status": {},
+              "status": {}
             },
             {
               "traceId": "xxxxx",
