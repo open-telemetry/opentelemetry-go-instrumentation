@@ -19,7 +19,7 @@ import (
 	"unsafe"
 )
 
-// A Value represents a structured log value.
+// A Value represents a structured value.
 // A zero value is valid and represents an empty value.
 type Value struct {
 	// Ensure forward compatibility by explicitly making this not comparable.
