@@ -30,7 +30,7 @@ func (tid TraceID) Size() int {
 	return traceIDSize
 }
 
-// IsEmpty returns true if id contains at least one non-zero byte.
+// IsEmpty returns false if id contains at least one non-zero byte.
 func (tid TraceID) IsEmpty() bool {
 	return tid == [traceIDSize]byte{}
 }
