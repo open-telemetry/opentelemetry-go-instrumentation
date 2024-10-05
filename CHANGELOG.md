@@ -10,7 +10,7 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 
 ### Added
 
-- Implement traceID ration and parent-based samplers. ([#1150](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1150))
+- Implement traceID ratio and parent-based samplers. ([#1150](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1150))
 
 ## [v0.15.0-alpha] - 2024-10-01
 
