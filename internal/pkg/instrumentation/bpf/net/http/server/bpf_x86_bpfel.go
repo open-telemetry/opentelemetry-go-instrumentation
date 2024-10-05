@@ -93,6 +93,8 @@ type bpfMapSpecs struct {
 	GolangMapbucketStorageMap  *ebpf.MapSpec `ebpf:"golang_mapbucket_storage_map"`
 	HttpServerUprobeStorageMap *ebpf.MapSpec `ebpf:"http_server_uprobe_storage_map"`
 	HttpServerUprobes          *ebpf.MapSpec `ebpf:"http_server_uprobes"`
+	ProbeActiveSamplerMap      *ebpf.MapSpec `ebpf:"probe_active_sampler_map"`
+	SamplersConfigMap          *ebpf.MapSpec `ebpf:"samplers_config_map"`
 	SliceArrayBuffMap          *ebpf.MapSpec `ebpf:"slice_array_buff_map"`
 	TrackedSpansBySc           *ebpf.MapSpec `ebpf:"tracked_spans_by_sc"`
 }
@@ -122,6 +124,8 @@ type bpfMaps struct {
 	GolangMapbucketStorageMap  *ebpf.Map `ebpf:"golang_mapbucket_storage_map"`
 	HttpServerUprobeStorageMap *ebpf.Map `ebpf:"http_server_uprobe_storage_map"`
 	HttpServerUprobes          *ebpf.Map `ebpf:"http_server_uprobes"`
+	ProbeActiveSamplerMap      *ebpf.Map `ebpf:"probe_active_sampler_map"`
+	SamplersConfigMap          *ebpf.Map `ebpf:"samplers_config_map"`
 	SliceArrayBuffMap          *ebpf.Map `ebpf:"slice_array_buff_map"`
 	TrackedSpansBySc           *ebpf.Map `ebpf:"tracked_spans_by_sc"`
 }
@@ -134,6 +138,8 @@ func (m *bpfMaps) Close() error {
 		m.GolangMapbucketStorageMap,
 		m.HttpServerUprobeStorageMap,
 		m.HttpServerUprobes,
+		m.ProbeActiveSamplerMap,
+		m.SamplersConfigMap,
 		m.SliceArrayBuffMap,
 		m.TrackedSpansBySc,
 	)

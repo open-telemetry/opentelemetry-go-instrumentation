@@ -51,12 +51,20 @@ tools: $(GOLICENSES) $(MULTIMOD) $(GOLANGCI_LINT) $(DBOTCONF) $(OFFSETGEN)
 
 ALL_GO_MODS := $(shell find . -type f -name 'go.mod' ! -path '$(TOOLS_MOD_DIR)/*' ! -path './LICENSES/*' | sort)
 GO_MODS_TO_TEST := $(ALL_GO_MODS:%=test/%)
+GO_MODS_TO_EBPF_TEST := $(ALL_GO_MODS:%=test_ebpf/%)
 
 .PHONY: test
 test: generate $(GO_MODS_TO_TEST)
 test/%: GO_MOD=$*
 test/%:
 	cd $(shell dirname $(GO_MOD)) && $(GOCMD) test -v ./...
+
+# Theses tests need to be run as privileged user/with sudo
+.PHONY: test_ebpf
+test_ebpf: generate $(GO_MODS_TO_EBPF_TEST)
+test_ebpf/%: GO_MOD=$*
+test_ebpf/%:
+	cd $(shell dirname $(GO_MOD)) && $(GOCMD) test -v -tags=ebpf_test -run ^TestEbpf ./...
 
 .PHONY: generate
 generate: export CFLAGS := $(BPF_INCLUDE)
@@ -167,7 +175,7 @@ fixtures/%:
 	if [ -f ./internal/test/e2e/$(LIBRARY)/build.sh ]; then \
 		./internal/test/e2e/$(LIBRARY)/build.sh; \
 	else \
-		cd internal/test/e2e/$(LIBRARY) && docker build --build-context ../../../../ -t sample-app . ;\
+		cd internal/test/e2e/$(LIBRARY) && docker build -t sample-app . ;\
 	fi
 	kind create cluster
 	kind load docker-image otel-go-instrumentation sample-app
