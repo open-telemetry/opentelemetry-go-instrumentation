@@ -59,7 +59,7 @@ test/%: GO_MOD=$*
 test/%:
 	cd $(shell dirname $(GO_MOD)) && $(GOCMD) test -v ./...
 
-# Theses tests need to be run as privileged user/with sudo
+# These tests need to be run as privileged user/with sudo
 .PHONY: test_ebpf
 test_ebpf: generate $(GO_MODS_TO_EBPF_TEST)
 test_ebpf/%: GO_MOD=$*
