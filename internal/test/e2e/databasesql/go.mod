@@ -3,7 +3,7 @@ module go.opentelemetry.io/auto/internal/test/e2e/databasesql
 go 1.22.0
 
 require (
-	github.com/mattn/go-sqlite3 v1.14.23
+	github.com/mattn/go-sqlite3 v1.14.24
 	go.uber.org/zap v1.27.0
 )
 
