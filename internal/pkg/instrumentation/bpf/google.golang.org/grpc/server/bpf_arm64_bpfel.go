@@ -80,14 +80,16 @@ type bpfProgramSpecs struct {
 //
 // It can be passed ebpf.CollectionSpec.Assign.
 type bpfMapSpecs struct {
-	AllocMap             *ebpf.MapSpec `ebpf:"alloc_map"`
-	Events               *ebpf.MapSpec `ebpf:"events"`
-	GoContextToSc        *ebpf.MapSpec `ebpf:"go_context_to_sc"`
-	GrpcEvents           *ebpf.MapSpec `ebpf:"grpc_events"`
-	GrpcStorageMap       *ebpf.MapSpec `ebpf:"grpc_storage_map"`
-	SliceArrayBuffMap    *ebpf.MapSpec `ebpf:"slice_array_buff_map"`
-	StreamidToGrpcEvents *ebpf.MapSpec `ebpf:"streamid_to_grpc_events"`
-	TrackedSpansBySc     *ebpf.MapSpec `ebpf:"tracked_spans_by_sc"`
+	AllocMap              *ebpf.MapSpec `ebpf:"alloc_map"`
+	Events                *ebpf.MapSpec `ebpf:"events"`
+	GoContextToSc         *ebpf.MapSpec `ebpf:"go_context_to_sc"`
+	GrpcEvents            *ebpf.MapSpec `ebpf:"grpc_events"`
+	GrpcStorageMap        *ebpf.MapSpec `ebpf:"grpc_storage_map"`
+	ProbeActiveSamplerMap *ebpf.MapSpec `ebpf:"probe_active_sampler_map"`
+	SamplersConfigMap     *ebpf.MapSpec `ebpf:"samplers_config_map"`
+	SliceArrayBuffMap     *ebpf.MapSpec `ebpf:"slice_array_buff_map"`
+	StreamidToGrpcEvents  *ebpf.MapSpec `ebpf:"streamid_to_grpc_events"`
+	TrackedSpansBySc      *ebpf.MapSpec `ebpf:"tracked_spans_by_sc"`
 }
 
 // bpfObjects contains all objects after they have been loaded into the kernel.
@@ -109,14 +111,16 @@ func (o *bpfObjects) Close() error {
 //
 // It can be passed to loadBpfObjects or ebpf.CollectionSpec.LoadAndAssign.
 type bpfMaps struct {
-	AllocMap             *ebpf.Map `ebpf:"alloc_map"`
-	Events               *ebpf.Map `ebpf:"events"`
-	GoContextToSc        *ebpf.Map `ebpf:"go_context_to_sc"`
-	GrpcEvents           *ebpf.Map `ebpf:"grpc_events"`
-	GrpcStorageMap       *ebpf.Map `ebpf:"grpc_storage_map"`
-	SliceArrayBuffMap    *ebpf.Map `ebpf:"slice_array_buff_map"`
-	StreamidToGrpcEvents *ebpf.Map `ebpf:"streamid_to_grpc_events"`
-	TrackedSpansBySc     *ebpf.Map `ebpf:"tracked_spans_by_sc"`
+	AllocMap              *ebpf.Map `ebpf:"alloc_map"`
+	Events                *ebpf.Map `ebpf:"events"`
+	GoContextToSc         *ebpf.Map `ebpf:"go_context_to_sc"`
+	GrpcEvents            *ebpf.Map `ebpf:"grpc_events"`
+	GrpcStorageMap        *ebpf.Map `ebpf:"grpc_storage_map"`
+	ProbeActiveSamplerMap *ebpf.Map `ebpf:"probe_active_sampler_map"`
+	SamplersConfigMap     *ebpf.Map `ebpf:"samplers_config_map"`
+	SliceArrayBuffMap     *ebpf.Map `ebpf:"slice_array_buff_map"`
+	StreamidToGrpcEvents  *ebpf.Map `ebpf:"streamid_to_grpc_events"`
+	TrackedSpansBySc      *ebpf.Map `ebpf:"tracked_spans_by_sc"`
 }
 
 func (m *bpfMaps) Close() error {
@@ -126,6 +130,8 @@ func (m *bpfMaps) Close() error {
 		m.GoContextToSc,
 		m.GrpcEvents,
 		m.GrpcStorageMap,
+		m.ProbeActiveSamplerMap,
+		m.SamplersConfigMap,
 		m.SliceArrayBuffMap,
 		m.StreamidToGrpcEvents,
 		m.TrackedSpansBySc,

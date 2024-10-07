@@ -74,9 +74,10 @@ type Base[BPFObj any, BPFEvent any] struct {
 	// encoding/binary package.
 	ProcessRecord func(perf.Record) (BPFEvent, error)
 
-	reader     *perf.Reader
-	collection *ebpf.Collection
-	closers    []io.Closer
+	reader          *perf.Reader
+	collection      *ebpf.Collection
+	closers         []io.Closer
+	samplingManager *sampling.Manager
 }
 
 const (
@@ -136,9 +137,10 @@ func (i *Base[BPFObj, BPFEvent]) Load(exec *link.Executable, td *process.TargetD
 		return err
 	}
 
-	// TODO: Initialize sampling manager based on the sampling configuration and the eBPF collection.
-	// The manager will be responsible for writing to eBPF maps - configuring the sampling.
-	// In addition the sampling manager will be responsible for handling updates for the configuration.
+	i.samplingManager, err = sampling.NewSamplingManager(i.collection, sampler)
+	if err != nil {
+		return err
+	}
 
 	i.closers = append(i.closers, i.reader)
 

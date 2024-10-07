@@ -99,6 +99,8 @@ type bpf_no_tpMapSpecs struct {
 	HttpClientUprobeStorageMap *ebpf.MapSpec `ebpf:"http_client_uprobe_storage_map"`
 	HttpEvents                 *ebpf.MapSpec `ebpf:"http_events"`
 	HttpHeaders                *ebpf.MapSpec `ebpf:"http_headers"`
+	ProbeActiveSamplerMap      *ebpf.MapSpec `ebpf:"probe_active_sampler_map"`
+	SamplersConfigMap          *ebpf.MapSpec `ebpf:"samplers_config_map"`
 	SliceArrayBuffMap          *ebpf.MapSpec `ebpf:"slice_array_buff_map"`
 	TrackedSpansBySc           *ebpf.MapSpec `ebpf:"tracked_spans_by_sc"`
 }
@@ -128,6 +130,8 @@ type bpf_no_tpMaps struct {
 	HttpClientUprobeStorageMap *ebpf.Map `ebpf:"http_client_uprobe_storage_map"`
 	HttpEvents                 *ebpf.Map `ebpf:"http_events"`
 	HttpHeaders                *ebpf.Map `ebpf:"http_headers"`
+	ProbeActiveSamplerMap      *ebpf.Map `ebpf:"probe_active_sampler_map"`
+	SamplersConfigMap          *ebpf.Map `ebpf:"samplers_config_map"`
 	SliceArrayBuffMap          *ebpf.Map `ebpf:"slice_array_buff_map"`
 	TrackedSpansBySc           *ebpf.Map `ebpf:"tracked_spans_by_sc"`
 }
@@ -140,6 +144,8 @@ func (m *bpf_no_tpMaps) Close() error {
 		m.HttpClientUprobeStorageMap,
 		m.HttpEvents,
 		m.HttpHeaders,
+		m.ProbeActiveSamplerMap,
+		m.SamplersConfigMap,
 		m.SliceArrayBuffMap,
 		m.TrackedSpansBySc,
 	)
