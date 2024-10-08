@@ -42,6 +42,9 @@ type Probe interface {
 	// Run runs the events processing loop.
 	Run(eventsChan chan<- *Event)
 
+	// Config returns this Probe's Config
+	Config() Config
+
 	// Close stops the Probe.
 	Close() error
 }
@@ -73,6 +76,8 @@ type Base[BPFObj any, BPFEvent any] struct {
 	// all records will be read directly into a new BPFEvent using the
 	// encoding/binary package.
 	ProcessRecord func(perf.Record) (BPFEvent, error)
+	// ProbeConfig is the Config for this Probe.
+	ProbeConfig Config
 
 	reader     *perf.Reader
 	collection *ebpf.Collection
@@ -87,6 +92,10 @@ const (
 	// to userspace.
 	DefaultBufferMapName = "events"
 )
+
+func (i *Base[BPFObj, BPFEvent]) Config() Config {
+	return i.ProbeConfig
+}
 
 // Manifest returns the Probe's instrumentation Manifest.
 func (i *Base[BPFObj, BPFEvent]) Manifest() Manifest {
@@ -125,11 +134,13 @@ func (i *Base[BPFObj, BPFEvent]) Load(exec *link.Executable, td *process.TargetD
 	if err != nil {
 		return err
 	}
+	i.Logger.Info("loaded BPF collection", "pkg", i.ProbeConfig.Package())
 
 	err = i.loadUprobes(exec, td)
 	if err != nil {
 		return err
 	}
+	i.Logger.Info("loaded uprobes", "pkg", i.ProbeConfig.Package())
 
 	err = i.initReader()
 	if err != nil {

@@ -5,8 +5,6 @@ package sql
 
 import (
 	"log/slog"
-	"os"
-	"strconv"
 
 	"go.opentelemetry.io/otel/attribute"
 	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
@@ -28,21 +26,33 @@ const (
 	IncludeDBStatementEnvVar = "OTEL_GO_AUTO_INCLUDE_DB_STATEMENT"
 )
 
+type Config struct {
+	// IncludeQueryText enables or disables inclusion of sql query text in the trace.
+	IncludeQueryText bool
+}
+
+func (c *Config) Package() string {
+	return pkg
+}
+
 // New returns a new [probe.Probe].
-func New(logger *slog.Logger) probe.Probe {
+func New(logger *slog.Logger, config probe.Config) probe.Probe {
+	cfg := config.(*Config)
+
 	id := probe.ID{
 		SpanKind:        trace.SpanKindClient,
 		InstrumentedPkg: pkg,
 	}
 	return &probe.Base[bpfObjects, event]{
-		ID:     id,
-		Logger: logger,
+		ID:          id,
+		ProbeConfig: cfg,
+		Logger:      logger,
 		Consts: []probe.Const{
 			probe.RegistersABIConst{},
 			probe.AllocationConst{},
 			probe.KeyValConst{
 				Key: "should_include_db_statement",
-				Val: shouldIncludeDBStatement(),
+				Val: cfg.IncludeQueryText,
 			},
 		},
 		Uprobes: []probe.Uprobe{
@@ -107,17 +117,4 @@ func convertEvent(e *event) []*probe.SpanEvent {
 			TracerSchema:      semconv.SchemaURL,
 		},
 	}
-}
-
-// shouldIncludeDBStatement returns if the user has configured SQL queries to be included.
-func shouldIncludeDBStatement() bool {
-	val := os.Getenv(IncludeDBStatementEnvVar)
-	if val != "" {
-		boolVal, err := strconv.ParseBool(val)
-		if err == nil {
-			return boolVal
-		}
-	}
-
-	return false
 }
