@@ -36,7 +36,7 @@ services:
       - /proc:/host/proc
 
   jaeger:
-    image: jaegertracing/all-in-one:latest
+    image: jaegertracing/all-in-one:1.60
     ports:
       - "16686:16686"
       - "14268:14268"
