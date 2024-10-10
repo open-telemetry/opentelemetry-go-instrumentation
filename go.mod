@@ -22,7 +22,10 @@ require (
 	github.com/hashicorp/go-version v1.7.0
 	github.com/pkg/errors v0.9.1
 	github.com/stretchr/testify v1.9.0
+	go.opentelemetry.io/collector/component v0.110.0
+	go.opentelemetry.io/collector/consumer v0.110.0
 	go.opentelemetry.io/collector/pdata v1.17.0
+	go.opentelemetry.io/collector/receiver v0.110.0
 	go.opentelemetry.io/contrib/exporters/autoexport v0.55.0
 	go.opentelemetry.io/otel v1.30.0
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp v1.30.0
@@ -53,6 +56,11 @@ require (
 	github.com/prometheus/client_model v0.6.1 // indirect
 	github.com/prometheus/common v0.59.1 // indirect
 	github.com/prometheus/procfs v0.15.1 // indirect
+	go.opentelemetry.io/collector/config/configtelemetry v0.110.0 // indirect
+	go.opentelemetry.io/collector/consumer/consumerprofiles v0.110.0 // indirect
+	go.opentelemetry.io/collector/internal/globalsignal v0.110.0 // indirect
+	go.opentelemetry.io/collector/pdata/pprofile v0.110.0 // indirect
+	go.opentelemetry.io/collector/pipeline v0.110.0 // indirect
 	go.opentelemetry.io/contrib/bridges/prometheus v0.55.0 // indirect
 	go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc v0.6.0 // indirect
 	go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp v0.6.0 // indirect
@@ -70,6 +78,7 @@ require (
 	go.opentelemetry.io/otel/sdk/metric v1.30.0 // indirect
 	go.opentelemetry.io/proto/otlp v1.3.1 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
+	go.uber.org/zap v1.27.0 // indirect
 	golang.org/x/exp v0.0.0-20230224173230-c95f2b4c22f2 // indirect
 	golang.org/x/net v0.29.0 // indirect
 	golang.org/x/text v0.18.0 // indirect

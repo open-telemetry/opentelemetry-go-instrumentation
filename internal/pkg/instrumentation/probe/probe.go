@@ -18,6 +18,8 @@ import (
 	"github.com/cilium/ebpf/perf"
 	"github.com/hashicorp/go-version"
 
+	"go.opentelemetry.io/collector/pdata/ptrace"
+
 	"go.opentelemetry.io/auto/internal/pkg/inject"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/bpffs"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/probe/sampling"
@@ -40,7 +42,7 @@ type Probe interface {
 	Load(*link.Executable, *process.TargetDetails, *sampling.Config) error
 
 	// Run runs the events processing loop.
-	Run(eventsChan chan<- *Event)
+	Run(tracesChan chan<- ptrace.ScopeSpans)
 
 	// Close stops the Probe.
 	Close() error
@@ -68,7 +70,7 @@ type Base[BPFObj any, BPFEvent any] struct {
 	// probe.
 	SpecFn func() (*ebpf.CollectionSpec, error)
 	// ProcessFn processes probe events into a uniform Event type.
-	ProcessFn func(*BPFEvent) []*SpanEvent
+	ProcessFn func(*BPFEvent) ptrace.ScopeSpans
 	// ProcessRecord is an optional processing function for the probe. If nil,
 	// all records will be read directly into a new BPFEvent using the
 	// encoding/binary package.
@@ -213,7 +215,7 @@ func (i *Base[BPFObj, BPFEvent]) buildEBPFCollection(td *process.TargetDetails, 
 }
 
 // Run runs the events processing loop.
-func (i *Base[BPFObj, BPFEvent]) Run(dest chan<- *Event) {
+func (i *Base[BPFObj, BPFEvent]) Run(dest chan<- ptrace.ScopeSpans) {
 	for {
 		record, err := i.reader.Read()
 		if err != nil {
@@ -229,21 +231,16 @@ func (i *Base[BPFObj, BPFEvent]) Run(dest chan<- *Event) {
 			continue
 		}
 
-		se, err := i.processRecord(record)
+		data, err := i.processRecord(record)
 		if err != nil {
 			i.Logger.Error("failed to process perf record", "error", err, "pkg", i.ID.InstrumentedPkg)
+			continue
 		}
-		e := &Event{
-			Package:    i.ID.InstrumentedPkg,
-			Kind:       i.ID.SpanKind,
-			SpanEvents: se,
-		}
-
-		dest <- e
+		dest <- data
 	}
 }
 
-func (i *Base[BPFObj, BPFEvent]) processRecord(record perf.Record) ([]*SpanEvent, error) {
+func (i *Base[BPFObj, BPFEvent]) processRecord(record perf.Record) (ptrace.ScopeSpans, error) {
 	var (
 		event BPFEvent
 		err   error
@@ -257,7 +254,7 @@ func (i *Base[BPFObj, BPFEvent]) processRecord(record perf.Record) ([]*SpanEvent
 	}
 
 	if err != nil {
-		return nil, err
+		return ptrace.NewScopeSpans(), err
 	}
 
 	return i.ProcessFn(&event), nil
