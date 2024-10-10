@@ -5,13 +5,11 @@ package auto
 
 import (
 	"context"
-	"debug/buildinfo"
 	"errors"
 	"fmt"
 	"log/slog"
 	"os"
 	"path/filepath"
-	"runtime"
 	"strconv"
 	"strings"
 	"sync"
@@ -19,12 +17,10 @@ import (
 	"go.opentelemetry.io/contrib/exporters/autoexport"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp"
-	"go.opentelemetry.io/otel/sdk/resource"
 	"go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
 
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation"
-	"go.opentelemetry.io/auto/internal/pkg/opentelemetry"
 	"go.opentelemetry.io/auto/internal/pkg/process"
 )
 
@@ -88,13 +84,16 @@ func NewInstrumentation(ctx context.Context, opts ...InstrumentationOption) (*In
 		return nil, err
 	}
 
-	ctrl, err := opentelemetry.NewController(c.logger, c.tracerProvider(pa.BuildInfo), Version())
-	if err != nil {
-		return nil, err
-	}
-
+	/*
+		ctrl, err := opentelemetry.NewController(c.logger, c.tracerProvider(pa.BuildInfo), Version())
+		if err != nil {
+			return nil, err
+		}
+	*/
+	// TODO: make this actually do something.
+	r := instrumentation.NewReceiver(c.logger)
 	cp := convertConfigProvider(c.cp)
-	mngr, err := instrumentation.NewManager(c.logger, ctrl, c.globalImpl, c.loadIndicator, cp)
+	mngr, err := instrumentation.NewManager(c.logger, r, c.globalImpl, c.loadIndicator, cp, Version())
 	if err != nil {
 		return nil, err
 	}
@@ -246,6 +245,7 @@ func (c instConfig) validate() error {
 	return c.target.Validate()
 }
 
+/*
 func (c instConfig) tracerProvider(bi *buildinfo.BuildInfo) *trace.TracerProvider {
 	return trace.NewTracerProvider(
 		// the actual sampling is done in the eBPF probes.
@@ -297,6 +297,7 @@ func (c instConfig) res(bi *buildinfo.BuildInfo) *resource.Resource {
 		attrs...,
 	)
 }
+*/
 
 // newLogger is used for testing.
 var newLogger = newLoggerFunc

@@ -8,7 +8,8 @@ import (
 	"log/slog"
 	"strconv"
 
-	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/collector/pdata/pcommon"
+	"go.opentelemetry.io/collector/pdata/ptrace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
 	"go.opentelemetry.io/otel/trace"
 	"golang.org/x/sys/unix"
@@ -27,7 +28,7 @@ const (
 )
 
 // New returns a new [probe.Probe].
-func New(logger *slog.Logger) probe.Probe {
+func New(logger *slog.Logger, version string) probe.Probe {
 	id := probe.ID{
 		SpanKind:        trace.SpanKindConsumer,
 		InstrumentedPkg: pkg,
@@ -75,7 +76,7 @@ func New(logger *slog.Logger) probe.Probe {
 			},
 		},
 		SpecFn:    loadBpf,
-		ProcessFn: convertEvent,
+		ProcessFn: processFn(pkg, version, semconv.SchemaURL),
 	}
 }
 
@@ -89,47 +90,43 @@ type event struct {
 	Partition     int64
 }
 
-func convertEvent(e *event) []*probe.SpanEvent {
-	sc := trace.NewSpanContext(trace.SpanContextConfig{
-		TraceID:    e.SpanContext.TraceID,
-		SpanID:     e.SpanContext.SpanID,
-		TraceFlags: trace.FlagsSampled,
-	})
+func processFn(pkg, ver, schemaURL string) func(*event) ptrace.ScopeSpans {
+	scopeName := "go.opentelemetry.io/auto/" + pkg
+	return func(e *event) ptrace.ScopeSpans {
+		ss := ptrace.NewScopeSpans()
 
-	var pscPtr *trace.SpanContext
-	if e.ParentSpanContext.TraceID.IsValid() {
-		psc := trace.NewSpanContext(trace.SpanContextConfig{
-			TraceID:    e.ParentSpanContext.TraceID,
-			SpanID:     e.ParentSpanContext.SpanID,
-			TraceFlags: trace.FlagsSampled,
-			Remote:     true,
-		})
-		pscPtr = &psc
-	} else {
-		pscPtr = nil
-	}
+		scope := ss.Scope()
+		scope.SetName(scopeName)
+		scope.SetVersion(ver)
+		ss.SetSchemaUrl(schemaURL)
 
-	topic := unix.ByteSliceToString(e.Topic[:])
+		span := ss.Spans().AppendEmpty()
 
-	attributes := []attribute.KeyValue{
-		semconv.MessagingSystemKafka,
-		semconv.MessagingOperationTypeReceive,
-		semconv.MessagingDestinationPartitionID(strconv.Itoa(int(e.Partition))),
-		semconv.MessagingDestinationName(topic),
-		semconv.MessagingKafkaMessageOffset(int(e.Offset)),
-		semconv.MessagingKafkaMessageKey(unix.ByteSliceToString(e.Key[:])),
-		semconv.MessagingKafkaConsumerGroup(unix.ByteSliceToString(e.ConsumerGroup[:])),
-	}
-	return []*probe.SpanEvent{
-		{
-			SpanName:          kafkaConsumerSpanName(topic),
-			StartTime:         utils.BootOffsetToTime(e.StartTime),
-			EndTime:           utils.BootOffsetToTime(e.EndTime),
-			SpanContext:       &sc,
-			ParentSpanContext: pscPtr,
-			Attributes:        attributes,
-			TracerSchema:      semconv.SchemaURL,
-		},
+		topic := unix.ByteSliceToString(e.Topic[:])
+		span.SetName(kafkaConsumerSpanName(topic))
+
+		span.SetStartTimestamp(utils.BootOffsetToTimestamp(e.StartTime))
+		span.SetEndTimestamp(utils.BootOffsetToTimestamp(e.EndTime))
+		span.SetTraceID(pcommon.TraceID(e.SpanContext.TraceID))
+		span.SetSpanID(pcommon.SpanID(e.SpanContext.SpanID))
+		span.SetFlags(uint32(trace.FlagsSampled))
+
+		if e.ParentSpanContext.SpanID.IsValid() {
+			span.SetParentSpanID(pcommon.SpanID(e.ParentSpanContext.SpanID))
+		}
+
+		utils.Attributes(
+			span.Attributes(),
+			semconv.MessagingSystemKafka,
+			semconv.MessagingOperationTypeReceive,
+			semconv.MessagingDestinationPartitionID(strconv.Itoa(int(e.Partition))),
+			semconv.MessagingDestinationName(topic),
+			semconv.MessagingKafkaMessageOffsetKey.Int64(e.Offset),
+			semconv.MessagingKafkaMessageKey(unix.ByteSliceToString(e.Key[:])),
+			semconv.MessagingKafkaConsumerGroup(unix.ByteSliceToString(e.ConsumerGroup[:])),
+		)
+
+		return ss
 	}
 }
 

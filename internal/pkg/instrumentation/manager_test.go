@@ -14,13 +14,12 @@ import (
 	"github.com/cilium/ebpf/link"
 	"github.com/hashicorp/go-version"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 
+	"go.opentelemetry.io/collector/pdata/ptrace"
 	"go.opentelemetry.io/otel/trace"
 
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/probe"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/probe/sampling"
-	"go.opentelemetry.io/auto/internal/pkg/opentelemetry"
 	"go.opentelemetry.io/auto/internal/pkg/process"
 	"go.opentelemetry.io/auto/internal/pkg/process/binary"
 )
@@ -185,7 +184,7 @@ func TestDependencyChecks(t *testing.T) {
 }
 
 func fakeManager(t *testing.T) *Manager {
-	m, err := NewManager(slog.Default(), nil, true, nil, NewNoopConfigProvider(nil))
+	m, err := NewManager(slog.Default(), nil, true, nil, NewNoopConfigProvider(nil), "")
 	assert.NoError(t, err)
 	assert.NotNil(t, m)
 
@@ -210,13 +209,13 @@ func mockExeAndBpffs(t *testing.T) {
 	t.Cleanup(func() { bpffsCleanup = origBpffsCleanup })
 }
 
-type shutdownTracerProvider struct {
-	trace.TracerProvider
+type shutdownHandler struct {
+	Handler
 
 	called bool
 }
 
-func (tp *shutdownTracerProvider) Shutdown(context.Context) error {
+func (tp *shutdownHandler) Shutdown(context.Context) error {
 	tp.called = true
 	return nil
 }
@@ -225,16 +224,15 @@ func TestRunStopping(t *testing.T) {
 	probeStop := make(chan struct{})
 	p := newSlowProbe(probeStop)
 
-	tp := new(shutdownTracerProvider)
-	ctrl, err := opentelemetry.NewController(slog.Default(), tp, "")
-	require.NoError(t, err)
+	tp := new(shutdownHandler)
 
+	h := new(shutdownHandler)
 	m := &Manager{
-		otelController: ctrl,
-		logger:         slog.Default(),
-		probes:         map[probe.ID]probe.Probe{{}: p},
-		eventCh:        make(chan *probe.Event),
-		cp:             NewNoopConfigProvider(nil),
+		handler:  h,
+		logger:   slog.Default(),
+		probes:   map[probe.ID]probe.Probe{{}: p},
+		tracesCh: make(chan ptrace.ScopeSpans),
+		cp:       NewNoopConfigProvider(nil),
 	}
 
 	mockExeAndBpffs(t)
@@ -256,6 +254,7 @@ func TestRunStopping(t *testing.T) {
 		close(probeStop)
 	})
 
+	var err error
 	assert.Eventually(t, func() bool {
 		select {
 		case err = <-errCh:
@@ -286,7 +285,7 @@ func (p slowProbe) Load(*link.Executable, *process.TargetDetails, *sampling.Conf
 	return nil
 }
 
-func (p slowProbe) Run(c chan<- *probe.Event) {
+func (p slowProbe) Run(c chan<- ptrace.ScopeSpans) {
 }
 
 func (p slowProbe) Close() error {
@@ -306,7 +305,7 @@ func (p *noopProbe) Load(*link.Executable, *process.TargetDetails, *sampling.Con
 	return nil
 }
 
-func (p *noopProbe) Run(c chan<- *probe.Event) {
+func (p *noopProbe) Run(c chan<- ptrace.ScopeSpans) {
 	p.running = true
 }
 
@@ -368,7 +367,7 @@ func TestConfigProvider(t *testing.T) {
 			netHTTPServerProbeID:       &noopProbe{},
 			somePackageProducerProbeID: &noopProbe{},
 		},
-		eventCh: make(chan *probe.Event),
+		tracesCh: make(chan ptrace.ScopeSpans),
 		cp: newDummyProvider(Config{
 			InstrumentationLibraryConfigs: map[LibraryID]Library{
 				netHTTPClientLibID: {TracesEnabled: &falseVal},

@@ -13,6 +13,7 @@ import (
 	"github.com/cilium/ebpf/link"
 	"github.com/cilium/ebpf/rlimit"
 
+	"go.opentelemetry.io/collector/pdata/ptrace"
 	"go.opentelemetry.io/otel/trace"
 
 	dbSql "go.opentelemetry.io/auto/internal/pkg/instrumentation/bpf/database/sql"
@@ -26,7 +27,6 @@ import (
 	httpServer "go.opentelemetry.io/auto/internal/pkg/instrumentation/bpf/net/http/server"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/bpffs"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/probe"
-	"go.opentelemetry.io/auto/internal/pkg/opentelemetry"
 	"go.opentelemetry.io/auto/internal/pkg/process"
 )
 
@@ -48,30 +48,32 @@ const (
 // Manager handles the management of [probe.Probe] instances.
 type Manager struct {
 	logger          *slog.Logger
+	version         string
 	probes          map[probe.ID]probe.Probe
-	otelController  *opentelemetry.Controller
+	handler         Handler
 	globalImpl      bool
 	loadedIndicator chan struct{}
 	cp              ConfigProvider
 	exe             *link.Executable
 	td              *process.TargetDetails
 	runningProbesWG sync.WaitGroup
-	eventCh         chan *probe.Event
+	tracesCh        chan ptrace.ScopeSpans
 	currentConfig   Config
 	probeMu         sync.Mutex
 	state           managerState
 }
 
 // NewManager returns a new [Manager].
-func NewManager(logger *slog.Logger, otelController *opentelemetry.Controller, globalImpl bool, loadIndicator chan struct{}, cp ConfigProvider) (*Manager, error) {
+func NewManager(logger *slog.Logger, h Handler, globalImpl bool, loadIndicator chan struct{}, cp ConfigProvider, version string) (*Manager, error) {
 	m := &Manager{
 		logger:          logger,
+		version:         version,
 		probes:          make(map[probe.ID]probe.Probe),
-		otelController:  otelController,
+		handler:         h,
 		globalImpl:      globalImpl,
 		loadedIndicator: loadIndicator,
 		cp:              cp,
-		eventCh:         make(chan *probe.Event),
+		tracesCh:        make(chan ptrace.ScopeSpans),
 	}
 
 	err := m.registerProbes()
@@ -224,7 +226,7 @@ func (m *Manager) runProbe(p probe.Probe) {
 	m.runningProbesWG.Add(1)
 	go func(ap probe.Probe) {
 		defer m.runningProbesWG.Done()
-		ap.Run(m.eventCh)
+		ap.Run(m.tracesCh)
 	}(p)
 }
 
@@ -287,13 +289,16 @@ func (m *Manager) Run(ctx context.Context, target *process.TargetDetails) error 
 
 			// Wait for all probes to stop before closing the chan they send on.
 			m.runningProbesWG.Wait()
-			close(m.eventCh)
+			close(m.tracesCh)
 
 			m.state = managerStateStopped
 			m.probeMu.Unlock()
 			return errors.Join(err, ctx.Err())
-		case e := <-m.eventCh:
-			m.otelController.Trace(e)
+		case data := <-m.tracesCh:
+			err := m.handler.HandleScopeSpans(ctx, data)
+			if err != nil {
+				m.logger.Error("failed to export trace data", "error", err)
+			}
 		}
 	}
 }
@@ -352,36 +357,29 @@ func (m *Manager) cleanup(target *process.TargetDetails) error {
 
 	// Wait for all probes to close so we know there is no more telemetry being
 	// generated before stopping (and flushing) the Controller.
-	if m.otelController != nil {
-		err = errors.Join(err, m.otelController.Shutdown(ctx))
+	if m.handler != nil {
+		err = errors.Join(err, m.handler.Shutdown(ctx))
 	}
 
 	m.logger.Debug("Cleaning bpffs")
 	return errors.Join(err, bpffsCleanup(target))
 }
 
-//nolint:revive // ignoring linter complaint about control flag
-func availableProbes(l *slog.Logger, withTraceGlobal bool) []probe.Probe {
-	insts := []probe.Probe{
-		grpcClient.New(l),
-		grpcServer.New(l),
-		httpServer.New(l),
-		httpClient.New(l),
-		dbSql.New(l),
-		kafkaProducer.New(l),
-		kafkaConsumer.New(l),
-		autosdk.New(l),
-	}
-
-	if withTraceGlobal {
-		insts = append(insts, otelTraceGlobal.New(l))
-	}
-
-	return insts
-}
-
 func (m *Manager) registerProbes() error {
-	insts := availableProbes(m.logger, m.globalImpl)
+	insts := []probe.Probe{
+		grpcClient.New(m.logger, m.version),
+		grpcServer.New(m.logger, m.version),
+		httpServer.New(m.logger, m.version),
+		httpClient.New(m.logger, m.version),
+		dbSql.New(m.logger, m.version),
+		kafkaProducer.New(m.logger, m.version),
+		kafkaConsumer.New(m.logger, m.version),
+		autosdk.New(m.logger, m.version),
+	}
+
+	if m.globalImpl {
+		insts = append(insts, otelTraceGlobal.New(m.logger, m.version))
+	}
 
 	for _, i := range insts {
 		err := m.registerProbe(i)

@@ -8,8 +8,9 @@ import (
 	"strings"
 
 	"github.com/hashicorp/go-version"
+	"go.opentelemetry.io/collector/pdata/pcommon"
+	"go.opentelemetry.io/collector/pdata/ptrace"
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/codes"
 	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
 	"go.opentelemetry.io/otel/trace"
 	"golang.org/x/sys/unix"
@@ -31,7 +32,7 @@ const (
 )
 
 // New returns a new [probe.Probe].
-func New(logger *slog.Logger) probe.Probe {
+func New(logger *slog.Logger, version string) probe.Probe {
 	id := probe.ID{
 		SpanKind:        trace.SpanKindServer,
 		InstrumentedPkg: pkg,
@@ -109,7 +110,7 @@ func New(logger *slog.Logger) probe.Probe {
 			},
 		},
 		SpecFn:    loadBpf,
-		ProcessFn: convertEvent,
+		ProcessFn: processFn(pkg, version, semconv.SchemaURL),
 	}
 }
 
@@ -138,91 +139,86 @@ type event struct {
 	Proto       [8]byte
 }
 
-func convertEvent(e *event) []*probe.SpanEvent {
-	path := unix.ByteSliceToString(e.Path[:])
-	method := unix.ByteSliceToString(e.Method[:])
-	patternPath := unix.ByteSliceToString(e.PathPattern[:])
+func processFn(pkg, ver, schemaURL string) func(*event) ptrace.ScopeSpans {
+	scopeName := "go.opentelemetry.io/auto/" + pkg
+	return func(e *event) ptrace.ScopeSpans {
+		ss := ptrace.NewScopeSpans()
 
-	isValidPatternPath := true
-	patternPath, err := http.ParsePattern(patternPath)
-	if err != nil || patternPath == "" {
-		isValidPatternPath = false
-	}
+		scope := ss.Scope()
+		scope.SetName(scopeName)
+		scope.SetVersion(ver)
+		ss.SetSchemaUrl(schemaURL)
 
-	proto := unix.ByteSliceToString(e.Proto[:])
+		path := unix.ByteSliceToString(e.Path[:])
+		method := unix.ByteSliceToString(e.Method[:])
+		patternPath := unix.ByteSliceToString(e.PathPattern[:])
 
-	sc := trace.NewSpanContext(trace.SpanContextConfig{
-		TraceID:    e.SpanContext.TraceID,
-		SpanID:     e.SpanContext.SpanID,
-		TraceFlags: trace.FlagsSampled,
-	})
-
-	var pscPtr *trace.SpanContext
-	if e.ParentSpanContext.TraceID.IsValid() {
-		psc := trace.NewSpanContext(trace.SpanContextConfig{
-			TraceID:    e.ParentSpanContext.TraceID,
-			SpanID:     e.ParentSpanContext.SpanID,
-			TraceFlags: trace.FlagsSampled,
-			Remote:     true,
-		})
-		pscPtr = &psc
-	} else {
-		pscPtr = nil
-	}
-
-	attributes := []attribute.KeyValue{
-		semconv.HTTPRequestMethodKey.String(method),
-		semconv.URLPath(path),
-		semconv.HTTPResponseStatusCodeKey.Int(int(e.StatusCode)),
-	}
-
-	// Client address and port
-	peerAddr, peerPort := http.NetPeerAddressPortAttributes(e.RemoteAddr[:])
-	if peerAddr.Valid() {
-		attributes = append(attributes, peerAddr)
-	}
-	if peerPort.Valid() {
-		attributes = append(attributes, peerPort)
-	}
-
-	// Server address and port
-	serverAddr, serverPort := http.ServerAddressPortAttributes(e.Host[:])
-	if serverAddr.Valid() {
-		attributes = append(attributes, serverAddr)
-	}
-	if serverPort.Valid() {
-		attributes = append(attributes, serverPort)
-	}
-
-	if proto != "" {
-		parts := strings.Split(proto, "/")
-		if len(parts) == 2 {
-			if parts[0] != "HTTP" {
-				attributes = append(attributes, semconv.NetworkProtocolName(parts[0]))
-			}
-			attributes = append(attributes, semconv.NetworkProtocolVersion(parts[1]))
+		isValidPatternPath := true
+		patternPath, err := http.ParsePattern(patternPath)
+		if err != nil || patternPath == "" {
+			isValidPatternPath = false
 		}
-	}
 
-	spanName := method
-	if isPatternPathSupported && isValidPatternPath {
-		spanName = spanName + " " + patternPath
-		attributes = append(attributes, semconv.HTTPRouteKey.String(patternPath))
-	}
+		proto := unix.ByteSliceToString(e.Proto[:])
 
-	spanEvent := &probe.SpanEvent{
-		SpanName:          spanName,
-		StartTime:         utils.BootOffsetToTime(e.StartTime),
-		EndTime:           utils.BootOffsetToTime(e.EndTime),
-		SpanContext:       &sc,
-		ParentSpanContext: pscPtr,
-		Attributes:        attributes,
-		TracerSchema:      semconv.SchemaURL,
-	}
+		attrs := []attribute.KeyValue{
+			semconv.HTTPRequestMethodKey.String(method),
+			semconv.URLPath(path),
+			semconv.HTTPResponseStatusCodeKey.Int(int(e.StatusCode)),
+		}
 
-	if int(e.StatusCode) >= 500 && int(e.StatusCode) < 600 {
-		spanEvent.Status = probe.Status{Code: codes.Error}
-	}
+		// Client address and port
+		peerAddr, peerPort := http.NetPeerAddressPortAttributes(e.RemoteAddr[:])
+		if peerAddr.Valid() {
+			attrs = append(attrs, peerAddr)
+		}
+		if peerPort.Valid() {
+			attrs = append(attrs, peerPort)
+		}
 
-	return []*probe.SpanEvent{spanEvent}
+		// Server address and port
+		serverAddr, serverPort := http.ServerAddressPortAttributes(e.Host[:])
+		if serverAddr.Valid() {
+			attrs = append(attrs, serverAddr)
+		}
+		if serverPort.Valid() {
+			attrs = append(attrs, serverPort)
+		}
+
+		if proto != "" {
+			parts := strings.Split(proto, "/")
+			if len(parts) == 2 {
+				if parts[0] != "HTTP" {
+					attrs = append(attrs, semconv.NetworkProtocolName(parts[0]))
+				}
+				attrs = append(attrs, semconv.NetworkProtocolVersion(parts[1]))
+			}
+		}
+
+		spanName := method
+		if isPatternPathSupported && isValidPatternPath {
+			spanName = spanName + " " + patternPath
+			attrs = append(attrs, semconv.HTTPRouteKey.String(patternPath))
+		}
+
+		span := ss.Spans().AppendEmpty()
+		span.SetName(spanName)
+		span.SetStartTimestamp(utils.BootOffsetToTimestamp(e.StartTime))
+		span.SetEndTimestamp(utils.BootOffsetToTimestamp(e.EndTime))
+		span.SetTraceID(pcommon.TraceID(e.SpanContext.TraceID))
+		span.SetSpanID(pcommon.SpanID(e.SpanContext.SpanID))
+		span.SetFlags(uint32(trace.FlagsSampled))
+
+		if e.ParentSpanContext.SpanID.IsValid() {
+			span.SetParentSpanID(pcommon.SpanID(e.ParentSpanContext.SpanID))
+		}
+
+		utils.Attributes(span.Attributes(), attrs...)
+
+		if int(e.StatusCode) >= 500 && int(e.StatusCode) < 600 {
+			span.Status().SetCode(ptrace.StatusCodeError)
+		}
+
+		return ss
+	}
 }

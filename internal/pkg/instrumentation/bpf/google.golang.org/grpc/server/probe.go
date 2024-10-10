@@ -8,7 +8,8 @@ import (
 	"log/slog"
 
 	"github.com/hashicorp/go-version"
-	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/collector/pdata/pcommon"
+	"go.opentelemetry.io/collector/pdata/ptrace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
 	"go.opentelemetry.io/otel/trace"
 	"golang.org/x/sys/unix"
@@ -29,7 +30,7 @@ const (
 )
 
 // New returns a new [probe.Probe].
-func New(logger *slog.Logger) probe.Probe {
+func New(logger *slog.Logger, version string) probe.Probe {
 	id := probe.ID{
 		SpanKind:        trace.SpanKindServer,
 		InstrumentedPkg: pkg,
@@ -74,7 +75,7 @@ func New(logger *slog.Logger) probe.Probe {
 			},
 		},
 		SpecFn:    loadBpf,
-		ProcessFn: convertEvent,
+		ProcessFn: processFn(pkg, version, semconv.SchemaURL),
 	}
 }
 
@@ -103,40 +104,36 @@ type event struct {
 	Method [100]byte
 }
 
-func convertEvent(e *event) []*probe.SpanEvent {
-	method := unix.ByteSliceToString(e.Method[:])
+func processFn(pkg, ver, schemaURL string) func(*event) ptrace.ScopeSpans {
+	scopeName := "go.opentelemetry.io/auto/" + pkg
+	return func(e *event) ptrace.ScopeSpans {
+		ss := ptrace.NewScopeSpans()
 
-	sc := trace.NewSpanContext(trace.SpanContextConfig{
-		TraceID:    e.SpanContext.TraceID,
-		SpanID:     e.SpanContext.SpanID,
-		TraceFlags: trace.FlagsSampled,
-	})
+		scope := ss.Scope()
+		scope.SetName(scopeName)
+		scope.SetVersion(ver)
+		ss.SetSchemaUrl(schemaURL)
 
-	var pscPtr *trace.SpanContext
-	if e.ParentSpanContext.TraceID.IsValid() {
-		psc := trace.NewSpanContext(trace.SpanContextConfig{
-			TraceID:    e.ParentSpanContext.TraceID,
-			SpanID:     e.ParentSpanContext.SpanID,
-			TraceFlags: trace.FlagsSampled,
-			Remote:     true,
-		})
-		pscPtr = &psc
-	} else {
-		pscPtr = nil
-	}
+		method := unix.ByteSliceToString(e.Method[:])
 
-	return []*probe.SpanEvent{
-		{
-			SpanName:  method,
-			StartTime: utils.BootOffsetToTime(e.StartTime),
-			EndTime:   utils.BootOffsetToTime(e.EndTime),
-			Attributes: []attribute.KeyValue{
-				semconv.RPCSystemKey.String("grpc"),
-				semconv.RPCServiceKey.String(method),
-			},
-			ParentSpanContext: pscPtr,
-			SpanContext:       &sc,
-			TracerSchema:      semconv.SchemaURL,
-		},
+		span := ss.Spans().AppendEmpty()
+		span.SetName(method)
+		span.SetStartTimestamp(utils.BootOffsetToTimestamp(e.StartTime))
+		span.SetEndTimestamp(utils.BootOffsetToTimestamp(e.EndTime))
+		span.SetTraceID(pcommon.TraceID(e.SpanContext.TraceID))
+		span.SetSpanID(pcommon.SpanID(e.SpanContext.SpanID))
+		span.SetFlags(uint32(trace.FlagsSampled))
+
+		if e.ParentSpanContext.SpanID.IsValid() {
+			span.SetParentSpanID(pcommon.SpanID(e.ParentSpanContext.SpanID))
+		}
+
+		utils.Attributes(
+			span.Attributes(),
+			semconv.RPCSystemKey.String("grpc"),
+			semconv.RPCServiceKey.String(method),
+		)
+
+		return ss
 	}
 }

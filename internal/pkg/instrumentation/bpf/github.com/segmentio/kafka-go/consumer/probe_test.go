@@ -9,12 +9,12 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/collector/pdata/pcommon"
+	"go.opentelemetry.io/collector/pdata/ptrace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
 	"go.opentelemetry.io/otel/trace"
 
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/context"
-	"go.opentelemetry.io/auto/internal/pkg/instrumentation/probe"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/utils"
 )
 
@@ -28,7 +28,8 @@ func TestProbeConvertEvent(t *testing.T) {
 	traceID := trace.TraceID{1}
 	spanID := trace.SpanID{1}
 
-	got := convertEvent(&event{
+	const ver = "v1"
+	got := processFn(pkg, ver, semconv.SchemaURL)(&event{
 		BaseSpanProperties: context.BaseSpanProperties{
 			StartTime:   startOffset,
 			EndTime:     endOffset,
@@ -44,17 +45,22 @@ func TestProbeConvertEvent(t *testing.T) {
 		Partition:     12,
 	})
 
-	sc := trace.NewSpanContext(trace.SpanContextConfig{
-		TraceID:    traceID,
-		SpanID:     spanID,
-		TraceFlags: trace.FlagsSampled,
-	})
-	want := &probe.SpanEvent{
-		SpanName:    kafkaConsumerSpanName("topic1"),
-		StartTime:   start,
-		EndTime:     end,
-		SpanContext: &sc,
-		Attributes: []attribute.KeyValue{
+	want := func() ptrace.ScopeSpans {
+		ss := ptrace.NewScopeSpans()
+
+		ss.Scope().SetName("go.opentelemetry.io/auto/" + pkg)
+		ss.Scope().SetVersion(ver)
+		ss.SetSchemaUrl(semconv.SchemaURL)
+
+		span := ss.Spans().AppendEmpty()
+		span.SetName(kafkaConsumerSpanName("topic1"))
+		span.SetStartTimestamp(utils.BootOffsetToTimestamp(startOffset))
+		span.SetEndTimestamp(utils.BootOffsetToTimestamp(endOffset))
+		span.SetTraceID(pcommon.TraceID(traceID))
+		span.SetSpanID(pcommon.SpanID(spanID))
+		span.SetFlags(uint32(trace.FlagsSampled))
+		utils.Attributes(
+			span.Attributes(),
 			semconv.MessagingSystemKafka,
 			semconv.MessagingOperationTypeReceive,
 			semconv.MessagingDestinationPartitionID("12"),
@@ -62,8 +68,8 @@ func TestProbeConvertEvent(t *testing.T) {
 			semconv.MessagingKafkaMessageOffset(42),
 			semconv.MessagingKafkaMessageKey("key1"),
 			semconv.MessagingKafkaConsumerGroup("test consumer group"),
-		},
-		TracerSchema: semconv.SchemaURL,
-	}
-	assert.Equal(t, want, got[0])
+		)
+		return ss
+	}()
+	assert.Equal(t, want, got)
 }

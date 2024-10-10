@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"log/slog"
 
+	"go.opentelemetry.io/collector/pdata/pcommon"
+	"go.opentelemetry.io/collector/pdata/ptrace"
 	"go.opentelemetry.io/otel/attribute"
 	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
 	"go.opentelemetry.io/otel/trace"
@@ -26,7 +28,7 @@ const (
 )
 
 // New returns a new [probe.Probe].
-func New(logger *slog.Logger) probe.Probe {
+func New(logger *slog.Logger, version string) probe.Probe {
 	id := probe.ID{
 		SpanKind:        trace.SpanKindProducer,
 		InstrumentedPkg: pkg,
@@ -62,7 +64,7 @@ func New(logger *slog.Logger) probe.Probe {
 			},
 		},
 		SpecFn:    loadBpf,
-		ProcessFn: convertEvent,
+		ProcessFn: processFn(pkg, version, semconv.SchemaURL),
 	}
 }
 
@@ -85,70 +87,64 @@ type event struct {
 	ValidMessages uint64
 }
 
-func convertEvent(e *event) []*probe.SpanEvent {
-	tsc := trace.SpanContextConfig{
-		TraceID:    e.Messages[0].SpanContext.TraceID,
-		TraceFlags: trace.FlagsSampled,
-	}
+func processFn(pkg, ver, schemaURL string) func(*event) ptrace.ScopeSpans {
+	scopeName := "go.opentelemetry.io/auto/" + pkg
+	return func(e *event) ptrace.ScopeSpans {
+		ss := ptrace.NewScopeSpans()
 
-	var pscPtr *trace.SpanContext
-	if e.ParentSpanContext.TraceID.IsValid() {
-		psc := trace.NewSpanContext(trace.SpanContextConfig{
-			TraceID:    e.ParentSpanContext.TraceID,
-			SpanID:     e.ParentSpanContext.SpanID,
-			TraceFlags: trace.FlagsSampled,
-			Remote:     true,
-		})
-		pscPtr = &psc
-	} else {
-		pscPtr = nil
-	}
+		scope := ss.Scope()
+		scope.SetName(scopeName)
+		scope.SetVersion(ver)
+		ss.SetSchemaUrl(schemaURL)
 
-	globalTopic := unix.ByteSliceToString(e.GlobalTopic[:])
+		globalTopic := unix.ByteSliceToString(e.GlobalTopic[:])
 
-	commonAttrs := []attribute.KeyValue{semconv.MessagingSystemKafka, semconv.MessagingOperationTypePublish}
-	if len(globalTopic) > 0 {
-		commonAttrs = append(commonAttrs, semconv.MessagingDestinationName(globalTopic))
-	}
-
-	if e.ValidMessages > 0 {
-		commonAttrs = append(commonAttrs, semconv.MessagingBatchMessageCount(int(e.ValidMessages)))
-	}
-
-	var res []*probe.SpanEvent
-	var msgTopic string
-	for i := uint64(0); i < e.ValidMessages; i++ {
-		tsc.SpanID = e.Messages[i].SpanContext.SpanID
-		sc := trace.NewSpanContext(tsc)
-		key := unix.ByteSliceToString(e.Messages[i].Key[:])
-
-		msgAttrs := []attribute.KeyValue{}
-		if len(key) > 0 {
-			msgAttrs = append(msgAttrs, semconv.MessagingKafkaMessageKey(key))
+		attrs := []attribute.KeyValue{semconv.MessagingSystemKafka, semconv.MessagingOperationTypePublish}
+		if len(globalTopic) > 0 {
+			attrs = append(attrs, semconv.MessagingDestinationName(globalTopic))
 		}
 
-		// Topic is either the global topic or the message specific topic
-		if len(globalTopic) == 0 {
-			msgTopic = unix.ByteSliceToString(e.Messages[i].Topic[:])
-		} else {
-			msgTopic = globalTopic
+		if e.ValidMessages > 0 {
+			attrs = append(attrs, semconv.MessagingBatchMessageCount(int(e.ValidMessages)))
 		}
 
-		msgAttrs = append(msgAttrs, semconv.MessagingDestinationName(msgTopic))
-		msgAttrs = append(msgAttrs, commonAttrs...)
+		traceID := pcommon.TraceID(e.Messages[0].SpanContext.TraceID)
 
-		res = append(res, &probe.SpanEvent{
-			SpanName:          kafkaProducerSpanName(msgTopic),
-			StartTime:         utils.BootOffsetToTime(e.StartTime),
-			EndTime:           utils.BootOffsetToTime(e.EndTime),
-			SpanContext:       &sc,
-			Attributes:        msgAttrs,
-			ParentSpanContext: pscPtr,
-			TracerSchema:      semconv.SchemaURL,
-		})
+		var msgTopic string
+		for i := uint64(0); i < e.ValidMessages; i++ {
+			key := unix.ByteSliceToString(e.Messages[i].Key[:])
+			var msgAttrs []attribute.KeyValue
+			if len(key) > 0 {
+				msgAttrs = append(msgAttrs, semconv.MessagingKafkaMessageKey(key))
+			}
+
+			// Topic is either the global topic or the message specific topic
+			if len(globalTopic) == 0 {
+				msgTopic = unix.ByteSliceToString(e.Messages[i].Topic[:])
+			} else {
+				msgTopic = globalTopic
+			}
+
+			msgAttrs = append(msgAttrs, semconv.MessagingDestinationName(msgTopic))
+			msgAttrs = append(msgAttrs, attrs...)
+
+			span := ss.Spans().AppendEmpty()
+			span.SetName(kafkaProducerSpanName(msgTopic))
+			span.SetStartTimestamp(utils.BootOffsetToTimestamp(e.StartTime))
+			span.SetEndTimestamp(utils.BootOffsetToTimestamp(e.EndTime))
+			span.SetTraceID(traceID)
+			span.SetSpanID(pcommon.SpanID(e.Messages[i].SpanContext.SpanID))
+			span.SetFlags(uint32(trace.FlagsSampled))
+
+			if e.ParentSpanContext.SpanID.IsValid() {
+				span.SetParentSpanID(pcommon.SpanID(e.ParentSpanContext.SpanID))
+			}
+
+			utils.Attributes(span.Attributes(), msgAttrs...)
+		}
+
+		return ss
 	}
-
-	return res
 }
 
 func kafkaProducerSpanName(topic string) string {

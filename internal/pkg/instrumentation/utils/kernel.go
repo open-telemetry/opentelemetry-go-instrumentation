@@ -6,6 +6,8 @@ package utils
 import (
 	"math"
 	"time"
+
+	"go.opentelemetry.io/collector/pdata/pcommon"
 )
 
 var bootTimeOffset = func() int64 {
@@ -15,6 +17,12 @@ var bootTimeOffset = func() int64 {
 	}
 	return o
 }()
+
+// BootOffsetToTimestamp returns the [pcommon.Timestamp] that is nsec number of
+// nanoseconds after the estimated boot time of the system.
+func BootOffsetToTimestamp(nsec uint64) pcommon.Timestamp {
+	return pcommon.NewTimestampFromTime(BootOffsetToTime(nsec))
+}
 
 // BootOffsetToTime returns the timestamp that is nsec number of nanoseconds
 // after the estimated boot time of the system.
