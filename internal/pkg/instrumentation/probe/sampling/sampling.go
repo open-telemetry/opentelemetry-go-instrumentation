@@ -215,14 +215,11 @@ func NewSamplingManager(c *ebpf.Collection, conf *Config) (*Manager, error) {
 }
 
 func (m *Manager) applyConfig(conf *Config) error {
-	samplerIDs := make([]SamplerID, len(conf.Samplers))
-	configs := make([]SamplerConfig, len(conf.Samplers))
-
-	i := 0
+	samplerIDs := make([]SamplerID, 0, len(conf.Samplers))
+	configs := make([]SamplerConfig, 0, len(conf.Samplers))
 	for id, samplerConfig := range conf.Samplers {
-		samplerIDs[i] = id
-		configs[i] = samplerConfig
-		i++
+		samplerIDs = append(samplerIDs, id)
+		configs = append(configs, samplerConfig)
 	}
 
 	configsBytes := make([][sampleConfigSize]byte, len(configs))

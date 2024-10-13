@@ -12,7 +12,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func mockEbpfCollectionForSampling() (*ebpf.Collection, error) {
+func mockEBPFCollectionForSampling() (*ebpf.Collection, error) {
 	err := rlimit.RemoveMemlock()
 	if err != nil {
 		return nil, err
@@ -52,8 +52,8 @@ func mockEbpfCollectionForSampling() (*ebpf.Collection, error) {
 	}, nil
 }
 
-func TestEbpfNewSamplingConfigDefault(t *testing.T) {
-	c, err := mockEbpfCollectionForSampling()
+func TestEBPFNewSamplingConfigDefault(t *testing.T) {
+	c, err := mockEBPFCollectionForSampling()
 	if !assert.NoError(t, err) {
 		return
 	}
