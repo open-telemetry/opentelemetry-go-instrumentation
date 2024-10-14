@@ -9,12 +9,12 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/collector/pdata/pcommon"
+	"go.opentelemetry.io/collector/pdata/ptrace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
 	"go.opentelemetry.io/otel/trace"
 
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/context"
-	"go.opentelemetry.io/auto/internal/pkg/instrumentation/probe"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/utils"
 )
 
@@ -28,7 +28,8 @@ func TestProbeConvertEvent(t *testing.T) {
 	traceID := trace.TraceID{1}
 	spanID := trace.SpanID{1}
 
-	got := convertEvent(&event{
+	const ver = "v1"
+	got := processFn(pkg, ver, semconv.SchemaURL)(&event{
 		BaseSpanProperties: context.BaseSpanProperties{
 			StartTime:   startOffset,
 			EndTime:     endOffset,
@@ -38,20 +39,21 @@ func TestProbeConvertEvent(t *testing.T) {
 		Query: [256]byte{0x53, 0x45, 0x4c, 0x45, 0x43, 0x54, 0x20, 0x2a, 0x20, 0x46, 0x52, 0x4f, 0x4d, 0x20, 0x66, 0x6f, 0x6f},
 	})
 
-	sc := trace.NewSpanContext(trace.SpanContextConfig{
-		TraceID:    traceID,
-		SpanID:     spanID,
-		TraceFlags: trace.FlagsSampled,
-	})
-	want := &probe.SpanEvent{
-		SpanName:    "DB",
-		StartTime:   start,
-		EndTime:     end,
-		SpanContext: &sc,
-		Attributes: []attribute.KeyValue{
-			semconv.DBQueryText("SELECT * FROM foo"),
-		},
-		TracerSchema: semconv.SchemaURL,
-	}
-	assert.Equal(t, want, got[0])
+	want := func() ptrace.ScopeSpans {
+		ss := ptrace.NewScopeSpans()
+		ss.Scope().SetName("go.opentelemetry.io/auto/" + pkg)
+		ss.Scope().SetVersion(ver)
+		ss.SetSchemaUrl(semconv.SchemaURL)
+
+		span := ss.Spans().AppendEmpty()
+		span.SetName("DB")
+		span.SetStartTimestamp(utils.BootOffsetToTimestamp(startOffset))
+		span.SetEndTimestamp(utils.BootOffsetToTimestamp(endOffset))
+		span.SetTraceID(pcommon.TraceID(traceID))
+		span.SetSpanID(pcommon.SpanID(spanID))
+		span.SetFlags(uint32(trace.FlagsSampled))
+		utils.Attributes(span.Attributes(), semconv.DBQueryText("SELECT * FROM foo"))
+		return ss
+	}()
+	assert.Equal(t, want, got)
 }
