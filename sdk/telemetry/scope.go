@@ -7,6 +7,6 @@ package telemetry
 type Scope struct {
 	Name         string `json:"name,omitempty"`
 	Version      string `json:"version,omitempty"`
-	Attrs        []Attr `json:"attributes"`
+	Attrs        []Attr `json:"attributes,omitempty"`
 	DroppedAttrs uint32 `json:"droppedAttributesCount,omitempty"`
 }

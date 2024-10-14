@@ -8,7 +8,7 @@ type Resource struct {
 	// Attrs are the set of attributes that describe the resource. Attribute
 	// keys MUST be unique (it is not allowed to have more than one attribute
 	// with the same key).
-	Attrs []Attr `json:"attributes"`
+	Attrs []Attr `json:"attributes,omitempty"`
 	// DroppedAttrs is the number of dropped attributes. If the value
 	// is 0, then no attributes were dropped.
 	DroppedAttrs uint32 `json:"droppedAttributesCount,omitempty"`
