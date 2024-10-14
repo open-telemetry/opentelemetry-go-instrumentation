@@ -17,7 +17,6 @@ import (
 	"go.opentelemetry.io/contrib/exporters/autoexport"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp"
-	"go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
 
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation"
@@ -176,7 +175,7 @@ type InstrumentationOption interface {
 }
 
 type instConfig struct {
-	traceExp           trace.SpanExporter
+	traceHandler       TraceHandler
 	target             process.TargetArgs
 	serviceName        string
 	additionalResAttrs []attribute.KeyValue
@@ -373,7 +372,7 @@ var lookupEnv = os.LookupEnv
 //
 //   - OTEL_GO_AUTO_TARGET_EXE: sets the target binary
 //   - OTEL_SERVICE_NAME (or OTEL_RESOURCE_ATTRIBUTES): sets the service name
-//   - OTEL_TRACES_EXPORTER: sets the trace exporter
+//   - OTEL_TRACES_EXPORTER: sets an appropriate TraceHandler
 //   - OTEL_GO_AUTO_GLOBAL: enables the OpenTelemetry global implementation
 //   - OTEL_LOG_LEVEL: sets the default logger's minimum logging level
 //   - OTEL_TRACES_SAMPLER: sets the trace sampler
@@ -391,10 +390,6 @@ var lookupEnv = os.LookupEnv
 // If [WithLogger] is not used, OTEL_LOG_LEVEL will be parsed and the default
 // logger used by the configured [Instrumentation] will use that level as its
 // minimum logging level.
-//
-// The OTEL_TRACES_EXPORTER environment variable value is resolved using the
-// [autoexport] package. See that package's documentation for information on
-// supported values and registration of custom exporters.
 func WithEnv() InstrumentationOption {
 	return fnOpt(func(ctx context.Context, c instConfig) (instConfig, error) {
 		var err error
@@ -473,16 +468,16 @@ func lookupResourceData() (string, []attribute.KeyValue, bool) {
 	return svcName, attrs, true
 }
 
-// WithTraceExporter returns an [InstrumentationOption] that will configure an
-// [Instrumentation] to use the provided exp to export OpenTelemetry tracing
-// telemetry.
+// WithTraceHandler returns an [InstrumentationOption] that will configure an
+// [Instrumentation] to use the provided handler to handle OpenTelemetry
+// tracing telemetry.
 //
 // If OTEL_TRACES_EXPORTER is defined, this option will conflict with
 // [WithEnv]. If both are used, the last one provided to an [Instrumentation]
 // will be used.
-func WithTraceExporter(exp trace.SpanExporter) InstrumentationOption {
+func WithTraceHandler(handler TraceHandler) InstrumentationOption {
 	return fnOpt(func(_ context.Context, c instConfig) (instConfig, error) {
-		c.traceExp = exp
+		c.traceHandler = handler
 		return c, nil
 	})
 }
