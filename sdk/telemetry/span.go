@@ -416,6 +416,8 @@ func (sl *SpanLink) UnmarshalJSON(data []byte) error {
 			err = decoder.Decode(&sl.Attrs)
 		case "droppedAttributesCount", "dropped_attributes_count":
 			err = decoder.Decode(&sl.DroppedAttrs)
+		case "flags":
+			err = decoder.Decode(&sl.Flags)
 		default:
 			// Skip unknown.
 		}
