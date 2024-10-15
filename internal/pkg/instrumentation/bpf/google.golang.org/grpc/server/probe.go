@@ -84,12 +84,9 @@ func New(logger *slog.Logger) probe.Probe {
 				EntryProbe: "uprobe_http2Server_operateHeader",
 			},
 			{
-				Sym:        "google.golang.org/grpc/internal/transport.(*serverHandlerTransport).WriteStatus",
-				EntryProbe: "uprobe_serverHandlerTransport_WriteStatus",
-			},
-			{
-				Sym:        "google.golang.org/grpc/internal/transport.(*http2Server).WriteStatus",
-				EntryProbe: "uprobe_http2Server_WriteStatus",
+				Sym:         "google.golang.org/grpc/internal/transport.(*http2Server).WriteStatus",
+				EntryProbe:  "uprobe_http2Server_WriteStatus",
+				ReturnProbe: "uprobe_http2Server_WriteStatus_Returns",
 			},
 		},
 		SpecFn:    loadBpf,
