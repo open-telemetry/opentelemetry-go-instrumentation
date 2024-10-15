@@ -167,7 +167,7 @@ fixtures/%:
 	if [ -f ./internal/test/e2e/$(LIBRARY)/build.sh ]; then \
 		./internal/test/e2e/$(LIBRARY)/build.sh; \
 	else \
-		cd internal/test/e2e/$(LIBRARY) && docker build --build-context ../../../../ -t sample-app . ;\
+		cd internal/test/e2e/$(LIBRARY) && docker build -t sample-app . ;\
 	fi
 	kind create cluster
 	kind load docker-image otel-go-instrumentation sample-app
