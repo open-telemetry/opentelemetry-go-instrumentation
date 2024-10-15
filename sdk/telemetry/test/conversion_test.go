@@ -222,7 +222,7 @@ func TestDecode(t *testing.T) {
 	b, err := enc.MarshalTraces(pTraces)
 	require.NoError(t, err)
 
-	t.Log(string(b))
+	t.Log(string(b)) // This helps when test fails to understand what is being decoded.
 
 	var got telemetry.Traces
 	dec := json.NewDecoder(bytes.NewReader(b))
@@ -237,7 +237,7 @@ func TestEncode(t *testing.T) {
 	require.NoError(t, enc.Encode(traces))
 
 	data := buf.Bytes()
-	t.Log(string(data))
+	t.Log(string(data)) // This helps when test fails to understand what how the data has been encoded.
 
 	var dec ptrace.JSONUnmarshaler
 	got, err := dec.UnmarshalTraces(data)
