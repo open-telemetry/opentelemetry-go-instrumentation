@@ -22,3 +22,4 @@ excluded-modules:
   - go.opentelemetry.io/auto/internal/test/e2e/otelglobal
   - go.opentelemetry.io/auto/internal/tools
   - go.opentelemetry.io/auto/sdk
+  - go.opentelemetry.io/auto/sdk/telemetry/test
