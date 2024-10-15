@@ -16,7 +16,6 @@
 #define TRACE_FLAGS_SIZE 1
 #define TRACE_FLAGS_STRING_SIZE 2
 
-static const u8 FLAG_SAMPLED = 1;
 
 struct span_context
 {
@@ -71,16 +70,6 @@ static __always_inline void w3c_string_to_span_context(char *str, struct span_co
     hex_string_to_bytes(str + trace_id_start_pos, TRACE_ID_STRING_SIZE, ctx->TraceID);
     hex_string_to_bytes(str + span_id_start_pos, SPAN_ID_STRING_SIZE, ctx->SpanID);
     hex_string_to_bytes(str + trace_flags_start_pos, TRACE_FLAGS_STRING_SIZE, &ctx->TraceFlags);
-}
-
-static __always_inline bool trace_flags_is_sampled(u8 flags)
-{
-    return ((flags & FLAG_SAMPLED) == FLAG_SAMPLED);
-}
-
-static __always_inline bool is_sampled(struct span_context *ctx)
-{
-    return trace_flags_is_sampled(ctx->TraceFlags);
 }
 
 #endif
