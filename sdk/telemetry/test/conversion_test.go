@@ -67,8 +67,8 @@ var (
 		TraceState:   "test=green",
 		Attrs:        []telemetry.Attr{telemetry.Int("queue", 17)},
 		DroppedAttrs: 8,
-		// https://github.com/open-telemetry/opentelemetry-collector/issues/11267
-		// Flags:                  1,
+		// https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1196
+		// Flags: 1,
 	}
 	pLink = func() ptrace.SpanLink {
 		l := ptrace.NewSpanLink()
@@ -77,7 +77,7 @@ var (
 		l.TraceState().FromRaw("test=green")
 		l.Attributes().PutInt("queue", 17)
 		l.SetDroppedAttributesCount(8)
-		// https://github.com/open-telemetry/opentelemetry-collector/issues/11267
+		// https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1196
 		// l.SetFlags(1)
 		return l
 	}()
@@ -98,12 +98,11 @@ var (
 	}()
 
 	spanA = &telemetry.Span{
-		TraceID:      [16]byte{0x1},
-		SpanID:       [8]byte{0x2},
-		TraceState:   "test=a",
-		ParentSpanID: [8]byte{0x1},
-		// https://github.com/open-telemetry/opentelemetry-collector/issues/11267
-		// Flags:             1,
+		TraceID:       [16]byte{0x1},
+		SpanID:        [8]byte{0x2},
+		TraceState:    "test=a",
+		ParentSpanID:  [8]byte{0x1},
+		Flags:         1,
 		Name:          "span.a",
 		Kind:          telemetry.SpanKindClient,
 		StartTime:     y2k,
@@ -128,8 +127,7 @@ var (
 		ts.FromRaw("test=a")
 
 		s.SetParentSpanID(pcommon.SpanID([8]byte{0x1}))
-		// https://github.com/open-telemetry/opentelemetry-collector/issues/11267
-		// s.SetFlags(1)
+		s.SetFlags(1)
 		s.SetName("span.a")
 		s.SetKind(ptrace.SpanKindClient)
 		s.SetStartTimestamp(pcommon.NewTimestampFromTime(y2k))
