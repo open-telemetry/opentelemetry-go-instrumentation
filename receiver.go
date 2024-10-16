@@ -15,7 +15,9 @@ import (
 	"go.opentelemetry.io/collector/receiver"
 )
 
-var cfgType = component.MustNewType("otlp")
+const receiverType = "auto"
+
+var cfgType = component.MustNewType(receiverType)
 
 type Receiver struct {
 	logger *slog.Logger

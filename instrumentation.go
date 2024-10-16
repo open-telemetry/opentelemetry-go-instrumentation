@@ -14,9 +14,7 @@ import (
 	"strings"
 	"sync"
 
-	"go.opentelemetry.io/contrib/exporters/autoexport"
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp"
 	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
 
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation"
@@ -203,19 +201,19 @@ func newInstConfig(ctx context.Context, opts []InstrumentationOption) (instConfi
 	if c.serviceName == "" {
 		c.serviceName = c.defaultServiceName()
 	}
-	if c.traceExp == nil {
+
+	if c.logger == nil {
+		c.logger = newLogger(nil)
+	}
+
+	if c.traceHandler == nil {
 		var e error
-		// This is the OTel recommended default.
-		c.traceExp, e = otlptracehttp.New(ctx)
+		c.traceHandler, e = defaultTraceHandler(ctx, c.logger)
 		err = errors.Join(err, e)
 	}
 
 	if c.sampler == nil {
 		c.sampler = DefaultSampler()
-	}
-
-	if c.logger == nil {
-		c.logger = newLogger(nil)
 	}
 
 	if c.cp == nil {
@@ -238,8 +236,8 @@ func (c instConfig) validate() error {
 	if c.target == zero {
 		return errUndefinedTarget
 	}
-	if c.traceExp == nil {
-		return errors.New("undefined trace exporter")
+	if c.traceHandler == nil {
+		return errors.New("undefined TraceHandler")
 	}
 	return c.target.Validate()
 }
@@ -396,17 +394,19 @@ func WithEnv() InstrumentationOption {
 		if v, ok := lookupEnv(envTargetExeKey); ok {
 			c.target = process.TargetArgs{ExePath: v}
 		}
-		if _, ok := lookupEnv(envTracesExportersKey); ok {
-			// Don't track the lookup value because autoexport does not provide
-			// a way to just pass the environment value currently. Just use
-			// NewSpanExporter which will re-read this value.
+		/*
+			if _, ok := lookupEnv(envTracesExportersKey); ok {
+				// Don't track the lookup value because autoexport does not provide
+				// a way to just pass the environment value currently. Just use
+				// NewSpanExporter which will re-read this value.
 
-			var e error
-			// NewSpanExporter will use an OTLP (HTTP/protobuf) exporter as the
-			// default. This is the OTel recommended default.
-			c.traceExp, e = autoexport.NewSpanExporter(ctx)
-			err = errors.Join(err, e)
-		}
+				var e error
+				// NewSpanExporter will use an OTLP (HTTP/protobuf) exporter as the
+				// default. This is the OTel recommended default.
+				c.traceExp, e = autoexport.NewSpanExporter(ctx)
+				err = errors.Join(err, e)
+			}
+		*/
 		if name, attrs, ok := lookupResourceData(); ok {
 			c.serviceName = name
 			c.additionalResAttrs = append(c.additionalResAttrs, attrs...)

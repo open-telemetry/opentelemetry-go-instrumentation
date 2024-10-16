@@ -5,10 +5,13 @@ package auto
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
+	"strings"
 
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
+	"go.opentelemetry.io/collector/confmap/provider/envprovider"
 	"go.opentelemetry.io/collector/connector"
 	forwardconnector "go.opentelemetry.io/collector/connector/forwardconnector"
 	"go.opentelemetry.io/collector/exporter"
@@ -47,10 +50,7 @@ func defaultTraceHandler(ctx context.Context, l *slog.Logger) (TraceHandler, err
 			ResolverSettings: confmap.ResolverSettings{
 				ProviderFactories: []confmap.ProviderFactory{
 					envprovider.NewFactory(),
-					fileprovider.NewFactory(),
-					httpprovider.NewFactory(),
-					httpsprovider.NewFactory(),
-					yamlprovider.NewFactory(),
+					confmap.NewProviderFactory(newProvider),
 				},
 			},
 		},
@@ -114,4 +114,52 @@ func components(r *Receiver) func() (otelcol.Factories, error) {
 
 		return f, nil
 	}
+}
+
+const providerSchema = "static"
+
+type provider struct{}
+
+func newProvider(confmap.ProviderSettings) confmap.Provider {
+	return new(provider)
+}
+
+func (p *provider) Retrieve(ctx context.Context, uri string, watcher confmap.WatcherFunc) (*confmap.Retrieved, error) {
+	if !strings.HasPrefix(uri, providerSchema+":") {
+		return nil, fmt.Errorf("%q uri is not supported by %q provider", uri, providerSchema)
+	}
+
+	return confmap.NewRetrieved(map[string]any{
+		"receivers": map[string]any{
+			"auto": nil,
+		},
+		"processors": map[string]any{
+			"batch": nil,
+			"memory_limiter": map[string]any{
+				"check_interval":  "5s",
+				"limit_mib":       4000,
+				"spike_limit_mib": 500,
+			},
+		},
+		"exporters": map[string]any{
+			"otlphttp": nil,
+		},
+		"service": map[string]any{
+			"pipelines": map[string]any{
+				"traces": map[string]any{
+					"receivers":  []string{"otlp"},
+					"processors": []string{"batch", "memory_limiter"},
+					"exporters":  []string{"otlphttp"},
+				},
+			},
+		},
+	})
+}
+
+func (p *provider) Scheme() string {
+	return providerSchema
+}
+
+func (p *provider) Shutdown(context.Context) error {
+	return nil
 }
