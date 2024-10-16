@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"os"
 	"strings"
 
 	"go.opentelemetry.io/collector/component"
@@ -17,6 +18,7 @@ import (
 	"go.opentelemetry.io/collector/exporter"
 	otlphttpexporter "go.opentelemetry.io/collector/exporter/otlphttpexporter"
 	"go.opentelemetry.io/collector/otelcol"
+	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/ptrace"
 	"go.opentelemetry.io/collector/processor"
 	batchprocessor "go.opentelemetry.io/collector/processor/batchprocessor"
@@ -34,8 +36,8 @@ type TraceHandler interface {
 	HandleScopeSpans(context.Context, ptrace.ScopeSpans) error
 }
 
-func defaultTraceHandler(ctx context.Context, l *slog.Logger) (TraceHandler, error) {
-	r := NewReceiver(l)
+func defaultTraceHandler(ctx context.Context, l *slog.Logger, res pcommon.Resource) (TraceHandler, error) {
+	r := NewReceiver(l, res)
 
 	info := component.BuildInfo{
 		Command:     "auto",
@@ -48,10 +50,12 @@ func defaultTraceHandler(ctx context.Context, l *slog.Logger) (TraceHandler, err
 		Factories: components(r),
 		ConfigProviderSettings: otelcol.ConfigProviderSettings{
 			ResolverSettings: confmap.ResolverSettings{
+				URIs: []string{"static:"},
 				ProviderFactories: []confmap.ProviderFactory{
 					envprovider.NewFactory(),
 					confmap.NewProviderFactory(newProvider),
 				},
+				DefaultScheme: "env",
 			},
 		},
 	}
@@ -129,6 +133,12 @@ func (p *provider) Retrieve(ctx context.Context, uri string, watcher confmap.Wat
 		return nil, fmt.Errorf("%q uri is not supported by %q provider", uri, providerSchema)
 	}
 
+	endpoint := "http://localhost:4318"
+	const envOTLP = "OTEL_EXPORTER_OTLP_ENDPOINT"
+	if v, ok := os.LookupEnv(envOTLP); ok {
+		endpoint = v
+	}
+
 	return confmap.NewRetrieved(map[string]any{
 		"receivers": map[string]any{
 			"auto": nil,
@@ -142,12 +152,14 @@ func (p *provider) Retrieve(ctx context.Context, uri string, watcher confmap.Wat
 			},
 		},
 		"exporters": map[string]any{
-			"otlphttp": nil,
+			"otlphttp": map[string]any{
+				"endpoint": endpoint,
+			},
 		},
 		"service": map[string]any{
 			"pipelines": map[string]any{
 				"traces": map[string]any{
-					"receivers":  []string{"otlp"},
+					"receivers":  []string{"auto"},
 					"processors": []string{"batch", "memory_limiter"},
 					"exporters":  []string{"otlphttp"},
 				},

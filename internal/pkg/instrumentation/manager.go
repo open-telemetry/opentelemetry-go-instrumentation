@@ -295,6 +295,7 @@ func (m *Manager) Run(ctx context.Context, target *process.TargetDetails) error 
 			m.probeMu.Unlock()
 			return errors.Join(err, ctx.Err())
 		case data := <-m.tracesCh:
+			m.logger.Debug("sending scope spans for processing", "count", data.Spans().Len())
 			err := m.handler.HandleScopeSpans(ctx, data)
 			if err != nil {
 				m.logger.Error("failed to export trace data", "error", err)

@@ -11,8 +11,10 @@ import (
 
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/consumer"
+	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/ptrace"
 	"go.opentelemetry.io/collector/receiver"
+	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
 )
 
 const receiverType = "auto"
@@ -20,7 +22,8 @@ const receiverType = "auto"
 var cfgType = component.MustNewType(receiverType)
 
 type Receiver struct {
-	logger *slog.Logger
+	logger   *slog.Logger
+	resource pcommon.Resource
 
 	nextTracesMu sync.Mutex
 	nextTraces   []consumer.Traces
@@ -31,8 +34,8 @@ var (
 	_ TraceHandler    = (*Receiver)(nil)
 )
 
-func NewReceiver(l *slog.Logger) *Receiver {
-	return &Receiver{logger: l}
+func NewReceiver(l *slog.Logger, res pcommon.Resource) *Receiver {
+	return &Receiver{logger: l, resource: res}
 }
 
 func (r *Receiver) Factory() receiver.Factory {
@@ -49,19 +52,21 @@ func (r *Receiver) Factory() receiver.Factory {
 	return receiver.NewFactory(
 		cfgType,
 		func() component.Config { return nil },
-		receiver.WithTraces(createTraces, component.StabilityLevelBeta),
+		receiver.WithTraces(createTraces, component.StabilityLevelAlpha),
 	)
 }
 
-func (*Receiver) Start(ctx context.Context, host component.Host) error {
+func (*Receiver) Start(context.Context, component.Host) error {
 	return nil
 }
 
-func (*Receiver) Shutdown(ctx context.Context) error {
+func (*Receiver) Shutdown(context.Context) error {
 	return nil
 }
 
 func (r *Receiver) RegisterConsumer(c consumer.Traces) {
+	r.logger.Debug("registering consumer")
+
 	r.nextTracesMu.Lock()
 	defer r.nextTracesMu.Unlock()
 
@@ -70,12 +75,19 @@ func (r *Receiver) RegisterConsumer(c consumer.Traces) {
 
 func (r *Receiver) HandleScopeSpans(ctx context.Context, data ptrace.ScopeSpans) error {
 	traces := ptrace.NewTraces()
-	// Copy a resource here
 	rs := traces.ResourceSpans().AppendEmpty()
+	r.resource.CopyTo(rs.Resource())
+	rs.SetSchemaUrl(semconv.SchemaURL)
 	data.CopyTo(rs.ScopeSpans().AppendEmpty())
 
 	r.nextTracesMu.Lock()
 	defer r.nextTracesMu.Unlock()
+
+	r.logger.Debug(
+		"handling scope spans",
+		"consumers", len(r.nextTraces),
+		"spans", traces.SpanCount(),
+	)
 
 	var err error
 	for _, c := range r.nextTraces {

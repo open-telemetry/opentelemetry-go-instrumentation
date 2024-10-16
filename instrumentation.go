@@ -5,19 +5,23 @@ package auto
 
 import (
 	"context"
+	"debug/buildinfo"
 	"errors"
 	"fmt"
 	"log/slog"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
 	"sync"
 
+	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/otel/attribute"
 	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
 
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation"
+	"go.opentelemetry.io/auto/internal/pkg/instrumentation/utils"
 	"go.opentelemetry.io/auto/internal/pkg/process"
 )
 
@@ -81,16 +85,13 @@ func NewInstrumentation(ctx context.Context, opts ...InstrumentationOption) (*In
 		return nil, err
 	}
 
-	/*
-		ctrl, err := opentelemetry.NewController(c.logger, c.tracerProvider(pa.BuildInfo), Version())
-		if err != nil {
-			return nil, err
-		}
-	*/
-	// TODO: make this actually do something.
-	r := instrumentation.NewReceiver(c.logger)
 	cp := convertConfigProvider(c.cp)
-	mngr, err := instrumentation.NewManager(c.logger, r, c.globalImpl, c.loadIndicator, cp, Version())
+	th, err := c.newTraceHandler(ctx, pa.BuildInfo)
+	if err != nil {
+		return nil, err
+	}
+
+	mngr, err := instrumentation.NewManager(c.logger, th, c.globalImpl, c.loadIndicator, cp, Version())
 	if err != nil {
 		return nil, err
 	}
@@ -206,12 +207,6 @@ func newInstConfig(ctx context.Context, opts []InstrumentationOption) (instConfi
 		c.logger = newLogger(nil)
 	}
 
-	if c.traceHandler == nil {
-		var e error
-		c.traceHandler, e = defaultTraceHandler(ctx, c.logger)
-		err = errors.Join(err, e)
-	}
-
 	if c.sampler == nil {
 		c.sampler = DefaultSampler()
 	}
@@ -236,25 +231,17 @@ func (c instConfig) validate() error {
 	if c.target == zero {
 		return errUndefinedTarget
 	}
-	if c.traceHandler == nil {
-		return errors.New("undefined TraceHandler")
-	}
 	return c.target.Validate()
 }
 
-/*
-func (c instConfig) tracerProvider(bi *buildinfo.BuildInfo) *trace.TracerProvider {
-	return trace.NewTracerProvider(
-		// the actual sampling is done in the eBPF probes.
-		// this is just to make sure that we export all spans we get from the probes
-		trace.WithSampler(trace.AlwaysSample()),
-		trace.WithResource(c.res(bi)),
-		trace.WithBatcher(c.traceExp),
-		trace.WithIDGenerator(opentelemetry.NewEBPFSourceIDGenerator()),
-	)
+func (c instConfig) newTraceHandler(ctx context.Context, bi *buildinfo.BuildInfo) (TraceHandler, error) {
+	if c.traceHandler != nil {
+		return c.traceHandler, nil
+	}
+	return defaultTraceHandler(ctx, c.logger, c.res(bi))
 }
 
-func (c instConfig) res(bi *buildinfo.BuildInfo) *resource.Resource {
+func (c instConfig) res(bi *buildinfo.BuildInfo) pcommon.Resource {
 	runVer := bi.GoVersion
 
 	var compiler string
@@ -275,7 +262,10 @@ func (c instConfig) res(bi *buildinfo.BuildInfo) *resource.Resource {
 		runVer, runtime.GOOS, runtime.GOARCH,
 	)
 
-	attrs := []attribute.KeyValue{
+	// TODO: handle limits.
+	res := pcommon.NewResource()
+	utils.Attributes(
+		res.Attributes(),
 		semconv.ServiceNameKey.String(c.serviceName),
 		semconv.TelemetrySDKLanguageGo,
 		semconv.TelemetryDistroVersionKey.String(Version()),
@@ -283,18 +273,10 @@ func (c instConfig) res(bi *buildinfo.BuildInfo) *resource.Resource {
 		semconv.ProcessRuntimeName(runName),
 		semconv.ProcessRuntimeVersion(runVer),
 		semconv.ProcessRuntimeDescription(runDesc),
-	}
-
-	if len(c.additionalResAttrs) > 0 {
-		attrs = append(attrs, c.additionalResAttrs...)
-	}
-
-	return resource.NewWithAttributes(
-		semconv.SchemaURL,
-		attrs...,
 	)
+	utils.Attributes(res.Attributes(), c.additionalResAttrs...)
+	return res
 }
-*/
 
 // newLogger is used for testing.
 var newLogger = newLoggerFunc
