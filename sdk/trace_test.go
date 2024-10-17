@@ -5,6 +5,7 @@ package sdk
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"math"
 	"testing"
@@ -12,12 +13,12 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"go.opentelemetry.io/collector/pdata/pcommon"
-	"go.opentelemetry.io/collector/pdata/ptrace"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
 	"go.opentelemetry.io/otel/trace"
+
+	"go.opentelemetry.io/auto/sdk/telemetry"
 )
 
 var (
@@ -34,38 +35,34 @@ var (
 		attribute.StringSlice("string slice", []string{"one", "two"}),
 	}
 
-	pAttrs = func() pcommon.Map {
-		m := pcommon.NewMap()
-		m.PutBool("bool", true)
-		m.PutInt("int", -1)
-		m.PutInt("int64", 43)
-		m.PutDouble("float64", 0.3)
-		m.PutStr("string", "value")
-
-		s := m.PutEmptySlice("bool slice")
-		s.AppendEmpty().SetBool(true)
-		s.AppendEmpty().SetBool(false)
-		s.AppendEmpty().SetBool(true)
-
-		s = m.PutEmptySlice("int slice")
-		s.AppendEmpty().SetInt(-1)
-		s.AppendEmpty().SetInt(-30)
-		s.AppendEmpty().SetInt(328)
-
-		s = m.PutEmptySlice("int64 slice")
-		s.AppendEmpty().SetInt(1030)
-		s.AppendEmpty().SetInt(0)
-		s.AppendEmpty().SetInt(0)
-
-		s = m.PutEmptySlice("float64 slice")
-		s.AppendEmpty().SetDouble(1e9)
-
-		s = m.PutEmptySlice("string slice")
-		s.AppendEmpty().SetStr("one")
-		s.AppendEmpty().SetStr("two")
-
-		return m
-	}()
+	tAttrs = []telemetry.Attr{
+		telemetry.Bool("bool", true),
+		telemetry.Int("int", -1),
+		telemetry.Int64("int64", 43),
+		telemetry.Float64("float64", 0.3),
+		telemetry.String("string", "value"),
+		telemetry.Slice(
+			"bool slice",
+			telemetry.BoolValue(true),
+			telemetry.BoolValue(false),
+			telemetry.BoolValue(true),
+		),
+		telemetry.Slice("int slice",
+			telemetry.IntValue(-1),
+			telemetry.IntValue(-30),
+			telemetry.IntValue(328),
+		),
+		telemetry.Slice("int64 slice",
+			telemetry.Int64Value(1030),
+			telemetry.Int64Value(0),
+			telemetry.Int64Value(0),
+		),
+		telemetry.Slice("float64 slice", telemetry.Float64Value(1e9)),
+		telemetry.Slice("string slice",
+			telemetry.StringValue("one"),
+			telemetry.StringValue("two"),
+		),
+	}
 
 	spanContext0 = trace.NewSpanContext(trace.SpanContextConfig{
 		TraceID:    trace.TraceID{0x1},
@@ -91,22 +88,18 @@ var (
 		},
 	}
 
-	pLink0 = func() ptrace.SpanLink {
-		l := ptrace.NewSpanLink()
-		l.SetTraceID(pcommon.TraceID(spanContext0.TraceID()))
-		l.SetSpanID(pcommon.SpanID(spanContext0.SpanID()))
-		l.SetFlags(uint32(spanContext0.TraceFlags()))
-		l.Attributes().PutInt("n", 0)
-		return l
-	}()
-	pLink1 = func() ptrace.SpanLink {
-		l := ptrace.NewSpanLink()
-		l.SetTraceID(pcommon.TraceID(spanContext1.TraceID()))
-		l.SetSpanID(pcommon.SpanID(spanContext1.SpanID()))
-		l.SetFlags(uint32(spanContext1.TraceFlags()))
-		l.Attributes().PutInt("n", 1)
-		return l
-	}()
+	tLink0 = &telemetry.SpanLink{
+		TraceID: telemetry.TraceID(spanContext0.TraceID()),
+		SpanID:  telemetry.SpanID(spanContext0.SpanID()),
+		Flags:   uint32(spanContext0.TraceFlags()),
+		Attrs:   []telemetry.Attr{telemetry.Int("n", 0)},
+	}
+	tLink1 = &telemetry.SpanLink{
+		TraceID: telemetry.TraceID(spanContext1.TraceID()),
+		SpanID:  telemetry.SpanID(spanContext1.SpanID()),
+		Flags:   uint32(spanContext1.TraceFlags()),
+		Attrs:   []telemetry.Attr{telemetry.Int("n", 1)},
+	}
 )
 
 func TestSpanCreation(t *testing.T) {
@@ -124,18 +117,18 @@ func TestSpanCreation(t *testing.T) {
 		trace.WithSchemaURL(semconv.SchemaURL),
 	)
 
-	assertTracer := func(traces ptrace.Traces) func(*testing.T) {
+	assertTracer := func(traces *telemetry.Traces) func(*testing.T) {
 		return func(t *testing.T) {
 			t.Helper()
 
-			rs := traces.ResourceSpans()
-			require.Equal(t, 1, rs.Len())
-			sss := rs.At(0).ScopeSpans()
-			require.Equal(t, 1, sss.Len())
-			ss := sss.At(0)
-			assert.Equal(t, tracerName, ss.Scope().Name(), "tracer name")
-			assert.Equal(t, tracerVer, ss.Scope().Version(), "tracer version")
-			assert.Equal(t, semconv.SchemaURL, ss.SchemaUrl(), "tracer schema URL")
+			rs := traces.ResourceSpans
+			require.Len(t, rs, 1)
+			sss := rs[0].ScopeSpans
+			require.Len(t, sss, 1)
+			ss := sss[0]
+			assert.Equal(t, tracerName, ss.Scope.Name, "tracer name")
+			assert.Equal(t, tracerVer, ss.Scope.Version, "tracer version")
+			assert.Equal(t, semconv.SchemaURL, ss.SchemaURL, "tracer schema URL")
 		}
 	}
 
@@ -167,7 +160,7 @@ func TestSpanCreation(t *testing.T) {
 				assertTracer(s.traces)
 
 				want := spanContext0.SpanID().String()
-				got := s.span.ParentSpanID().String()
+				got := s.span.ParentSpanID.String()
 				assert.Equal(t, want, got)
 			},
 		},
@@ -186,10 +179,10 @@ func TestSpanCreation(t *testing.T) {
 				str := func(i interface{ String() string }) string {
 					return i.String()
 				}
-				assert.Equal(t, str(spanContext0.TraceID()), str(s.span.TraceID()), "trace ID")
-				assert.Equal(t, str(spanContext0.SpanID()), str(s.span.SpanID()), "span ID")
-				assert.Equal(t, uint32(spanContext0.TraceFlags()), s.span.Flags(), "flags")
-				assert.Equal(t, str(spanContext0.TraceState()), s.span.TraceState().AsRaw(), "tracestate")
+				assert.Equal(t, str(spanContext0.TraceID()), s.span.TraceID.String(), "trace ID")
+				assert.Equal(t, str(spanContext0.SpanID()), s.span.SpanID.String(), "span ID")
+				assert.Equal(t, uint32(spanContext0.TraceFlags()), s.span.Flags, "flags")
+				assert.Equal(t, str(spanContext0.TraceState()), s.span.TraceState, "tracestate")
 			},
 		},
 		{
@@ -210,7 +203,7 @@ func TestSpanCreation(t *testing.T) {
 			SpanName: spanName,
 			Eval: func(t *testing.T, _ context.Context, s *span) {
 				assertTracer(s.traces)
-				assert.Equal(t, spanName, s.span.Name())
+				assert.Equal(t, spanName, s.span.Name)
 			},
 		},
 		{
@@ -220,7 +213,7 @@ func TestSpanCreation(t *testing.T) {
 			},
 			Eval: func(t *testing.T, _ context.Context, s *span) {
 				assertTracer(s.traces)
-				assert.Equal(t, ptrace.SpanKindClient, s.span.Kind())
+				assert.Equal(t, telemetry.SpanKindClient, s.span.Kind)
 			},
 		},
 		{
@@ -230,7 +223,7 @@ func TestSpanCreation(t *testing.T) {
 			},
 			Eval: func(t *testing.T, _ context.Context, s *span) {
 				assertTracer(s.traces)
-				assert.Equal(t, pcommon.NewTimestampFromTime(ts), s.span.StartTimestamp())
+				assert.Equal(t, ts, s.span.StartTime)
 			},
 		},
 		{
@@ -240,7 +233,7 @@ func TestSpanCreation(t *testing.T) {
 			},
 			Eval: func(t *testing.T, _ context.Context, s *span) {
 				assertTracer(s.traces)
-				assert.Equal(t, pAttrs, s.span.Attributes())
+				assert.Equal(t, tAttrs, s.span.Attrs)
 			},
 		},
 		{
@@ -250,10 +243,8 @@ func TestSpanCreation(t *testing.T) {
 			},
 			Eval: func(t *testing.T, _ context.Context, s *span) {
 				assertTracer(s.traces)
-				want := ptrace.NewSpanLinkSlice()
-				pLink0.CopyTo(want.AppendEmpty())
-				pLink1.CopyTo(want.AppendEmpty())
-				assert.Equal(t, want, s.span.Links())
+				want := []*telemetry.SpanLink{tLink0, tLink1}
+				assert.Equal(t, want, s.span.Links)
 			},
 		},
 	}
@@ -275,16 +266,16 @@ func TestSpanCreation(t *testing.T) {
 }
 
 func TestSpanKindTransform(t *testing.T) {
-	tests := map[trace.SpanKind]ptrace.SpanKind{
-		trace.SpanKind(-1):          ptrace.SpanKindUnspecified,
-		trace.SpanKindUnspecified:   ptrace.SpanKindUnspecified,
-		trace.SpanKind(math.MaxInt): ptrace.SpanKindUnspecified,
+	tests := map[trace.SpanKind]telemetry.SpanKind{
+		trace.SpanKind(-1):          telemetry.SpanKind(0),
+		trace.SpanKindUnspecified:   telemetry.SpanKind(0),
+		trace.SpanKind(math.MaxInt): telemetry.SpanKind(0),
 
-		trace.SpanKindInternal: ptrace.SpanKindInternal,
-		trace.SpanKindServer:   ptrace.SpanKindServer,
-		trace.SpanKindClient:   ptrace.SpanKindClient,
-		trace.SpanKindProducer: ptrace.SpanKindProducer,
-		trace.SpanKindConsumer: ptrace.SpanKindConsumer,
+		trace.SpanKindInternal: telemetry.SpanKindInternal,
+		trace.SpanKindServer:   telemetry.SpanKindServer,
+		trace.SpanKindClient:   telemetry.SpanKindClient,
+		trace.SpanKindProducer: telemetry.SpanKindProducer,
+		trace.SpanKindConsumer: telemetry.SpanKindConsumer,
 	}
 
 	for in, want := range tests {
@@ -299,17 +290,17 @@ func TestSpanEnd(t *testing.T) {
 	var buf []byte
 	ended = func(b []byte) { buf = b }
 
-	timeNow := time.Now()
+	timeNow := time.Unix(0, time.Now().UnixNano()) // No location.
 
 	tests := []struct {
 		Name    string
 		Options []trace.SpanEndOption
-		Eval    func(*testing.T, pcommon.Timestamp)
+		Eval    func(*testing.T, time.Time)
 	}{
 		{
 			Name: "Now",
-			Eval: func(t *testing.T, ts pcommon.Timestamp) {
-				assert.False(t, ts.AsTime().IsZero(), "zero end time")
+			Eval: func(t *testing.T, ts time.Time) {
+				assert.False(t, ts.IsZero(), "zero end time")
 			},
 		},
 		{
@@ -317,8 +308,8 @@ func TestSpanEnd(t *testing.T) {
 			Options: []trace.SpanEndOption{
 				trace.WithTimestamp(timeNow),
 			},
-			Eval: func(t *testing.T, ts pcommon.Timestamp) {
-				assert.True(t, ts.AsTime().Equal(timeNow), "end time not set")
+			Eval: func(t *testing.T, ts time.Time) {
+				assert.Equal(t, timeNow, ts, "end time not set")
 			},
 		},
 	}
@@ -331,18 +322,18 @@ func TestSpanEnd(t *testing.T) {
 			assert.False(t, s.sampled, "ended span should not be sampled")
 			require.NotNil(t, buf, "no span data emitted")
 
-			var m ptrace.ProtoUnmarshaler
-			traces, err := m.UnmarshalTraces(buf)
+			var traces telemetry.Traces
+			err := json.Unmarshal(buf, &traces)
 			require.NoError(t, err)
 
-			rs := traces.ResourceSpans()
-			require.Equal(t, 1, rs.Len())
-			ss := rs.At(0).ScopeSpans()
-			require.Equal(t, 1, ss.Len())
-			spans := ss.At(0).Spans()
-			require.Equal(t, 1, spans.Len())
+			rs := traces.ResourceSpans
+			require.Len(t, rs, 1)
+			ss := rs[0].ScopeSpans
+			require.Len(t, ss, 1)
+			spans := ss[0].Spans
+			require.Len(t, spans, 1)
 
-			test.Eval(t, spans.At(0).EndTimestamp())
+			test.Eval(t, spans[0].EndTime)
 		})
 	}
 }
@@ -376,10 +367,8 @@ func TestSpanAddLink(t *testing.T) {
 	}.Build()
 	s.AddLink(link1)
 
-	want := ptrace.NewSpanLinkSlice()
-	pLink0.CopyTo(want.AppendEmpty())
-	pLink1.CopyTo(want.AppendEmpty())
-	assert.Equal(t, want, s.span.Links())
+	want := []*telemetry.SpanLink{tLink0, tLink1}
+	assert.Equal(t, want, s.span.Links)
 }
 
 func TestSpanIsRecording(t *testing.T) {
@@ -395,9 +384,9 @@ func TestSpanIsRecording(t *testing.T) {
 func TestSpanRecordError(t *testing.T) {
 	s := spanBuilder{}.Build()
 
-	want := ptrace.NewSpanEventSlice()
+	var want []*telemetry.SpanEvent
 	s.RecordError(nil)
-	require.Equal(t, want, s.span.Events(), "nil error recorded")
+	require.Equal(t, want, s.span.Events, "nil error recorded")
 
 	ts := time.Now()
 	err := errors.New("test")
@@ -406,19 +395,28 @@ func TestSpanRecordError(t *testing.T) {
 		trace.WithTimestamp(ts),
 		trace.WithAttributes(attribute.Bool("testing", true)),
 	)
-	e := want.AppendEmpty()
-	e.SetName(semconv.ExceptionEventName)
-	e.SetTimestamp(pcommon.NewTimestampFromTime(ts))
-	e.Attributes().PutBool("testing", true)
-	e.Attributes().PutStr(string(semconv.ExceptionTypeKey), "*errors.errorString")
-	e.Attributes().PutStr(string(semconv.ExceptionMessageKey), err.Error())
-	assert.Equal(t, want, s.span.Events(), "nil error recorded")
+	want = append(want, &telemetry.SpanEvent{
+		Name: semconv.ExceptionEventName,
+		Time: ts,
+		Attrs: []telemetry.Attr{
+			telemetry.Bool("testing", true),
+			telemetry.String(string(semconv.ExceptionTypeKey), "*errors.errorString"),
+			telemetry.String(string(semconv.ExceptionMessageKey), err.Error()),
+		},
+	})
+	assert.Equal(t, want, s.span.Events, "nil error recorded")
 
 	s.RecordError(err, trace.WithStackTrace(true))
-	require.Equal(t, 2, s.span.Events().Len(), "missing event")
-	e = s.span.Events().At(1)
-	_, ok := e.Attributes().Get(string(semconv.ExceptionStacktraceKey))
-	assert.True(t, ok, "missing stacktrace attribute")
+	require.Len(t, s.span.Events, 2, "missing event")
+
+	var hasST bool
+	for _, attr := range s.span.Events[1].Attrs {
+		if attr.Key == string(semconv.ExceptionStacktraceKey) {
+			hasST = true
+			break
+		}
+	}
+	assert.True(t, hasST, "missing stacktrace attribute")
 }
 
 func TestSpanSpanContext(t *testing.T) {
@@ -429,20 +427,19 @@ func TestSpanSpanContext(t *testing.T) {
 func TestSpanSetStatus(t *testing.T) {
 	s := spanBuilder{}.Build()
 
-	want := ptrace.NewStatus()
-	assert.Equal(t, want, s.span.Status(), "empty status should not be set")
+	assert.Nil(t, s.span.Status, "empty status should not be set")
 
-	msg := "test"
-	want.SetMessage(msg)
+	const msg = "test"
+	want := &telemetry.Status{Message: msg}
 
-	for c, p := range map[codes.Code]ptrace.StatusCode{
-		codes.Error: ptrace.StatusCodeError,
-		codes.Ok:    ptrace.StatusCodeOk,
-		codes.Unset: ptrace.StatusCodeUnset,
+	for c, tCode := range map[codes.Code]telemetry.StatusCode{
+		codes.Error: telemetry.StatusCodeError,
+		codes.Ok:    telemetry.StatusCodeOK,
+		codes.Unset: telemetry.StatusCodeUnset,
 	} {
-		want.SetCode(p)
+		want.Code = tCode
 		s.SetStatus(c, msg)
-		assert.Equalf(t, want, s.span.Status(), "code: %s, msg: %s", c, msg)
+		assert.Equalf(t, want, s.span.Status, "code: %s, msg: %s", c, msg)
 	}
 }
 
@@ -452,12 +449,12 @@ func TestSpanSetName(t *testing.T) {
 
 	s := builder.Build()
 	s.SetName(name)
-	assert.Equal(t, name, s.span.Name(), "span name not set")
+	assert.Equal(t, name, s.span.Name, "span name not set")
 
 	builder.Name = "alt"
 	s = builder.Build()
 	s.SetName(name)
-	assert.Equal(t, name, s.span.Name(), "SetName did not overwrite")
+	assert.Equal(t, name, s.span.Name, "SetName did not overwrite")
 }
 
 func TestSpanSetAttributes(t *testing.T) {
@@ -465,7 +462,7 @@ func TestSpanSetAttributes(t *testing.T) {
 
 	s := builder.Build()
 	s.SetAttributes(attrs...)
-	assert.Equal(t, pAttrs, s.span.Attributes(), "span attributes not set")
+	assert.Equal(t, tAttrs, s.span.Attrs, "span attributes not set")
 
 	builder.Options = []trace.SpanStartOption{
 		trace.WithAttributes(attrs[0].Key.Bool(!attrs[0].Value.AsBool())),
@@ -473,7 +470,7 @@ func TestSpanSetAttributes(t *testing.T) {
 
 	s = builder.Build()
 	s.SetAttributes(attrs...)
-	assert.Equal(t, pAttrs, s.span.Attributes(), "SpanAttributes did not override")
+	assert.Equal(t, tAttrs, s.span.Attrs, "SpanAttributes did not override")
 }
 
 func TestSpanTracerProvider(t *testing.T) {

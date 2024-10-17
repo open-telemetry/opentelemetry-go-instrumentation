@@ -15,7 +15,7 @@ char __license[] SEC("license") = "Dual MIT/GPL";
 // the maximum size of a span (based on limits) and set this. Ideally, we could
 // also look into a tiered allocation strategy so we do not over allocate
 // space (i.e. small, medium, large data sizes).
-#define MAX_SIZE 1024
+#define MAX_SIZE 2048
 
 // Injected const.
 volatile const u64 span_context_trace_id_pos;

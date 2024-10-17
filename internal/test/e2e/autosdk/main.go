@@ -91,7 +91,6 @@ func main() {
 	defer stop()
 
 	ctx, span := tracer.Start(ctx, "main", trace.WithTimestamp(y2k))
-	defer span.End(trace.WithTimestamp(y2k.Add(5 * time.Second)))
 
 	err := app.Run(ctx, "Alice", true, sig(ctx))
 	if err != nil {
@@ -103,6 +102,8 @@ func main() {
 			trace.WithStackTrace(true),
 		)
 	}
+
+	span.End(trace.WithTimestamp(y2k.Add(5 * time.Second)))
 
 	// give time for auto-instrumentation to report signal
 	time.Sleep(5 * time.Second)
