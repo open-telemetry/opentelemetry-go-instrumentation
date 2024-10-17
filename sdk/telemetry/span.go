@@ -5,6 +5,7 @@ package telemetry
 
 import (
 	"bytes"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -69,7 +70,7 @@ type Span struct {
 	// Empty value is equivalent to an unknown span name.
 	//
 	// This field is required.
-	Name string `json:"name,omitempty"`
+	Name string `json:"name"`
 	// Distinguishes between spans generated in a particular context. For example,
 	// two spans with the same name may be distinguished using `CLIENT` (caller)
 	// and `SERVER` (callee) to identify queueing latency associated with the span.
@@ -123,15 +124,35 @@ type Span struct {
 
 // MarshalJSON encodes s into OTLP formatted JSON.
 func (s Span) MarshalJSON() ([]byte, error) {
+	startT := s.StartTime.UnixNano()
+	if s.StartTime.IsZero() || startT < 0 {
+		startT = 0
+	}
+
+	endT := s.EndTime.UnixNano()
+	if s.EndTime.IsZero() || endT < 0 {
+		endT = 0
+	}
+
+	// Override non-empty default SpanID marshal and omitempty.
+	var parentSpanId string
+	if !s.ParentSpanID.IsEmpty() {
+		b := make([]byte, hex.EncodedLen(spanIDSize))
+		hex.Encode(b, s.ParentSpanID[:])
+		parentSpanId = string(b)
+	}
+
 	type Alias Span
 	return json.Marshal(struct {
 		Alias
-		StartTime uint64 `json:"startTimeUnixNano,omitempty"`
-		EndTime   uint64 `json:"endTimeUnixNano,omitempty"`
+		ParentSpanID string `json:"parentSpanId,omitempty"`
+		StartTime    uint64 `json:"startTimeUnixNano,omitempty"`
+		EndTime      uint64 `json:"endTimeUnixNano,omitempty"`
 	}{
-		Alias:     Alias(s),
-		StartTime: uint64(s.StartTime.UnixNano()),
-		EndTime:   uint64(s.EndTime.UnixNano()),
+		Alias:        Alias(s),
+		ParentSpanID: parentSpanId,
+		StartTime:    uint64(startT),
+		EndTime:      uint64(endT),
 	})
 }
 
@@ -280,13 +301,18 @@ type SpanEvent struct {
 
 // MarshalJSON encodes e into OTLP formatted JSON.
 func (e SpanEvent) MarshalJSON() ([]byte, error) {
+	t := e.Time.UnixNano()
+	if e.Time.IsZero() || t < 0 {
+		t = 0
+	}
+
 	type Alias SpanEvent
 	return json.Marshal(struct {
 		Alias
 		Time uint64 `json:"timeUnixNano,omitempty"`
 	}{
 		Alias: Alias(e),
-		Time:  uint64(e.Time.UnixNano()),
+		Time:  uint64(t),
 	})
 }
 
@@ -416,6 +442,8 @@ func (sl *SpanLink) UnmarshalJSON(data []byte) error {
 			err = decoder.Decode(&sl.Attrs)
 		case "droppedAttributesCount", "dropped_attributes_count":
 			err = decoder.Decode(&sl.DroppedAttrs)
+		case "flags":
+			err = decoder.Decode(&sl.Flags)
 		default:
 			// Skip unknown.
 		}
