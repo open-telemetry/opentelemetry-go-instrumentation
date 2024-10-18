@@ -8,7 +8,8 @@ import (
 	"os"
 	"strconv"
 
-	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/collector/pdata/pcommon"
+	"go.opentelemetry.io/collector/pdata/ptrace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
 	"go.opentelemetry.io/otel/trace"
 	"golang.org/x/sys/unix"
@@ -29,7 +30,7 @@ const (
 )
 
 // New returns a new [probe.Probe].
-func New(logger *slog.Logger) probe.Probe {
+func New(logger *slog.Logger, version string) probe.Probe {
 	id := probe.ID{
 		SpanKind:        trace.SpanKindClient,
 		InstrumentedPkg: pkg,
@@ -61,7 +62,7 @@ func New(logger *slog.Logger) probe.Probe {
 		},
 
 		SpecFn:    loadBpf,
-		ProcessFn: convertEvent,
+		ProcessFn: processFn(pkg, version, semconv.SchemaURL),
 	}
 }
 
@@ -72,40 +73,32 @@ type event struct {
 	Query [256]byte
 }
 
-func convertEvent(e *event) []*probe.SpanEvent {
-	query := unix.ByteSliceToString(e.Query[:])
+func processFn(pkg, ver, schemaURL string) func(*event) ptrace.ScopeSpans {
+	scopeName := "go.opentelemetry.io/auto/" + pkg
+	return func(e *event) ptrace.ScopeSpans {
+		ss := ptrace.NewScopeSpans()
 
-	sc := trace.NewSpanContext(trace.SpanContextConfig{
-		TraceID:    e.SpanContext.TraceID,
-		SpanID:     e.SpanContext.SpanID,
-		TraceFlags: trace.FlagsSampled,
-	})
+		scope := ss.Scope()
+		scope.SetName(scopeName)
+		scope.SetVersion(ver)
+		ss.SetSchemaUrl(schemaURL)
 
-	var pscPtr *trace.SpanContext
-	if e.ParentSpanContext.TraceID.IsValid() {
-		psc := trace.NewSpanContext(trace.SpanContextConfig{
-			TraceID:    e.ParentSpanContext.TraceID,
-			SpanID:     e.ParentSpanContext.SpanID,
-			TraceFlags: trace.FlagsSampled,
-			Remote:     true,
-		})
-		pscPtr = &psc
-	} else {
-		pscPtr = nil
-	}
+		span := ss.Spans().AppendEmpty()
+		span.SetName("DB")
+		span.SetStartTimestamp(utils.BootOffsetToTimestamp(e.StartTime))
+		span.SetEndTimestamp(utils.BootOffsetToTimestamp(e.EndTime))
+		span.SetTraceID(pcommon.TraceID(e.SpanContext.TraceID))
+		span.SetSpanID(pcommon.SpanID(e.SpanContext.SpanID))
+		span.SetFlags(uint32(trace.FlagsSampled))
 
-	return []*probe.SpanEvent{
-		{
-			SpanName:    "DB",
-			StartTime:   utils.BootOffsetToTime(e.StartTime),
-			EndTime:     utils.BootOffsetToTime(e.EndTime),
-			SpanContext: &sc,
-			Attributes: []attribute.KeyValue{
-				semconv.DBQueryText(query),
-			},
-			ParentSpanContext: pscPtr,
-			TracerSchema:      semconv.SchemaURL,
-		},
+		if e.ParentSpanContext.SpanID.IsValid() {
+			span.SetParentSpanID(pcommon.SpanID(e.ParentSpanContext.SpanID))
+		}
+
+		query := unix.ByteSliceToString(e.Query[:])
+		span.Attributes().PutStr(string(semconv.DBQueryTextKey), query)
+
+		return ss
 	}
 }
 
