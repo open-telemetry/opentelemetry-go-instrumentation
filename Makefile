@@ -64,7 +64,7 @@ test/%:
 test_ebpf: generate $(GO_MODS_TO_EBPF_TEST)
 test_ebpf/%: GO_MOD=$*
 test_ebpf/%:
-	cd $(shell dirname $(GO_MOD)) && $(GOCMD) test -v -tags=ebpf_test -run ^TestEbpf ./...
+	cd $(shell dirname $(GO_MOD)) && $(GOCMD) test -v -tags=ebpf_test -run ^TestEBPF ./...
 
 .PHONY: generate
 generate: export CFLAGS := $(BPF_INCLUDE)
