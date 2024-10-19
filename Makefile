@@ -51,12 +51,20 @@ tools: $(GOLICENSES) $(MULTIMOD) $(GOLANGCI_LINT) $(DBOTCONF) $(OFFSETGEN)
 
 ALL_GO_MODS := $(shell find . -type f -name 'go.mod' ! -path '$(TOOLS_MOD_DIR)/*' ! -path './LICENSES/*' | sort)
 GO_MODS_TO_TEST := $(ALL_GO_MODS:%=test/%)
+GO_MODS_TO_EBPF_TEST := $(ALL_GO_MODS:%=test_ebpf/%)
 
 .PHONY: test
 test: generate $(GO_MODS_TO_TEST)
 test/%: GO_MOD=$*
 test/%:
 	cd $(shell dirname $(GO_MOD)) && $(GOCMD) test -v ./...
+
+# These tests need to be run as privileged user/with sudo
+.PHONY: test_ebpf
+test_ebpf: generate $(GO_MODS_TO_EBPF_TEST)
+test_ebpf/%: GO_MOD=$*
+test_ebpf/%:
+	cd $(shell dirname $(GO_MOD)) && $(GOCMD) test -v -tags=ebpf_test -run ^TestEBPF ./...
 
 .PHONY: generate
 generate: export CFLAGS := $(BPF_INCLUDE)

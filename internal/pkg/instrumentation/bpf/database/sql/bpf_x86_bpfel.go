@@ -80,12 +80,14 @@ type bpfProgramSpecs struct {
 //
 // It can be passed ebpf.CollectionSpec.Assign.
 type bpfMapSpecs struct {
-	AllocMap          *ebpf.MapSpec `ebpf:"alloc_map"`
-	Events            *ebpf.MapSpec `ebpf:"events"`
-	GoContextToSc     *ebpf.MapSpec `ebpf:"go_context_to_sc"`
-	SliceArrayBuffMap *ebpf.MapSpec `ebpf:"slice_array_buff_map"`
-	SqlEvents         *ebpf.MapSpec `ebpf:"sql_events"`
-	TrackedSpansBySc  *ebpf.MapSpec `ebpf:"tracked_spans_by_sc"`
+	AllocMap              *ebpf.MapSpec `ebpf:"alloc_map"`
+	Events                *ebpf.MapSpec `ebpf:"events"`
+	GoContextToSc         *ebpf.MapSpec `ebpf:"go_context_to_sc"`
+	ProbeActiveSamplerMap *ebpf.MapSpec `ebpf:"probe_active_sampler_map"`
+	SamplersConfigMap     *ebpf.MapSpec `ebpf:"samplers_config_map"`
+	SliceArrayBuffMap     *ebpf.MapSpec `ebpf:"slice_array_buff_map"`
+	SqlEvents             *ebpf.MapSpec `ebpf:"sql_events"`
+	TrackedSpansBySc      *ebpf.MapSpec `ebpf:"tracked_spans_by_sc"`
 }
 
 // bpfObjects contains all objects after they have been loaded into the kernel.
@@ -107,12 +109,14 @@ func (o *bpfObjects) Close() error {
 //
 // It can be passed to loadBpfObjects or ebpf.CollectionSpec.LoadAndAssign.
 type bpfMaps struct {
-	AllocMap          *ebpf.Map `ebpf:"alloc_map"`
-	Events            *ebpf.Map `ebpf:"events"`
-	GoContextToSc     *ebpf.Map `ebpf:"go_context_to_sc"`
-	SliceArrayBuffMap *ebpf.Map `ebpf:"slice_array_buff_map"`
-	SqlEvents         *ebpf.Map `ebpf:"sql_events"`
-	TrackedSpansBySc  *ebpf.Map `ebpf:"tracked_spans_by_sc"`
+	AllocMap              *ebpf.Map `ebpf:"alloc_map"`
+	Events                *ebpf.Map `ebpf:"events"`
+	GoContextToSc         *ebpf.Map `ebpf:"go_context_to_sc"`
+	ProbeActiveSamplerMap *ebpf.Map `ebpf:"probe_active_sampler_map"`
+	SamplersConfigMap     *ebpf.Map `ebpf:"samplers_config_map"`
+	SliceArrayBuffMap     *ebpf.Map `ebpf:"slice_array_buff_map"`
+	SqlEvents             *ebpf.Map `ebpf:"sql_events"`
+	TrackedSpansBySc      *ebpf.Map `ebpf:"tracked_spans_by_sc"`
 }
 
 func (m *bpfMaps) Close() error {
@@ -120,6 +124,8 @@ func (m *bpfMaps) Close() error {
 		m.AllocMap,
 		m.Events,
 		m.GoContextToSc,
+		m.ProbeActiveSamplerMap,
+		m.SamplersConfigMap,
 		m.SliceArrayBuffMap,
 		m.SqlEvents,
 		m.TrackedSpansBySc,

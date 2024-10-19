@@ -89,6 +89,8 @@ type bpfMapSpecs struct {
 	KafkaEvents            *ebpf.MapSpec `ebpf:"kafka_events"`
 	KafkaReaderToConn      *ebpf.MapSpec `ebpf:"kafka_reader_to_conn"`
 	KafkaRequestStorageMap *ebpf.MapSpec `ebpf:"kafka_request_storage_map"`
+	ProbeActiveSamplerMap  *ebpf.MapSpec `ebpf:"probe_active_sampler_map"`
+	SamplersConfigMap      *ebpf.MapSpec `ebpf:"samplers_config_map"`
 	SliceArrayBuffMap      *ebpf.MapSpec `ebpf:"slice_array_buff_map"`
 	TrackedSpansBySc       *ebpf.MapSpec `ebpf:"tracked_spans_by_sc"`
 }
@@ -119,6 +121,8 @@ type bpfMaps struct {
 	KafkaEvents            *ebpf.Map `ebpf:"kafka_events"`
 	KafkaReaderToConn      *ebpf.Map `ebpf:"kafka_reader_to_conn"`
 	KafkaRequestStorageMap *ebpf.Map `ebpf:"kafka_request_storage_map"`
+	ProbeActiveSamplerMap  *ebpf.Map `ebpf:"probe_active_sampler_map"`
+	SamplersConfigMap      *ebpf.Map `ebpf:"samplers_config_map"`
 	SliceArrayBuffMap      *ebpf.Map `ebpf:"slice_array_buff_map"`
 	TrackedSpansBySc       *ebpf.Map `ebpf:"tracked_spans_by_sc"`
 }
@@ -132,6 +136,8 @@ func (m *bpfMaps) Close() error {
 		m.KafkaEvents,
 		m.KafkaReaderToConn,
 		m.KafkaRequestStorageMap,
+		m.ProbeActiveSamplerMap,
+		m.SamplersConfigMap,
 		m.SliceArrayBuffMap,
 		m.TrackedSpansBySc,
 	)
