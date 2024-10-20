@@ -3,7 +3,14 @@
 
 package sampling
 
-import "math"
+import (
+	"bytes"
+	"encoding/binary"
+	"fmt"
+	"math"
+
+	"github.com/cilium/ebpf"
+)
 
 // SamplerType defines the type of a sampler.
 type SamplerType uint64
@@ -77,10 +84,13 @@ type ParentBasedConfig struct {
 // the following are constants which are used by the eBPF code.
 // they should be kept in sync with the definitions there.
 const (
+	maxSampleConfigDataSize = 256
+	sampleConfigSize        = maxSampleConfigDataSize + 8
 	// since eBPF does not support floating point arithmetic, we use a rational number to represent the ratio.
 	// the denominator is fixed and the numerator is used to represent the ratio.
 	// This value can limit the precision of the sampling rate, hence setting it to a high value should be enough in terms of precision.
 	samplingRateDenominator = math.MaxUint32
+	maxSamplers             = 32
 )
 
 // The spec-defined samplers have a constant ID, and are always available.
@@ -99,6 +109,76 @@ type SamplerConfig struct {
 	Config      any
 }
 
+func (sc *SamplerConfig) MarshalBinary() ([]byte, error) {
+	buf := make([]byte, 0, sampleConfigSize)
+	writingBuffer := bytes.NewBuffer(buf)
+
+	err := binary.Write(writingBuffer, binary.NativeEndian, sc.SamplerType)
+	if err != nil {
+		return nil, err
+	}
+
+	if sc.Config != nil {
+		// sampler config may be empty. In that case, we don't write anything.
+		err = binary.Write(writingBuffer, binary.NativeEndian, sc.Config)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	if available := writingBuffer.Available(); available > 0 {
+		_, _ = writingBuffer.Write(make([]byte, available))
+	}
+
+	return writingBuffer.Bytes(), nil
+}
+
+func (sc *SamplerConfig) UnmarshalBinary(data []byte) error {
+	if len(data) != sampleConfigSize {
+		return fmt.Errorf("invalid data size for sampler config: %d", len(data))
+	}
+	readingBuffer := bytes.NewReader(data)
+
+	err := binary.Read(readingBuffer, binary.NativeEndian, &sc.SamplerType)
+	if err != nil {
+		return err
+	}
+
+	switch sc.SamplerType {
+	case SamplerAlwaysOn, SamplerAlwaysOff:
+		return nil
+	case SamplerTraceIDRatio:
+		var numerator uint64
+		err := binary.Read(readingBuffer, binary.NativeEndian, &numerator)
+		if err != nil {
+			return err
+		}
+		sc.Config = TraceIDRatioConfig{numerator}
+	case SamplerParentBased:
+		var parentBased ParentBasedConfig
+		err := binary.Read(readingBuffer, binary.NativeEndian, &parentBased)
+		if err != nil {
+			return err
+		}
+		sc.Config = parentBased
+	}
+
+	return nil
+}
+
+// Manager is used to configure the samplers used by eBPF.
+type Manager struct {
+	samplersConfigMap *ebpf.Map
+	ActiveSamplerMap  *ebpf.Map
+
+	currentSamplerID SamplerID
+}
+
+const (
+	samplersConfigMapName     = "samplers_config_map"
+	probeActiveSamplerMapName = "probe_active_sampler_map"
+)
+
 func DefaultParentBasedSampler() ParentBasedConfig {
 	return ParentBasedConfig{
 		Root:             AlwaysOnID,
@@ -107,4 +187,74 @@ func DefaultParentBasedSampler() ParentBasedConfig {
 		LocalSampled:     AlwaysOnID,
 		LocalNotSampled:  AlwaysOffID,
 	}
+}
+
+// NewSamplingManager creates a new Manager from the given eBPF collection with the given configuration.
+func NewSamplingManager(c *ebpf.Collection, conf *Config) (*Manager, error) {
+	samplersConfig, ok := c.Maps[samplersConfigMapName]
+	if !ok {
+		return nil, fmt.Errorf("map %s not found", samplersConfigMapName)
+	}
+
+	probeActiveSampler, ok := c.Maps[probeActiveSamplerMapName]
+	if !ok {
+		return nil, fmt.Errorf("map %s not found", probeActiveSamplerMapName)
+	}
+
+	m := &Manager{
+		samplersConfigMap: samplersConfig,
+		ActiveSamplerMap:  probeActiveSampler,
+	}
+
+	err := m.applyConfig(conf)
+	if err != nil {
+		return nil, err
+	}
+
+	return m, nil
+}
+
+func (m *Manager) applyConfig(conf *Config) error {
+	samplerIDs := make([]SamplerID, 0, len(conf.Samplers))
+	configs := make([]SamplerConfig, 0, len(conf.Samplers))
+	for id, samplerConfig := range conf.Samplers {
+		samplerIDs = append(samplerIDs, id)
+		configs = append(configs, samplerConfig)
+	}
+
+	configsBytes := make([][sampleConfigSize]byte, len(configs))
+	for i, config := range configs {
+		b, err := config.MarshalBinary()
+		if err != nil {
+			return err
+		}
+		if len(b) != sampleConfigSize {
+			return fmt.Errorf("unexpected sampler config size, expected %d, got %d", sampleConfigSize, len(b))
+		}
+		copy(configsBytes[i][:], b)
+	}
+
+	n, err := m.samplersConfigMap.BatchUpdate(samplerIDs, configsBytes, &ebpf.BatchOptions{})
+	if err != nil {
+		return err
+	}
+	if n != len(samplerIDs) {
+		return fmt.Errorf("failed to update samplers, expected %d, updated %d", len(samplerIDs), n)
+	}
+
+	err = m.setActiveSampler(conf.ActiveSampler)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (m *Manager) setActiveSampler(id SamplerID) error {
+	err := m.ActiveSamplerMap.Put(uint32(0), id)
+	if err != nil {
+		return err
+	}
+
+	m.currentSamplerID = id
+	return nil
 }
