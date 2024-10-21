@@ -1,4 +1,4 @@
-FROM golang:1.23.2-bullseye AS base
+FROM golang:1.23.2-bookworm AS base
 
 RUN apt-get update && apt-get install -y curl clang gcc llvm make libbpf-dev
 
