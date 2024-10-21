@@ -32,8 +32,18 @@ const (
 	pkg = "net/http"
 )
 
+type Config struct {
+	// SupportsContextPropagation indicates whether the kernel supports context propagation.
+	SupportsContextPropagation bool
+}
+
+func (c *Config) Package() string {
+	return pkg
+}
+
 // New returns a new [probe.Probe].
-func New(logger *slog.Logger) probe.Probe {
+func New(logger *slog.Logger, config probe.Config) probe.Probe {
+	cfg := config.(*Config)
 	id := probe.ID{
 		SpanKind:        trace.SpanKindClient,
 		InstrumentedPkg: pkg,
@@ -49,7 +59,7 @@ func New(logger *slog.Logger) probe.Probe {
 
 	// If the kernel supports context propagation, we enable the
 	// probe which writes the data in the outgoing buffer.
-	if utils.SupportsContextPropagation() {
+	if cfg.SupportsContextPropagation {
 		uprobes = append(uprobes,
 			probe.Uprobe{
 				Sym:        "net/http.Header.writeSubset",
@@ -63,8 +73,9 @@ func New(logger *slog.Logger) probe.Probe {
 	}
 
 	return &probe.Base[bpfObjects, event]{
-		ID:     id,
-		Logger: logger,
+		ID:          id,
+		ProbeConfig: cfg,
+		Logger:      logger,
 		Consts: []probe.Const{
 			probe.RegistersABIConst{},
 			probe.AllocationConst{},
