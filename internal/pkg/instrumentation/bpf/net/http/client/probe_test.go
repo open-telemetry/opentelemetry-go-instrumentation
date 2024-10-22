@@ -101,6 +101,7 @@ func TestConvertEvent(t *testing.T) {
 
 				span := ss.Spans().AppendEmpty()
 				span.SetName(methodString)
+				span.SetKind(ptrace.SpanKindClient)
 				span.SetTraceID(pcommon.TraceID(trId))
 				span.SetSpanID(pcommon.SpanID(spId))
 				span.SetFlags(1)
@@ -146,6 +147,7 @@ func TestConvertEvent(t *testing.T) {
 
 				span := ss.Spans().AppendEmpty()
 				span.SetName(methodString)
+				span.SetKind(ptrace.SpanKindClient)
 				span.SetTraceID(pcommon.TraceID(trId))
 				span.SetSpanID(pcommon.SpanID(spId))
 				span.SetFlags(1)
@@ -192,6 +194,7 @@ func TestConvertEvent(t *testing.T) {
 
 				span := ss.Spans().AppendEmpty()
 				span.SetName(methodString)
+				span.SetKind(ptrace.SpanKindClient)
 				span.SetTraceID(pcommon.TraceID(trId))
 				span.SetSpanID(pcommon.SpanID(spId))
 				span.SetFlags(1)
@@ -238,6 +241,7 @@ func TestConvertEvent(t *testing.T) {
 
 				span := ss.Spans().AppendEmpty()
 				span.SetName(methodString)
+				span.SetKind(ptrace.SpanKindClient)
 				span.SetTraceID(pcommon.TraceID(trId))
 				span.SetSpanID(pcommon.SpanID(spId))
 				span.SetFlags(1)
@@ -287,6 +291,7 @@ func TestConvertEvent(t *testing.T) {
 
 				span := ss.Spans().AppendEmpty()
 				span.SetName(methodString)
+				span.SetKind(ptrace.SpanKindClient)
 				span.SetTraceID(pcommon.TraceID(trId))
 				span.SetSpanID(pcommon.SpanID(spId))
 				span.SetFlags(1)
@@ -336,6 +341,7 @@ func TestConvertEvent(t *testing.T) {
 
 				span := ss.Spans().AppendEmpty()
 				span.SetName(methodString)
+				span.SetKind(ptrace.SpanKindClient)
 				span.SetTraceID(pcommon.TraceID(trId))
 				span.SetSpanID(pcommon.SpanID(spId))
 				span.SetFlags(1)

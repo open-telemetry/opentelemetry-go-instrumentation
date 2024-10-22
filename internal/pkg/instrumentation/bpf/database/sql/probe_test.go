@@ -47,6 +47,7 @@ func TestProbeConvertEvent(t *testing.T) {
 
 		span := ss.Spans().AppendEmpty()
 		span.SetName("DB")
+		span.SetKind(ptrace.SpanKindClient)
 		span.SetStartTimestamp(utils.BootOffsetToTimestamp(startOffset))
 		span.SetEndTimestamp(utils.BootOffsetToTimestamp(endOffset))
 		span.SetTraceID(pcommon.TraceID(traceID))

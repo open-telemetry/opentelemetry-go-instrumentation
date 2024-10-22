@@ -63,6 +63,7 @@ func TestProbeConvertEvent(t *testing.T) {
 
 				span := ss.Spans().AppendEmpty()
 				span.SetName("GET")
+				span.SetKind(ptrace.SpanKindServer)
 				span.SetStartTimestamp(utils.BootOffsetToTimestamp(startOffset))
 				span.SetEndTimestamp(utils.BootOffsetToTimestamp(endOffset))
 				span.SetTraceID(pcommon.TraceID(traceID))
@@ -111,6 +112,7 @@ func TestProbeConvertEvent(t *testing.T) {
 
 				span := ss.Spans().AppendEmpty()
 				span.SetName("GET")
+				span.SetKind(ptrace.SpanKindServer)
 				span.SetStartTimestamp(utils.BootOffsetToTimestamp(startOffset))
 				span.SetEndTimestamp(utils.BootOffsetToTimestamp(endOffset))
 				span.SetTraceID(pcommon.TraceID(traceID))
@@ -160,6 +162,7 @@ func TestProbeConvertEvent(t *testing.T) {
 
 				span := ss.Spans().AppendEmpty()
 				span.SetName("GET")
+				span.SetKind(ptrace.SpanKindServer)
 				span.SetStartTimestamp(utils.BootOffsetToTimestamp(startOffset))
 				span.SetEndTimestamp(utils.BootOffsetToTimestamp(endOffset))
 				span.SetTraceID(pcommon.TraceID(traceID))
@@ -208,6 +211,7 @@ func TestProbeConvertEvent(t *testing.T) {
 
 				span := ss.Spans().AppendEmpty()
 				span.SetName("GET")
+				span.SetKind(ptrace.SpanKindServer)
 				span.SetStartTimestamp(utils.BootOffsetToTimestamp(startOffset))
 				span.SetEndTimestamp(utils.BootOffsetToTimestamp(endOffset))
 				span.SetTraceID(pcommon.TraceID(traceID))

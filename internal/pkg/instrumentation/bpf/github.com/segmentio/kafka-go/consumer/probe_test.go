@@ -54,6 +54,7 @@ func TestProbeConvertEvent(t *testing.T) {
 
 		span := ss.Spans().AppendEmpty()
 		span.SetName(kafkaConsumerSpanName("topic1"))
+		span.SetKind(ptrace.SpanKindConsumer)
 		span.SetStartTimestamp(utils.BootOffsetToTimestamp(startOffset))
 		span.SetEndTimestamp(utils.BootOffsetToTimestamp(endOffset))
 		span.SetTraceID(pcommon.TraceID(traceID))

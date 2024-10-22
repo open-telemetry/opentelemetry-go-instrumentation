@@ -130,6 +130,7 @@ func processFn(pkg, ver, schemaURL string) func(*event) ptrace.ScopeSpans {
 
 			span := ss.Spans().AppendEmpty()
 			span.SetName(kafkaProducerSpanName(msgTopic))
+			span.SetKind(ptrace.SpanKindProducer)
 			span.SetStartTimestamp(utils.BootOffsetToTimestamp(e.StartTime))
 			span.SetEndTimestamp(utils.BootOffsetToTimestamp(e.EndTime))
 			span.SetTraceID(traceID)

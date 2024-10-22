@@ -135,6 +135,7 @@ func processFn(pkg, ver, schemaURL string) func(*event) ptrace.ScopeSpans {
 
 		span := ss.Spans().AppendEmpty()
 		span.SetName(method)
+		span.SetKind(ptrace.SpanKindClient)
 		span.SetStartTimestamp(utils.BootOffsetToTimestamp(e.StartTime))
 		span.SetEndTimestamp(utils.BootOffsetToTimestamp(e.EndTime))
 		span.SetTraceID(pcommon.TraceID(e.SpanContext.TraceID))

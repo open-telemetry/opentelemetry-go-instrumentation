@@ -104,6 +104,7 @@ func processFn(pkg, ver, schemaURL string) func(*event) ptrace.ScopeSpans {
 
 		topic := unix.ByteSliceToString(e.Topic[:])
 		span.SetName(kafkaConsumerSpanName(topic))
+		span.SetKind(ptrace.SpanKindConsumer)
 
 		span.SetStartTimestamp(utils.BootOffsetToTimestamp(e.StartTime))
 		span.SetEndTimestamp(utils.BootOffsetToTimestamp(e.EndTime))
