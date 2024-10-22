@@ -107,7 +107,7 @@
                   }
                 }
               ],
-              "flags": 768,
+              "flags": 256,
               "kind": 2,
               "name": "GET",
               "parentSpanId": "xxxxx",
