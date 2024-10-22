@@ -16,6 +16,11 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 - Support `google.golang.org/grpc` `1.69.0-dev`. ([#1203](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1203))
 - Implement traceID ratio and parent-based samplers. ([#1150](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1150))
 
+### Fixed
+
+- The `"golang.org/x/net/http2".FrameHeader.StreamID` offset for version `0.8.0` is corrected. ([#1208](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1208))
+- The `"golang.org/x/net/http2".MetaHeadersFrame.Fields` offset for version `0.8.0` is corrected. ([#1208](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1208))
+
 ## [v0.15.0-alpha] - 2024-10-01
 
 ### Added
