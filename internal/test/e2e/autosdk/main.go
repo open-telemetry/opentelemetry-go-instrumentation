@@ -37,7 +37,7 @@ func (a *app) Run(ctx context.Context, user string, admin bool, in <-chan msg) e
 			attribute.Bool("admin", admin),
 		),
 		trace.WithTimestamp(y2k.Add(500 * time.Microsecond)),
-		trace.WithSpanKind(trace.SpanKindInternal),
+		trace.WithSpanKind(trace.SpanKindServer),
 	}
 	_, span := a.tracer.Start(ctx, "Run", opts...)
 	defer span.End(trace.WithTimestamp(y2k.Add(1 * time.Second)))
