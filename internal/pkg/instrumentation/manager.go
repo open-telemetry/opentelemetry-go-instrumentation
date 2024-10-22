@@ -364,7 +364,16 @@ func (m *Manager) cleanup(target *process.TargetDetails) error {
 }
 
 func (m *Manager) registerProbes() error {
-	insts := []probe.Probe{
+	for _, p := range m.availableProbes() {
+		if err := m.registerProbe(p); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (m *Manager) availableProbes() []probe.Probe {
+	p := []probe.Probe{
 		grpcClient.New(m.logger, m.version),
 		grpcServer.New(m.logger, m.version),
 		httpServer.New(m.logger, m.version),
@@ -376,15 +385,8 @@ func (m *Manager) registerProbes() error {
 	}
 
 	if m.globalImpl {
-		insts = append(insts, otelTraceGlobal.New(m.logger, m.version))
+		p = append(p, otelTraceGlobal.New(m.logger, m.version))
 	}
 
-	for _, i := range insts {
-		err := m.registerProbe(i)
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
+	return p
 }
