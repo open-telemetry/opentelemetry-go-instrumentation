@@ -6,8 +6,8 @@ package grpc
 import (
 	"fmt"
 	"log/slog"
+	"net"
 	"strconv"
-	"strings"
 
 	"github.com/cilium/ebpf"
 	"go.opentelemetry.io/collector/pdata/pcommon"
@@ -118,19 +118,25 @@ func processFn(pkg, ver, schemaURL string) func(*event) ptrace.ScopeSpans {
 		ss.SetSchemaUrl(schemaURL)
 
 		method := unix.ByteSliceToString(e.Method[:])
-		target := unix.ByteSliceToString(e.Target[:])
+		address := unix.ByteSliceToString(e.Target[:])
+
+		var port int
+		host, portStr, err := net.SplitHostPort(address)
+		if err == nil {
+			port, _ = strconv.Atoi(portStr)
+		} else {
+			host = address
+		}
 
 		attrs := []attribute.KeyValue{
 			semconv.RPCSystemKey.String("grpc"),
 			semconv.RPCServiceKey.String(method),
-			semconv.ServerAddress(target),
+			semconv.ServerAddress(host),
 			semconv.RPCGRPCStatusCodeKey.Int(int(e.StatusCode)),
 		}
-		// remove port
-		if parts := strings.Split(target, ":"); len(parts) > 1 {
-			if remotePeerPortInt, err := strconv.Atoi(parts[1]); err == nil {
-				attrs = append(attrs, semconv.NetworkPeerPort(remotePeerPortInt))
-			}
+
+		if port > 0 {
+			attrs = append(attrs, semconv.NetworkPeerPort(port))
 		}
 
 		span := ss.Spans().AppendEmpty()
