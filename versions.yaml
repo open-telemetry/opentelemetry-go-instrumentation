@@ -2,10 +2,14 @@
 # SPDX-License-Identifier: Apache-2.0
 
 module-sets:
-  alpha:
-    version: v0.15.0-alpha
+  auto:
+    version: v0.16.0-alpha
     modules:
       - go.opentelemetry.io/auto
+  sdk:
+    version: v0.1.0-alpha
+    modules:
+      - go.opentelemetry.io/auto/sdk
 excluded-modules:
   - github.com/hashicorp/go-version
   - go.opentelemetry.io/auto/examples
@@ -21,5 +25,4 @@ excluded-modules:
   - go.opentelemetry.io/auto/internal/test/e2e/nethttp
   - go.opentelemetry.io/auto/internal/test/e2e/otelglobal
   - go.opentelemetry.io/auto/internal/tools
-  - go.opentelemetry.io/auto/sdk
   - go.opentelemetry.io/auto/sdk/telemetry/test
