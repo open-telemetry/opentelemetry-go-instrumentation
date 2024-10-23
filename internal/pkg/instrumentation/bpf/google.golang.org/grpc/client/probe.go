@@ -121,10 +121,10 @@ func processFn(pkg, ver, schemaURL string) func(*event) ptrace.ScopeSpans {
 		target := unix.ByteSliceToString(e.Target[:])
 
 		attrs := []attribute.KeyValue{
-			semconv.RPCGRPCStatusCodeKey.Int(int(e.StatusCode)),
 			semconv.RPCSystemKey.String("grpc"),
 			semconv.RPCServiceKey.String(method),
 			semconv.ServerAddress(target),
+			semconv.RPCGRPCStatusCodeKey.Int(int(e.StatusCode)),
 		}
 		// remove port
 		if parts := strings.Split(target, ":"); len(parts) > 1 {
