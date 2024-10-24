@@ -179,56 +179,19 @@ int uprobe_http2Server_WriteStatus(struct pt_regs *ctx) {
     get_Go_context(ctx, 2, stream_ctx_pos, true, &go_context);
     void *key = get_consistent_key(ctx, go_context.data);
 
-    // Get parent context if exists
-    void *stream_ptr = get_argument(ctx, 2);
-    u32 stream_id = 0;
-    bpf_probe_read(&stream_id, sizeof(stream_id), (void *)(stream_ptr + stream_id_pos));
-    struct grpc_request_t *grpcReq = bpf_map_lookup_elem(&streamid_to_grpc_events, &stream_id);
-    if (grpcReq == NULL) {
-        // No parent span context, generate new span context
-        u32 zero = 0;
-        grpcReq = bpf_map_lookup_elem(&grpc_storage_map, &zero);
-        if (grpcReq == NULL) {
-            bpf_printk("failed to get grpcReq from storage map");
-            return -1;
-        }
-    }
-
-    void *grpcReq_event_ptr = bpf_map_lookup_elem(&grpc_events, &key);
+    struct grpc_request_t *grpcReq_event_ptr = bpf_map_lookup_elem(&grpc_events, &key);
     // if grpcReq_event is null, then handleStream probe didn't run. Try starting a new span here
     if (grpcReq_event_ptr == NULL)
     {
-        grpcReq->start_time = bpf_ktime_get_ns();
-
-        start_span_params_t start_span_params = {
-            .ctx = ctx,
-            .sc = &grpcReq->sc,
-            .psc = &grpcReq->psc,
-            .go_context = &go_context,
-            // The parent span context is set by operateHeader probe
-            .get_parent_span_context_fn = dummy_extract_span_context_from_headers,
-            .get_parent_span_context_arg = NULL,
-        };
-        start_span(&start_span_params);
-
-        // Set attributes
-        if (!get_go_string_from_user_ptr((void *)(stream_ptr + stream_method_ptr_pos), grpcReq->method, sizeof(grpcReq->method)))
-        {
-            bpf_printk("Failed to read gRPC method from stream");
-            bpf_map_delete_elem(&streamid_to_grpc_events, &stream_id);
-            return 0;
-        }
+        bpf_printk("failed to get grpcReq_event from events map");
+        return -1;
     }
 
     void *status_ptr = get_argument(ctx, 3);
     void *s_ptr = 0;
     bpf_probe_read_user(&s_ptr, sizeof(s_ptr), (void *)(status_ptr + status_s_pos));
     // Get status code from Status.s pointer
-    bpf_probe_read_user(&grpcReq->status_code, sizeof(grpcReq->status_code), (void *)(s_ptr + status_code_pos));
-
-    bpf_map_update_elem(&grpc_events, &key, grpcReq, 0);
-    bpf_map_delete_elem(&streamid_to_grpc_events, &stream_id);
+    bpf_probe_read_user(&grpcReq_event_ptr->status_code, sizeof(grpcReq_event_ptr->status_code), (void *)(s_ptr + status_code_pos));
+    bpf_map_update_elem(&grpc_events, &key, grpcReq_event_ptr, 0);
     return 0;
 }
-
-UPROBE_RETURN(http2Server_WriteStatus, struct grpc_request_t, grpc_events, events, 2, stream_ctx_pos, false)
