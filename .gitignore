@@ -5,6 +5,7 @@
 *.so
 *.dylib
 **/*.o
+**/*.go.d
 .tools/
 **/internal/test/e2e/*/main
 

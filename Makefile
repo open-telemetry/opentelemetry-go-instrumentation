@@ -2,15 +2,19 @@
 # Assume the Makefile is in the root of the repository.
 REPODIR := $(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
 
+# Used by bpf2go to generate make compatible depinfo files.
+export BPF2GO_MAKEBASE := $(REPODIR)
+
 TOOLS_MOD_DIR := ./internal/tools
 TOOLS = $(CURDIR)/.tools
 
 ALL_GO_MOD_DIRS := $(shell find . -type f -name 'go.mod' ! -path './LICENSES/*' -exec dirname {} \; | sort)
 ALL_GO_MODS := $(shell find . -type f -name 'go.mod' ! -path '$(TOOLS_MOD_DIR)/*' ! -path './LICENSES/*' | sort)
 
-# Build the list of include directories to compile the bpf program
-BPF_INCLUDE += -I${REPODIR}/internal/include/libbpf
-BPF_INCLUDE += -I${REPODIR}/internal/include
+# BPF compile time dependencies.
+BPF2GO_CFLAGS += -I${REPODIR}/internal/include/libbpf
+BPF2GO_CFLAGS += -I${REPODIR}/internal/include
+export BPF2GO_CFLAGS
 
 # Go default variables
 GOCMD?= go
@@ -59,11 +63,35 @@ test: generate $(ALL_GO_MODS:%=test/%)
 test/%/go.mod:
 	@cd $* && $(GOCMD) test $(ARGS) ./...
 
+PROBE_ROOT = internal/pkg/instrumentation/bpf/
+PROBE_DIRS = $(shell find $(PROBE_ROOT) -type d -exec sh -c '(ls -p "{}"|grep />/dev/null)||dirname "{}"' \;)
+PROBE_GEN := $(addsuffix /bpf_x86_bpfel.go,$(PROBE_DIRS))
+PROBE_GEN += $(addsuffix /bpf_arm64_bpfel.go,$(PROBE_DIRS))
+PROBE_GEN := $(wildcard $(PROBE_GEN))
+PROBE_GEN += internal/pkg/instrumentation/bpf/net/http/client/bpf_no_tp_arm64_bpfel.go
+PROBE_GEN += internal/pkg/instrumentation/bpf/net/http/client/bpf_no_tp_x86_bpfel.go
+
+# Include all depinfo files to ensure we only re-generate when needed.
+-include $(shell find $(PROBE_ROOT) -type f -name 'bpf_*_bpfel.go.d')
+
+$(PROBE_GEN): %_bpfel.go: %_bpfel.o
+
+%/bpf_x86_bpfel.o: generate/%
+	$(info building $@)
+
+%/bpf_arm64_bpfel.o: generate/%
+	$(info building $@)
+
+%/bpf_no_tp_x86_bpfel.o: generate/%
+	$(info building $@)
+
+%/bpf_no_tp_arm64_bpfel.o: generate/%
+	$(info building $@)
+
 .PHONY: generate
-generate: export CFLAGS := $(BPF_INCLUDE)
-generate: go-mod-tidy
-generate:
-	$(GOCMD) generate ./...
+generate: go-mod-tidy $(PROBE_GEN)
+generate/%:
+	$(GOCMD) generate ./$*...
 
 .PHONY: docker-generate
 docker-generate: docker-build-base
