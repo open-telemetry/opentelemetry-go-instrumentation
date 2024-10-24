@@ -1,4 +1,4 @@
-FROM golang:1.23.2-bookworm AS base
+FROM  --platform=$BUILDPLATFORM golang:1.23.2-bookworm AS base
 
 RUN apt-get update && apt-get install -y curl clang gcc llvm make libbpf-dev
 
@@ -12,11 +12,13 @@ COPY go.mod go.sum ./
 RUN --mount=type=cache,target=/go/pkg \
     go mod download && go mod verify
 
-FROM base as builder
+FROM --platform=$BUILDPLATFORM base as builder
 COPY . .
+
+ARG TARGETARCH
 RUN --mount=type=cache,target=/root/.cache/go-build \
     --mount=type=cache,target=/go/pkg \
-    make build
+    GOARCH=$TARGETARCH make build
 
 FROM gcr.io/distroless/base-debian12@sha256:6ae5fe659f28c6afe9cc2903aebc78a5c6ad3aaa3d9d0369760ac6aaea2529c8
 COPY --from=builder /app/otel-go-instrumentation /
