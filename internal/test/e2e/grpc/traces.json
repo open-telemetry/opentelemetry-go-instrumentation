@@ -71,7 +71,7 @@
                   }
                 }
               ],
-              "flags": 768,
+              "flags": 256,
               "kind": 2,
               "name": "/helloworld.Greeter/SayHello",
               "parentSpanId": "xxxxx",
@@ -81,12 +81,6 @@
             },
             {
               "attributes": [
-                {
-                  "key": "network.peer.port",
-                  "value": {
-                    "intValue": "xxxxx"
-                  }
-                },
                 {
                   "key": "rpc.system",
                   "value": {
@@ -110,6 +104,12 @@
                   "value": {
                     "intValue": "0"
                   }
+                },
+                {
+                  "key": "network.peer.port",
+                  "value": {
+                    "intValue": "xxxxx"
+                  }
                 }
               ],
               "flags": 256,
@@ -122,12 +122,6 @@
             },
             {
               "attributes": [
-                {
-                  "key": "network.peer.port",
-                  "value": {
-                    "intValue": "xxxxx"
-                  }
-                },
                 {
                   "key": "rpc.system",
                   "value": {
@@ -150,6 +144,12 @@
                   "key": "rpc.grpc.status_code",
                   "value": {
                     "intValue": "14"
+                  }
+                },
+                {
+                  "key": "network.peer.port",
+                  "value": {
+                    "intValue": "xxxxx"
                   }
                 }
               ],

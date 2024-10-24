@@ -11,8 +11,9 @@ import (
 	"strings"
 
 	"github.com/cilium/ebpf"
+	"go.opentelemetry.io/collector/pdata/pcommon"
+	"go.opentelemetry.io/collector/pdata/ptrace"
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/codes"
 	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
 	"go.opentelemetry.io/otel/trace"
 	"golang.org/x/sys/unix"
@@ -33,7 +34,7 @@ const (
 )
 
 // New returns a new [probe.Probe].
-func New(logger *slog.Logger) probe.Probe {
+func New(logger *slog.Logger, version string) probe.Probe {
 	id := probe.ID{
 		SpanKind:        trace.SpanKindClient,
 		InstrumentedPkg: pkg,
@@ -155,7 +156,7 @@ func New(logger *slog.Logger) probe.Probe {
 		},
 		Uprobes:   uprobes,
 		SpecFn:    verifyAndLoadBpf,
-		ProcessFn: convertEvent,
+		ProcessFn: processFn(pkg, version, semconv.SchemaURL),
 	}
 }
 
@@ -186,105 +187,102 @@ type event struct {
 	OmitHost    uint8
 }
 
-func convertEvent(e *event) []*probe.SpanEvent {
-	method := unix.ByteSliceToString(e.Method[:])
-	path := unix.ByteSliceToString(e.Path[:])
-	scheme := unix.ByteSliceToString(e.Scheme[:])
-	opaque := unix.ByteSliceToString(e.Opaque[:])
-	host := unix.ByteSliceToString(e.Host[:])
-	rawPath := unix.ByteSliceToString(e.RawPath[:])
-	rawQuery := unix.ByteSliceToString(e.RawQuery[:])
-	username := unix.ByteSliceToString(e.Username[:])
-	fragment := unix.ByteSliceToString(e.Fragment[:])
-	rawFragment := unix.ByteSliceToString(e.RawFragment[:])
-	forceQuery := e.ForceQuery != 0
-	omitHost := e.OmitHost != 0
-	var user *url.Userinfo
-	if len(username) > 0 {
-		// check that username!="", otherwise url.User will instantiate
-		// an empty, non-nil *Userinfo object which url.String() will parse
-		// to just "@" in the final fullUrl
-		user = url.User(username)
-	}
+func processFn(pkg, ver, schemaURL string) func(*event) ptrace.ScopeSpans {
+	scopeName := "go.opentelemetry.io/auto/" + pkg
+	return func(e *event) ptrace.ScopeSpans {
+		ss := ptrace.NewScopeSpans()
 
-	sc := trace.NewSpanContext(trace.SpanContextConfig{
-		TraceID:    e.SpanContext.TraceID,
-		SpanID:     e.SpanContext.SpanID,
-		TraceFlags: trace.FlagsSampled,
-	})
+		scope := ss.Scope()
+		scope.SetName(scopeName)
+		scope.SetVersion(ver)
+		ss.SetSchemaUrl(schemaURL)
 
-	var pscPtr *trace.SpanContext
-	if e.ParentSpanContext.TraceID.IsValid() {
-		psc := trace.NewSpanContext(trace.SpanContextConfig{
-			TraceID:    e.ParentSpanContext.TraceID,
-			SpanID:     e.ParentSpanContext.SpanID,
-			TraceFlags: trace.FlagsSampled,
-			Remote:     true,
-		})
-		pscPtr = &psc
-	} else {
-		pscPtr = nil
-	}
-
-	attrs := []attribute.KeyValue{
-		semconv.HTTPRequestMethodKey.String(method),
-		semconv.HTTPResponseStatusCodeKey.Int(int(e.StatusCode)),
-	}
-
-	if path != "" {
-		attrs = append(attrs, semconv.URLPath(path))
-	}
-
-	urlObj := &url.URL{
-		Path:        path,
-		Scheme:      scheme,
-		Opaque:      opaque,
-		Host:        host,
-		RawPath:     rawPath,
-		User:        user,
-		RawQuery:    rawQuery,
-		Fragment:    fragment,
-		RawFragment: rawFragment,
-		ForceQuery:  forceQuery,
-		OmitHost:    omitHost,
-	}
-
-	fullURL := urlObj.String()
-	attrs = append(attrs, semconv.URLFull(fullURL))
-
-	// Server address and port
-	serverAddr, serverPort := http.ServerAddressPortAttributes(e.Host[:])
-	if serverAddr.Valid() {
-		attrs = append(attrs, serverAddr)
-	}
-	if serverPort.Valid() {
-		attrs = append(attrs, serverPort)
-	}
-
-	proto := unix.ByteSliceToString(e.Proto[:])
-	if proto != "" {
-		parts := strings.Split(proto, "/")
-		if len(parts) == 2 {
-			if parts[0] != "HTTP" {
-				attrs = append(attrs, semconv.NetworkProtocolName(parts[0]))
-			}
-			attrs = append(attrs, semconv.NetworkProtocolVersion(parts[1]))
+		method := unix.ByteSliceToString(e.Method[:])
+		path := unix.ByteSliceToString(e.Path[:])
+		scheme := unix.ByteSliceToString(e.Scheme[:])
+		opaque := unix.ByteSliceToString(e.Opaque[:])
+		host := unix.ByteSliceToString(e.Host[:])
+		rawPath := unix.ByteSliceToString(e.RawPath[:])
+		rawQuery := unix.ByteSliceToString(e.RawQuery[:])
+		username := unix.ByteSliceToString(e.Username[:])
+		fragment := unix.ByteSliceToString(e.Fragment[:])
+		rawFragment := unix.ByteSliceToString(e.RawFragment[:])
+		forceQuery := e.ForceQuery != 0
+		omitHost := e.OmitHost != 0
+		var user *url.Userinfo
+		if len(username) > 0 {
+			// check that username!="", otherwise url.User will instantiate
+			// an empty, non-nil *Userinfo object which url.String() will parse
+			// to just "@" in the final fullUrl
+			user = url.User(username)
 		}
-	}
 
-	spanEvent := &probe.SpanEvent{
-		SpanName:          method,
-		StartTime:         utils.BootOffsetToTime(e.StartTime),
-		EndTime:           utils.BootOffsetToTime(e.EndTime),
-		SpanContext:       &sc,
-		Attributes:        attrs,
-		ParentSpanContext: pscPtr,
-		TracerSchema:      semconv.SchemaURL,
-	}
+		attrs := []attribute.KeyValue{
+			semconv.HTTPRequestMethodKey.String(method),
+			semconv.HTTPResponseStatusCodeKey.Int(int(e.StatusCode)),
+		}
 
-	if int(e.StatusCode) >= 400 && int(e.StatusCode) < 600 {
-		spanEvent.Status = probe.Status{Code: codes.Error}
-	}
+		if path != "" {
+			attrs = append(attrs, semconv.URLPath(path))
+		}
 
-	return []*probe.SpanEvent{spanEvent}
+		urlObj := &url.URL{
+			Path:        path,
+			Scheme:      scheme,
+			Opaque:      opaque,
+			Host:        host,
+			RawPath:     rawPath,
+			User:        user,
+			RawQuery:    rawQuery,
+			Fragment:    fragment,
+			RawFragment: rawFragment,
+			ForceQuery:  forceQuery,
+			OmitHost:    omitHost,
+		}
+
+		fullURL := urlObj.String()
+		attrs = append(attrs, semconv.URLFull(fullURL))
+
+		// Server address and port
+		serverAddr, serverPort := http.ServerAddressPortAttributes(e.Host[:])
+		if serverAddr.Valid() {
+			attrs = append(attrs, serverAddr)
+		}
+		if serverPort.Valid() {
+			attrs = append(attrs, serverPort)
+		}
+
+		proto := unix.ByteSliceToString(e.Proto[:])
+		if proto != "" {
+			parts := strings.Split(proto, "/")
+			if len(parts) == 2 {
+				if parts[0] != "HTTP" {
+					attrs = append(attrs, semconv.NetworkProtocolName(parts[0]))
+				}
+				attrs = append(attrs, semconv.NetworkProtocolVersion(parts[1]))
+			}
+		}
+
+		span := ss.Spans().AppendEmpty()
+		span.SetName(method)
+		span.SetKind(ptrace.SpanKindClient)
+		span.SetStartTimestamp(utils.BootOffsetToTimestamp(e.StartTime))
+		span.SetEndTimestamp(utils.BootOffsetToTimestamp(e.EndTime))
+		span.SetTraceID(pcommon.TraceID(e.SpanContext.TraceID))
+		span.SetSpanID(pcommon.SpanID(e.SpanContext.SpanID))
+		span.SetFlags(uint32(trace.FlagsSampled))
+		span.SetKind(ptrace.SpanKindClient)
+
+		if e.ParentSpanContext.SpanID.IsValid() {
+			span.SetParentSpanID(pcommon.SpanID(e.ParentSpanContext.SpanID))
+		}
+
+		utils.Attributes(span.Attributes(), attrs...)
+
+		if int(e.StatusCode) >= 400 && int(e.StatusCode) < 600 {
+			span.Status().SetCode(ptrace.StatusCodeError)
+		}
+
+		return ss
+	}
 }

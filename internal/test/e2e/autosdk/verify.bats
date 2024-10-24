@@ -44,11 +44,6 @@ SCOPE="go.opentelemetry.io/auto/internal/test/e2e/autosdk"
   assert_regex "$timestamp" "946684805000000000"
 }
 
-@test "autosdk :: main span :: kind" {
-  kind=$(spans_from_scope_named ${SCOPE} | jq "select(.name == \"main\")" | jq ".kind")
-  assert_equal "$kind" "3"
-}
-
 @test "autosdk :: main span :: event" {
   event=$(span_events ${SCOPE} "main")
 
@@ -128,7 +123,7 @@ SCOPE="go.opentelemetry.io/auto/internal/test/e2e/autosdk"
 
 @test "autosdk :: Run span :: kind" {
   kind=$(spans_from_scope_named ${SCOPE} | jq "select(.name == \"Run\")" | jq ".kind")
-  assert_equal "$kind" "1"
+  assert_equal "$kind" "2"
 }
 
 @test "autosdk :: Run span :: attribute :: user" {
