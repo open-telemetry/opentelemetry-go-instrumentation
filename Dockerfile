@@ -12,7 +12,7 @@ COPY go.mod go.sum ./
 RUN --mount=type=cache,target=/go/pkg \
     go mod download && go mod verify
 
-FROM --platform=$BUILDPLATFORM base as builder
+FROM --platform=$BUILDPLATFORM base AS builder
 COPY . .
 
 ARG TARGETARCH
