@@ -27,7 +27,7 @@ jobs:
           uname -p;
           clang --version;
       - run: make test
-      - run: sudo make test_ebpf
+      - run: sudo make test-ebpf
       - run: make check-clean-work-tree
   generate-and-test-arm64:
     runs-on: macos-latest
