@@ -180,7 +180,7 @@ int uprobe_http2Server_WriteStatus(struct pt_regs *ctx) {
     void *key = get_consistent_key(ctx, go_context.data);
 
     struct grpc_request_t *grpcReq_event_ptr = bpf_map_lookup_elem(&grpc_events, &key);
-    // if grpcReq_event is null, then handleStream probe didn't run. Try starting a new span here
+    // if we fail to get an active grpc span, nothing to do here
     if (grpcReq_event_ptr == NULL)
     {
         bpf_printk("failed to get grpcReq_event from events map");
