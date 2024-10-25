@@ -71,7 +71,7 @@
                   }
                 }
               ],
-              "flags": 768,
+              "flags": 256,
               "kind": 3,
               "name": "child override",
               "parentSpanId": "xxxxx",
