@@ -192,6 +192,5 @@ int uprobe_http2Server_WriteStatus(struct pt_regs *ctx) {
     bpf_probe_read_user(&s_ptr, sizeof(s_ptr), (void *)(status_ptr + status_s_pos));
     // Get status code from Status.s pointer
     bpf_probe_read_user(&grpcReq_event_ptr->status_code, sizeof(grpcReq_event_ptr->status_code), (void *)(s_ptr + status_code_pos));
-    bpf_map_update_elem(&grpc_events, &key, grpcReq_event_ptr, 0);
     return 0;
 }
