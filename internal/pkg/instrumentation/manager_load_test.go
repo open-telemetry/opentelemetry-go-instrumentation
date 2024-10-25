@@ -1,7 +1,7 @@
-//go:build multi_kernel_test
-
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
+
+//go:build multi_kernel_test
 
 package instrumentation
 
@@ -21,7 +21,7 @@ func TestLoadProbes(t *testing.T) {
 	t.Logf("Running on kernel %s", ver.String())
 	m := fakeManager(t)
 
-	probes := availableProbes(m.logger, true)
+	probes := m.availableProbes()
 	assert.NotEmpty(t, probes)
 
 	for _, p := range probes {
@@ -44,7 +44,7 @@ func TestLoadProbes(t *testing.T) {
 }
 
 func fakeManager(t *testing.T) *Manager {
-	m, err := NewManager(slog.Default(), nil, true, nil, NewNoopConfigProvider(nil))
+	m, err := NewManager(slog.Default(), nil, true, nil, NewNoopConfigProvider(nil), "")
 	assert.NoError(t, err)
 	assert.NotNil(t, m)
 

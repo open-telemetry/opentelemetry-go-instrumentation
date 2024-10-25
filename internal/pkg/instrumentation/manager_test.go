@@ -16,7 +16,9 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"go.opentelemetry.io/collector/pdata/ptrace"
 	"go.opentelemetry.io/otel/trace"
+	"go.opentelemetry.io/otel/trace/noop"
 
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/probe"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/probe/sampling"
@@ -185,7 +187,7 @@ func TestDependencyChecks(t *testing.T) {
 }
 
 func fakeManager(t *testing.T) *Manager {
-	m, err := NewManager(slog.Default(), nil, true, nil, NewNoopConfigProvider(nil))
+	m, err := NewManager(slog.Default(), nil, true, nil, NewNoopConfigProvider(nil), "")
 	assert.NoError(t, err)
 	assert.NotNil(t, m)
 
@@ -211,7 +213,7 @@ func mockExeAndBpffs(t *testing.T) {
 }
 
 type shutdownTracerProvider struct {
-	trace.TracerProvider
+	noop.TracerProvider
 
 	called bool
 }
@@ -226,14 +228,14 @@ func TestRunStopping(t *testing.T) {
 	p := newSlowProbe(probeStop)
 
 	tp := new(shutdownTracerProvider)
-	ctrl, err := opentelemetry.NewController(slog.Default(), tp, "")
+	ctrl, err := opentelemetry.NewController(slog.Default(), tp)
 	require.NoError(t, err)
 
 	m := &Manager{
 		otelController: ctrl,
 		logger:         slog.Default(),
 		probes:         map[probe.ID]probe.Probe{{}: p},
-		eventCh:        make(chan *probe.Event),
+		telemetryCh:    make(chan ptrace.ScopeSpans),
 		cp:             NewNoopConfigProvider(nil),
 	}
 
@@ -286,7 +288,7 @@ func (p slowProbe) Load(*link.Executable, *process.TargetDetails, *sampling.Conf
 	return nil
 }
 
-func (p slowProbe) Run(c chan<- *probe.Event) {
+func (p slowProbe) Run(c chan<- ptrace.ScopeSpans) {
 }
 
 func (p slowProbe) Close() error {
@@ -306,7 +308,7 @@ func (p *noopProbe) Load(*link.Executable, *process.TargetDetails, *sampling.Con
 	return nil
 }
 
-func (p *noopProbe) Run(c chan<- *probe.Event) {
+func (p *noopProbe) Run(c chan<- ptrace.ScopeSpans) {
 	p.running = true
 }
 
@@ -368,7 +370,7 @@ func TestConfigProvider(t *testing.T) {
 			netHTTPServerProbeID:       &noopProbe{},
 			somePackageProducerProbeID: &noopProbe{},
 		},
-		eventCh: make(chan *probe.Event),
+		telemetryCh: make(chan ptrace.ScopeSpans),
 		cp: newDummyProvider(Config{
 			InstrumentationLibraryConfigs: map[LibraryID]Library{
 				netHTTPClientLibID: {TracesEnabled: &falseVal},
@@ -473,10 +475,10 @@ func (p *hangingProbe) Load(*link.Executable, *process.TargetDetails, *sampling.
 	return nil
 }
 
-func (p *hangingProbe) Run(c chan<- *probe.Event) {
+func (p *hangingProbe) Run(c chan<- ptrace.ScopeSpans) {
 	<-p.closeReturned
 	// Write after Close has returned.
-	c <- new(probe.Event)
+	c <- ptrace.NewScopeSpans()
 }
 
 func (p *hangingProbe) Close() error {
@@ -489,14 +491,14 @@ func TestRunStopDeadlock(t *testing.T) {
 	p := newHangingProbe()
 
 	tp := new(shutdownTracerProvider)
-	ctrl, err := opentelemetry.NewController(slog.Default(), tp, "")
+	ctrl, err := opentelemetry.NewController(slog.Default(), tp)
 	require.NoError(t, err)
 
 	m := &Manager{
 		otelController: ctrl,
 		logger:         slog.Default(),
 		probes:         map[probe.ID]probe.Probe{{}: p},
-		eventCh:        make(chan *probe.Event),
+		telemetryCh:    make(chan ptrace.ScopeSpans),
 		cp:             NewNoopConfigProvider(nil),
 	}
 
