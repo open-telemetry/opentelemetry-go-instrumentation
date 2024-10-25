@@ -183,7 +183,7 @@
                   }
                 }
               ],
-              "flags": 768,
+              "flags": 256,
               "kind": 5,
               "name": "topic1 receive",
               "parentSpanId": "xxxxx",
