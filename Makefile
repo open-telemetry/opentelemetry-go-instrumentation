@@ -6,6 +6,7 @@ TOOLS_MOD_DIR := ./internal/tools
 TOOLS = $(CURDIR)/.tools
 
 ALL_GO_MOD_DIRS := $(shell find . -type f -name 'go.mod' ! -path './LICENSES/*' -exec dirname {} \; | sort)
+ALL_GO_MODS := $(shell find . -type f -name 'go.mod' ! -path '$(TOOLS_MOD_DIR)/*' ! -path './LICENSES/*' | sort)
 
 # Build the list of include directories to compile the bpf program
 BPF_INCLUDE += -I${REPODIR}/internal/include/libbpf
@@ -19,7 +20,7 @@ CGO_ENABLED=0
 .DEFAULT_GOAL := precommit
 
 .PHONY: precommit
-precommit: license-header-check dependabot-generate go-mod-tidy golangci-lint-fix codespell
+precommit: license-header-check dependabot-generate golangci-lint-fix test codespell
 
 # Tools
 $(TOOLS):
@@ -49,22 +50,14 @@ $(TOOLS)/offsetgen: PACKAGE=go.opentelemetry.io/auto/$(TOOLS_MOD_DIR)/inspect/cm
 .PHONY: tools
 tools: $(GOLICENSES) $(MULTIMOD) $(GOLANGCI_LINT) $(DBOTCONF) $(OFFSETGEN)
 
-ALL_GO_MODS := $(shell find . -type f -name 'go.mod' ! -path '$(TOOLS_MOD_DIR)/*' ! -path './LICENSES/*' | sort)
-GO_MODS_TO_TEST := $(ALL_GO_MODS:%=test/%)
-GO_MODS_TO_EBPF_TEST := $(ALL_GO_MODS:%=test_ebpf/%)
-
-.PHONY: test
-test: generate $(GO_MODS_TO_TEST)
-test/%: GO_MOD=$*
-test/%:
-	cd $(shell dirname $(GO_MOD)) && $(GOCMD) test -v ./...
-
-# These tests need to be run as privileged user/with sudo
-.PHONY: test_ebpf
-test_ebpf: generate $(GO_MODS_TO_EBPF_TEST)
-test_ebpf/%: GO_MOD=$*
-test_ebpf/%:
-	cd $(shell dirname $(GO_MOD)) && $(GOCMD) test -v -tags=ebpf_test -run ^TestEBPF ./...
+TEST_TARGETS := test-verbose test-ebpf
+.PHONY: $(TEST_TARGETS) test
+test-ebpf: ARGS = -tags=ebpf_test -run ^TestEBPF # These need to be run with sudo.
+test-verbose: ARGS = -v
+$(TEST_TARGETS): test
+test: generate $(ALL_GO_MODS:%=test/%)
+test/%/go.mod:
+	@cd $* && $(GOCMD) test $(ARGS) ./...
 
 .PHONY: generate
 generate: export CFLAGS := $(BPF_INCLUDE)
