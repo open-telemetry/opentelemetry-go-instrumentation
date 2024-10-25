@@ -9,13 +9,12 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/collector/pdata/pcommon"
+	"go.opentelemetry.io/collector/pdata/ptrace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
 	"go.opentelemetry.io/otel/trace"
 
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/context"
-	"go.opentelemetry.io/auto/internal/pkg/instrumentation/probe"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/utils"
 )
 
@@ -28,16 +27,11 @@ func TestProbeConvertEvent(t *testing.T) {
 
 	traceID := trace.TraceID{1}
 	spanID := trace.SpanID{1}
-	sc := trace.NewSpanContext(trace.SpanContextConfig{
-		TraceID:    traceID,
-		SpanID:     spanID,
-		TraceFlags: trace.FlagsSampled,
-	})
 
 	testCases := []struct {
 		name     string
 		event    *event
-		expected []*probe.SpanEvent
+		expected ptrace.SpanSlice
 	}{
 		{
 			name: "basic server test",
@@ -59,25 +53,30 @@ func TestProbeConvertEvent(t *testing.T) {
 				// "HTTP/1.1"
 				Proto: [8]byte{0x48, 0x54, 0x54, 0x50, 0x2f, 0x31, 0x2e, 0x31},
 			},
-			expected: []*probe.SpanEvent{
-				{
-					SpanName:    "GET",
-					StartTime:   start,
-					EndTime:     end,
-					SpanContext: &sc,
-					Attributes: []attribute.KeyValue{
-						semconv.HTTPRequestMethodKey.String("GET"),
-						semconv.URLPath("/foo/bar"),
-						semconv.HTTPResponseStatusCodeKey.Int(200),
-						semconv.NetworkPeerAddress("www.google.com"),
-						semconv.NetworkPeerPort(8080),
-						semconv.ServerAddress("localhost"),
-						semconv.ServerPort(8080),
-						semconv.NetworkProtocolVersion("1.1"),
-					},
-					TracerSchema: semconv.SchemaURL,
-				},
-			},
+			expected: func() ptrace.SpanSlice {
+				spans := ptrace.NewSpanSlice()
+				span := spans.AppendEmpty()
+				span.SetName("GET")
+				span.SetKind(ptrace.SpanKindServer)
+				span.SetStartTimestamp(utils.BootOffsetToTimestamp(startOffset))
+				span.SetEndTimestamp(utils.BootOffsetToTimestamp(endOffset))
+				span.SetTraceID(pcommon.TraceID(traceID))
+				span.SetSpanID(pcommon.SpanID(spanID))
+				span.SetFlags(uint32(trace.FlagsSampled))
+				utils.Attributes(
+					span.Attributes(),
+					semconv.HTTPRequestMethodKey.String("GET"),
+					semconv.URLPath("/foo/bar"),
+					semconv.HTTPResponseStatusCodeKey.Int(200),
+					semconv.NetworkPeerAddress("www.google.com"),
+					semconv.NetworkPeerPort(8080),
+					semconv.ServerAddress("localhost"),
+					semconv.ServerPort(8080),
+					semconv.NetworkProtocolVersion("1.1"),
+				)
+
+				return spans
+			}(),
 		},
 		{
 			name: "proto name added when not HTTP",
@@ -99,26 +98,31 @@ func TestProbeConvertEvent(t *testing.T) {
 				// "FOO/2.2"
 				Proto: [8]byte{0x46, 0x4f, 0x4f, 0x2f, 0x32, 0x2e, 0x32},
 			},
-			expected: []*probe.SpanEvent{
-				{
-					SpanName:    "GET",
-					StartTime:   start,
-					EndTime:     end,
-					SpanContext: &sc,
-					Attributes: []attribute.KeyValue{
-						semconv.HTTPRequestMethodKey.String("GET"),
-						semconv.URLPath("/foo/bar"),
-						semconv.HTTPResponseStatusCodeKey.Int(200),
-						semconv.NetworkPeerAddress("www.google.com"),
-						semconv.NetworkPeerPort(8080),
-						semconv.ServerAddress("localhost"),
-						semconv.ServerPort(8080),
-						semconv.NetworkProtocolName("FOO"),
-						semconv.NetworkProtocolVersion("2.2"),
-					},
-					TracerSchema: semconv.SchemaURL,
-				},
-			},
+			expected: func() ptrace.SpanSlice {
+				spans := ptrace.NewSpanSlice()
+				span := spans.AppendEmpty()
+				span.SetName("GET")
+				span.SetKind(ptrace.SpanKindServer)
+				span.SetStartTimestamp(utils.BootOffsetToTimestamp(startOffset))
+				span.SetEndTimestamp(utils.BootOffsetToTimestamp(endOffset))
+				span.SetTraceID(pcommon.TraceID(traceID))
+				span.SetSpanID(pcommon.SpanID(spanID))
+				span.SetFlags(uint32(trace.FlagsSampled))
+				utils.Attributes(
+					span.Attributes(),
+					semconv.HTTPRequestMethodKey.String("GET"),
+					semconv.URLPath("/foo/bar"),
+					semconv.HTTPResponseStatusCodeKey.Int(200),
+					semconv.NetworkPeerAddress("www.google.com"),
+					semconv.NetworkPeerPort(8080),
+					semconv.ServerAddress("localhost"),
+					semconv.ServerPort(8080),
+					semconv.NetworkProtocolName("FOO"),
+					semconv.NetworkProtocolVersion("2.2"),
+				)
+
+				return spans
+			}(),
 		},
 		{
 			name: "server statuscode 400 doesn't set span.Status",
@@ -140,25 +144,30 @@ func TestProbeConvertEvent(t *testing.T) {
 				// "HTTP/1.1"
 				Proto: [8]byte{0x48, 0x54, 0x54, 0x50, 0x2f, 0x31, 0x2e, 0x31},
 			},
-			expected: []*probe.SpanEvent{
-				{
-					SpanName:    "GET",
-					StartTime:   start,
-					EndTime:     end,
-					SpanContext: &sc,
-					Attributes: []attribute.KeyValue{
-						semconv.HTTPRequestMethodKey.String("GET"),
-						semconv.URLPath("/foo/bar"),
-						semconv.HTTPResponseStatusCodeKey.Int(400),
-						semconv.NetworkPeerAddress("www.google.com"),
-						semconv.NetworkPeerPort(8080),
-						semconv.ServerAddress("localhost"),
-						semconv.ServerPort(8080),
-						semconv.NetworkProtocolVersion("1.1"),
-					},
-					TracerSchema: semconv.SchemaURL,
-				},
-			},
+			expected: func() ptrace.SpanSlice {
+				spans := ptrace.NewSpanSlice()
+				span := spans.AppendEmpty()
+				span.SetName("GET")
+				span.SetKind(ptrace.SpanKindServer)
+				span.SetStartTimestamp(utils.BootOffsetToTimestamp(startOffset))
+				span.SetEndTimestamp(utils.BootOffsetToTimestamp(endOffset))
+				span.SetTraceID(pcommon.TraceID(traceID))
+				span.SetSpanID(pcommon.SpanID(spanID))
+				span.SetFlags(uint32(trace.FlagsSampled))
+				utils.Attributes(
+					span.Attributes(),
+					semconv.HTTPRequestMethodKey.String("GET"),
+					semconv.URLPath("/foo/bar"),
+					semconv.HTTPResponseStatusCodeKey.Int(400),
+					semconv.NetworkPeerAddress("www.google.com"),
+					semconv.NetworkPeerPort(8080),
+					semconv.ServerAddress("localhost"),
+					semconv.ServerPort(8080),
+					semconv.NetworkProtocolVersion("1.1"),
+				)
+
+				return spans
+			}(),
 		},
 		{
 			name: "server statuscode 500 sets span.Status",
@@ -180,32 +189,37 @@ func TestProbeConvertEvent(t *testing.T) {
 				// "HTTP/1.1"
 				Proto: [8]byte{0x48, 0x54, 0x54, 0x50, 0x2f, 0x31, 0x2e, 0x31},
 			},
-			expected: []*probe.SpanEvent{
-				{
-					SpanName:    "GET",
-					StartTime:   start,
-					EndTime:     end,
-					SpanContext: &sc,
-					Attributes: []attribute.KeyValue{
-						semconv.HTTPRequestMethodKey.String("GET"),
-						semconv.URLPath("/foo/bar"),
-						semconv.HTTPResponseStatusCodeKey.Int(500),
-						semconv.NetworkPeerAddress("www.google.com"),
-						semconv.NetworkPeerPort(8080),
-						semconv.ServerAddress("localhost"),
-						semconv.ServerPort(8080),
-						semconv.NetworkProtocolVersion("1.1"),
-					},
-					Status:       probe.Status{Code: codes.Error},
-					TracerSchema: semconv.SchemaURL,
-				},
-			},
+			expected: func() ptrace.SpanSlice {
+				spans := ptrace.NewSpanSlice()
+				span := spans.AppendEmpty()
+				span.SetName("GET")
+				span.SetKind(ptrace.SpanKindServer)
+				span.SetStartTimestamp(utils.BootOffsetToTimestamp(startOffset))
+				span.SetEndTimestamp(utils.BootOffsetToTimestamp(endOffset))
+				span.SetTraceID(pcommon.TraceID(traceID))
+				span.SetSpanID(pcommon.SpanID(spanID))
+				span.SetFlags(uint32(trace.FlagsSampled))
+				span.Status().SetCode(ptrace.StatusCodeError)
+				utils.Attributes(
+					span.Attributes(),
+					semconv.HTTPRequestMethodKey.String("GET"),
+					semconv.URLPath("/foo/bar"),
+					semconv.HTTPResponseStatusCodeKey.Int(500),
+					semconv.NetworkPeerAddress("www.google.com"),
+					semconv.NetworkPeerPort(8080),
+					semconv.ServerAddress("localhost"),
+					semconv.ServerPort(8080),
+					semconv.NetworkProtocolVersion("1.1"),
+				)
+
+				return spans
+			}(),
 		},
 	}
 
 	for _, tt := range testCases {
 		t.Run(tt.name, func(t *testing.T) {
-			out := convertEvent(tt.event)
+			out := processFn(tt.event)
 			assert.Equal(t, tt.expected, out)
 		})
 	}
