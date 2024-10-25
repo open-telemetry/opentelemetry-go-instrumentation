@@ -88,13 +88,13 @@ func NewInstrumentation(ctx context.Context, opts ...InstrumentationOption) (*In
 		return nil, err
 	}
 
-	ctrl, err := opentelemetry.NewController(c.logger, c.tracerProvider(pa.BuildInfo), Version())
+	ctrl, err := opentelemetry.NewController(c.logger, c.tracerProvider(pa.BuildInfo))
 	if err != nil {
 		return nil, err
 	}
 
 	cp := convertConfigProvider(c.cp)
-	mngr, err := instrumentation.NewManager(c.logger, ctrl, c.globalImpl, c.loadIndicator, cp)
+	mngr, err := instrumentation.NewManager(c.logger, ctrl, c.globalImpl, c.loadIndicator, cp, Version())
 	if err != nil {
 		return nil, err
 	}
