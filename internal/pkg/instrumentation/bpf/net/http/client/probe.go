@@ -11,8 +11,9 @@ import (
 	"strings"
 
 	"github.com/cilium/ebpf"
+	"go.opentelemetry.io/collector/pdata/pcommon"
+	"go.opentelemetry.io/collector/pdata/ptrace"
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/codes"
 	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
 	"go.opentelemetry.io/otel/trace"
 	"golang.org/x/sys/unix"
@@ -33,7 +34,7 @@ const (
 )
 
 // New returns a new [probe.Probe].
-func New(logger *slog.Logger) probe.Probe {
+func New(logger *slog.Logger, version string) probe.Probe {
 	id := probe.ID{
 		SpanKind:        trace.SpanKindClient,
 		InstrumentedPkg: pkg,
@@ -62,100 +63,104 @@ func New(logger *slog.Logger) probe.Probe {
 		)
 	}
 
-	return &probe.Base[bpfObjects, event]{
-		ID:     id,
-		Logger: logger,
-		Consts: []probe.Const{
-			probe.RegistersABIConst{},
-			probe.AllocationConst{},
-			probe.StructFieldConst{
-				Key: "method_ptr_pos",
-				Val: structfield.NewID("std", "net/http", "Request", "Method"),
+	return &probe.SpanProducer[bpfObjects, event]{
+		Base: probe.Base[bpfObjects, event]{
+			ID:     id,
+			Logger: logger,
+			Consts: []probe.Const{
+				probe.RegistersABIConst{},
+				probe.AllocationConst{},
+				probe.StructFieldConst{
+					Key: "method_ptr_pos",
+					Val: structfield.NewID("std", "net/http", "Request", "Method"),
+				},
+				probe.StructFieldConst{
+					Key: "url_ptr_pos",
+					Val: structfield.NewID("std", "net/http", "Request", "URL"),
+				},
+				probe.StructFieldConst{
+					Key: "path_ptr_pos",
+					Val: structfield.NewID("std", "net/url", "URL", "Path"),
+				},
+				probe.StructFieldConst{
+					Key: "headers_ptr_pos",
+					Val: structfield.NewID("std", "net/http", "Request", "Header"),
+				},
+				probe.StructFieldConst{
+					Key: "ctx_ptr_pos",
+					Val: structfield.NewID("std", "net/http", "Request", "ctx"),
+				},
+				probe.StructFieldConst{
+					Key: "status_code_pos",
+					Val: structfield.NewID("std", "net/http", "Response", "StatusCode"),
+				},
+				probe.StructFieldConst{
+					Key: "request_host_pos",
+					Val: structfield.NewID("std", "net/http", "Request", "Host"),
+				},
+				probe.StructFieldConst{
+					Key: "request_proto_pos",
+					Val: structfield.NewID("std", "net/http", "Request", "Proto"),
+				},
+				probe.StructFieldConst{
+					Key: "io_writer_buf_ptr_pos",
+					Val: structfield.NewID("std", "bufio", "Writer", "buf"),
+				},
+				probe.StructFieldConst{
+					Key: "io_writer_n_pos",
+					Val: structfield.NewID("std", "bufio", "Writer", "n"),
+				},
+				probe.StructFieldConst{
+					Key: "scheme_pos",
+					Val: structfield.NewID("std", "net/url", "URL", "Scheme"),
+				},
+				probe.StructFieldConst{
+					Key: "opaque_pos",
+					Val: structfield.NewID("std", "net/url", "URL", "Opaque"),
+				},
+				probe.StructFieldConst{
+					Key: "user_ptr_pos",
+					Val: structfield.NewID("std", "net/url", "URL", "User"),
+				},
+				probe.StructFieldConst{
+					Key: "raw_path_pos",
+					Val: structfield.NewID("std", "net/url", "URL", "RawPath"),
+				},
+				probe.StructFieldConst{
+					Key: "omit_host_pos",
+					Val: structfield.NewID("std", "net/url", "URL", "OmitHost"),
+				},
+				probe.StructFieldConst{
+					Key: "force_query_pos",
+					Val: structfield.NewID("std", "net/url", "URL", "ForceQuery"),
+				},
+				probe.StructFieldConst{
+					Key: "raw_query_pos",
+					Val: structfield.NewID("std", "net/url", "URL", "RawQuery"),
+				},
+				probe.StructFieldConst{
+					Key: "fragment_pos",
+					Val: structfield.NewID("std", "net/url", "URL", "Fragment"),
+				},
+				probe.StructFieldConst{
+					Key: "raw_fragment_pos",
+					Val: structfield.NewID("std", "net/url", "URL", "RawFragment"),
+				},
+				probe.StructFieldConst{
+					Key: "username_pos",
+					Val: structfield.NewID("std", "net/url", "Userinfo", "username"),
+				},
+				probe.StructFieldConst{
+					Key: "url_host_pos",
+					Val: structfield.NewID("std", "net/url", "URL", "Host"),
+				},
 			},
-			probe.StructFieldConst{
-				Key: "url_ptr_pos",
-				Val: structfield.NewID("std", "net/http", "Request", "URL"),
-			},
-			probe.StructFieldConst{
-				Key: "path_ptr_pos",
-				Val: structfield.NewID("std", "net/url", "URL", "Path"),
-			},
-			probe.StructFieldConst{
-				Key: "headers_ptr_pos",
-				Val: structfield.NewID("std", "net/http", "Request", "Header"),
-			},
-			probe.StructFieldConst{
-				Key: "ctx_ptr_pos",
-				Val: structfield.NewID("std", "net/http", "Request", "ctx"),
-			},
-			probe.StructFieldConst{
-				Key: "status_code_pos",
-				Val: structfield.NewID("std", "net/http", "Response", "StatusCode"),
-			},
-			probe.StructFieldConst{
-				Key: "request_host_pos",
-				Val: structfield.NewID("std", "net/http", "Request", "Host"),
-			},
-			probe.StructFieldConst{
-				Key: "request_proto_pos",
-				Val: structfield.NewID("std", "net/http", "Request", "Proto"),
-			},
-			probe.StructFieldConst{
-				Key: "io_writer_buf_ptr_pos",
-				Val: structfield.NewID("std", "bufio", "Writer", "buf"),
-			},
-			probe.StructFieldConst{
-				Key: "io_writer_n_pos",
-				Val: structfield.NewID("std", "bufio", "Writer", "n"),
-			},
-			probe.StructFieldConst{
-				Key: "scheme_pos",
-				Val: structfield.NewID("std", "net/url", "URL", "Scheme"),
-			},
-			probe.StructFieldConst{
-				Key: "opaque_pos",
-				Val: structfield.NewID("std", "net/url", "URL", "Opaque"),
-			},
-			probe.StructFieldConst{
-				Key: "user_ptr_pos",
-				Val: structfield.NewID("std", "net/url", "URL", "User"),
-			},
-			probe.StructFieldConst{
-				Key: "raw_path_pos",
-				Val: structfield.NewID("std", "net/url", "URL", "RawPath"),
-			},
-			probe.StructFieldConst{
-				Key: "omit_host_pos",
-				Val: structfield.NewID("std", "net/url", "URL", "OmitHost"),
-			},
-			probe.StructFieldConst{
-				Key: "force_query_pos",
-				Val: structfield.NewID("std", "net/url", "URL", "ForceQuery"),
-			},
-			probe.StructFieldConst{
-				Key: "raw_query_pos",
-				Val: structfield.NewID("std", "net/url", "URL", "RawQuery"),
-			},
-			probe.StructFieldConst{
-				Key: "fragment_pos",
-				Val: structfield.NewID("std", "net/url", "URL", "Fragment"),
-			},
-			probe.StructFieldConst{
-				Key: "raw_fragment_pos",
-				Val: structfield.NewID("std", "net/url", "URL", "RawFragment"),
-			},
-			probe.StructFieldConst{
-				Key: "username_pos",
-				Val: structfield.NewID("std", "net/url", "Userinfo", "username"),
-			},
-			probe.StructFieldConst{
-				Key: "url_host_pos",
-				Val: structfield.NewID("std", "net/url", "URL", "Host"),
-			},
+			Uprobes: uprobes,
+			SpecFn:  verifyAndLoadBpf,
 		},
-		Uprobes:   uprobes,
-		SpecFn:    verifyAndLoadBpf,
-		ProcessFn: convertEvent,
+		Version:   version,
+		SchemaURL: semconv.SchemaURL,
+		ProcessFn: processFn,
 	}
 }
 
@@ -186,7 +191,7 @@ type event struct {
 	OmitHost    uint8
 }
 
-func convertEvent(e *event) []*probe.SpanEvent {
+func processFn(e *event) ptrace.SpanSlice {
 	method := unix.ByteSliceToString(e.Method[:])
 	path := unix.ByteSliceToString(e.Path[:])
 	scheme := unix.ByteSliceToString(e.Scheme[:])
@@ -205,25 +210,6 @@ func convertEvent(e *event) []*probe.SpanEvent {
 		// an empty, non-nil *Userinfo object which url.String() will parse
 		// to just "@" in the final fullUrl
 		user = url.User(username)
-	}
-
-	sc := trace.NewSpanContext(trace.SpanContextConfig{
-		TraceID:    e.SpanContext.TraceID,
-		SpanID:     e.SpanContext.SpanID,
-		TraceFlags: trace.FlagsSampled,
-	})
-
-	var pscPtr *trace.SpanContext
-	if e.ParentSpanContext.TraceID.IsValid() {
-		psc := trace.NewSpanContext(trace.SpanContextConfig{
-			TraceID:    e.ParentSpanContext.TraceID,
-			SpanID:     e.ParentSpanContext.SpanID,
-			TraceFlags: trace.FlagsSampled,
-			Remote:     true,
-		})
-		pscPtr = &psc
-	} else {
-		pscPtr = nil
 	}
 
 	attrs := []attribute.KeyValue{
@@ -272,19 +258,26 @@ func convertEvent(e *event) []*probe.SpanEvent {
 		}
 	}
 
-	spanEvent := &probe.SpanEvent{
-		SpanName:          method,
-		StartTime:         utils.BootOffsetToTime(e.StartTime),
-		EndTime:           utils.BootOffsetToTime(e.EndTime),
-		SpanContext:       &sc,
-		Attributes:        attrs,
-		ParentSpanContext: pscPtr,
-		TracerSchema:      semconv.SchemaURL,
+	spans := ptrace.NewSpanSlice()
+	span := spans.AppendEmpty()
+	span.SetName(method)
+	span.SetKind(ptrace.SpanKindClient)
+	span.SetStartTimestamp(utils.BootOffsetToTimestamp(e.StartTime))
+	span.SetEndTimestamp(utils.BootOffsetToTimestamp(e.EndTime))
+	span.SetTraceID(pcommon.TraceID(e.SpanContext.TraceID))
+	span.SetSpanID(pcommon.SpanID(e.SpanContext.SpanID))
+	span.SetFlags(uint32(trace.FlagsSampled))
+	span.SetKind(ptrace.SpanKindClient)
+
+	if e.ParentSpanContext.SpanID.IsValid() {
+		span.SetParentSpanID(pcommon.SpanID(e.ParentSpanContext.SpanID))
 	}
+
+	utils.Attributes(span.Attributes(), attrs...)
 
 	if int(e.StatusCode) >= 400 && int(e.StatusCode) < 600 {
-		spanEvent.Status = probe.Status{Code: codes.Error}
+		span.Status().SetCode(ptrace.StatusCodeError)
 	}
 
-	return []*probe.SpanEvent{spanEvent}
+	return spans
 }

@@ -8,13 +8,12 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
-	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/collector/pdata/pcommon"
+	"go.opentelemetry.io/collector/pdata/ptrace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
 	"go.opentelemetry.io/otel/trace"
 
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/context"
-	"go.opentelemetry.io/auto/internal/pkg/instrumentation/probe"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/utils"
 )
 
@@ -69,18 +68,11 @@ func TestConvertEvent(t *testing.T) {
 	assert.NoError(t, err)
 	trId, err := trace.TraceIDFromHex("00f067aa0ba902b700f067aa0ba902b7")
 	assert.NoError(t, err)
-	spanContext := trace.NewSpanContext(
-		trace.SpanContextConfig{
-			SpanID:     spId,
-			TraceID:    trId,
-			TraceFlags: 1,
-		},
-	)
 
 	testCases := []struct {
 		name     string
 		event    *event
-		expected []*probe.SpanEvent
+		expected ptrace.SpanSlice
 	}{
 		{
 			name: "basic client event",
@@ -97,23 +89,30 @@ func TestConvertEvent(t *testing.T) {
 					SpanContext: context.EBPFSpanContext{TraceID: trId, SpanID: spId},
 				},
 			},
-			expected: []*probe.SpanEvent{
-				{
-					SpanName:    methodString,
-					SpanContext: &spanContext,
-					StartTime:   startTime,
-					EndTime:     endTime,
-					Attributes: []attribute.KeyValue{
-						semconv.HTTPRequestMethodKey.String(methodString),
-						semconv.HTTPResponseStatusCodeKey.Int(200),
-						semconv.URLPath(pathString),
-						semconv.URLFull("http://google.com/home"),
-						semconv.ServerAddress(hostString),
-						semconv.NetworkProtocolVersion("1.1"),
-					},
-					TracerSchema: semconv.SchemaURL,
-				},
-			},
+			expected: func() ptrace.SpanSlice {
+				spans := ptrace.NewSpanSlice()
+				span := spans.AppendEmpty()
+				span.SetName(methodString)
+				span.SetKind(ptrace.SpanKindClient)
+				span.SetTraceID(pcommon.TraceID(trId))
+				span.SetSpanID(pcommon.SpanID(spId))
+				span.SetFlags(1)
+				span.SetKind(ptrace.SpanKindClient)
+				span.SetStartTimestamp(pcommon.NewTimestampFromTime(startTime))
+				span.SetEndTimestamp(pcommon.NewTimestampFromTime(endTime))
+
+				utils.Attributes(
+					span.Attributes(),
+					semconv.HTTPRequestMethodKey.String(methodString),
+					semconv.HTTPResponseStatusCodeKey.Int(200),
+					semconv.URLPath(pathString),
+					semconv.URLFull("http://google.com/home"),
+					semconv.ServerAddress(hostString),
+					semconv.NetworkProtocolVersion("1.1"),
+				)
+
+				return spans
+			}(),
 		},
 		{
 			name: "client event code 400",
@@ -130,24 +129,31 @@ func TestConvertEvent(t *testing.T) {
 					SpanContext: context.EBPFSpanContext{TraceID: trId, SpanID: spId},
 				},
 			},
-			expected: []*probe.SpanEvent{
-				{
-					SpanName:    methodString,
-					SpanContext: &spanContext,
-					StartTime:   startTime,
-					EndTime:     endTime,
-					Attributes: []attribute.KeyValue{
-						semconv.HTTPRequestMethodKey.String(methodString),
-						semconv.HTTPResponseStatusCodeKey.Int(400),
-						semconv.URLPath(pathString),
-						semconv.URLFull("http://google.com/home"),
-						semconv.ServerAddress(hostString),
-						semconv.NetworkProtocolVersion("1.1"),
-					},
-					Status:       probe.Status{Code: codes.Error},
-					TracerSchema: semconv.SchemaURL,
-				},
-			},
+			expected: func() ptrace.SpanSlice {
+				spans := ptrace.NewSpanSlice()
+				span := spans.AppendEmpty()
+				span.SetName(methodString)
+				span.SetKind(ptrace.SpanKindClient)
+				span.SetTraceID(pcommon.TraceID(trId))
+				span.SetSpanID(pcommon.SpanID(spId))
+				span.SetFlags(1)
+				span.SetKind(ptrace.SpanKindClient)
+				span.SetStartTimestamp(pcommon.NewTimestampFromTime(startTime))
+				span.SetEndTimestamp(pcommon.NewTimestampFromTime(endTime))
+				span.Status().SetCode(ptrace.StatusCodeError)
+
+				utils.Attributes(
+					span.Attributes(),
+					semconv.HTTPRequestMethodKey.String(methodString),
+					semconv.HTTPResponseStatusCodeKey.Int(400),
+					semconv.URLPath(pathString),
+					semconv.URLFull("http://google.com/home"),
+					semconv.ServerAddress(hostString),
+					semconv.NetworkProtocolVersion("1.1"),
+				)
+
+				return spans
+			}(),
 		},
 		{
 			name: "client event code 500",
@@ -164,24 +170,31 @@ func TestConvertEvent(t *testing.T) {
 					SpanContext: context.EBPFSpanContext{TraceID: trId, SpanID: spId},
 				},
 			},
-			expected: []*probe.SpanEvent{
-				{
-					SpanName:    methodString,
-					SpanContext: &spanContext,
-					StartTime:   startTime,
-					EndTime:     endTime,
-					Attributes: []attribute.KeyValue{
-						semconv.HTTPRequestMethodKey.String(methodString),
-						semconv.HTTPResponseStatusCodeKey.Int(500),
-						semconv.URLPath(pathString),
-						semconv.URLFull("http://google.com/home"),
-						semconv.ServerAddress(hostString),
-						semconv.NetworkProtocolVersion("1.1"),
-					},
-					Status:       probe.Status{Code: codes.Error},
-					TracerSchema: semconv.SchemaURL,
-				},
-			},
+			expected: func() ptrace.SpanSlice {
+				spans := ptrace.NewSpanSlice()
+				span := spans.AppendEmpty()
+				span.SetName(methodString)
+				span.SetKind(ptrace.SpanKindClient)
+				span.SetTraceID(pcommon.TraceID(trId))
+				span.SetSpanID(pcommon.SpanID(spId))
+				span.SetFlags(1)
+				span.SetKind(ptrace.SpanKindClient)
+				span.SetStartTimestamp(pcommon.NewTimestampFromTime(startTime))
+				span.SetEndTimestamp(pcommon.NewTimestampFromTime(endTime))
+				span.Status().SetCode(ptrace.StatusCodeError)
+
+				utils.Attributes(
+					span.Attributes(),
+					semconv.HTTPRequestMethodKey.String(methodString),
+					semconv.HTTPResponseStatusCodeKey.Int(500),
+					semconv.URLPath(pathString),
+					semconv.URLFull("http://google.com/home"),
+					semconv.ServerAddress(hostString),
+					semconv.NetworkProtocolVersion("1.1"),
+				)
+
+				return spans
+			}(),
 		},
 		{
 			name: "non-http protocol.name",
@@ -198,24 +211,31 @@ func TestConvertEvent(t *testing.T) {
 					SpanContext: context.EBPFSpanContext{TraceID: trId, SpanID: spId},
 				},
 			},
-			expected: []*probe.SpanEvent{
-				{
-					SpanName:    methodString,
-					SpanContext: &spanContext,
-					StartTime:   startTime,
-					EndTime:     endTime,
-					Attributes: []attribute.KeyValue{
-						semconv.HTTPRequestMethodKey.String(methodString),
-						semconv.HTTPResponseStatusCodeKey.Int(200),
-						semconv.URLPath(pathString),
-						semconv.URLFull("foo://google.com/home"),
-						semconv.ServerAddress(hostString),
-						semconv.NetworkProtocolName("foo"),
-						semconv.NetworkProtocolVersion("2.2"),
-					},
-					TracerSchema: semconv.SchemaURL,
-				},
-			},
+			expected: func() ptrace.SpanSlice {
+				spans := ptrace.NewSpanSlice()
+				span := spans.AppendEmpty()
+				span.SetName(methodString)
+				span.SetKind(ptrace.SpanKindClient)
+				span.SetTraceID(pcommon.TraceID(trId))
+				span.SetSpanID(pcommon.SpanID(spId))
+				span.SetFlags(1)
+				span.SetKind(ptrace.SpanKindClient)
+				span.SetStartTimestamp(pcommon.NewTimestampFromTime(startTime))
+				span.SetEndTimestamp(pcommon.NewTimestampFromTime(endTime))
+
+				utils.Attributes(
+					span.Attributes(),
+					semconv.HTTPRequestMethodKey.String(methodString),
+					semconv.HTTPResponseStatusCodeKey.Int(200),
+					semconv.URLPath(pathString),
+					semconv.URLFull("foo://google.com/home"),
+					semconv.ServerAddress(hostString),
+					semconv.NetworkProtocolName("foo"),
+					semconv.NetworkProtocolVersion("2.2"),
+				)
+
+				return spans
+			}(),
 		},
 		{
 			name: "basic url parsing",
@@ -235,23 +255,30 @@ func TestConvertEvent(t *testing.T) {
 					SpanContext: context.EBPFSpanContext{TraceID: trId, SpanID: spId},
 				},
 			},
-			expected: []*probe.SpanEvent{
-				{
-					SpanName:    methodString,
-					SpanContext: &spanContext,
-					StartTime:   startTime,
-					EndTime:     endTime,
-					Attributes: []attribute.KeyValue{
-						semconv.HTTPRequestMethodKey.String(methodString),
-						semconv.HTTPResponseStatusCodeKey.Int(200),
-						semconv.URLPath(pathString),
-						semconv.URLFull("http://user@google.com/home?query=true#fragment"),
-						semconv.ServerAddress(hostString),
-						semconv.NetworkProtocolVersion("1.1"),
-					},
-					TracerSchema: semconv.SchemaURL,
-				},
-			},
+			expected: func() ptrace.SpanSlice {
+				spans := ptrace.NewSpanSlice()
+				span := spans.AppendEmpty()
+				span.SetName(methodString)
+				span.SetKind(ptrace.SpanKindClient)
+				span.SetTraceID(pcommon.TraceID(trId))
+				span.SetSpanID(pcommon.SpanID(spId))
+				span.SetFlags(1)
+				span.SetKind(ptrace.SpanKindClient)
+				span.SetStartTimestamp(pcommon.NewTimestampFromTime(startTime))
+				span.SetEndTimestamp(pcommon.NewTimestampFromTime(endTime))
+
+				utils.Attributes(
+					span.Attributes(),
+					semconv.HTTPRequestMethodKey.String(methodString),
+					semconv.HTTPResponseStatusCodeKey.Int(200),
+					semconv.URLPath(pathString),
+					semconv.URLFull("http://user@google.com/home?query=true#fragment"),
+					semconv.ServerAddress(hostString),
+					semconv.NetworkProtocolVersion("1.1"),
+				)
+
+				return spans
+			}(),
 		},
 		{
 			// see https://cs.opensource.google/go/go/+/refs/tags/go1.22.2:src/net/url/url.go;l=815
@@ -272,28 +299,35 @@ func TestConvertEvent(t *testing.T) {
 					SpanContext: context.EBPFSpanContext{TraceID: trId, SpanID: spId},
 				},
 			},
-			expected: []*probe.SpanEvent{
-				{
-					SpanName:    methodString,
-					SpanContext: &spanContext,
-					StartTime:   startTime,
-					EndTime:     endTime,
-					Attributes: []attribute.KeyValue{
-						semconv.HTTPRequestMethodKey.String(methodString),
-						semconv.HTTPResponseStatusCodeKey.Int(200),
-						semconv.URLPath(pathString),
-						semconv.URLFull("http:/home?"),
-						semconv.NetworkProtocolVersion("1.1"),
-					},
-					TracerSchema: semconv.SchemaURL,
-				},
-			},
+			expected: func() ptrace.SpanSlice {
+				spans := ptrace.NewSpanSlice()
+				span := spans.AppendEmpty()
+				span.SetName(methodString)
+				span.SetKind(ptrace.SpanKindClient)
+				span.SetTraceID(pcommon.TraceID(trId))
+				span.SetSpanID(pcommon.SpanID(spId))
+				span.SetFlags(1)
+				span.SetKind(ptrace.SpanKindClient)
+				span.SetStartTimestamp(pcommon.NewTimestampFromTime(startTime))
+				span.SetEndTimestamp(pcommon.NewTimestampFromTime(endTime))
+
+				utils.Attributes(
+					span.Attributes(),
+					semconv.HTTPRequestMethodKey.String(methodString),
+					semconv.HTTPResponseStatusCodeKey.Int(200),
+					semconv.URLPath(pathString),
+					semconv.URLFull("http:/home?"),
+					semconv.NetworkProtocolVersion("1.1"),
+				)
+
+				return spans
+			}(),
 		},
 	}
 
 	for _, tt := range testCases {
 		t.Run(tt.name, func(t *testing.T) {
-			out := convertEvent(tt.event)
+			out := processFn(tt.event)
 			assert.Equal(t, tt.expected, out)
 		})
 	}
