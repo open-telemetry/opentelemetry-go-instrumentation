@@ -458,3 +458,74 @@ func TestConfigProvider(t *testing.T) {
 		m.cp.(*dummyProvider).sendConfig(Config{})
 	})
 }
+
+type hangingProbe struct {
+	probe.Probe
+
+	closeReturned chan struct{}
+}
+
+func newHangingProbe() *hangingProbe {
+	return &hangingProbe{closeReturned: make(chan struct{})}
+}
+
+func (p *hangingProbe) Load(*link.Executable, *process.TargetDetails, *sampling.Config) error {
+	return nil
+}
+
+func (p *hangingProbe) Run(c chan<- *probe.Event) {
+	<-p.closeReturned
+	// Write after Close has returned.
+	c <- new(probe.Event)
+}
+
+func (p *hangingProbe) Close() error {
+	defer close(p.closeReturned)
+	return nil
+}
+
+func TestRunStopDeadlock(t *testing.T) {
+	// Regression test for #1228.
+	p := newHangingProbe()
+
+	tp := new(shutdownTracerProvider)
+	ctrl, err := opentelemetry.NewController(slog.Default(), tp, "")
+	require.NoError(t, err)
+
+	m := &Manager{
+		otelController: ctrl,
+		logger:         slog.Default(),
+		probes:         map[probe.ID]probe.Probe{{}: p},
+		eventCh:        make(chan *probe.Event),
+		cp:             NewNoopConfigProvider(nil),
+	}
+
+	mockExeAndBpffs(t)
+
+	ctx, stopCtx := context.WithCancel(context.Background())
+	errCh := make(chan error, 1)
+	go func() { errCh <- m.Run(ctx, &process.TargetDetails{PID: 1000}) }()
+
+	assert.NotPanics(t, func() {
+		stopCtx()
+		assert.Eventually(t, func() bool {
+			select {
+			case <-p.closeReturned:
+				return true
+			default:
+				return false
+			}
+		}, time.Second, 10*time.Millisecond)
+	})
+
+	assert.Eventually(t, func() bool {
+		select {
+		case err = <-errCh:
+			return true
+		default:
+			return false
+		}
+	}, time.Second, 10*time.Millisecond)
+	assert.ErrorIs(t, err, context.Canceled, "Stopping Run error")
+	assert.True(t, tp.called, "Controller not stopped")
+}
