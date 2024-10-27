@@ -277,25 +277,30 @@ func (m *Manager) Run(ctx context.Context, target *process.TargetDetails) error 
 
 	go m.ConfigLoop(ctx)
 
-	for {
-		select {
-		case <-ctx.Done():
-			m.probeMu.Lock()
+	done := make(chan error, 1)
+	go func() {
+		defer close(done)
+		<-ctx.Done()
 
-			m.logger.Debug("Shutting down all probes")
-			err := m.cleanup(target)
+		m.probeMu.Lock()
 
-			// Wait for all probes to stop before closing the chan they send on.
-			m.runningProbesWG.Wait()
-			close(m.eventCh)
+		m.logger.Debug("Shutting down all probes")
+		err := m.cleanup(target)
 
-			m.state = managerStateStopped
-			m.probeMu.Unlock()
-			return errors.Join(err, ctx.Err())
-		case e := <-m.eventCh:
-			m.otelController.Trace(e)
-		}
+		// Wait for all probes to stop before closing the chan they send on.
+		m.runningProbesWG.Wait()
+		close(m.eventCh)
+
+		m.state = managerStateStopped
+		m.probeMu.Unlock()
+
+		done <- errors.Join(err, ctx.Err())
+	}()
+
+	for e := range m.eventCh {
+		m.otelController.Trace(e)
 	}
+	return <-done
 }
 
 func (m *Manager) load(target *process.TargetDetails) error {
