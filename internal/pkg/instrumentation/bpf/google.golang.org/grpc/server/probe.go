@@ -8,10 +8,13 @@ import (
 	"log/slog"
 
 	"github.com/hashicorp/go-version"
+	"golang.org/x/sys/unix"
+	"google.golang.org/grpc/codes"
+
 	"go.opentelemetry.io/otel/attribute"
+	otelcodes "go.opentelemetry.io/otel/codes"
 	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
 	"go.opentelemetry.io/otel/trace"
-	"golang.org/x/sys/unix"
 
 	"go.opentelemetry.io/auto/internal/pkg/inject"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/context"
@@ -60,6 +63,14 @@ func New(logger *slog.Logger) probe.Probe {
 				Key: "frame_stream_id_pod",
 				Val: structfield.NewID("golang.org/x/net", "golang.org/x/net/http2", "FrameHeader", "StreamID"),
 			},
+			probe.StructFieldConst{
+				Key: "status_s_pos",
+				Val: structfield.NewID("google.golang.org/grpc", "google.golang.org/grpc/internal/status", "Status", "s"),
+			},
+			probe.StructFieldConst{
+				Key: "status_code_pos",
+				Val: structfield.NewID("google.golang.org/grpc", "google.golang.org/genproto/googleapis/rpc/status", "Status", "Code"),
+			},
 			framePosConst{},
 		},
 		Uprobes: []probe.Uprobe{
@@ -71,6 +82,10 @@ func New(logger *slog.Logger) probe.Probe {
 			{
 				Sym:        "google.golang.org/grpc/internal/transport.(*http2Server).operateHeaders",
 				EntryProbe: "uprobe_http2Server_operateHeader",
+			},
+			{
+				Sym:        "google.golang.org/grpc/internal/transport.(*http2Server).WriteStatus",
+				EntryProbe: "uprobe_http2Server_WriteStatus",
 			},
 		},
 		SpecFn:    loadBpf,
@@ -100,7 +115,8 @@ func (c framePosConst) InjectOption(td *process.TargetDetails) (inject.Option, e
 // event represents an event in the gRPC server during a gRPC request.
 type event struct {
 	context.BaseSpanProperties
-	Method [100]byte
+	Method     [100]byte
+	StatusCode int32
 }
 
 func convertEvent(e *event) []*probe.SpanEvent {
@@ -125,18 +141,29 @@ func convertEvent(e *event) []*probe.SpanEvent {
 		pscPtr = nil
 	}
 
-	return []*probe.SpanEvent{
-		{
-			SpanName:  method,
-			StartTime: utils.BootOffsetToTime(e.StartTime),
-			EndTime:   utils.BootOffsetToTime(e.EndTime),
-			Attributes: []attribute.KeyValue{
-				semconv.RPCSystemKey.String("grpc"),
-				semconv.RPCServiceKey.String(method),
-			},
-			ParentSpanContext: pscPtr,
-			SpanContext:       &sc,
-			TracerSchema:      semconv.SchemaURL,
+	event := &probe.SpanEvent{
+		SpanName:  method,
+		StartTime: utils.BootOffsetToTime(e.StartTime),
+		EndTime:   utils.BootOffsetToTime(e.EndTime),
+		Attributes: []attribute.KeyValue{
+			semconv.RPCSystemKey.String("grpc"),
+			semconv.RPCServiceKey.String(method),
+			semconv.RPCGRPCStatusCodeKey.Int(int(e.StatusCode)),
 		},
+		ParentSpanContext: pscPtr,
+		SpanContext:       &sc,
+		TracerSchema:      semconv.SchemaURL,
 	}
+
+	// Set server status codes per semconv:
+	// See https://github.com/open-telemetry/semantic-conventions/blob/02ecf0c71e9fa74d09d81c48e04a132db2b7060b/docs/rpc/grpc.md#grpc-status
+	if e.StatusCode == int32(codes.Unknown) ||
+		e.StatusCode == int32(codes.DeadlineExceeded) ||
+		e.StatusCode == int32(codes.Unimplemented) ||
+		e.StatusCode == int32(codes.Internal) ||
+		e.StatusCode == int32(codes.Unavailable) ||
+		e.StatusCode == int32(codes.DataLoss) {
+		event.Status = probe.Status{Code: otelcodes.Error}
+	}
+	return []*probe.SpanEvent{event}
 }

@@ -10,46 +10,67 @@ SCOPE="go.opentelemetry.io/auto/google.golang.org/grpc"
 }
 
 @test "server :: emits a span name 'SayHello'" {
-  result=$(server_span_names_for ${SCOPE})
+  result=$(server_span_names_for ${SCOPE} | uniq)
   assert_equal "$result" '"/helloworld.Greeter/SayHello"'
 }
 
 @test "server :: includes rpc.system attribute" {
-  result=$(server_span_attributes_for ${SCOPE} | jq "select(.key == \"rpc.system\").value.stringValue")
+  result=$(server_span_attributes_for ${SCOPE} | jq "select(.key == \"rpc.system\").value.stringValue" | uniq)
   assert_equal "$result" '"grpc"'
 }
 
 @test "server :: includes rpc.service attribute" {
-  result=$(server_span_attributes_for ${SCOPE} | jq "select(.key == \"rpc.service\").value.stringValue")
+  result=$(server_span_attributes_for ${SCOPE} | jq "select(.key == \"rpc.service\").value.stringValue" | uniq)
   assert_equal "$result" '"/helloworld.Greeter/SayHello"'
 }
 
 @test "server :: trace ID present and valid in all spans" {
-  trace_id=$(server_spans_from_scope_named ${SCOPE} | jq ".traceId")
+  trace_id=$(server_spans_from_scope_named ${SCOPE} | jq ".traceId" | jq -Rn '[inputs]' | jq -r .[0])
+  assert_regex "$trace_id" ${MATCH_A_TRACE_ID}
+  trace_id=$(server_spans_from_scope_named ${SCOPE} | jq ".traceId" | jq -Rn '[inputs]' | jq -r .[1])
   assert_regex "$trace_id" ${MATCH_A_TRACE_ID}
 }
 
 @test "server :: span ID present and valid in all spans" {
-  span_id=$(server_spans_from_scope_named ${SCOPE} | jq ".spanId")
+  span_id=$(server_spans_from_scope_named ${SCOPE} | jq ".spanId" | jq -Rn '[inputs]' | jq -r .[0])
+  assert_regex "$span_id" ${MATCH_A_SPAN_ID}
+  span_id=$(server_spans_from_scope_named ${SCOPE} | jq ".spanId" | jq -Rn '[inputs]' | jq -r .[1])
   assert_regex "$span_id" ${MATCH_A_SPAN_ID}
 }
 
 @test "server :: parent span ID present and valid in all spans" {
-  parent_span_id=$(server_spans_from_scope_named ${SCOPE} | jq ".parentSpanId")
+  parent_span_id=$(server_spans_from_scope_named ${SCOPE} | jq ".parentSpanId" | jq -Rn '[inputs]' | jq -r .[0])
+  assert_regex "$parent_span_id" ${MATCH_A_SPAN_ID}
+  parent_span_id=$(server_spans_from_scope_named ${SCOPE} | jq ".parentSpanId" | jq -Rn '[inputs]' | jq -r .[1])
   assert_regex "$parent_span_id" ${MATCH_A_SPAN_ID}
 }
 
+@test "server :: error code is present for unsuccessful span" {
+  # gRPC error code 12 - Unimplemented
+  result=$(server_span_attributes_for ${SCOPE} | jq 'select(.key == "rpc.grpc.status_code" and .value.intValue == "12")')
+  assert_not_empty "$result"
+}
+
 @test "client, server :: spans have same trace ID" {
-  # only check the first client span (the 2nd is an error)
+  # only check the first and 2nd client span (the 3rd is an error)
   client_trace_id=$(client_spans_from_scope_named ${SCOPE} | jq ".traceId" | jq -Rn '[inputs]' | jq -r .[0])
-  server_trace_id=$(server_spans_from_scope_named ${SCOPE} | jq ".traceId")
+  server_trace_id=$(server_spans_from_scope_named ${SCOPE} | jq ".traceId" | jq -Rn '[inputs]' | jq -r .[0])
+  assert_equal "$server_trace_id" "$client_trace_id"
+
+  client_trace_id=$(client_spans_from_scope_named ${SCOPE} | jq ".traceId" | jq -Rn '[inputs]' | jq -r .[0])
+  server_trace_id=$(server_spans_from_scope_named ${SCOPE} | jq ".traceId" | jq -Rn '[inputs]' | jq -r .[0])
   assert_equal "$server_trace_id" "$client_trace_id"
 }
 
 @test "client, server :: server span has client span as parent" {
-  server_parent_span_id=$(server_spans_from_scope_named ${SCOPE} | jq ".parentSpanId")
-  # only check the first client span (the 2nd is an error)
+  server_parent_span_id=$(server_spans_from_scope_named ${SCOPE} | jq ".parentSpanId" | jq -Rn '[inputs]' | jq -r .[0])
+  # only check the first and 2nd client span (the 3rd is an error)
   client_span_id=$(client_spans_from_scope_named ${SCOPE} | jq ".spanId"| jq -Rn '[inputs]' | jq -r .[0])
+  assert_equal "$client_span_id" "$server_parent_span_id"
+
+  server_parent_span_id=$(server_spans_from_scope_named ${SCOPE} | jq ".parentSpanId" | jq -Rn '[inputs]' | jq -r .[1])
+  # only check the first and 2nd client span (the 3rd is an error)
+  client_span_id=$(client_spans_from_scope_named ${SCOPE} | jq ".spanId"| jq -Rn '[inputs]' | jq -r .[1])
   assert_equal "$client_span_id" "$server_parent_span_id"
 }
 
