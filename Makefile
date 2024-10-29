@@ -86,10 +86,12 @@ $(PROBE_GEN): %_bpfel.go: %_bpfel.o
 %/bpf_no_tp_arm64_bpfel.o: generate/%
 	$(info building $@)
 
-.PHONY: generate
+.PHONY: generate generate/all
 generate: go-mod-tidy $(PROBE_GEN)
 generate/%:
 	$(GOCMD) generate ./$*...
+generate/all:
+	$(GOCMD) generate ./...
 
 .PHONY: docker-generate
 docker-generate: docker-build-base
