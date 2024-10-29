@@ -18,8 +18,6 @@ export BPF2GO_CFLAGS
 
 # Go default variables
 GOCMD?= go
-GOOS=linux
-CGO_ENABLED=0
 
 .DEFAULT_GOAL := precommit
 
