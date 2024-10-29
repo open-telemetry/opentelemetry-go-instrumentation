@@ -20,14 +20,14 @@ import (
 	"go.opentelemetry.io/auto/sdk/telemetry"
 )
 
-// GetTracerProvider returns an auto-instrumentable [trace.TracerProvider].
+// TracerProvider returns an auto-instrumentable [trace.TracerProvider].
 //
 // If an [go.opentelemetry.io/auto.Instrumentation] is configured to instrument
 // the process using the returned TracerProvider, all of the telemetry it
 // produces will be processed and handled by that Instrumentation. By default,
 // if no Instrumentation instruments the TracerProvider it will not generate
 // any trace telemetry.
-func GetTracerProvider() trace.TracerProvider { return tracerProviderInstance }
+func TracerProvider() trace.TracerProvider { return tracerProviderInstance }
 
 var tracerProviderInstance = tracerProvider{}
 
@@ -383,4 +383,4 @@ func (s *span) SetName(name string) {
 	s.span.Name = name
 }
 
-func (*span) TracerProvider() trace.TracerProvider { return GetTracerProvider() }
+func (*span) TracerProvider() trace.TracerProvider { return TracerProvider() }
