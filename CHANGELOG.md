@@ -12,6 +12,7 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 
 - The SDK provided in `go.opentelemtry.io/auto/sdk` now defaults to NoOp behavior for unimplemented methods of the OpenTelemetry API.
   This is changed from causing a compilation error for unimplemented methods. ([#1230](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1230))
+- The `GetTracerProvider` fucntion in `go.opentelemtry.io/auto/sdk` is renamed to `TracerProvider`. ([#1231](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1231))
 
 ### Fixed
 

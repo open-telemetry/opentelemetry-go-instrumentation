@@ -79,7 +79,7 @@ func main() {
 	// give time for auto-instrumentation to start up
 	time.Sleep(5 * time.Second)
 
-	provider := sdk.GetTracerProvider()
+	provider := sdk.TracerProvider()
 	tracer := provider.Tracer(
 		pkgName,
 		trace.WithInstrumentationVersion(pkgVer),
