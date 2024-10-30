@@ -93,7 +93,7 @@ golangci-lint/%: | $(GOLANGCI_LINT)
 
 .PHONY: build
 build: generate
-	$(GOCMD) build -o otel-go-instrumentation ./cli/...
+	CGO_ENABLED=0 $(GOCMD) build -o otel-go-instrumentation ./cli/...
 
 .PHONY: docker-build
 docker-build:
