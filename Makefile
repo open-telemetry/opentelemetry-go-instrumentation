@@ -62,34 +62,19 @@ test/%/go.mod:
 	@cd $* && $(GOCMD) test $(ARGS) ./...
 
 PROBE_ROOT = internal/pkg/instrumentation/bpf/
-PROBE_DIRS = $(shell find $(PROBE_ROOT) -type d -exec sh -c '(ls -p "{}"|grep />/dev/null)||dirname "{}"' \;)
-PROBE_GEN := $(addsuffix /bpf_x86_bpfel.go,$(PROBE_DIRS))
-PROBE_GEN += $(addsuffix /bpf_arm64_bpfel.go,$(PROBE_DIRS))
-PROBE_GEN := $(wildcard $(PROBE_GEN))
-PROBE_GEN += internal/pkg/instrumentation/bpf/net/http/client/bpf_no_tp_arm64_bpfel.go
-PROBE_GEN += internal/pkg/instrumentation/bpf/net/http/client/bpf_no_tp_x86_bpfel.go
+PROBE_GEN_GO := $(shell find $(PROBE_ROOT) -type f -name 'bpf_*_bpfe[lb].go')
+PROBE_GEN_OBJ := $(PROBE_GEN_GO:.go=.o)
 
 # Include all depinfo files to ensure we only re-generate when needed.
 -include $(shell find $(PROBE_ROOT) -type f -name 'bpf_*_bpfel.go.d')
 
-$(PROBE_GEN): %_bpfel.go: %_bpfel.o
-
-%/bpf_x86_bpfel.o: generate/%
-	$(info building $@)
-
-%/bpf_arm64_bpfel.o: generate/%
-	$(info building $@)
-
-%/bpf_no_tp_x86_bpfel.o: generate/%
-	$(info building $@)
-
-%/bpf_no_tp_arm64_bpfel.o: generate/%
-	$(info building $@)
-
 .PHONY: generate generate/all
-generate: go-mod-tidy $(PROBE_GEN)
-generate/%:
-	$(GOCMD) generate ./$*...
+generate: go-mod-tidy $(PROBE_GEN_GO)
+$(PROBE_GEN_GO): %.go: %.o
+
+$(PROBE_GEN_OBJ):
+	$(GOCMD) generate ./$(dir $@)...
+
 generate/all:
 	$(GOCMD) generate ./...
 
