@@ -8,6 +8,10 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 
 ## [Unreleased]
 
+### Changed
+
+- The `GetTracerProvider` fucntion in `go.opentelemtry.io/auto/sdk` is renamed to `TracerProvider`. ([#1231](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1231))
+
 ### Fixed
 
 - Sporadic shutdown deadlock. ([#1220](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1220))
