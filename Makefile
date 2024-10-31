@@ -57,7 +57,7 @@ TEST_TARGETS := test-verbose test-ebpf
 test-ebpf: ARGS = -tags=ebpf_test -run ^TestEBPF # These need to be run with sudo.
 test-verbose: ARGS = -v
 $(TEST_TARGETS): test
-test: generate $(ALL_GO_MODS:%=test/%)
+test: go-mod-tidy generate $(ALL_GO_MODS:%=test/%)
 test/%/go.mod:
 	@cd $* && $(GOCMD) test $(ARGS) ./...
 
@@ -69,7 +69,7 @@ PROBE_GEN_OBJ := $(PROBE_GEN_GO:.go=.o)
 -include $(shell find $(PROBE_ROOT) -type f -name 'bpf_*_bpfel.go.d')
 
 .PHONY: generate generate/all
-generate: go-mod-tidy $(PROBE_GEN_GO)
+generate: $(PROBE_GEN_GO)
 $(PROBE_GEN_GO): %.go: %.o
 
 $(PROBE_GEN_OBJ):
@@ -99,7 +99,7 @@ go-mod-tidy/%:
 .PHONY: golangci-lint golangci-lint-fix
 golangci-lint-fix: ARGS=--fix
 golangci-lint-fix: golangci-lint
-golangci-lint: generate $(ALL_GO_MOD_DIRS:%=golangci-lint/%)
+golangci-lint: go-mod-tidy generate $(ALL_GO_MOD_DIRS:%=golangci-lint/%)
 golangci-lint/%: DIR=$*
 golangci-lint/%: | $(GOLANGCI_LINT)
 	@echo 'golangci-lint $(if $(ARGS),$(ARGS) ,)$(DIR)' \
@@ -107,7 +107,7 @@ golangci-lint/%: | $(GOLANGCI_LINT)
 		&& $(GOLANGCI_LINT) run --allow-serial-runners --timeout=2m0s $(ARGS)
 
 .PHONY: build
-build: generate
+build: go-mod-tidy generate
 	$(GOCMD) build -o otel-go-instrumentation ./cli/...
 
 .PHONY: docker-build
