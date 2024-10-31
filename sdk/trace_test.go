@@ -111,7 +111,7 @@ func TestSpanCreation(t *testing.T) {
 
 	ts := time.Now()
 
-	tracer := GetTracerProvider().Tracer(
+	tracer := TracerProvider().Tracer(
 		tracerName,
 		trace.WithInstrumentationVersion(tracerVer),
 		trace.WithSchemaURL(semconv.SchemaURL),

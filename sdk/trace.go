@@ -15,23 +15,23 @@ import (
 	"go.opentelemetry.io/otel/codes"
 	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
 	"go.opentelemetry.io/otel/trace"
-	"go.opentelemetry.io/otel/trace/embedded"
+	"go.opentelemetry.io/otel/trace/noop"
 
 	"go.opentelemetry.io/auto/sdk/telemetry"
 )
 
-// GetTracerProvider returns an auto-instrumentable [trace.TracerProvider].
+// TracerProvider returns an auto-instrumentable [trace.TracerProvider].
 //
 // If an [go.opentelemetry.io/auto.Instrumentation] is configured to instrument
 // the process using the returned TracerProvider, all of the telemetry it
 // produces will be processed and handled by that Instrumentation. By default,
 // if no Instrumentation instruments the TracerProvider it will not generate
 // any trace telemetry.
-func GetTracerProvider() trace.TracerProvider { return tracerProviderInstance }
+func TracerProvider() trace.TracerProvider { return tracerProviderInstance }
 
 var tracerProviderInstance = tracerProvider{}
 
-type tracerProvider struct{ embedded.TracerProvider }
+type tracerProvider struct{ noop.TracerProvider }
 
 var _ trace.TracerProvider = tracerProvider{}
 
@@ -45,7 +45,7 @@ func (p tracerProvider) Tracer(name string, opts ...trace.TracerOption) trace.Tr
 }
 
 type tracer struct {
-	embedded.Tracer
+	noop.Tracer
 
 	name, schemaURL, version string
 }
@@ -140,7 +140,7 @@ func spanKind(kind trace.SpanKind) telemetry.SpanKind {
 }
 
 type span struct {
-	embedded.Span
+	noop.Span
 
 	sampled     bool
 	spanContext trace.SpanContext
@@ -383,4 +383,4 @@ func (s *span) SetName(name string) {
 	s.span.Name = name
 }
 
-func (*span) TracerProvider() trace.TracerProvider { return GetTracerProvider() }
+func (*span) TracerProvider() trace.TracerProvider { return TracerProvider() }
