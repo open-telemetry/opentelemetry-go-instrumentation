@@ -18,6 +18,7 @@ export BPF2GO_CFLAGS
 
 # Go default variables
 GOCMD?= go
+CGO_ENABLED?=0
 
 .DEFAULT_GOAL := precommit
 
@@ -108,7 +109,7 @@ golangci-lint/%: | $(GOLANGCI_LINT)
 
 .PHONY: build
 build: go-mod-tidy generate
-	$(GOCMD) build -o otel-go-instrumentation ./cli/...
+	CGO_ENABLED=$(CGO_ENABLED) $(GOCMD) build -o otel-go-instrumentation ./cli/...
 
 .PHONY: docker-build
 docker-build:
