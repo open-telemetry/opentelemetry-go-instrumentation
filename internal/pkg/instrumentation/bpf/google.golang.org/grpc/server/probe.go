@@ -43,6 +43,7 @@ func New(logger *slog.Logger) probe.Probe {
 		Consts: []probe.Const{
 			probe.RegistersABIConst{},
 			probe.AllocationConst{},
+			writeStatusConst{},
 			probe.StructFieldConst{
 				Key: "stream_method_ptr_pos",
 				Val: structfield.NewID("google.golang.org/grpc", "google.golang.org/grpc/internal/transport", "Stream", "method"),
@@ -112,6 +113,22 @@ func (c framePosConst) InjectOption(td *process.TargetDetails) (inject.Option, e
 	return inject.WithKeyValue("is_new_frame_pos", ver.GreaterThanOrEqual(paramChangeVer)), nil
 }
 
+type writeStatusConst struct{}
+
+var writeStatus = false
+
+func (w writeStatusConst) InjectOption(td *process.TargetDetails) (inject.Option, error) {
+	writeStatusVersion := version.Must(version.NewVersion("1.40.0"))
+	ver, ok := td.Libraries[pkg]
+	if !ok {
+		return nil, fmt.Errorf("unknown module version: %s", pkg)
+	}
+	if ver.GreaterThanOrEqual(writeStatusVersion) {
+		writeStatus = true
+	}
+	return inject.WithKeyValue("write_status_supported", writeStatus), nil
+}
+
 // event represents an event in the gRPC server during a gRPC request.
 type event struct {
 	context.BaseSpanProperties
@@ -141,29 +158,33 @@ func convertEvent(e *event) []*probe.SpanEvent {
 		pscPtr = nil
 	}
 
+	attrs := []attribute.KeyValue{
+		semconv.RPCSystemKey.String("grpc"),
+		semconv.RPCServiceKey.String(method),
+	}
 	event := &probe.SpanEvent{
-		SpanName:  method,
-		StartTime: utils.BootOffsetToTime(e.StartTime),
-		EndTime:   utils.BootOffsetToTime(e.EndTime),
-		Attributes: []attribute.KeyValue{
-			semconv.RPCSystemKey.String("grpc"),
-			semconv.RPCServiceKey.String(method),
-			semconv.RPCGRPCStatusCodeKey.Int(int(e.StatusCode)),
-		},
+		SpanName:          method,
+		StartTime:         utils.BootOffsetToTime(e.StartTime),
+		EndTime:           utils.BootOffsetToTime(e.EndTime),
+		Attributes:        attrs,
 		ParentSpanContext: pscPtr,
 		SpanContext:       &sc,
 		TracerSchema:      semconv.SchemaURL,
 	}
 
-	// Set server status codes per semconv:
-	// See https://github.com/open-telemetry/semantic-conventions/blob/02ecf0c71e9fa74d09d81c48e04a132db2b7060b/docs/rpc/grpc.md#grpc-status
-	if e.StatusCode == int32(codes.Unknown) ||
-		e.StatusCode == int32(codes.DeadlineExceeded) ||
-		e.StatusCode == int32(codes.Unimplemented) ||
-		e.StatusCode == int32(codes.Internal) ||
-		e.StatusCode == int32(codes.Unavailable) ||
-		e.StatusCode == int32(codes.DataLoss) {
-		event.Status = probe.Status{Code: otelcodes.Error}
+	if writeStatus {
+		event.Attributes = append(event.Attributes, semconv.RPCGRPCStatusCodeKey.Int(int(e.StatusCode)))
+		// Set server status codes per semconv:
+		// See https://github.com/open-telemetry/semantic-conventions/blob/02ecf0c71e9fa74d09d81c48e04a132db2b7060b/docs/rpc/grpc.md#grpc-status
+		if e.StatusCode == int32(codes.Unknown) ||
+			e.StatusCode == int32(codes.DeadlineExceeded) ||
+			e.StatusCode == int32(codes.Unimplemented) ||
+			e.StatusCode == int32(codes.Internal) ||
+			e.StatusCode == int32(codes.Unavailable) ||
+			e.StatusCode == int32(codes.DataLoss) {
+			event.Status = probe.Status{Code: otelcodes.Error}
+		}
 	}
+
 	return []*probe.SpanEvent{event}
 }

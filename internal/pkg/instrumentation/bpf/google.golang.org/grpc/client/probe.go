@@ -10,15 +10,18 @@ import (
 	"strings"
 
 	"github.com/cilium/ebpf"
+	"github.com/hashicorp/go-version"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
 	"go.opentelemetry.io/otel/trace"
 	"golang.org/x/sys/unix"
 
+	"go.opentelemetry.io/auto/internal/pkg/inject"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/context"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/probe"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/utils"
+	"go.opentelemetry.io/auto/internal/pkg/process"
 	"go.opentelemetry.io/auto/internal/pkg/structfield"
 )
 
@@ -28,6 +31,22 @@ const (
 	// pkg is the package being instrumented.
 	pkg = "google.golang.org/grpc"
 )
+
+type writeStatusConst struct{}
+
+var writeStatus = false
+
+func (w writeStatusConst) InjectOption(td *process.TargetDetails) (inject.Option, error) {
+	writeStatusVersion := version.Must(version.NewVersion("1.40.0"))
+	ver, ok := td.Libraries[pkg]
+	if !ok {
+		return nil, fmt.Errorf("unknown module version: %s", pkg)
+	}
+	if ver.GreaterThanOrEqual(writeStatusVersion) {
+		writeStatus = true
+	}
+	return inject.WithKeyValue("write_status_supported", writeStatus), nil
+}
 
 // New returns a new [probe.Probe].
 func New(logger *slog.Logger) probe.Probe {
@@ -41,6 +60,7 @@ func New(logger *slog.Logger) probe.Probe {
 		Consts: []probe.Const{
 			probe.RegistersABIConst{},
 			probe.AllocationConst{},
+			writeStatusConst{},
 			probe.StructFieldConst{
 				Key: "clientconn_target_ptr_pos",
 				Val: structfield.NewID("google.golang.org/grpc", "google.golang.org/grpc", "ClientConn", "target"),
@@ -124,8 +144,6 @@ func convertEvent(e *event) []*probe.SpanEvent {
 		semconv.RPCServiceKey.String(method),
 		semconv.ServerAddress(target))
 
-	attrs = append(attrs, semconv.RPCGRPCStatusCodeKey.Int(int(e.StatusCode)))
-
 	sc := trace.NewSpanContext(trace.SpanContextConfig{
 		TraceID:    e.SpanContext.TraceID,
 		SpanID:     e.SpanContext.SpanID,
@@ -155,8 +173,12 @@ func convertEvent(e *event) []*probe.SpanEvent {
 		TracerSchema:      semconv.SchemaURL,
 	}
 
-	if e.StatusCode > 0 {
-		event.Status = probe.Status{Code: codes.Error}
+	if writeStatus {
+		event.Attributes = append(event.Attributes, semconv.RPCGRPCStatusCodeKey.Int(int(e.StatusCode)))
+
+		if e.StatusCode > 0 {
+			event.Status = probe.Status{Code: codes.Error}
+		}
 	}
 
 	return []*probe.SpanEvent{event}

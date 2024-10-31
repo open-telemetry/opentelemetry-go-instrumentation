@@ -63,6 +63,8 @@ volatile const bool is_new_frame_pos;
 volatile const u64 status_s_pos;
 volatile const u64 status_code_pos;
 
+volatile const bool write_status_supported;
+
 static __always_inline long dummy_extract_span_context_from_headers(void *stream_id, struct span_context *parent_span_context) {
     return 0;
 }
@@ -175,6 +177,10 @@ int uprobe_http2Server_operateHeader(struct pt_regs *ctx)
 // https://github.com/grpc/grpc-go/blob/bcf9171a20e44ed81a6eb152e3ca9e35b2c02c5d/internal/transport/http2_server.go#L1049
 SEC("uprobe/http2Server_WriteStatus")
 int uprobe_http2Server_WriteStatus(struct pt_regs *ctx) {
+    if(!write_status_supported) {
+        bpf_printk("status probe not supported for this version of gRPC");
+        return 0;
+    }
     struct go_iface go_context = {0};
     get_Go_context(ctx, 2, stream_ctx_pos, true, &go_context);
     void *key = get_consistent_key(ctx, go_context.data);
