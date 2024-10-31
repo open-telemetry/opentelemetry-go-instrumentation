@@ -24,8 +24,8 @@ import (
 	"go.opentelemetry.io/auto/internal/pkg/structfield"
 )
 
-//go:generate go run github.com/cilium/ebpf/cmd/bpf2go -target amd64,arm64 -cc clang -cflags $CFLAGS bpf ./bpf/probe.bpf.c
-//go:generate go run github.com/cilium/ebpf/cmd/bpf2go -target amd64,arm64 -cc clang -cflags $CFLAGS bpf_no_tp ./bpf/probe.bpf.c -- -DNO_HEADER_PROPAGATION
+//go:generate go run github.com/cilium/ebpf/cmd/bpf2go -target amd64,arm64 bpf ./bpf/probe.bpf.c
+//go:generate go run github.com/cilium/ebpf/cmd/bpf2go -target amd64,arm64 bpf_no_tp ./bpf/probe.bpf.c -- -DNO_HEADER_PROPAGATION
 
 const (
 	// pkg is the package being instrumented.
