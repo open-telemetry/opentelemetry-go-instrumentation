@@ -2,18 +2,23 @@
 # Assume the Makefile is in the root of the repository.
 REPODIR := $(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
 
+# Used by bpf2go to generate make compatible depinfo files.
+export BPF2GO_MAKEBASE := $(REPODIR)
+
 TOOLS_MOD_DIR := ./internal/tools
 TOOLS = $(CURDIR)/.tools
 
 ALL_GO_MOD_DIRS := $(shell find . -type f -name 'go.mod' ! -path './LICENSES/*' -exec dirname {} \; | sort)
 ALL_GO_MODS := $(shell find . -type f -name 'go.mod' ! -path '$(TOOLS_MOD_DIR)/*' ! -path './LICENSES/*' | sort)
 
-# Build the list of include directories to compile the bpf program
-BPF_INCLUDE += -I${REPODIR}/internal/include/libbpf
-BPF_INCLUDE += -I${REPODIR}/internal/include
+# BPF compile time dependencies.
+BPF2GO_CFLAGS += -I${REPODIR}/internal/include/libbpf
+BPF2GO_CFLAGS += -I${REPODIR}/internal/include
+export BPF2GO_CFLAGS
 
 # Go default variables
 GOCMD?= go
+CGO_ENABLED?=0
 
 .DEFAULT_GOAL := precommit
 
@@ -53,14 +58,25 @@ TEST_TARGETS := test-verbose test-ebpf
 test-ebpf: ARGS = -tags=ebpf_test -run ^TestEBPF # These need to be run with sudo.
 test-verbose: ARGS = -v
 $(TEST_TARGETS): test
-test: generate $(ALL_GO_MODS:%=test/%)
+test: go-mod-tidy generate $(ALL_GO_MODS:%=test/%)
 test/%/go.mod:
 	@cd $* && $(GOCMD) test $(ARGS) ./...
 
-.PHONY: generate
-generate: export CFLAGS := $(BPF_INCLUDE)
-generate: go-mod-tidy
-generate:
+PROBE_ROOT = internal/pkg/instrumentation/bpf/
+PROBE_GEN_GO := $(shell find $(PROBE_ROOT) -type f -name 'bpf_*_bpfe[lb].go')
+PROBE_GEN_OBJ := $(PROBE_GEN_GO:.go=.o)
+
+# Include all depinfo files to ensure we only re-generate when needed.
+-include $(shell find $(PROBE_ROOT) -type f -name 'bpf_*_bpfel.go.d')
+
+.PHONY: generate generate/all
+generate: $(PROBE_GEN_GO)
+$(PROBE_GEN_GO): %.go: %.o
+
+$(PROBE_GEN_OBJ):
+	$(GOCMD) generate ./$(dir $@)...
+
+generate/all:
 	$(GOCMD) generate ./...
 
 .PHONY: docker-generate
@@ -84,7 +100,7 @@ go-mod-tidy/%:
 .PHONY: golangci-lint golangci-lint-fix
 golangci-lint-fix: ARGS=--fix
 golangci-lint-fix: golangci-lint
-golangci-lint: generate $(ALL_GO_MOD_DIRS:%=golangci-lint/%)
+golangci-lint: go-mod-tidy generate $(ALL_GO_MOD_DIRS:%=golangci-lint/%)
 golangci-lint/%: DIR=$*
 golangci-lint/%: | $(GOLANGCI_LINT)
 	@echo 'golangci-lint $(if $(ARGS),$(ARGS) ,)$(DIR)' \
@@ -92,8 +108,8 @@ golangci-lint/%: | $(GOLANGCI_LINT)
 		&& $(GOLANGCI_LINT) run --allow-serial-runners --timeout=2m0s $(ARGS)
 
 .PHONY: build
-build: generate
-	$(GOCMD) build -o otel-go-instrumentation ./cli/...
+build: go-mod-tidy generate
+	CGO_ENABLED=$(CGO_ENABLED) $(GOCMD) build -o otel-go-instrumentation ./cli/...
 
 .PHONY: docker-build
 docker-build:
