@@ -6,6 +6,7 @@ package server
 import (
 	"fmt"
 	"log/slog"
+	"net"
 
 	"github.com/hashicorp/go-version"
 	"go.opentelemetry.io/collector/pdata/pcommon"
@@ -45,6 +46,7 @@ func New(logger *slog.Logger, version string) probe.Probe {
 				probe.RegistersABIConst{},
 				probe.AllocationConst{},
 				writeStatusConst{},
+				serverAddrConst{},
 				probe.StructFieldConst{
 					Key: "stream_method_ptr_pos",
 					Val: structfield.NewID("google.golang.org/grpc", "google.golang.org/grpc/internal/transport", "Stream", "method"),
@@ -78,6 +80,28 @@ func New(logger *slog.Logger, version string) probe.Probe {
 						Val: structfield.NewID("google.golang.org/grpc", "google.golang.org/genproto/googleapis/rpc/status", "Status", "Code"),
 					},
 					MinVersion: writeStatusMinVersion,
+				},
+				probe.StructFieldConstMinVersion{
+					StructField: probe.StructFieldConst{
+						Key: "http2server_peer_pos",
+						Val: structfield.NewID("google.golang.org/grpc", "google.golang.org/grpc/internal/transport", "http2Server", "peer"),
+					},
+					MinVersion: serverAddrMinVersion,
+				},
+				probe.StructFieldConstMinVersion{
+					StructField: probe.StructFieldConst{
+						Key: "peer_local_addr_pos",
+						Val: structfield.NewID("google.golang.org/grpc", "google.golang.org/grpc/peer", "Peer", "LocalAddr"),
+					},
+					MinVersion: serverAddrMinVersion,
+				},
+				probe.StructFieldConst{
+					Key: "TCPAddr_IP_offset",
+					Val: structfield.NewID("std", "net", "TCPAddr", "IP"),
+				},
+				probe.StructFieldConst{
+					Key: "TCPAddr_Port_offset",
+					Val: structfield.NewID("std", "net", "TCPAddr", "Port"),
 				},
 				framePosConst{},
 			},
@@ -141,11 +165,36 @@ func (w writeStatusConst) InjectOption(td *process.TargetDetails) (inject.Option
 	return inject.WithKeyValue("write_status_supported", writeStatus), nil
 }
 
+type serverAddrConst struct{}
+
+var (
+	serverAddrMinVersion = version.Must(version.NewVersion("1.60.0"))
+	serverAddr           = false
+)
+
+func (w serverAddrConst) InjectOption(td *process.TargetDetails) (inject.Option, error) {
+	ver, ok := td.Libraries[pkg]
+	if !ok {
+		return nil, fmt.Errorf("unknown module version: %s", pkg)
+	}
+	if ver.GreaterThanOrEqual(serverAddrMinVersion) {
+		serverAddr = true
+	}
+	return inject.WithKeyValue("server_addr_supported", serverAddr), nil
+}
+
 // event represents an event in the gRPC server during a gRPC request.
 type event struct {
 	context.BaseSpanProperties
 	Method     [100]byte
 	StatusCode int32
+	LocalAddr  NetAddr
+}
+
+type NetAddr struct {
+	IP   [16]uint8
+	Port uint64
+	IsV6 uint64
 }
 
 func processFn(e *event) ptrace.SpanSlice {
@@ -182,6 +231,11 @@ func processFn(e *event) ptrace.SpanSlice {
 			int32(codes.Unavailable), int32(codes.DataLoss):
 			span.Status().SetCode(ptrace.StatusCodeError)
 		}
+	}
+
+	if serverAddr {
+		attrs = append(attrs, semconv.ServerAddress(net.IP(e.LocalAddr.IP[:]).String()))
+		attrs = append(attrs, semconv.ServerPort(int(e.LocalAddr.Port)))
 	}
 
 	utils.Attributes(span.Attributes(), attrs...)

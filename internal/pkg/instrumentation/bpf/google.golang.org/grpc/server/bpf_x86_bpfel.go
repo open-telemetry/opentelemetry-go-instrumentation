@@ -19,6 +19,11 @@ type bpfGrpcRequestT struct {
 	Psc        bpfSpanContext
 	Method     [100]int8
 	StatusCode uint32
+	LocalAddr  struct {
+		Ip   [16]uint8
+		Port uint64
+		IsV6 uint64
+	}
 }
 
 type bpfSliceArrayBuff struct{ Buff [1024]uint8 }

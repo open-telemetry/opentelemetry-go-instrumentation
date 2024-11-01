@@ -24,6 +24,16 @@ SCOPE="go.opentelemetry.io/auto/google.golang.org/grpc"
   assert_equal "$result" '"/helloworld.Greeter/SayHello"'
 }
 
+@test "server :: includes server.address attribute" {
+  result=$(server_span_attributes_for ${SCOPE} | jq "select(.key == \"server.address\").value.stringValue" | uniq)
+  assert_equal "$result" '"127.0.0.1"'
+}
+
+@test "server :: includes server.port attribute" {
+  result=$(server_span_attributes_for ${SCOPE} | jq "select(.key == \"server.port\").value.intValue" | uniq)
+  assert_equal "$result" '"1701"'
+}
+
 @test "server :: trace ID present and valid in all spans" {
   trace_id=$(server_spans_from_scope_named ${SCOPE} | jq ".traceId" | jq -Rn '[inputs]' | jq -r .[0])
   assert_regex "$trace_id" ${MATCH_A_TRACE_ID}
@@ -92,6 +102,11 @@ SCOPE="go.opentelemetry.io/auto/google.golang.org/grpc"
 @test "client :: includes rpc.service attribute" {
   result=$(client_span_attributes_for ${SCOPE} | jq "select(.key == \"rpc.service\").value.stringValue" | uniq)
   assert_equal "$result" '"/helloworld.Greeter/SayHello"'
+}
+
+@test "client :: includes server.port attribute" {
+  result=$(client_span_attributes_for ${SCOPE} | jq "select(.key == \"server.port\").value.intValue" | uniq)
+  assert_equal "$result" '"1701"'
 }
 
 @test "client :: trace ID present and valid in all spans" {
