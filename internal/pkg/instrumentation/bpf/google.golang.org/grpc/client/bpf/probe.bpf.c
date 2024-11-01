@@ -53,6 +53,8 @@ volatile const u64 error_status_pos;
 volatile const u64 status_s_pos;
 volatile const u64 status_code_pos;
 
+volatile const bool write_status_supported;
+
 // This instrumentation attaches uprobe to the following function:
 // func (cc *ClientConn) Invoke(ctx context.Context, method string, args, reply interface{}, opts ...CallOption) error
 SEC("uprobe/ClientConn_Invoke")
@@ -122,6 +124,9 @@ int uprobe_ClientConn_Invoke_Returns(struct pt_regs *ctx) {
         return 0;
     }
 
+    if(!write_status_supported) {
+        goto done;
+    }
     // Getting the returned response (error)
     // The status code is embedded 3 layers deep:
     // Invoke() error

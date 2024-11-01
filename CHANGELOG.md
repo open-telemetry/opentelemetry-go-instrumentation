@@ -17,6 +17,7 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 ### Fixed
 
 - Sporadic shutdown deadlock. ([#1220](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1220))
+- Only support gRPC status codes for gRPC >= 1.40. ([#1235](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1235))
 
 ## [v0.16.0-alpha] - 2024-10-22
 
