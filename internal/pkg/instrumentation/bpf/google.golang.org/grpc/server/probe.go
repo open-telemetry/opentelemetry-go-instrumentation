@@ -64,13 +64,19 @@ func New(logger *slog.Logger) probe.Probe {
 				Key: "frame_stream_id_pod",
 				Val: structfield.NewID("golang.org/x/net", "golang.org/x/net/http2", "FrameHeader", "StreamID"),
 			},
-			probe.StructFieldConst{
-				Key: "status_s_pos",
-				Val: structfield.NewID("google.golang.org/grpc", "google.golang.org/grpc/internal/status", "Status", "s"),
+			probe.StructFieldConstMinVersion{
+				StructField: probe.StructFieldConst{
+					Key: "status_s_pos",
+					Val: structfield.NewID("google.golang.org/grpc", "google.golang.org/grpc/internal/status", "Status", "s"),
+				},
+				MinVersion: writeStatusMinVersion,
 			},
-			probe.StructFieldConst{
-				Key: "status_code_pos",
-				Val: structfield.NewID("google.golang.org/grpc", "google.golang.org/genproto/googleapis/rpc/status", "Status", "Code"),
+			probe.StructFieldConstMinVersion{
+				StructField: probe.StructFieldConst{
+					Key: "status_code_pos",
+					Val: structfield.NewID("google.golang.org/grpc", "google.golang.org/genproto/googleapis/rpc/status", "Status", "Code"),
+				},
+				MinVersion: writeStatusMinVersion,
 			},
 			framePosConst{},
 		},
@@ -115,15 +121,17 @@ func (c framePosConst) InjectOption(td *process.TargetDetails) (inject.Option, e
 
 type writeStatusConst struct{}
 
-var writeStatus = false
+var (
+	writeStatus           = false
+	writeStatusMinVersion = version.Must(version.NewVersion("1.40.0"))
+)
 
 func (w writeStatusConst) InjectOption(td *process.TargetDetails) (inject.Option, error) {
-	writeStatusVersion := version.Must(version.NewVersion("1.40.0"))
 	ver, ok := td.Libraries[pkg]
 	if !ok {
 		return nil, fmt.Errorf("unknown module version: %s", pkg)
 	}
-	if ver.GreaterThanOrEqual(writeStatusVersion) {
+	if ver.GreaterThanOrEqual(writeStatusMinVersion) {
 		writeStatus = true
 	}
 	return inject.WithKeyValue("write_status_supported", writeStatus), nil
