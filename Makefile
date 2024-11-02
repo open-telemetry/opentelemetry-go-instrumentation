@@ -64,14 +64,16 @@ test/%/go.mod:
 
 PROBE_ROOT = internal/pkg/instrumentation/bpf/
 PROBE_GEN_GO := $(shell find $(PROBE_ROOT) -type f -name 'bpf_*_bpfe[lb].go')
+PROBE_GEN_OBJ := $(PROBE_GEN_GO:.go=.o)
+PROBE_GEN_ALL := $(PROBE_GEN_GO) $(PROBE_GEN_OBJ)
 
 # Include all depinfo files to ensure we only re-generate when needed.
 -include $(shell find $(PROBE_ROOT) -type f -name 'bpf_*_bpfel.go.d')
 
 .PHONY: generate generate/all
-generate: $(PROBE_GEN_GO)
+generate: $(PROBE_GEN_ALL)
 
-$(PROBE_GEN_GO):
+$(PROBE_GEN_ALL):
 	$(GOCMD) generate ./$(dir $@)...
 
 generate/all:
