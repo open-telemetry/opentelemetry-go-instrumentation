@@ -4,7 +4,5 @@
 /*
 Package telemetry provides a lightweight representations of OpenTelemetry
 telemetry that is compatible with the OTLP JSON protobuf encoding.
-
-Deprecated: This module is no longer supported.
 */
 package telemetry
