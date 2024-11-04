@@ -8,13 +8,13 @@ import (
 	"log/slog"
 
 	"github.com/hashicorp/go-version"
-	"golang.org/x/sys/unix"
-	"google.golang.org/grpc/codes"
-
+	"go.opentelemetry.io/collector/pdata/pcommon"
+	"go.opentelemetry.io/collector/pdata/ptrace"
 	"go.opentelemetry.io/otel/attribute"
-	otelcodes "go.opentelemetry.io/otel/codes"
 	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
 	"go.opentelemetry.io/otel/trace"
+	"golang.org/x/sys/unix"
+	"google.golang.org/grpc/codes"
 
 	"go.opentelemetry.io/auto/internal/pkg/inject"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/context"
@@ -32,71 +32,75 @@ const (
 )
 
 // New returns a new [probe.Probe].
-func New(logger *slog.Logger) probe.Probe {
+func New(logger *slog.Logger, version string) probe.Probe {
 	id := probe.ID{
 		SpanKind:        trace.SpanKindServer,
 		InstrumentedPkg: pkg,
 	}
-	return &probe.Base[bpfObjects, event]{
-		ID:     id,
-		Logger: logger,
-		Consts: []probe.Const{
-			probe.RegistersABIConst{},
-			probe.AllocationConst{},
-			writeStatusConst{},
-			probe.StructFieldConst{
-				Key: "stream_method_ptr_pos",
-				Val: structfield.NewID("google.golang.org/grpc", "google.golang.org/grpc/internal/transport", "Stream", "method"),
-			},
-			probe.StructFieldConst{
-				Key: "stream_id_pos",
-				Val: structfield.NewID("google.golang.org/grpc", "google.golang.org/grpc/internal/transport", "Stream", "id"),
-			},
-			probe.StructFieldConst{
-				Key: "stream_ctx_pos",
-				Val: structfield.NewID("google.golang.org/grpc", "google.golang.org/grpc/internal/transport", "Stream", "ctx"),
-			},
-			probe.StructFieldConst{
-				Key: "frame_fields_pos",
-				Val: structfield.NewID("golang.org/x/net", "golang.org/x/net/http2", "MetaHeadersFrame", "Fields"),
-			},
-			probe.StructFieldConst{
-				Key: "frame_stream_id_pod",
-				Val: structfield.NewID("golang.org/x/net", "golang.org/x/net/http2", "FrameHeader", "StreamID"),
-			},
-			probe.StructFieldConstMinVersion{
-				StructField: probe.StructFieldConst{
-					Key: "status_s_pos",
-					Val: structfield.NewID("google.golang.org/grpc", "google.golang.org/grpc/internal/status", "Status", "s"),
+	return &probe.SpanProducer[bpfObjects, event]{
+		Base: probe.Base[bpfObjects, event]{
+			ID:     id,
+			Logger: logger,
+			Consts: []probe.Const{
+				probe.RegistersABIConst{},
+				probe.AllocationConst{},
+				writeStatusConst{},
+				probe.StructFieldConst{
+					Key: "stream_method_ptr_pos",
+					Val: structfield.NewID("google.golang.org/grpc", "google.golang.org/grpc/internal/transport", "Stream", "method"),
 				},
-				MinVersion: writeStatusMinVersion,
-			},
-			probe.StructFieldConstMinVersion{
-				StructField: probe.StructFieldConst{
-					Key: "status_code_pos",
-					Val: structfield.NewID("google.golang.org/grpc", "google.golang.org/genproto/googleapis/rpc/status", "Status", "Code"),
+				probe.StructFieldConst{
+					Key: "stream_id_pos",
+					Val: structfield.NewID("google.golang.org/grpc", "google.golang.org/grpc/internal/transport", "Stream", "id"),
 				},
-				MinVersion: writeStatusMinVersion,
+				probe.StructFieldConst{
+					Key: "stream_ctx_pos",
+					Val: structfield.NewID("google.golang.org/grpc", "google.golang.org/grpc/internal/transport", "Stream", "ctx"),
+				},
+				probe.StructFieldConst{
+					Key: "frame_fields_pos",
+					Val: structfield.NewID("golang.org/x/net", "golang.org/x/net/http2", "MetaHeadersFrame", "Fields"),
+				},
+				probe.StructFieldConst{
+					Key: "frame_stream_id_pod",
+					Val: structfield.NewID("golang.org/x/net", "golang.org/x/net/http2", "FrameHeader", "StreamID"),
+				},
+				probe.StructFieldConstMinVersion{
+					StructField: probe.StructFieldConst{
+						Key: "status_s_pos",
+						Val: structfield.NewID("google.golang.org/grpc", "google.golang.org/grpc/internal/status", "Status", "s"),
+					},
+					MinVersion: writeStatusMinVersion,
+				},
+				probe.StructFieldConstMinVersion{
+					StructField: probe.StructFieldConst{
+						Key: "status_code_pos",
+						Val: structfield.NewID("google.golang.org/grpc", "google.golang.org/genproto/googleapis/rpc/status", "Status", "Code"),
+					},
+					MinVersion: writeStatusMinVersion,
+				},
+				framePosConst{},
 			},
-			framePosConst{},
+			Uprobes: []probe.Uprobe{
+				{
+					Sym:         "google.golang.org/grpc.(*Server).handleStream",
+					EntryProbe:  "uprobe_server_handleStream",
+					ReturnProbe: "uprobe_server_handleStream_Returns",
+				},
+				{
+					Sym:        "google.golang.org/grpc/internal/transport.(*http2Server).operateHeaders",
+					EntryProbe: "uprobe_http2Server_operateHeader",
+				},
+				{
+					Sym:        "google.golang.org/grpc/internal/transport.(*http2Server).WriteStatus",
+					EntryProbe: "uprobe_http2Server_WriteStatus",
+				},
+			},
+			SpecFn: loadBpf,
 		},
-		Uprobes: []probe.Uprobe{
-			{
-				Sym:         "google.golang.org/grpc.(*Server).handleStream",
-				EntryProbe:  "uprobe_server_handleStream",
-				ReturnProbe: "uprobe_server_handleStream_Returns",
-			},
-			{
-				Sym:        "google.golang.org/grpc/internal/transport.(*http2Server).operateHeaders",
-				EntryProbe: "uprobe_http2Server_operateHeader",
-			},
-			{
-				Sym:        "google.golang.org/grpc/internal/transport.(*http2Server).WriteStatus",
-				EntryProbe: "uprobe_http2Server_WriteStatus",
-			},
-		},
-		SpecFn:    loadBpf,
-		ProcessFn: convertEvent,
+		Version:   version,
+		SchemaURL: semconv.SchemaURL,
+		ProcessFn: processFn,
 	}
 }
 
@@ -144,55 +148,43 @@ type event struct {
 	StatusCode int32
 }
 
-func convertEvent(e *event) []*probe.SpanEvent {
+func processFn(e *event) ptrace.SpanSlice {
 	method := unix.ByteSliceToString(e.Method[:])
 
-	sc := trace.NewSpanContext(trace.SpanContextConfig{
-		TraceID:    e.SpanContext.TraceID,
-		SpanID:     e.SpanContext.SpanID,
-		TraceFlags: trace.FlagsSampled,
-	})
+	spans := ptrace.NewSpanSlice()
+	span := spans.AppendEmpty()
+	span.SetName(method)
+	span.SetKind(ptrace.SpanKindServer)
+	span.SetStartTimestamp(utils.BootOffsetToTimestamp(e.StartTime))
+	span.SetEndTimestamp(utils.BootOffsetToTimestamp(e.EndTime))
+	span.SetTraceID(pcommon.TraceID(e.SpanContext.TraceID))
+	span.SetSpanID(pcommon.SpanID(e.SpanContext.SpanID))
+	span.SetFlags(uint32(trace.FlagsSampled))
 
-	var pscPtr *trace.SpanContext
-	if e.ParentSpanContext.TraceID.IsValid() {
-		psc := trace.NewSpanContext(trace.SpanContextConfig{
-			TraceID:    e.ParentSpanContext.TraceID,
-			SpanID:     e.ParentSpanContext.SpanID,
-			TraceFlags: trace.FlagsSampled,
-			Remote:     true,
-		})
-		pscPtr = &psc
-	} else {
-		pscPtr = nil
+	if e.ParentSpanContext.SpanID.IsValid() {
+		span.SetParentSpanID(pcommon.SpanID(e.ParentSpanContext.SpanID))
 	}
 
 	attrs := []attribute.KeyValue{
 		semconv.RPCSystemKey.String("grpc"),
 		semconv.RPCServiceKey.String(method),
-	}
-	event := &probe.SpanEvent{
-		SpanName:          method,
-		StartTime:         utils.BootOffsetToTime(e.StartTime),
-		EndTime:           utils.BootOffsetToTime(e.EndTime),
-		Attributes:        attrs,
-		ParentSpanContext: pscPtr,
-		SpanContext:       &sc,
-		TracerSchema:      semconv.SchemaURL,
+		semconv.RPCGRPCStatusCodeKey.Int(int(e.StatusCode)),
 	}
 
 	if writeStatus {
-		event.Attributes = append(event.Attributes, semconv.RPCGRPCStatusCodeKey.Int(int(e.StatusCode)))
+		attrs = append(attrs, semconv.RPCGRPCStatusCodeKey.Int(int(e.StatusCode)))
+
 		// Set server status codes per semconv:
-		// See https://github.com/open-telemetry/semantic-conventions/blob/02ecf0c71e9fa74d09d81c48e04a132db2b7060b/docs/rpc/grpc.md#grpc-status
-		if e.StatusCode == int32(codes.Unknown) ||
-			e.StatusCode == int32(codes.DeadlineExceeded) ||
-			e.StatusCode == int32(codes.Unimplemented) ||
-			e.StatusCode == int32(codes.Internal) ||
-			e.StatusCode == int32(codes.Unavailable) ||
-			e.StatusCode == int32(codes.DataLoss) {
-			event.Status = probe.Status{Code: otelcodes.Error}
+		// https://github.com/open-telemetry/semantic-conventions/blob/02ecf0c71e9fa74d09d81c48e04a132db2b7060b/docs/rpc/grpc.md#grpc-status
+		switch e.StatusCode {
+		case int32(codes.Unknown), int32(codes.DeadlineExceeded),
+			int32(codes.Unimplemented), int32(codes.Internal),
+			int32(codes.Unavailable), int32(codes.DataLoss):
+			span.Status().SetCode(ptrace.StatusCodeError)
 		}
 	}
 
-	return []*probe.SpanEvent{event}
+	utils.Attributes(span.Attributes(), attrs...)
+
+	return spans
 }

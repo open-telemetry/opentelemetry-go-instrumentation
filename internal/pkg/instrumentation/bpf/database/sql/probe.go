@@ -8,7 +8,8 @@ import (
 	"os"
 	"strconv"
 
-	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/collector/pdata/pcommon"
+	"go.opentelemetry.io/collector/pdata/ptrace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
 	"go.opentelemetry.io/otel/trace"
 	"golang.org/x/sys/unix"
@@ -29,39 +30,43 @@ const (
 )
 
 // New returns a new [probe.Probe].
-func New(logger *slog.Logger) probe.Probe {
+func New(logger *slog.Logger, version string) probe.Probe {
 	id := probe.ID{
 		SpanKind:        trace.SpanKindClient,
 		InstrumentedPkg: pkg,
 	}
-	return &probe.Base[bpfObjects, event]{
-		ID:     id,
-		Logger: logger,
-		Consts: []probe.Const{
-			probe.RegistersABIConst{},
-			probe.AllocationConst{},
-			probe.KeyValConst{
-				Key: "should_include_db_statement",
-				Val: shouldIncludeDBStatement(),
+	return &probe.SpanProducer[bpfObjects, event]{
+		Base: probe.Base[bpfObjects, event]{
+			ID:     id,
+			Logger: logger,
+			Consts: []probe.Const{
+				probe.RegistersABIConst{},
+				probe.AllocationConst{},
+				probe.KeyValConst{
+					Key: "should_include_db_statement",
+					Val: shouldIncludeDBStatement(),
+				},
 			},
-		},
-		Uprobes: []probe.Uprobe{
-			{
-				Sym:         "database/sql.(*DB).queryDC",
-				EntryProbe:  "uprobe_queryDC",
-				ReturnProbe: "uprobe_queryDC_Returns",
-				Optional:    true,
+			Uprobes: []probe.Uprobe{
+				{
+					Sym:         "database/sql.(*DB).queryDC",
+					EntryProbe:  "uprobe_queryDC",
+					ReturnProbe: "uprobe_queryDC_Returns",
+					Optional:    true,
+				},
+				{
+					Sym:         "database/sql.(*DB).execDC",
+					EntryProbe:  "uprobe_execDC",
+					ReturnProbe: "uprobe_execDC_Returns",
+					Optional:    true,
+				},
 			},
-			{
-				Sym:         "database/sql.(*DB).execDC",
-				EntryProbe:  "uprobe_execDC",
-				ReturnProbe: "uprobe_execDC_Returns",
-				Optional:    true,
-			},
-		},
 
-		SpecFn:    loadBpf,
-		ProcessFn: convertEvent,
+			SpecFn: loadBpf,
+		},
+		Version:   version,
+		SchemaURL: semconv.SchemaURL,
+		ProcessFn: processFn,
 	}
 }
 
@@ -72,41 +77,25 @@ type event struct {
 	Query [256]byte
 }
 
-func convertEvent(e *event) []*probe.SpanEvent {
+func processFn(e *event) ptrace.SpanSlice {
+	spans := ptrace.NewSpanSlice()
+	span := spans.AppendEmpty()
+	span.SetName("DB")
+	span.SetKind(ptrace.SpanKindClient)
+	span.SetStartTimestamp(utils.BootOffsetToTimestamp(e.StartTime))
+	span.SetEndTimestamp(utils.BootOffsetToTimestamp(e.EndTime))
+	span.SetTraceID(pcommon.TraceID(e.SpanContext.TraceID))
+	span.SetSpanID(pcommon.SpanID(e.SpanContext.SpanID))
+	span.SetFlags(uint32(trace.FlagsSampled))
+
+	if e.ParentSpanContext.SpanID.IsValid() {
+		span.SetParentSpanID(pcommon.SpanID(e.ParentSpanContext.SpanID))
+	}
+
 	query := unix.ByteSliceToString(e.Query[:])
+	span.Attributes().PutStr(string(semconv.DBQueryTextKey), query)
 
-	sc := trace.NewSpanContext(trace.SpanContextConfig{
-		TraceID:    e.SpanContext.TraceID,
-		SpanID:     e.SpanContext.SpanID,
-		TraceFlags: trace.FlagsSampled,
-	})
-
-	var pscPtr *trace.SpanContext
-	if e.ParentSpanContext.TraceID.IsValid() {
-		psc := trace.NewSpanContext(trace.SpanContextConfig{
-			TraceID:    e.ParentSpanContext.TraceID,
-			SpanID:     e.ParentSpanContext.SpanID,
-			TraceFlags: trace.FlagsSampled,
-			Remote:     true,
-		})
-		pscPtr = &psc
-	} else {
-		pscPtr = nil
-	}
-
-	return []*probe.SpanEvent{
-		{
-			SpanName:    "DB",
-			StartTime:   utils.BootOffsetToTime(e.StartTime),
-			EndTime:     utils.BootOffsetToTime(e.EndTime),
-			SpanContext: &sc,
-			Attributes: []attribute.KeyValue{
-				semconv.DBQueryText(query),
-			},
-			ParentSpanContext: pscPtr,
-			TracerSchema:      semconv.SchemaURL,
-		},
-	}
+	return spans
 }
 
 // shouldIncludeDBStatement returns if the user has configured SQL queries to be included.

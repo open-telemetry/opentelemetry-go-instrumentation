@@ -18,6 +18,8 @@ import (
 	"github.com/cilium/ebpf/perf"
 	"github.com/hashicorp/go-version"
 
+	"go.opentelemetry.io/collector/pdata/ptrace"
+
 	"go.opentelemetry.io/auto/internal/pkg/inject"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/bpffs"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/probe/sampling"
@@ -40,7 +42,7 @@ type Probe interface {
 	Load(*link.Executable, *process.TargetDetails, *sampling.Config) error
 
 	// Run runs the events processing loop.
-	Run(eventsChan chan<- *Event)
+	Run(tracesChan chan<- ptrace.ScopeSpans)
 
 	// Close stops the Probe.
 	Close() error
@@ -67,8 +69,6 @@ type Base[BPFObj any, BPFEvent any] struct {
 	// SpecFn is a creation function for an eBPF CollectionSpec related to the
 	// probe.
 	SpecFn func() (*ebpf.CollectionSpec, error)
-	// ProcessFn processes probe events into a uniform Event type.
-	ProcessFn func(*BPFEvent) []*SpanEvent
 	// ProcessRecord is an optional processing function for the probe. If nil,
 	// all records will be read directly into a new BPFEvent using the
 	// encoding/binary package.
@@ -214,43 +214,22 @@ func (i *Base[BPFObj, BPFEvent]) buildEBPFCollection(td *process.TargetDetails, 
 	return c, nil
 }
 
-// Run runs the events processing loop.
-func (i *Base[BPFObj, BPFEvent]) Run(dest chan<- *Event) {
-	for {
-		record, err := i.reader.Read()
-		if err != nil {
-			if errors.Is(err, perf.ErrClosed) {
-				return
-			}
+// read reads a new BPFEvent from the perf Reader.
+func (i *Base[BPFObj, BPFEvent]) read() (*BPFEvent, error) {
+	record, err := i.reader.Read()
+	if err != nil {
+		if !errors.Is(err, perf.ErrClosed) {
 			i.Logger.Error("error reading from perf reader", "error", err)
-			continue
 		}
-
-		if record.LostSamples != 0 {
-			i.Logger.Debug("perf event ring buffer full", "dropped", record.LostSamples)
-			continue
-		}
-
-		se, err := i.processRecord(record)
-		if err != nil {
-			i.Logger.Error("failed to process perf record", "error", err, "pkg", i.ID.InstrumentedPkg)
-		}
-		e := &Event{
-			Package:    i.ID.InstrumentedPkg,
-			Kind:       i.ID.SpanKind,
-			SpanEvents: se,
-		}
-
-		dest <- e
+		return nil, err
 	}
-}
 
-func (i *Base[BPFObj, BPFEvent]) processRecord(record perf.Record) ([]*SpanEvent, error) {
-	var (
-		event BPFEvent
-		err   error
-	)
+	if record.LostSamples != 0 {
+		i.Logger.Debug("perf event ring buffer full", "dropped", record.LostSamples)
+		return nil, err
+	}
 
+	var event BPFEvent
 	if i.ProcessRecord != nil {
 		event, err = i.ProcessRecord(record)
 	} else {
@@ -261,8 +240,7 @@ func (i *Base[BPFObj, BPFEvent]) processRecord(record perf.Record) ([]*SpanEvent
 	if err != nil {
 		return nil, err
 	}
-
-	return i.ProcessFn(&event), nil
+	return &event, nil
 }
 
 // Close stops the Probe.
@@ -278,6 +256,58 @@ func (i *Base[BPFObj, BPFEvent]) Close() error {
 		i.Logger.Debug("Closed", "Probe", i.ID)
 	}
 	return err
+}
+
+type SpanProducer[BPFObj any, BPFEvent any] struct {
+	Base[BPFObj, BPFEvent]
+
+	Version   string
+	SchemaURL string
+	ProcessFn func(*BPFEvent) ptrace.SpanSlice
+}
+
+// Run runs the events processing loop.
+func (i *SpanProducer[BPFObj, BPFEvent]) Run(dest chan<- ptrace.ScopeSpans) {
+	for {
+		event, err := i.read()
+		if err != nil {
+			if errors.Is(err, perf.ErrClosed) {
+				return
+			}
+			continue
+		}
+
+		ss := ptrace.NewScopeSpans()
+
+		ss.Scope().SetName("go.opentelemetry.io/auto/" + i.ID.InstrumentedPkg)
+		ss.Scope().SetVersion(i.Version)
+		ss.SetSchemaUrl(i.SchemaURL)
+
+		i.ProcessFn(event).CopyTo(ss.Spans())
+
+		dest <- ss
+	}
+}
+
+type TraceProducer[BPFObj any, BPFEvent any] struct {
+	Base[BPFObj, BPFEvent]
+
+	ProcessFn func(*BPFEvent) ptrace.ScopeSpans
+}
+
+// Run runs the events processing loop.
+func (i *TraceProducer[BPFObj, BPFEvent]) Run(dest chan<- ptrace.ScopeSpans) {
+	for {
+		event, err := i.read()
+		if err != nil {
+			if errors.Is(err, perf.ErrClosed) {
+				return
+			}
+			continue
+		}
+
+		dest <- i.ProcessFn(event)
+	}
 }
 
 // Uprobe is an eBPF program that is attached in the entry point and/or the return of a function.

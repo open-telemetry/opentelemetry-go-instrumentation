@@ -4,8 +4,6 @@ RUN apt-get update && apt-get install -y curl clang gcc llvm make libbpf-dev
 
 WORKDIR /app
 
-COPY sdk/ /app/sdk/
-
 # pre-copy/cache go.mod for pre-downloading dependencies and only redownloading
 # them in subsequent builds if they change
 COPY go.mod go.sum ./
