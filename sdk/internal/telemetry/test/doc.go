@@ -4,6 +4,4 @@
 // Package test provides isolated testing for
 // go.opentelemetry.io/auto/sdk/telemetry. It exists to ensure that package is
 // tested without importing any OTLP or pdata dependencies.
-//
-// Deprecated: This module is no longer supported.
 package test

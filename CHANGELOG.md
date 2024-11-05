@@ -19,6 +19,13 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 - Sporadic shutdown deadlock. ([#1220](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1220))
 - Only support gRPC status codes for gRPC >= 1.40. ([#1235](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1235))
 
+### Deprecated
+
+- The `go.opentelemetry.io/auto/sdk/telemetry` package is deprecated.
+  This package will be removed in the next release. ([#1238](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1238))
+- The `go.opentelemetry.io/auto/sdk/telemetry/test` module is deprecated.
+  This module will be removed in the next release. ([#1238](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1238))
+
 ## [v0.16.0-alpha] - 2024-10-22
 
 ### Added
