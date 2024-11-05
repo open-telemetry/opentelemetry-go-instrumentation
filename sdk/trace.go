@@ -17,7 +17,7 @@ import (
 	"go.opentelemetry.io/otel/trace"
 	"go.opentelemetry.io/otel/trace/noop"
 
-	"go.opentelemetry.io/auto/sdk/telemetry"
+	"go.opentelemetry.io/auto/sdk/internal/telemetry"
 )
 
 // TracerProvider returns an auto-instrumentable [trace.TracerProvider].

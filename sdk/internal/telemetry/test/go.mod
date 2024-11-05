@@ -1,4 +1,3 @@
-// Deprecated: This module is no longer supported.
 module go.opentelemetry.io/auto/sdk/telemetry/test
 
 go 1.22.0
@@ -27,4 +26,4 @@ require (
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
 
-replace go.opentelemetry.io/auto/sdk => ../..
+replace go.opentelemetry.io/auto/sdk => ../../..
