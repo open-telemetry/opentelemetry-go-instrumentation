@@ -93,7 +93,9 @@ func processFn(e *event) ptrace.SpanSlice {
 	}
 
 	query := unix.ByteSliceToString(e.Query[:])
-	span.Attributes().PutStr(string(semconv.DBQueryTextKey), query)
+	if query != "" {
+		span.Attributes().PutStr(string(semconv.DBQueryTextKey), query)
+	}
 
 	return spans
 }
