@@ -10,6 +10,7 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -314,35 +315,6 @@ func TestTrace(t *testing.T) {
 	}
 }
 
-func TestGetTracer(t *testing.T) {
-	exporter := tracetest.NewInMemoryExporter()
-	tp := sdktrace.NewTracerProvider(
-		sdktrace.WithSampler(sdktrace.AlwaysSample()),
-		sdktrace.WithBatcher(exporter),
-		sdktrace.WithResource(instResource()),
-	)
-	defer func() {
-		err := tp.Shutdown(context.Background())
-		assert.NoError(t, err)
-	}()
-
-	ctrl, err := NewController(slog.Default(), tp)
-	assert.NoError(t, err)
-
-	t1 := ctrl.getTracer("test", "v1", "schema")
-	assert.Equal(t, t1, ctrl.tracersMap[tracerID{name: "test", version: "v1", schema: "schema"}])
-
-	t2 := ctrl.getTracer("net/http", "", "")
-	assert.Equal(t, t2, ctrl.tracersMap[tracerID{name: "net/http", version: "", schema: ""}])
-
-	t3 := ctrl.getTracer("test", "v1", "schema")
-	assert.Same(t, t1, t3)
-
-	t4 := ctrl.getTracer("net/http", "", "")
-	assert.Same(t, t2, t4)
-	assert.Equal(t, len(ctrl.tracersMap), 2)
-}
-
 type shutdownExporter struct {
 	sdktrace.SpanExporter
 
@@ -389,4 +361,39 @@ func TestShutdown(t *testing.T) {
 	require.NoError(t, ctrl.Shutdown(ctx))
 	assert.True(t, exporter.called, "Exporter not shutdown")
 	assert.Equal(t, uint32(nSpan), exporter.exported.Load(), "Pending spans not flushed")
+}
+
+func TestControllerTraceConcurrentSafe(t *testing.T) {
+	exporter := tracetest.NewInMemoryExporter()
+	tp := sdktrace.NewTracerProvider(
+		sdktrace.WithSampler(sdktrace.AlwaysSample()),
+		sdktrace.WithBatcher(exporter),
+		sdktrace.WithResource(instResource()),
+	)
+	defer func() {
+		err := tp.Shutdown(context.Background())
+		assert.NoError(t, err)
+	}()
+
+	ctrl, err := NewController(slog.Default(), tp)
+	assert.NoError(t, err)
+
+	const goroutines = 10
+
+	var wg sync.WaitGroup
+	for n := 0; n < goroutines; n++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+
+			data := ptrace.NewScopeSpans()
+			data.Scope().SetName(fmt.Sprintf("tracer-%d", n%(goroutines/2)))
+			data.Scope().SetVersion("v1")
+			data.SetSchemaUrl("url")
+			data.Spans().AppendEmpty().SetName("test")
+			ctrl.Trace(data)
+		}()
+	}
+
+	wg.Wait()
 }

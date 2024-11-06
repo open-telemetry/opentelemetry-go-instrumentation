@@ -19,19 +19,6 @@ import (
 type Controller struct {
 	logger         *slog.Logger
 	tracerProvider trace.TracerProvider
-	tracersMap     map[tracerID]trace.Tracer
-}
-
-type tracerID struct{ name, version, schema string }
-
-func (c *Controller) getTracer(name, version, schema string) trace.Tracer {
-	tID := tracerID{name: name, version: version, schema: schema}
-	t, exists := c.tracersMap[tID]
-	if !exists {
-		t = c.tracerProvider.Tracer(name, trace.WithInstrumentationVersion(version), trace.WithSchemaURL(schema))
-		c.tracersMap[tID] = t
-	}
-	return t
 }
 
 // Trace creates a trace span for event.
@@ -43,7 +30,12 @@ func (c *Controller) Trace(ss ptrace.ScopeSpans) {
 		kvs       []attribute.KeyValue
 	)
 
-	t := c.getTracer(ss.Scope().Name(), ss.Scope().Version(), ss.SchemaUrl())
+	tracer := c.tracerProvider.Tracer(
+		ss.Scope().Name(),
+		trace.WithInstrumentationVersion(ss.Scope().Version()),
+		trace.WithInstrumentationAttributes(attrs(ss.Scope().Attributes())...),
+		trace.WithSchemaURL(ss.SchemaUrl()),
+	)
 	for k := 0; k < ss.Spans().Len(); k++ {
 		pSpan := ss.Spans().At(k)
 
@@ -51,7 +43,7 @@ func (c *Controller) Trace(ss ptrace.ScopeSpans) {
 			c.logger.Debug("dropping invalid span", "name", pSpan.Name())
 			continue
 		}
-		c.logger.Debug("handling span", "tracer", t, "span", pSpan)
+		c.logger.Debug("handling span", "tracer", tracer, "span", pSpan)
 
 		ctx := context.Background()
 		if !pSpan.ParentSpanID().IsEmpty() {
@@ -71,7 +63,7 @@ func (c *Controller) Trace(ss ptrace.ScopeSpans) {
 			trace.WithTimestamp(pSpan.StartTimestamp().AsTime()),
 			trace.WithLinks(c.links(pSpan.Links())...),
 		)
-		_, span := t.Start(ctx, pSpan.Name(), startOpts...)
+		_, span := tracer.Start(ctx, pSpan.Name(), startOpts...)
 		startOpts = startOpts[:0]
 		kvs = kvs[:0]
 
@@ -96,7 +88,6 @@ func NewController(logger *slog.Logger, tracerProvider trace.TracerProvider) (*C
 	return &Controller{
 		logger:         logger,
 		tracerProvider: tracerProvider,
-		tracersMap:     make(map[tracerID]trace.Tracer),
 	}, nil
 }
 
