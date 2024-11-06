@@ -44,7 +44,7 @@ func TestLoadProbes(t *testing.T) {
 }
 
 func fakeManager(t *testing.T) *Manager {
-	m, err := NewManager(slog.Default(), nil, true, nil, NewNoopConfigProvider(nil), "")
+	m, err := NewManager(slog.Default(), nil, true, NewNoopConfigProvider(nil), "")
 	assert.NoError(t, err)
 	assert.NotNil(t, m)
 
