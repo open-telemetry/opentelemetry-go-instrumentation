@@ -10,16 +10,25 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 
 ### Changed
 
-- The SDK provided in `go.opentelemtry.io/auto/sdk` now defaults to NoOp behavior for unimplemented methods of the OpenTelemetry API.
-  This is changed from causing a compilation error for unimplemented methods. ([#1230](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1230))
-- The `GetTracerProvider` fucntion in `go.opentelemtry.io/auto/sdk` is renamed to `TracerProvider`. ([#1231](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1231))
 - Split the functionality of `Instrumentation.Run` to `Instrumentation.Load` and `Instrumentation.Run`.
   `Load` will report any errors in the loading and attaching phase of the probes. ([#1245](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1245))
 
 ### Fixed
 
+- Don't include `db.query.text` attribute in `database/sql` if the query string is empty or not collected. ([#1246](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1246))
+
+## [v0.17.0-alpha] - 2024-11-05
+
+### Changed
+
+- The SDK provided in `go.opentelemtry.io/auto/sdk` now defaults to No-Op behavior for unimplemented methods of the OpenTelemetry API.
+  This is changed from causing a compilation error for unimplemented methods. ([#1230](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1230))
+- The `GetTracerProvider` function in `go.opentelemtry.io/auto/sdk` is renamed to `TracerProvider`. ([#1231](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1231))
+
+### Fixed
+
 - Sporadic shutdown deadlock. ([#1220](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1220))
-- Only support gRPC status codes for gRPC >= 1.40. ([#1235](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1235))
+- Only support status codes for versions of `google.golang.org/grpc` >= `1.40`. ([#1235](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1235))
 
 ### Deprecated
 
@@ -472,7 +481,8 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 
 This is the first release of OpenTelemetry Go Automatic Instrumentation.
 
-[Unreleased]: https://github.com/open-telemetry/opentelemetry-go-instrumentation/compare/v0.16.0-alpha...HEAD
+[Unreleased]: https://github.com/open-telemetry/opentelemetry-go-instrumentation/compare/v0.17.0-alpha...HEAD
+[v0.17.0-alpha]: https://github.com/open-telemetry/opentelemetry-go-instrumentation/releases/tag/v0.17.0-alpha
 [v0.16.0-alpha]: https://github.com/open-telemetry/opentelemetry-go-instrumentation/releases/tag/v0.16.0-alpha
 [v0.15.0-alpha]: https://github.com/open-telemetry/opentelemetry-go-instrumentation/releases/tag/v0.15.0-alpha
 [v0.14.0-alpha]: https://github.com/open-telemetry/opentelemetry-go-instrumentation/releases/tag/v0.14.0-alpha
