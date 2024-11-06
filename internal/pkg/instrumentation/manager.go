@@ -13,7 +13,6 @@ import (
 	"github.com/cilium/ebpf/link"
 	"github.com/cilium/ebpf/rlimit"
 
-	"go.opentelemetry.io/collector/pdata/ptrace"
 	"go.opentelemetry.io/otel/trace"
 
 	dbSql "go.opentelemetry.io/auto/internal/pkg/instrumentation/bpf/database/sql"
@@ -58,7 +57,6 @@ type Manager struct {
 	exe             *link.Executable
 	td              *process.TargetDetails
 	runningProbesWG sync.WaitGroup
-	telemetryCh     chan ptrace.ScopeSpans
 	currentConfig   Config
 	probeMu         sync.Mutex
 	state           managerState
@@ -74,7 +72,6 @@ func NewManager(logger *slog.Logger, otelController *opentelemetry.Controller, g
 		globalImpl:      globalImpl,
 		loadedIndicator: loadIndicator,
 		cp:              cp,
-		telemetryCh:     make(chan ptrace.ScopeSpans),
 	}
 
 	err := m.registerProbes()
@@ -227,7 +224,7 @@ func (m *Manager) runProbe(p probe.Probe) {
 	m.runningProbesWG.Add(1)
 	go func(ap probe.Probe) {
 		defer m.runningProbesWG.Done()
-		ap.Run(m.telemetryCh)
+		ap.Run(m.otelController.Trace)
 	}(p)
 }
 
@@ -290,9 +287,8 @@ func (m *Manager) Run(ctx context.Context, target *process.TargetDetails) error 
 		m.logger.Debug("Shutting down all probes")
 		err := m.cleanup(target)
 
-		// Wait for all probes to stop before closing the chan they send on.
+		// Wait for all probes to stop.
 		m.runningProbesWG.Wait()
-		close(m.telemetryCh)
 
 		m.state = managerStateStopped
 		m.probeMu.Unlock()
@@ -300,9 +296,6 @@ func (m *Manager) Run(ctx context.Context, target *process.TargetDetails) error 
 		done <- errors.Join(err, ctx.Err())
 	}()
 
-	for e := range m.telemetryCh {
-		m.otelController.Trace(e)
-	}
 	return <-done
 }
 
