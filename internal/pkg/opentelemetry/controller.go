@@ -113,6 +113,11 @@ func (c *Controller) Shutdown(ctx context.Context) error {
 	return nil
 }
 
+func attrs(m pcommon.Map) []attribute.KeyValue {
+	out := make([]attribute.KeyValue, 0, m.Len())
+	return appendAttrs(out, m)
+}
+
 func appendAttrs(dest []attribute.KeyValue, m pcommon.Map) []attribute.KeyValue {
 	m.Range(func(k string, v pcommon.Value) bool {
 		dest = append(dest, attr(k, v))
@@ -213,8 +218,7 @@ func appendEventOpts(dest []trace.EventOption, e ptrace.SpanEvent) []trace.Event
 		dest = append(dest, trace.WithTimestamp(ts))
 	}
 
-	var kvs []attribute.KeyValue
-	kvs = appendAttrs(kvs, e.Attributes())
+	kvs := attrs(e.Attributes())
 	if len(kvs) > 0 {
 		dest = append(dest, trace.WithAttributes(kvs...))
 	}
@@ -244,8 +248,8 @@ func (c *Controller) links(links ptrace.SpanLinkSlice) []trace.Link {
 				TraceFlags: trace.TraceFlags(l.Flags()),
 				TraceState: ts,
 			}),
+			Attributes: attrs(l.Attributes()),
 		}
-		out[i].Attributes = appendAttrs(out[i].Attributes, l.Attributes())
 	}
 	return out
 }
