@@ -53,10 +53,11 @@ $(TOOLS)/offsetgen: PACKAGE=go.opentelemetry.io/auto/$(TOOLS_MOD_DIR)/inspect/cm
 .PHONY: tools
 tools: $(GOLICENSES) $(MULTIMOD) $(GOLANGCI_LINT) $(DBOTCONF) $(OFFSETGEN)
 
-TEST_TARGETS := test-verbose test-ebpf
+TEST_TARGETS := test-verbose test-ebpf test-race
 .PHONY: $(TEST_TARGETS) test
 test-ebpf: ARGS = -tags=ebpf_test -run ^TestEBPF # These need to be run with sudo.
 test-verbose: ARGS = -v
+test-race: ARGS = -race
 $(TEST_TARGETS): test
 test: go-mod-tidy generate $(ALL_GO_MODS:%=test/%)
 test/%/go.mod:
