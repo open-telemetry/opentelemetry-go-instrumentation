@@ -22,6 +22,8 @@ type Controller struct {
 }
 
 // Trace creates a trace span for event.
+//
+// This method is safe to call concurrently.
 func (c *Controller) Trace(ss ptrace.ScopeSpans) {
 	var (
 		startOpts []trace.SpanStartOption
