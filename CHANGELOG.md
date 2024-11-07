@@ -8,6 +8,10 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 
 ## [Unreleased]
 
+### Added
+
+- Support Go standard libraries for 1.22.9 and 1.23.3. ([#1250](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1250))
+
 ### Fixed
 
 - Don't include `db.query.text` attribute in `database/sql` if the query string is empty or not collected. ([#1246](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1246))
