@@ -41,14 +41,14 @@ func TestProbeConvertEvent(t *testing.T) {
 	want := func() ptrace.SpanSlice {
 		spans := ptrace.NewSpanSlice()
 		span := spans.AppendEmpty()
-		span.SetName("DB")
+		span.SetName("SELECT")
 		span.SetKind(ptrace.SpanKindClient)
 		span.SetStartTimestamp(utils.BootOffsetToTimestamp(startOffset))
 		span.SetEndTimestamp(utils.BootOffsetToTimestamp(endOffset))
 		span.SetTraceID(pcommon.TraceID(traceID))
 		span.SetSpanID(pcommon.SpanID(spanID))
 		span.SetFlags(uint32(trace.FlagsSampled))
-		utils.Attributes(span.Attributes(), semconv.DBQueryText("SELECT * FROM foo"))
+		utils.Attributes(span.Attributes(), semconv.DBQueryText("SELECT * FROM foo"), semconv.DBOperationName("SELECT"))
 		return spans
 	}()
 	assert.Equal(t, want, got)

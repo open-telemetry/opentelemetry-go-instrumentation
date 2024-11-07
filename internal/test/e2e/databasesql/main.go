@@ -100,6 +100,118 @@ func (s *Server) queryDb(w http.ResponseWriter, req *http.Request) {
 	}
 }
 
+func (s *Server) insert(w http.ResponseWriter, req *http.Request) {
+	ctx := req.Context()
+
+	conn, err := s.db.Conn(ctx)
+	if err != nil {
+		panic(err)
+	}
+
+	rows, err := conn.QueryContext(req.Context(), "INSERT INTO contacts (first_name) VALUES ('Mike')")
+	if err != nil {
+		panic(err)
+	}
+
+	logger.Info("queryDb called")
+	for rows.Next() {
+		var id int
+		var firstName string
+		var lastName string
+		var email string
+		var phone string
+		err := rows.Scan(&id, &firstName, &lastName, &email, &phone)
+		if err != nil {
+			panic(err)
+		}
+		fmt.Fprintf(w, "ID: %d, firstName: %s, lastName: %s, email: %s, phone: %s\n", id, firstName, lastName, email, phone)
+	}
+}
+
+func (s *Server) update(w http.ResponseWriter, req *http.Request) {
+	ctx := req.Context()
+
+	conn, err := s.db.Conn(ctx)
+	if err != nil {
+		panic(err)
+	}
+
+	rows, err := conn.QueryContext(req.Context(), "UPDATE contacts SET last_name = 'Santa' WHERE first_name = 'Mike'")
+	if err != nil {
+		panic(err)
+	}
+
+	logger.Info("queryDb called")
+	for rows.Next() {
+		var id int
+		var firstName string
+		var lastName string
+		var email string
+		var phone string
+		err := rows.Scan(&id, &firstName, &lastName, &email, &phone)
+		if err != nil {
+			panic(err)
+		}
+		fmt.Fprintf(w, "ID: %d, firstName: %s, lastName: %s, email: %s, phone: %s\n", id, firstName, lastName, email, phone)
+	}
+}
+
+func (s *Server) delete(w http.ResponseWriter, req *http.Request) {
+	ctx := req.Context()
+
+	conn, err := s.db.Conn(ctx)
+	if err != nil {
+		panic(err)
+	}
+
+	rows, err := conn.QueryContext(req.Context(), "DELETE FROM contacts WHERE first_name = 'Mike'")
+	if err != nil {
+		panic(err)
+	}
+
+	logger.Info("queryDb called")
+	for rows.Next() {
+		var id int
+		var firstName string
+		var lastName string
+		var email string
+		var phone string
+		err := rows.Scan(&id, &firstName, &lastName, &email, &phone)
+		if err != nil {
+			panic(err)
+		}
+		fmt.Fprintf(w, "ID: %d, firstName: %s, lastName: %s, email: %s, phone: %s\n", id, firstName, lastName, email, phone)
+	}
+}
+
+func (s *Server) drop(w http.ResponseWriter, req *http.Request) {
+	ctx := req.Context()
+
+	conn, err := s.db.Conn(ctx)
+	if err != nil {
+		panic(err)
+	}
+
+	rows, err := conn.QueryContext(req.Context(), "DROP TABLE contacts")
+	if err != nil {
+		panic(err)
+	}
+
+	logger.Info("queryDb called")
+	for rows.Next() {
+		var id int
+		var firstName string
+		var lastName string
+		var email string
+		var phone string
+		err := rows.Scan(&id, &firstName, &lastName, &email, &phone)
+		if err != nil {
+			panic(err)
+		}
+		fmt.Fprintf(w, "ID: %d, firstName: %s, lastName: %s, email: %s, phone: %s\n", id, firstName, lastName, email, phone)
+	}
+}
+
 var logger *zap.Logger
 
 func main() {
@@ -115,6 +227,10 @@ func main() {
 	s := NewServer()
 
 	http.HandleFunc("/query_db", s.queryDb)
+	http.HandleFunc("/insert", s.insert)
+	http.HandleFunc("/update", s.update)
+	http.HandleFunc("/delete", s.delete)
+	http.HandleFunc("/drop", s.drop)
 	go func() {
 		_ = http.ListenAndServe(":8080", nil)
 	}()
@@ -127,6 +243,54 @@ func main() {
 		logger.Error("Error performing GET", zap.Error(err))
 	}
 	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		logger.Error("Error reading http body", zap.Error(err))
+	}
+
+	logger.Info("Body:\n", zap.String("body", string(body[:])))
+	_ = resp.Body.Close()
+
+	resp, err = http.Get("http://localhost:8080/insert")
+	if err != nil {
+		logger.Error("Error performing GET", zap.Error(err))
+	}
+	body, err = io.ReadAll(resp.Body)
+	if err != nil {
+		logger.Error("Error reading http body", zap.Error(err))
+	}
+
+	logger.Info("Body:\n", zap.String("body", string(body[:])))
+	_ = resp.Body.Close()
+
+	resp, err = http.Get("http://localhost:8080/update")
+	if err != nil {
+		logger.Error("Error performing GET", zap.Error(err))
+	}
+	body, err = io.ReadAll(resp.Body)
+	if err != nil {
+		logger.Error("Error reading http body", zap.Error(err))
+	}
+
+	logger.Info("Body:\n", zap.String("body", string(body[:])))
+	_ = resp.Body.Close()
+
+	resp, err = http.Get("http://localhost:8080/delete")
+	if err != nil {
+		logger.Error("Error performing GET", zap.Error(err))
+	}
+	body, err = io.ReadAll(resp.Body)
+	if err != nil {
+		logger.Error("Error reading http body", zap.Error(err))
+	}
+
+	logger.Info("Body:\n", zap.String("body", string(body[:])))
+	_ = resp.Body.Close()
+
+	resp, err = http.Get("http://localhost:8080/drop")
+	if err != nil {
+		logger.Error("Error performing GET", zap.Error(err))
+	}
+	body, err = io.ReadAll(resp.Body)
 	if err != nil {
 		logger.Error("Error reading http body", zap.Error(err))
 	}
