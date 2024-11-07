@@ -67,8 +67,8 @@ SCOPE="go.opentelemetry.io/auto/google.golang.org/grpc"
   server_trace_id=$(server_spans_from_scope_named ${SCOPE} | jq ".traceId" | jq -Rn '[inputs]' | jq -r .[0])
   assert_equal "$server_trace_id" "$client_trace_id"
 
-  client_trace_id=$(client_spans_from_scope_named ${SCOPE} | jq ".traceId" | jq -Rn '[inputs]' | jq -r .[0])
-  server_trace_id=$(server_spans_from_scope_named ${SCOPE} | jq ".traceId" | jq -Rn '[inputs]' | jq -r .[0])
+  client_trace_id=$(client_spans_from_scope_named ${SCOPE} | jq ".traceId" | jq -Rn '[inputs]' | jq -r .[1])
+  server_trace_id=$(server_spans_from_scope_named ${SCOPE} | jq ".traceId" | jq -Rn '[inputs]' | jq -r .[1])
   assert_equal "$server_trace_id" "$client_trace_id"
 }
 

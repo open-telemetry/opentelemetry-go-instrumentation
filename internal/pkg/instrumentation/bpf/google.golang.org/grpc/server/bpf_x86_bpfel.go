@@ -21,9 +21,9 @@ type bpfGrpcRequestT struct {
 	StatusCode uint32
 	LocalAddr  struct {
 		Ip   [16]uint8
-		Port uint64
-		IsV6 uint64
+		Port uint32
 	}
+	_ [4]byte
 }
 
 type bpfSliceArrayBuff struct{ Buff [1024]uint8 }

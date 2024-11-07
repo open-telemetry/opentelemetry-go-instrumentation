@@ -9,8 +9,7 @@
 
 typedef struct net_addr {
     u8 ip[16];
-    u64 port;
-    u64 is_v6;
+    u32 port;
 } net_addr_t;
 
 /*
@@ -39,7 +38,6 @@ static __always_inline long get_tcp_net_addr_from_tcp_addr(struct pt_regs *ctx, 
 
     if (ip.len == 16) {
         ip_slice_len = 16;
-        addr->is_v6 = 1;
     }
 
     res = bpf_probe_read_user(addr->ip, ip_slice_len, ip.array);

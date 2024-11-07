@@ -193,8 +193,7 @@ type event struct {
 
 type NetAddr struct {
 	IP   [16]uint8
-	Port uint64
-	IsV6 uint64
+	Port int32
 }
 
 func processFn(e *event) ptrace.SpanSlice {
