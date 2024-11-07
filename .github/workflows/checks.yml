@@ -68,7 +68,7 @@ jobs:
       - name: Install build dependencies
         run: sudo apt-get update && sudo apt-get install -y clang llvm
       - name: Run tests
-        run: make test
+        run: make test-race
   compatibility-test:
     strategy:
       matrix:
