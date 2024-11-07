@@ -8,6 +8,8 @@ import (
 	"os"
 	"strconv"
 
+	sql "github.com/xwb1989/sqlparser"
+
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/ptrace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
@@ -95,6 +97,26 @@ func processFn(e *event) ptrace.SpanSlice {
 	query := unix.ByteSliceToString(e.Query[:])
 	if query != "" {
 		span.Attributes().PutStr(string(semconv.DBQueryTextKey), query)
+
+		q, err := sql.Parse(query)
+		if err == nil {
+			operation := ""
+			switch q.(type) {
+			case *sql.Select:
+				operation = "SELECT"
+			case *sql.Update:
+				operation = "UPDATE"
+			case *sql.Insert:
+				operation = "INSERT"
+			case *sql.Delete:
+				operation = "DELETE"
+			}
+
+			if operation != "" {
+				span.Attributes().PutStr(string(semconv.DBOperationNameKey), operation)
+				span.SetName(operation)
+			}
+		}
 	}
 
 	return spans
