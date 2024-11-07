@@ -381,7 +381,19 @@ func TestConfigProvider(t *testing.T) {
 
 	mockExeAndBpffs(t)
 	runCtx, cancel := context.WithCancel(context.Background())
-	go func() { _ = m.Run(runCtx, &process.TargetDetails{PID: 1000}) }()
+	errCh := make(chan error, 1)
+	go func() { errCh <- m.Run(runCtx, &process.TargetDetails{PID: 1000}) }()
+	t.Cleanup(func() {
+		assert.Eventually(t, func() bool {
+			select {
+			case <-errCh:
+				return true
+			default:
+				return false
+			}
+		}, time.Second, 10*time.Millisecond)
+	})
+
 	assert.Eventually(t, func() bool {
 		select {
 		case <-loadedIndicator:
