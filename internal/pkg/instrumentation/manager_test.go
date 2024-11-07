@@ -8,6 +8,7 @@ package instrumentation
 import (
 	"context"
 	"log/slog"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -298,24 +299,24 @@ func (p slowProbe) Close() error {
 }
 
 type noopProbe struct {
-	loaded, running, closed bool
+	loaded, running, closed atomic.Bool
 }
 
 var _ probe.Probe = (*noopProbe)(nil)
 
 func (p *noopProbe) Load(*link.Executable, *process.TargetDetails, *sampling.Config) error {
-	p.loaded = true
+	p.loaded.Store(true)
 	return nil
 }
 
 func (p *noopProbe) Run(c chan<- ptrace.ScopeSpans) {
-	p.running = true
+	p.running.Store(true)
 }
 
 func (p *noopProbe) Close() error {
-	p.closed = true
-	p.loaded = false
-	p.running = false
+	p.closed.Store(true)
+	p.loaded.Store(false)
+	p.running.Store(false)
 	return nil
 }
 
@@ -405,17 +406,17 @@ func TestConfigProvider(t *testing.T) {
 
 	probeRunning := func(id probe.ID) bool {
 		p := m.probes[id].(*noopProbe)
-		return p.loaded && p.running
+		return p.loaded.Load() && p.running.Load()
 	}
 
 	probePending := func(id probe.ID) bool {
 		p := m.probes[id].(*noopProbe)
-		return !p.loaded && !p.running
+		return !p.loaded.Load() && !p.running.Load()
 	}
 
 	probeClosed := func(id probe.ID) bool {
 		p := m.probes[id].(*noopProbe)
-		return p.closed
+		return p.closed.Load()
 	}
 
 	assert.True(t, probePending(netHTTPClientProbeID))
