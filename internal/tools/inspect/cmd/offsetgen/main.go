@@ -123,6 +123,8 @@ func manifests() ([]inspect.Manifest, error) {
 				structfield.NewID("std", "net/url", "Userinfo", "username"),
 				structfield.NewID("std", "bufio", "Writer", "buf"),
 				structfield.NewID("std", "bufio", "Writer", "n"),
+				structfield.NewID("std", "net", "TCPAddr", "IP"),
+				structfield.NewID("std", "net", "TCPAddr", "Port"),
 			},
 		},
 		{
@@ -141,6 +143,8 @@ func manifests() ([]inspect.Manifest, error) {
 				structfield.NewID("google.golang.org/grpc", "google.golang.org/grpc/internal/status", "Error", "s"),
 				structfield.NewID("google.golang.org/grpc", "google.golang.org/grpc/internal/status", "Status", "s"),
 				structfield.NewID("google.golang.org/grpc", "google.golang.org/genproto/googleapis/rpc/status", "Status", "Code"),
+				structfield.NewID("google.golang.org/grpc", "google.golang.org/grpc/internal/transport", "http2Server", "peer"),
+				structfield.NewID("google.golang.org/grpc", "google.golang.org/grpc/peer", "Peer", "LocalAddr"),
 			},
 		},
 		{

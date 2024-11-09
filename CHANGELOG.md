@@ -10,6 +10,7 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 
 ### Added
 
+- Include `server.address` and `server.port` in gRPC spans (>=v1.60.0). ([#1242](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1242))
 - Support Go standard libraries for 1.22.9 and 1.23.3. ([#1250](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1250))
 - Support `google.golang.org/grpc` `1.68.0`. ([#1251](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1251))
 - Support `golang.org/x/net` `0.31.0`. ([#1254](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1254))
