@@ -19,6 +19,11 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 
 - Don't include `db.query.text` attribute in `database/sql` if the query string is empty or not collected. ([#1246](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1246))
 
+### Removed
+
+- The deprecated `go.opentelemetry.io/auto/sdk/telemetry` package is removed. ([#1252](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1252))
+- The deprecated `go.opentelemetry.io/auto/sdk/telemetry/test` module is removed. ([#1252](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1252))
+
 ## [v0.17.0-alpha] - 2024-11-05
 
 ### Changed
