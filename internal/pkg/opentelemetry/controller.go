@@ -32,12 +32,16 @@ func (c *Controller) Trace(ss ptrace.ScopeSpans) {
 		kvs       []attribute.KeyValue
 	)
 
-	tracer := c.tracerProvider.Tracer(
-		ss.Scope().Name(),
+	to := []trace.TracerOption{
 		trace.WithInstrumentationVersion(ss.Scope().Version()),
-		trace.WithInstrumentationAttributes(attrs(ss.Scope().Attributes())...),
 		trace.WithSchemaURL(ss.SchemaUrl()),
-	)
+	}
+
+	if m := ss.Scope().Attributes(); m.Len() > 0 {
+		to = append(to, trace.WithInstrumentationAttributes(attrs(m)...))
+	}
+
+	tracer := c.tracerProvider.Tracer(ss.Scope().Name(), to...)
 	for k := 0; k < ss.Spans().Len(); k++ {
 		pSpan := ss.Spans().At(k)
 
