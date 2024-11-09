@@ -10,12 +10,19 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 
 ### Added
 
+- Include `server.address` and `server.port` in gRPC spans (>=v1.60.0). ([#1242](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1242))
 - Support Go standard libraries for 1.22.9 and 1.23.3. ([#1250](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1250))
 - Support `google.golang.org/grpc` `1.68.0`. ([#1251](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1251))
+- Support `golang.org/x/net` `0.31.0`. ([#1254](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1254))
 
 ### Fixed
 
 - Don't include `db.query.text` attribute in `database/sql` if the query string is empty or not collected. ([#1246](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1246))
+
+### Removed
+
+- The deprecated `go.opentelemetry.io/auto/sdk/telemetry` package is removed. ([#1252](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1252))
+- The deprecated `go.opentelemetry.io/auto/sdk/telemetry/test` module is removed. ([#1252](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1252))
 
 ## [v0.17.0-alpha] - 2024-11-05
 

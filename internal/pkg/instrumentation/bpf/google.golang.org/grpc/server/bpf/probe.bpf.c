@@ -3,6 +3,7 @@
 
 #include "arguments.h"
 #include "go_types.h"
+#include "go_net.h"
 #include "trace/span_context.h"
 #include "go_context.h"
 #include "uprobe.h"
@@ -20,6 +21,7 @@ struct grpc_request_t
     BASE_SPAN_PROPERTIES
     char method[MAX_SIZE];
     u32 status_code;
+    net_addr_t local_addr;
 };
 
 struct
@@ -62,8 +64,11 @@ volatile const u64 stream_ctx_pos;
 volatile const bool is_new_frame_pos;
 volatile const u64 status_s_pos;
 volatile const u64 status_code_pos;
+volatile const u64 http2server_peer_pos;
+volatile const u64 peer_local_addr_pos;
 
 volatile const bool write_status_supported;
+volatile const bool server_addr_supported;
 
 static __always_inline long dummy_extract_span_context_from_headers(void *stream_id, struct span_context *parent_span_context) {
     return 0;
@@ -120,6 +125,15 @@ int uprobe_server_handleStream(struct pt_regs *ctx)
         bpf_printk("Failed to read gRPC method from stream");
         bpf_map_delete_elem(&streamid_to_grpc_events, &stream_id);
         return 0;
+    }
+
+    if (server_addr_supported) {
+        void *http2server = get_argument(ctx, 3);
+        void *peer_ptr = 0;
+        bpf_probe_read_user(&peer_ptr, sizeof(peer_ptr), (void *)(http2server + http2server_peer_pos));
+        void *local_addr_ptr = 0;
+        bpf_probe_read_user(&local_addr_ptr, sizeof(local_addr_ptr), get_go_interface_instance((void *)(http2server + http2server_peer_pos + peer_local_addr_pos)));
+        get_tcp_net_addr_from_tcp_addr(ctx, &grpcReq->local_addr, (void *)(local_addr_ptr));
     }
 
     // Write event

@@ -262,15 +262,6 @@ updates:
     schedule:
       interval: weekly
       day: sunday
-  - package-ecosystem: gomod
-    directory: /sdk/telemetry/test
-    labels:
-      - dependencies
-      - go
-      - Skip Changelog
-    schedule:
-      interval: weekly
-      day: sunday
   - package-ecosystem: pip
     directory: /
     labels:

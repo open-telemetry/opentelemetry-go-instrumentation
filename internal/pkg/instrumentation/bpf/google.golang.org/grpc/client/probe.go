@@ -163,6 +163,7 @@ func processFn(e *event) ptrace.SpanSlice {
 
 	if port > 0 {
 		attrs = append(attrs, semconv.NetworkPeerPort(port))
+		attrs = append(attrs, semconv.ServerPort(port))
 	}
 
 	spans := ptrace.NewSpanSlice()
