@@ -236,7 +236,6 @@ func TestRunStopping(t *testing.T) {
 		otelController: ctrl,
 		logger:         slog.Default(),
 		probes:         map[probe.ID]probe.Probe{{}: p},
-		telemetryCh:    make(chan ptrace.ScopeSpans),
 		cp:             NewNoopConfigProvider(nil),
 	}
 
@@ -289,7 +288,7 @@ func (p slowProbe) Load(*link.Executable, *process.TargetDetails, *sampling.Conf
 	return nil
 }
 
-func (p slowProbe) Run(c chan<- ptrace.ScopeSpans) {
+func (p slowProbe) Run(func(ptrace.ScopeSpans)) {
 }
 
 func (p slowProbe) Close() error {
@@ -309,7 +308,7 @@ func (p *noopProbe) Load(*link.Executable, *process.TargetDetails, *sampling.Con
 	return nil
 }
 
-func (p *noopProbe) Run(c chan<- ptrace.ScopeSpans) {
+func (p *noopProbe) Run(func(ptrace.ScopeSpans)) {
 	p.running.Store(true)
 }
 
@@ -371,7 +370,6 @@ func TestConfigProvider(t *testing.T) {
 			netHTTPServerProbeID:       &noopProbe{},
 			somePackageProducerProbeID: &noopProbe{},
 		},
-		telemetryCh: make(chan ptrace.ScopeSpans),
 		cp: newDummyProvider(Config{
 			InstrumentationLibraryConfigs: map[LibraryID]Library{
 				netHTTPClientLibID: {TracesEnabled: &falseVal},
@@ -488,10 +486,10 @@ func (p *hangingProbe) Load(*link.Executable, *process.TargetDetails, *sampling.
 	return nil
 }
 
-func (p *hangingProbe) Run(c chan<- ptrace.ScopeSpans) {
+func (p *hangingProbe) Run(handle func(ptrace.ScopeSpans)) {
 	<-p.closeReturned
 	// Write after Close has returned.
-	c <- ptrace.NewScopeSpans()
+	handle(ptrace.NewScopeSpans())
 }
 
 func (p *hangingProbe) Close() error {
@@ -511,7 +509,6 @@ func TestRunStopDeadlock(t *testing.T) {
 		otelController: ctrl,
 		logger:         slog.Default(),
 		probes:         map[probe.ID]probe.Probe{{}: p},
-		telemetryCh:    make(chan ptrace.ScopeSpans),
 		cp:             NewNoopConfigProvider(nil),
 	}
 
