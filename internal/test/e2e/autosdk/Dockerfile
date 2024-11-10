@@ -1,4 +1,4 @@
-FROM golang:1.23.2
+FROM golang:1.23.3
 # Make sure this dir exists.
 WORKDIR /usr/src/go.opentelemetry.io/auto/internal/test/e2e/autosdk
 
