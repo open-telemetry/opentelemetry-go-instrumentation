@@ -1,7 +1,6 @@
 module go.opentelemetry.io/auto/internal/test/e2e/grpc
 
-go 1.22.0
-toolchain go1.22.9
+go 1.22.7
 
 require (
 	google.golang.org/grpc v1.68.0
