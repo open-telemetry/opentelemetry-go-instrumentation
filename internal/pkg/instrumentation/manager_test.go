@@ -9,6 +9,7 @@ import (
 	"context"
 	"errors"
 	"log/slog"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -246,7 +247,6 @@ func TestRunStopping(t *testing.T) {
 		otelController: ctrl,
 		logger:         slog.Default(),
 		probes:         map[probe.ID]probe.Probe{{}: p},
-		telemetryCh:    make(chan ptrace.ScopeSpans),
 		cp:             NewNoopConfigProvider(nil),
 	}
 
@@ -303,7 +303,7 @@ func (p slowProbe) Load(*link.Executable, *process.TargetDetails, *sampling.Conf
 	return nil
 }
 
-func (p slowProbe) Run(c chan<- ptrace.ScopeSpans) {
+func (p slowProbe) Run(func(ptrace.ScopeSpans)) {
 }
 
 func (p slowProbe) Close() error {
@@ -313,24 +313,24 @@ func (p slowProbe) Close() error {
 }
 
 type noopProbe struct {
-	loaded, running, closed bool
+	loaded, running, closed atomic.Bool
 }
 
 var _ probe.Probe = (*noopProbe)(nil)
 
 func (p *noopProbe) Load(*link.Executable, *process.TargetDetails, *sampling.Config) error {
-	p.loaded = true
+	p.loaded.Store(true)
 	return nil
 }
 
-func (p *noopProbe) Run(c chan<- ptrace.ScopeSpans) {
-	p.running = true
+func (p *noopProbe) Run(func(ptrace.ScopeSpans)) {
+	p.running.Store(true)
 }
 
 func (p *noopProbe) Close() error {
-	p.closed = true
-	p.loaded = false
-	p.running = false
+	p.closed.Store(true)
+	p.loaded.Store(false)
+	p.running.Store(false)
 	return nil
 }
 
@@ -383,7 +383,6 @@ func TestConfigProvider(t *testing.T) {
 			netHTTPServerProbeID:       &noopProbe{},
 			somePackageProducerProbeID: &noopProbe{},
 		},
-		telemetryCh: make(chan ptrace.ScopeSpans),
 		cp: newDummyProvider(Config{
 			InstrumentationLibraryConfigs: map[LibraryID]Library{
 				netHTTPClientLibID: {TracesEnabled: &falseVal},
@@ -401,17 +400,17 @@ func TestConfigProvider(t *testing.T) {
 
 	probeRunning := func(id probe.ID) bool {
 		p := m.probes[id].(*noopProbe)
-		return p.loaded && p.running
+		return p.loaded.Load() && p.running.Load()
 	}
 
 	probePending := func(id probe.ID) bool {
 		p := m.probes[id].(*noopProbe)
-		return !p.loaded && !p.running
+		return !p.loaded.Load() && !p.running.Load()
 	}
 
 	probeClosed := func(id probe.ID) bool {
 		p := m.probes[id].(*noopProbe)
-		return p.closed
+		return p.closed.Load()
 	}
 
 	assert.True(t, probePending(netHTTPClientProbeID))
@@ -487,10 +486,10 @@ func (p *hangingProbe) Load(*link.Executable, *process.TargetDetails, *sampling.
 	return nil
 }
 
-func (p *hangingProbe) Run(c chan<- ptrace.ScopeSpans) {
+func (p *hangingProbe) Run(handle func(ptrace.ScopeSpans)) {
 	<-p.closeReturned
 	// Write after Close has returned.
-	c <- ptrace.NewScopeSpans()
+	handle(ptrace.NewScopeSpans())
 }
 
 func (p *hangingProbe) Close() error {
@@ -510,7 +509,6 @@ func TestRunStopDeadlock(t *testing.T) {
 		otelController: ctrl,
 		logger:         slog.Default(),
 		probes:         map[probe.ID]probe.Probe{{}: p},
-		telemetryCh:    make(chan ptrace.ScopeSpans),
 		cp:             NewNoopConfigProvider(nil),
 	}
 
@@ -559,7 +557,6 @@ func TestStopBeforeLoad(t *testing.T) {
 		otelController: ctrl,
 		logger:         slog.Default(),
 		probes:         map[probe.ID]probe.Probe{{}: &p},
-		telemetryCh:    make(chan ptrace.ScopeSpans),
 		cp:             NewNoopConfigProvider(nil),
 	}
 
@@ -580,7 +577,6 @@ func TestStopBeforeRun(t *testing.T) {
 		otelController: ctrl,
 		logger:         slog.Default(),
 		probes:         map[probe.ID]probe.Probe{{}: &p},
-		telemetryCh:    make(chan ptrace.ScopeSpans),
 		cp:             NewNoopConfigProvider(nil),
 	}
 
@@ -588,10 +584,10 @@ func TestStopBeforeRun(t *testing.T) {
 
 	err = m.Load(context.Background(), &process.TargetDetails{PID: 1000})
 	require.NoError(t, err)
-	require.True(t, p.loaded)
+	require.True(t, p.loaded.Load())
 
 	err = m.Stop()
 	require.NoError(t, err)
-	require.True(t, p.closed)
-	require.False(t, p.running)
+	require.True(t, p.closed.Load())
+	require.False(t, p.running.Load())
 }

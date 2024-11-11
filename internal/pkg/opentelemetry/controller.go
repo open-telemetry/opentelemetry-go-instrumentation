@@ -19,22 +19,11 @@ import (
 type Controller struct {
 	logger         *slog.Logger
 	tracerProvider trace.TracerProvider
-	tracersMap     map[tracerID]trace.Tracer
-}
-
-type tracerID struct{ name, version, schema string }
-
-func (c *Controller) getTracer(name, version, schema string) trace.Tracer {
-	tID := tracerID{name: name, version: version, schema: schema}
-	t, exists := c.tracersMap[tID]
-	if !exists {
-		t = c.tracerProvider.Tracer(name, trace.WithInstrumentationVersion(version), trace.WithSchemaURL(schema))
-		c.tracersMap[tID] = t
-	}
-	return t
 }
 
 // Trace creates a trace span for event.
+//
+// This method is safe to call concurrently.
 func (c *Controller) Trace(ss ptrace.ScopeSpans) {
 	var (
 		startOpts []trace.SpanStartOption
@@ -43,7 +32,16 @@ func (c *Controller) Trace(ss ptrace.ScopeSpans) {
 		kvs       []attribute.KeyValue
 	)
 
-	t := c.getTracer(ss.Scope().Name(), ss.Scope().Version(), ss.SchemaUrl())
+	to := []trace.TracerOption{
+		trace.WithInstrumentationVersion(ss.Scope().Version()),
+		trace.WithSchemaURL(ss.SchemaUrl()),
+	}
+
+	if m := ss.Scope().Attributes(); m.Len() > 0 {
+		to = append(to, trace.WithInstrumentationAttributes(attrs(m)...))
+	}
+
+	tracer := c.tracerProvider.Tracer(ss.Scope().Name(), to...)
 	for k := 0; k < ss.Spans().Len(); k++ {
 		pSpan := ss.Spans().At(k)
 
@@ -51,7 +49,7 @@ func (c *Controller) Trace(ss ptrace.ScopeSpans) {
 			c.logger.Debug("dropping invalid span", "name", pSpan.Name())
 			continue
 		}
-		c.logger.Debug("handling span", "tracer", t, "span", pSpan)
+		c.logger.Debug("handling span", "tracer", tracer, "span", pSpan)
 
 		ctx := context.Background()
 		if !pSpan.ParentSpanID().IsEmpty() {
@@ -71,7 +69,7 @@ func (c *Controller) Trace(ss ptrace.ScopeSpans) {
 			trace.WithTimestamp(pSpan.StartTimestamp().AsTime()),
 			trace.WithLinks(c.links(pSpan.Links())...),
 		)
-		_, span := t.Start(ctx, pSpan.Name(), startOpts...)
+		_, span := tracer.Start(ctx, pSpan.Name(), startOpts...)
 		startOpts = startOpts[:0]
 		kvs = kvs[:0]
 
@@ -96,7 +94,6 @@ func NewController(logger *slog.Logger, tracerProvider trace.TracerProvider) (*C
 	return &Controller{
 		logger:         logger,
 		tracerProvider: tracerProvider,
-		tracersMap:     make(map[tracerID]trace.Tracer),
 	}, nil
 }
 
@@ -111,6 +108,11 @@ func (c *Controller) Shutdown(ctx context.Context) error {
 		return s.Shutdown(ctx)
 	}
 	return nil
+}
+
+func attrs(m pcommon.Map) []attribute.KeyValue {
+	out := make([]attribute.KeyValue, 0, m.Len())
+	return appendAttrs(out, m)
 }
 
 func appendAttrs(dest []attribute.KeyValue, m pcommon.Map) []attribute.KeyValue {
@@ -213,8 +215,7 @@ func appendEventOpts(dest []trace.EventOption, e ptrace.SpanEvent) []trace.Event
 		dest = append(dest, trace.WithTimestamp(ts))
 	}
 
-	var kvs []attribute.KeyValue
-	kvs = appendAttrs(kvs, e.Attributes())
+	kvs := attrs(e.Attributes())
 	if len(kvs) > 0 {
 		dest = append(dest, trace.WithAttributes(kvs...))
 	}
@@ -244,8 +245,8 @@ func (c *Controller) links(links ptrace.SpanLinkSlice) []trace.Link {
 				TraceFlags: trace.TraceFlags(l.Flags()),
 				TraceState: ts,
 			}),
+			Attributes: attrs(l.Attributes()),
 		}
-		out[i].Attributes = appendAttrs(out[i].Attributes, l.Attributes())
 	}
 	return out
 }

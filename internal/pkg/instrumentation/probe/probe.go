@@ -42,7 +42,7 @@ type Probe interface {
 	Load(*link.Executable, *process.TargetDetails, *sampling.Config) error
 
 	// Run runs the events processing loop.
-	Run(tracesChan chan<- ptrace.ScopeSpans)
+	Run(func(ptrace.ScopeSpans))
 
 	// Close stops the Probe.
 	Close() error
@@ -267,7 +267,7 @@ type SpanProducer[BPFObj any, BPFEvent any] struct {
 }
 
 // Run runs the events processing loop.
-func (i *SpanProducer[BPFObj, BPFEvent]) Run(dest chan<- ptrace.ScopeSpans) {
+func (i *SpanProducer[BPFObj, BPFEvent]) Run(handle func(ptrace.ScopeSpans)) {
 	for {
 		event, err := i.read()
 		if err != nil {
@@ -285,7 +285,7 @@ func (i *SpanProducer[BPFObj, BPFEvent]) Run(dest chan<- ptrace.ScopeSpans) {
 
 		i.ProcessFn(event).CopyTo(ss.Spans())
 
-		dest <- ss
+		handle(ss)
 	}
 }
 
@@ -296,7 +296,7 @@ type TraceProducer[BPFObj any, BPFEvent any] struct {
 }
 
 // Run runs the events processing loop.
-func (i *TraceProducer[BPFObj, BPFEvent]) Run(dest chan<- ptrace.ScopeSpans) {
+func (i *TraceProducer[BPFObj, BPFEvent]) Run(handle func(ptrace.ScopeSpans)) {
 	for {
 		event, err := i.read()
 		if err != nil {
@@ -306,7 +306,7 @@ func (i *TraceProducer[BPFObj, BPFEvent]) Run(dest chan<- ptrace.ScopeSpans) {
 			continue
 		}
 
-		dest <- i.ProcessFn(event)
+		handle(i.ProcessFn(event))
 	}
 }
 
