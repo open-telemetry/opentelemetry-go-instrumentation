@@ -301,21 +301,21 @@ func TestRunStoppingByStop(t *testing.T) {
 
 	mockExeAndBpffs(t)
 
-	ctx, _ := context.WithCancel(context.Background())
+	ctx := context.Background()
 	errCh := make(chan error, 1)
 
 	err = m.Load(ctx, &process.TargetDetails{PID: 1000})
 	require.NoError(t, err)
 
 	time.AfterFunc(100*time.Millisecond, func() {
-		err = m.Stop()
+		err := m.Stop()
 		require.NoError(t, err)
 	})
 	go func() { errCh <- m.Run(ctx) }()
 
 	assert.Eventually(t, func() bool {
 		select {
-		case err = <-errCh:
+		case <-errCh:
 			return true
 		default:
 			return false
@@ -437,7 +437,9 @@ func TestConfigProvider(t *testing.T) {
 	err := m.Load(runCtx, &process.TargetDetails{PID: 1000})
 	require.NoError(t, err)
 
-	go func() { _ = m.Run(runCtx) }()
+	runErr := make(chan error, 1)
+
+	go func() { runErr <- m.Run(runCtx) }()
 
 	probeRunning := func(id probe.ID) bool {
 		p := m.probes[id].(*noopProbe)
@@ -501,6 +503,14 @@ func TestConfigProvider(t *testing.T) {
 	}, time.Second, 10*time.Millisecond)
 
 	cancel()
+	assert.Eventually(t, func() bool {
+		select {
+		case <-runErr:
+			return true
+		default:
+			return false
+		}
+	}, time.Second, 10*time.Millisecond)
 	assert.Eventually(t, func() bool {
 		return probeClosed(netHTTPClientProbeID) && !probeRunning(netHTTPClientProbeID) &&
 			probeClosed(netHTTPServerProbeID) && !probeRunning(netHTTPServerProbeID) &&

@@ -61,7 +61,24 @@ type Manager struct {
 	runningProbesWG sync.WaitGroup
 	currentConfig   Config
 	probeMu         sync.Mutex
-	state           managerState
+	state           state
+}
+
+type state struct {
+	state managerState
+	mu    sync.RWMutex
+}
+
+func (m *Manager) setState(s managerState) {
+	m.state.mu.Lock()
+	defer m.state.mu.Unlock()
+	m.state.state = s
+}
+
+func (m *Manager) getState() managerState {
+	m.state.mu.RLock()
+	defer m.state.mu.RUnlock()
+	return m.state.state
 }
 
 // NewManager returns a new [Manager].
@@ -194,7 +211,7 @@ func (m *Manager) applyConfig(c Config) error {
 	m.probeMu.Lock()
 	defer m.probeMu.Unlock()
 
-	if m.state != managerStateRunning {
+	if m.getState() != managerStateRunning {
 		return nil
 	}
 
@@ -259,7 +276,7 @@ func (m *Manager) Load(ctx context.Context, target *process.TargetDetails) error
 	if target == nil {
 		return errors.New("target details not set - load is called on non-initialized instrumentation")
 	}
-	if m.state == managerStateRunning {
+	if m.getState() == managerStateRunning {
 		return errors.New("manager is already running, load is not allowed")
 	}
 
@@ -270,14 +287,14 @@ func (m *Manager) Load(ctx context.Context, target *process.TargetDetails) error
 	}
 
 	m.td = target
-	m.state = managerStateLoaded
+	m.setState(managerStateLoaded)
 
 	return nil
 }
 
 // Run runs the event processing loop for all managed probes.
 func (m *Manager) Run(ctx context.Context) error {
-	if m.state != managerStateLoaded {
+	if m.getState() != managerStateLoaded {
 		return errors.New("manager is not loaded, call Load before Run")
 	}
 
@@ -288,7 +305,7 @@ func (m *Manager) Run(ctx context.Context) error {
 	}
 
 	ctx, m.stop = context.WithCancelCause(ctx)
-	m.state = managerStateRunning
+	m.setState(managerStateRunning)
 
 	go m.ConfigLoop(ctx)
 
@@ -311,11 +328,12 @@ var errStop = errors.New("stopped called")
 
 // Stop stops all probes and cleans up all the resources associated with them.
 func (m *Manager) Stop() error {
-	if m.state == managerStateUninitialized || m.state == managerStateStopped {
+	currentState := m.getState()
+	if currentState == managerStateUninitialized || currentState == managerStateStopped {
 		return nil
 	}
 
-	if m.state == managerStateRunning {
+	if currentState == managerStateRunning {
 		m.stop(errStop)
 	}
 
@@ -328,7 +346,7 @@ func (m *Manager) Stop() error {
 	// Wait for all probes to stop.
 	m.runningProbesWG.Wait()
 
-	m.state = managerStateStopped
+	m.setState(managerStateStopped)
 	return err
 }
 
