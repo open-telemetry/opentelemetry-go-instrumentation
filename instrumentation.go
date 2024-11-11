@@ -168,6 +168,8 @@ func (i *Instrumentation) Close() error {
 	defer i.stopMu.Unlock()
 
 	if i.stop == nil {
+		// if stop is not set, the instrumentation is not running
+		// stop the manager to clean up resources
 		return i.manager.Stop()
 	}
 

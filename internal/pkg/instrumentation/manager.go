@@ -57,6 +57,7 @@ type Manager struct {
 	cp              ConfigProvider
 	exe             *link.Executable
 	td              *process.TargetDetails
+	stop            context.CancelCauseFunc
 	runningProbesWG sync.WaitGroup
 	currentConfig   Config
 	probeMu         sync.Mutex
@@ -286,6 +287,7 @@ func (m *Manager) Run(ctx context.Context) error {
 		}
 	}
 
+	ctx, m.stop = context.WithCancelCause(ctx)
 	m.state = managerStateRunning
 
 	go m.ConfigLoop(ctx)
@@ -296,16 +298,25 @@ func (m *Manager) Run(ctx context.Context) error {
 		<-ctx.Done()
 
 		err := m.Stop()
-		done <- errors.Join(err, ctx.Err())
+		if e := context.Cause(ctx); !errors.Is(e, errStop) {
+			err = errors.Join(err, e)
+		}
+		done <- err
 	}()
 
 	return <-done
 }
 
+var errStop = errors.New("stopped called")
+
 // Stop stops all probes and cleans up all the resources associated with them.
 func (m *Manager) Stop() error {
 	if m.state == managerStateUninitialized || m.state == managerStateStopped {
 		return nil
+	}
+
+	if m.state == managerStateRunning {
+		m.stop(errStop)
 	}
 
 	m.probeMu.Lock()
@@ -314,7 +325,7 @@ func (m *Manager) Stop() error {
 	m.logger.Debug("Shutting down all probes")
 	err := m.cleanup(m.td)
 
-	// Wait for all probes to stop before closing the chan they send on.
+	// Wait for all probes to stop.
 	m.runningProbesWG.Wait()
 
 	m.state = managerStateStopped

@@ -235,7 +235,7 @@ func (tp *shutdownTracerProvider) Shutdown(context.Context) error {
 	return nil
 }
 
-func TestRunStopping(t *testing.T) {
+func TestRunStoppingByContext(t *testing.T) {
 	probeStop := make(chan struct{})
 	p := newSlowProbe(probeStop)
 
@@ -283,6 +283,47 @@ func TestRunStopping(t *testing.T) {
 	}, time.Second, 10*time.Millisecond)
 	assert.ErrorIs(t, err, context.Canceled, "Stopping Run error")
 	assert.True(t, tp.called, "Controller not stopped")
+}
+
+func TestRunStoppingByStop(t *testing.T) {
+	p := noopProbe{}
+
+	tp := new(shutdownTracerProvider)
+	ctrl, err := opentelemetry.NewController(slog.Default(), tp)
+	require.NoError(t, err)
+
+	m := &Manager{
+		otelController: ctrl,
+		logger:         slog.Default(),
+		probes:         map[probe.ID]probe.Probe{{}: &p},
+		cp:             NewNoopConfigProvider(nil),
+	}
+
+	mockExeAndBpffs(t)
+
+	ctx, _ := context.WithCancel(context.Background())
+	errCh := make(chan error, 1)
+
+	err = m.Load(ctx, &process.TargetDetails{PID: 1000})
+	require.NoError(t, err)
+
+	time.AfterFunc(100*time.Millisecond, func() {
+		err = m.Stop()
+		require.NoError(t, err)
+	})
+	go func() { errCh <- m.Run(ctx) }()
+
+	assert.Eventually(t, func() bool {
+		select {
+		case err = <-errCh:
+			return true
+		default:
+			return false
+		}
+	}, time.Second, 10*time.Millisecond)
+	assert.ErrorIs(t, err, nil)
+	assert.True(t, tp.called, "Controller not stopped")
+	assert.True(t, p.closed.Load(), "Probe not closed")
 }
 
 type slowProbe struct {
