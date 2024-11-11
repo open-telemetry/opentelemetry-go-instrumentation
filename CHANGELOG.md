@@ -12,7 +12,8 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 
 - Split the functionality of `Instrumentation.Run` to `Instrumentation.Load` and `Instrumentation.Run`.
   `Load` will report any errors in the loading and attaching phase of the probes. ([#1245](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1245))
-  
+- Remove the `WithLoadedIndicator` `InstrumentationOption` since the `Instrumentation.Load` will indicate whether the probes are loaded in a synchronous way.  ([#1245](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1245))
+
 ### Added
 
 - Include `server.address` and `server.port` in gRPC spans (>=v1.60.0). ([#1242](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1242))
