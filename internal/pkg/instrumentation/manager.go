@@ -61,24 +61,8 @@ type Manager struct {
 	runningProbesWG sync.WaitGroup
 	currentConfig   Config
 	probeMu         sync.Mutex
-	state           state
-}
-
-type state struct {
-	state managerState
-	mu    sync.RWMutex
-}
-
-func (m *Manager) setState(s managerState) {
-	m.state.mu.Lock()
-	defer m.state.mu.Unlock()
-	m.state.state = s
-}
-
-func (m *Manager) getState() managerState {
-	m.state.mu.RLock()
-	defer m.state.mu.RUnlock()
-	return m.state.state
+	state           managerState
+	stateMu         sync.RWMutex
 }
 
 // NewManager returns a new [Manager].
@@ -211,7 +195,7 @@ func (m *Manager) applyConfig(c Config) error {
 	m.probeMu.Lock()
 	defer m.probeMu.Unlock()
 
-	if m.getState() != managerStateRunning {
+	if m.state != managerStateRunning {
 		return nil
 	}
 
@@ -276,7 +260,10 @@ func (m *Manager) Load(ctx context.Context, target *process.TargetDetails) error
 	if target == nil {
 		return errors.New("target details not set - load is called on non-initialized instrumentation")
 	}
-	if m.getState() == managerStateRunning {
+	m.stateMu.Lock()
+	defer m.stateMu.Unlock()
+
+	if m.state == managerStateRunning {
 		return errors.New("manager is already running, load is not allowed")
 	}
 
@@ -287,15 +274,17 @@ func (m *Manager) Load(ctx context.Context, target *process.TargetDetails) error
 	}
 
 	m.td = target
-	m.setState(managerStateLoaded)
+	m.state = managerStateLoaded
 
 	return nil
 }
 
-// Run runs the event processing loop for all managed probes.
-func (m *Manager) Run(ctx context.Context) error {
-	if m.getState() != managerStateLoaded {
-		return errors.New("manager is not loaded, call Load before Run")
+func (m *Manager) runProbes(ctx context.Context) (context.Context, error) {
+	m.stateMu.Lock()
+	defer m.stateMu.Unlock()
+
+	if m.state != managerStateLoaded {
+		return nil, errors.New("manager is not loaded, call Load before Run")
 	}
 
 	for id, p := range m.probes {
@@ -304,8 +293,18 @@ func (m *Manager) Run(ctx context.Context) error {
 		}
 	}
 
-	ctx, m.stop = context.WithCancelCause(ctx)
-	m.setState(managerStateRunning)
+	ctx, stop := context.WithCancelCause(ctx)
+	m.stop = stop
+	m.state = managerStateRunning
+	return ctx, nil
+}
+
+// Run runs the event processing loop for all managed probes.
+func (m *Manager) Run(ctx context.Context) error {
+	ctx, err := m.runProbes(ctx)
+	if err != nil {
+		return err
+	}
 
 	go m.ConfigLoop(ctx)
 
@@ -328,7 +327,10 @@ var errStop = errors.New("stopped called")
 
 // Stop stops all probes and cleans up all the resources associated with them.
 func (m *Manager) Stop() error {
-	currentState := m.getState()
+	m.stateMu.Lock()
+	defer m.stateMu.Unlock()
+
+	currentState := m.state
 	if currentState == managerStateUninitialized || currentState == managerStateStopped {
 		return nil
 	}
@@ -346,7 +348,7 @@ func (m *Manager) Stop() error {
 	// Wait for all probes to stop.
 	m.runningProbesWG.Wait()
 
-	m.setState(managerStateStopped)
+	m.state = managerStateStopped
 	return err
 }
 
