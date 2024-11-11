@@ -66,12 +66,12 @@ type Manager struct {
 // NewManager returns a new [Manager].
 func NewManager(logger *slog.Logger, otelController *opentelemetry.Controller, globalImpl bool, cp ConfigProvider, version string) (*Manager, error) {
 	m := &Manager{
-		logger:          logger,
-		version:         version,
-		probes:          make(map[probe.ID]probe.Probe),
-		otelController:  otelController,
-		globalImpl:      globalImpl,
-		cp:              cp,
+		logger:         logger,
+		version:        version,
+		probes:         make(map[probe.ID]probe.Probe),
+		otelController: otelController,
+		globalImpl:     globalImpl,
+		cp:             cp,
 	}
 
 	err := m.registerProbes()
