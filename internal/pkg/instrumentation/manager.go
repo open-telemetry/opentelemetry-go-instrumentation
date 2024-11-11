@@ -263,7 +263,7 @@ func (m *Manager) Load(ctx context.Context, target *process.TargetDetails) error
 	}
 
 	m.currentConfig = m.cp.InitialConfig(ctx)
-	err := m.load(target)
+	err := m.loadProbes(target)
 	if err != nil {
 		return err
 	}
@@ -321,7 +321,7 @@ func (m *Manager) Stop() error {
 	return err
 }
 
-func (m *Manager) load(target *process.TargetDetails) error {
+func (m *Manager) loadProbes(target *process.TargetDetails) error {
 	// Remove resource limits for kernels <5.11.
 	if err := rlimitRemoveMemlock(); err != nil {
 		return err
