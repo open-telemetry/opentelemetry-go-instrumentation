@@ -113,7 +113,7 @@ func (s *Server) insert(w http.ResponseWriter, req *http.Request) {
 		panic(err)
 	}
 
-	logger.Info("queryDb called")
+	logger.Info("insert called")
 	for rows.Next() {
 		var id int
 		var firstName string
@@ -141,7 +141,7 @@ func (s *Server) update(w http.ResponseWriter, req *http.Request) {
 		panic(err)
 	}
 
-	logger.Info("queryDb called")
+	logger.Info("update called")
 	for rows.Next() {
 		var id int
 		var firstName string
@@ -169,7 +169,7 @@ func (s *Server) delete(w http.ResponseWriter, req *http.Request) {
 		panic(err)
 	}
 
-	logger.Info("queryDb called")
+	logger.Info("delete called")
 	for rows.Next() {
 		var id int
 		var firstName string
@@ -197,7 +197,7 @@ func (s *Server) drop(w http.ResponseWriter, req *http.Request) {
 		panic(err)
 	}
 
-	logger.Info("queryDb called")
+	logger.Info("drop called")
 	for rows.Next() {
 		var id int
 		var firstName string
