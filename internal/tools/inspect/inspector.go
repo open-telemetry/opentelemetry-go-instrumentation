@@ -179,13 +179,6 @@ func (i *Inspector) Do(ctx context.Context) (*structfield.Index, error) {
 	return index, nil
 }
 
-func max(a, b int) int {
-	if a > b {
-		return a
-	}
-	return b
-}
-
 type result struct {
 	StructField structfield.ID
 	Version     *version.Version
