@@ -12,7 +12,6 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 
 - Split the functionality of `Instrumentation.Run` to `Instrumentation.Load` and `Instrumentation.Run`.
   `Load` will report any errors in the loading and attaching phase of the probes. ([#1245](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1245))
-- Remove the `WithLoadedIndicator` `InstrumentationOption` since the `Instrumentation.Load` will indicate whether the probes are loaded in a synchronous way.  ([#1245](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1245))
 
 ### Added
 
@@ -29,6 +28,7 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 
 - The deprecated `go.opentelemetry.io/auto/sdk/telemetry` package is removed. ([#1252](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1252))
 - The deprecated `go.opentelemetry.io/auto/sdk/telemetry/test` module is removed. ([#1252](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1252))
+- Remove the `WithLoadedIndicator` `InstrumentationOption` since the `Instrumentation.Load` will indicate whether the probes are loaded in a synchronous way.  ([#1245](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1245))
 
 ## [v0.17.0-alpha] - 2024-11-05
 
