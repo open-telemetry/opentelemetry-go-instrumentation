@@ -131,7 +131,7 @@ func (i *Instrumentation) Load(ctx context.Context) error {
 	return i.manager.Load(ctx, i.target)
 }
 
-// Run starts the instrumentation. It must be called after [Load].
+// Run starts the instrumentation. It must be called after [Instrumentation.Load].
 //
 // This function will not return until either ctx is done, an unrecoverable
 // error is encountered, or Close is called.
