@@ -94,7 +94,7 @@ func NewInstrumentation(ctx context.Context, opts ...InstrumentationOption) (*In
 	}
 
 	cp := convertConfigProvider(c.cp)
-	mngr, err := instrumentation.NewManager(c.logger, ctrl, c.globalImpl, c.loadIndicator, cp, Version())
+	mngr, err := instrumentation.NewManager(c.logger, ctrl, c.globalImpl, cp, Version())
 	if err != nil {
 		return nil, err
 	}
@@ -126,7 +126,12 @@ func NewInstrumentation(ctx context.Context, opts ...InstrumentationOption) (*In
 	}, nil
 }
 
-// Run starts the instrumentation.
+// Load loads and attaches the relevant probes to the target process.
+func (i *Instrumentation) Load(ctx context.Context) error {
+	return i.manager.Load(ctx, i.target)
+}
+
+// Run starts the instrumentation. It must be called after [Instrumentation.Load].
 //
 // This function will not return until either ctx is done, an unrecoverable
 // error is encountered, or Close is called.
@@ -136,7 +141,7 @@ func (i *Instrumentation) Run(ctx context.Context) error {
 		return err
 	}
 
-	err = i.manager.Run(ctx, i.target)
+	err = i.manager.Run(ctx)
 	close(i.stopped)
 	if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
 		return nil
@@ -162,12 +167,16 @@ func (i *Instrumentation) Close() error {
 	i.stopMu.Lock()
 	defer i.stopMu.Unlock()
 
-	if i.stop != nil {
-		i.stop()
-		<-i.stopped
-
-		i.stop, i.stopped = nil, nil
+	if i.stop == nil {
+		// if stop is not set, the instrumentation is not running
+		// stop the manager to clean up resources
+		return i.manager.Stop()
 	}
+
+	i.stop()
+	<-i.stopped
+	i.stop, i.stopped = nil, nil
+
 	return nil
 }
 
@@ -182,7 +191,6 @@ type instConfig struct {
 	serviceName        string
 	additionalResAttrs []attribute.KeyValue
 	globalImpl         bool
-	loadIndicator      chan struct{}
 	logger             *slog.Logger
 	sampler            Sampler
 	cp                 ConfigProvider
@@ -530,17 +538,6 @@ func WithGlobal() InstrumentationOption {
 func WithResourceAttributes(attrs ...attribute.KeyValue) InstrumentationOption {
 	return fnOpt(func(_ context.Context, c instConfig) (instConfig, error) {
 		c.additionalResAttrs = append(c.additionalResAttrs, attrs...)
-		return c, nil
-	})
-}
-
-// WithLoadedIndicator returns an [InstrumentationOption] that will configure an
-// [Instrumentation] to close the provided indicator channel when the target
-// process has been instrumented (i.e. all probes have been loaded).
-// The provided indicator channel needs to be initialized by the caller.
-func WithLoadedIndicator(indicator chan struct{}) InstrumentationOption {
-	return fnOpt(func(_ context.Context, c instConfig) (instConfig, error) {
-		c.loadIndicator = indicator
 		return c, nil
 	})
 }
