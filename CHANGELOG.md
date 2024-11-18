@@ -23,6 +23,7 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 ### Fixed
 
 - Don't include `db.query.text` attribute in `database/sql` if the query string is empty or not collected. ([#1246](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1246))
+- Handle a `ConfigProvider` which doesn't provide a sampling config in the initial configuration by applying the default sampler. ([#1292](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1292))
 
 ### Removed
 

@@ -206,6 +206,10 @@ func NewSamplingManager(c *ebpf.Collection, conf *Config) (*Manager, error) {
 		ActiveSamplerMap:  probeActiveSampler,
 	}
 
+	if conf == nil {
+		conf = DefaultConfig()
+	}
+
 	err := m.applyConfig(conf)
 	if err != nil {
 		return nil, err
@@ -215,6 +219,10 @@ func NewSamplingManager(c *ebpf.Collection, conf *Config) (*Manager, error) {
 }
 
 func (m *Manager) applyConfig(conf *Config) error {
+	if conf == nil {
+		return fmt.Errorf("cannot apply nil config")
+	}
+
 	samplerIDs := make([]SamplerID, 0, len(conf.Samplers))
 	configs := make([]SamplerConfig, 0, len(conf.Samplers))
 	for id, samplerConfig := range conf.Samplers {

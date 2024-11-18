@@ -127,4 +127,28 @@ func TestEBPFNewSamplingConfigDefault(t *testing.T) {
 		assert.Equal(t, SamplerTraceIDRatio, samplersConfigInMap.SamplerType)
 		assert.Equal(t, TraceIDRatioConfig{42}, samplersConfigInMap.Config)
 	})
+
+	t.Run("nil config", func(t *testing.T) {
+		m, err := NewSamplingManager(c, nil)
+		if !assert.NoError(t, err) {
+			return
+		}
+
+		assert.Equal(t, m.currentSamplerID, ParentBasedID)
+
+		var activeSamplerIDInMap SamplerID
+		err = m.ActiveSamplerMap.Lookup(uint32(0), &activeSamplerIDInMap)
+		if !assert.NoError(t, err) {
+			return
+		}
+		assert.Equal(t, activeSamplerIDInMap, ParentBasedID)
+
+		var samplersConfigInMap SamplerConfig
+		err = m.samplersConfigMap.Lookup(uint32(ParentBasedID), &samplersConfigInMap)
+		if !assert.NoError(t, err) {
+			return
+		}
+		assert.Equal(t, samplersConfigInMap.SamplerType, SamplerParentBased)
+		assert.Equal(t, samplersConfigInMap.Config, DefaultParentBasedSampler())
+	})
 }
