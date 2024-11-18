@@ -106,10 +106,8 @@ func main() {
 		"version", newVersion(),
 	)
 
-	loadedIndicator := make(chan struct{})
 	instOptions := []auto.InstrumentationOption{
 		auto.WithEnv(),
-		auto.WithLoadedIndicator(loadedIndicator),
 		auto.WithLogger(logger),
 	}
 	if globalImpl {
@@ -122,16 +120,14 @@ func main() {
 		return
 	}
 
-	go func() {
-		select {
-		case <-ctx.Done():
-			return
-		case <-loadedIndicator:
-			logger.Info("instrumentation loaded successfully")
-		}
-	}()
+	err = inst.Load(ctx)
+	if err != nil {
+		logger.Error("failed to load instrumentation", "error", err)
+		return
+	}
 
-	logger.Info("starting instrumentation...")
+	logger.Info("instrumentation loaded successfully, starting...")
+
 	if err = inst.Run(ctx); err != nil && !errors.Is(err, process.ErrInterrupted) {
 		logger.Error("instrumentation crashed", "error", err)
 	}
