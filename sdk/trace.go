@@ -4,11 +4,12 @@
 package sdk
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"reflect"
 	"runtime"
+	"sync"
+	"sync/atomic"
 	"time"
 
 	"go.opentelemetry.io/otel/attribute"
@@ -44,85 +45,6 @@ func (p tracerProvider) Tracer(name string, opts ...trace.TracerOption) trace.Tr
 	}
 }
 
-type tracer struct {
-	noop.Tracer
-
-	name, schemaURL, version string
-}
-
-var _ trace.Tracer = tracer{}
-
-func (t tracer) Start(ctx context.Context, name string, opts ...trace.SpanStartOption) (context.Context, trace.Span) {
-	var psc trace.SpanContext
-	span := &span{sampled: true}
-
-	// Ask eBPF for sampling decision and span context info.
-	t.start(ctx, span, &psc, &span.sampled, &span.spanContext)
-
-	ctx = trace.ContextWithSpan(ctx, span)
-
-	if span.sampled {
-		// Only build traces if sampled.
-		cfg := trace.NewSpanStartConfig(opts...)
-		span.traces, span.span = t.traces(ctx, name, cfg, span.spanContext, psc)
-	}
-
-	return ctx, span
-}
-
-// Expected to be implemented in eBPF.
-//
-//go:noinline
-func (t *tracer) start(
-	ctx context.Context,
-	spanPtr *span,
-	psc *trace.SpanContext,
-	sampled *bool,
-	sc *trace.SpanContext,
-) {
-	start(ctx, spanPtr, psc, sampled, sc)
-}
-
-// start is used for testing.
-var start = func(context.Context, *span, *trace.SpanContext, *bool, *trace.SpanContext) {}
-
-func (t tracer) traces(ctx context.Context, name string, cfg trace.SpanConfig, sc, psc trace.SpanContext) (*telemetry.Traces, *telemetry.Span) {
-	span := &telemetry.Span{
-		TraceID:      telemetry.TraceID(sc.TraceID()),
-		SpanID:       telemetry.SpanID(sc.SpanID()),
-		Flags:        uint32(sc.TraceFlags()),
-		TraceState:   sc.TraceState().String(),
-		ParentSpanID: telemetry.SpanID(psc.SpanID()),
-		Name:         name,
-		Kind:         spanKind(cfg.SpanKind()),
-		Attrs:        convAttrs(cfg.Attributes()),
-		Links:        convLinks(cfg.Links()),
-	}
-
-	if t := cfg.Timestamp(); !t.IsZero() {
-		span.StartTime = cfg.Timestamp()
-	} else {
-		span.StartTime = time.Now()
-	}
-
-	return &telemetry.Traces{
-		ResourceSpans: []*telemetry.ResourceSpans{
-			{
-				ScopeSpans: []*telemetry.ScopeSpans{
-					{
-						Scope: &telemetry.Scope{
-							Name:    t.name,
-							Version: t.version,
-						},
-						Spans:     []*telemetry.Span{span},
-						SchemaURL: t.schemaURL,
-					},
-				},
-			},
-		},
-	}, span
-}
-
 func spanKind(kind trace.SpanKind) telemetry.SpanKind {
 	switch kind {
 	case trace.SpanKindInternal:
@@ -142,9 +64,10 @@ func spanKind(kind trace.SpanKind) telemetry.SpanKind {
 type span struct {
 	noop.Span
 
-	sampled     bool
 	spanContext trace.SpanContext
+	sampled     atomic.Bool
 
+	mu     sync.Mutex
 	traces *telemetry.Traces
 	span   *telemetry.Span
 }
@@ -153,6 +76,7 @@ func (s *span) SpanContext() trace.SpanContext {
 	if s == nil {
 		return trace.SpanContext{}
 	}
+	// s.spanContext is immutable, do not acquire lock s.mu.
 	return s.spanContext
 }
 
@@ -160,13 +84,17 @@ func (s *span) IsRecording() bool {
 	if s == nil {
 		return false
 	}
-	return s.sampled
+
+	return s.sampled.Load()
 }
 
 func (s *span) SetStatus(c codes.Code, msg string) {
-	if s == nil || !s.sampled {
+	if s == nil || !s.sampled.Load() {
 		return
 	}
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
 
 	if s.span.Status == nil {
 		s.span.Status = new(telemetry.Status)
@@ -185,9 +113,12 @@ func (s *span) SetStatus(c codes.Code, msg string) {
 }
 
 func (s *span) SetAttributes(attrs ...attribute.KeyValue) {
-	if s == nil || !s.sampled {
+	if s == nil || !s.sampled.Load() {
 		return
 	}
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
 
 	// TODO: handle attribute limits.
 
@@ -273,9 +204,17 @@ func convAttrValue(value attribute.Value) telemetry.Value {
 }
 
 func (s *span) End(opts ...trace.SpanEndOption) {
-	if s == nil || !s.sampled {
+	if s == nil || !s.sampled.Swap(false) {
 		return
 	}
+
+	// s.end exists so the lock (s.mu) is not held while s.ended is called.
+	s.ended(s.end(opts))
+}
+
+func (s *span) end(opts []trace.SpanEndOption) []byte {
+	s.mu.Lock()
+	defer s.mu.Unlock()
 
 	cfg := trace.NewSpanEndConfig(opts...)
 	if t := cfg.Timestamp(); !t.IsZero() {
@@ -285,10 +224,7 @@ func (s *span) End(opts ...trace.SpanEndOption) {
 	}
 
 	b, _ := json.Marshal(s.traces) // TODO: do not ignore this error.
-
-	s.sampled = false
-
-	s.ended(b)
+	return b
 }
 
 // Expected to be implemented in eBPF.
@@ -300,7 +236,7 @@ func (*span) ended(buf []byte) { ended(buf) }
 var ended = func([]byte) {}
 
 func (s *span) RecordError(err error, opts ...trace.EventOption) {
-	if s == nil || err == nil || !s.sampled {
+	if s == nil || err == nil || !s.sampled.Load() {
 		return
 	}
 
@@ -317,6 +253,9 @@ func (s *span) RecordError(err error, opts ...trace.EventOption) {
 		attrs = append(attrs, semconv.ExceptionStacktrace(string(buf[0:n])))
 	}
 
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
 	s.addEvent(semconv.ExceptionEventName, cfg.Timestamp(), attrs)
 }
 
@@ -330,14 +269,20 @@ func typeStr(i any) string {
 }
 
 func (s *span) AddEvent(name string, opts ...trace.EventOption) {
-	if s == nil || !s.sampled {
+	if s == nil || !s.sampled.Load() {
 		return
 	}
 
 	cfg := trace.NewEventConfig(opts...)
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
 	s.addEvent(name, cfg.Timestamp(), cfg.Attributes())
 }
 
+// addEvent adds an event with name and attrs at tStamp to the span. The span
+// lock (s.mu) needs to be held by the caller.
 func (s *span) addEvent(name string, tStamp time.Time, attrs []attribute.KeyValue) {
 	// TODO: handle event limits.
 
@@ -349,9 +294,12 @@ func (s *span) addEvent(name string, tStamp time.Time, attrs []attribute.KeyValu
 }
 
 func (s *span) AddLink(link trace.Link) {
-	if s == nil || !s.sampled {
+	if s == nil || !s.sampled.Load() {
 		return
 	}
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
 
 	// TODO: handle link limits.
 
@@ -377,9 +325,13 @@ func convLink(link trace.Link) *telemetry.SpanLink {
 }
 
 func (s *span) SetName(name string) {
-	if s == nil || !s.sampled {
+	if s == nil || !s.sampled.Load() {
 		return
 	}
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
 	s.span.Name = name
 }
 
