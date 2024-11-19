@@ -23,14 +23,17 @@ var _ trace.Tracer = tracer{}
 
 func (t tracer) Start(ctx context.Context, name string, opts ...trace.SpanStartOption) (context.Context, trace.Span) {
 	var psc trace.SpanContext
-	span := &span{sampled: true}
+	sampled := true
+	span := new(span)
 
 	// Ask eBPF for sampling decision and span context info.
-	t.start(ctx, span, &psc, &span.sampled, &span.spanContext)
+	t.start(ctx, span, &psc, &sampled, &span.spanContext)
+
+	span.sampled.Store(sampled)
 
 	ctx = trace.ContextWithSpan(ctx, span)
 
-	if span.sampled {
+	if sampled {
 		// Only build traces if sampled.
 		cfg := trace.NewSpanStartConfig(opts...)
 		span.traces, span.span = t.traces(ctx, name, cfg, span.spanContext, psc)
