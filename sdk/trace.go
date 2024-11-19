@@ -9,6 +9,8 @@ import (
 	"fmt"
 	"reflect"
 	"runtime"
+	"sync"
+	"sync/atomic"
 	"time"
 
 	"go.opentelemetry.io/otel/attribute"
@@ -30,14 +32,17 @@ var _ trace.Tracer = tracer{}
 
 func (t tracer) Start(ctx context.Context, name string, opts ...trace.SpanStartOption) (context.Context, trace.Span) {
 	var psc trace.SpanContext
-	span := &span{sampled: true}
+	sampled := true
+	span := new(span)
 
 	// Ask eBPF for sampling decision and span context info.
-	t.start(ctx, span, &psc, &span.sampled, &span.spanContext)
+	t.start(ctx, span, &psc, &sampled, &span.spanContext)
+
+	span.sampled.Store(sampled)
 
 	ctx = trace.ContextWithSpan(ctx, span)
 
-	if span.sampled {
+	if sampled {
 		// Only build traces if sampled.
 		cfg := trace.NewSpanStartConfig(opts...)
 		span.traces, span.span = t.traces(ctx, name, cfg, span.spanContext, psc)
@@ -118,9 +123,10 @@ func spanKind(kind trace.SpanKind) telemetry.SpanKind {
 type span struct {
 	noop.Span
 
-	sampled     bool
 	spanContext trace.SpanContext
+	sampled     atomic.Bool
 
+	mu     sync.Mutex
 	traces *telemetry.Traces
 	span   *telemetry.Span
 }
@@ -129,6 +135,7 @@ func (s *span) SpanContext() trace.SpanContext {
 	if s == nil {
 		return trace.SpanContext{}
 	}
+	// s.spanContext is immutable, do not acquire lock s.mu.
 	return s.spanContext
 }
 
@@ -136,13 +143,17 @@ func (s *span) IsRecording() bool {
 	if s == nil {
 		return false
 	}
-	return s.sampled
+
+	return s.sampled.Load()
 }
 
 func (s *span) SetStatus(c codes.Code, msg string) {
-	if s == nil || !s.sampled {
+	if s == nil || !s.sampled.Load() {
 		return
 	}
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
 
 	if s.span.Status == nil {
 		s.span.Status = new(telemetry.Status)
@@ -161,9 +172,12 @@ func (s *span) SetStatus(c codes.Code, msg string) {
 }
 
 func (s *span) SetAttributes(attrs ...attribute.KeyValue) {
-	if s == nil || !s.sampled {
+	if s == nil || !s.sampled.Load() {
 		return
 	}
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
 
 	// TODO: handle attribute limits.
 
@@ -249,9 +263,17 @@ func convAttrValue(value attribute.Value) telemetry.Value {
 }
 
 func (s *span) End(opts ...trace.SpanEndOption) {
-	if s == nil || !s.sampled {
+	if s == nil || !s.sampled.Swap(false) {
 		return
 	}
+
+	// s.end exists so the lock (s.mu) is not held while s.ended is called.
+	s.ended(s.end(opts))
+}
+
+func (s *span) end(opts []trace.SpanEndOption) []byte {
+	s.mu.Lock()
+	defer s.mu.Unlock()
 
 	cfg := trace.NewSpanEndConfig(opts...)
 	if t := cfg.Timestamp(); !t.IsZero() {
@@ -261,10 +283,7 @@ func (s *span) End(opts ...trace.SpanEndOption) {
 	}
 
 	b, _ := json.Marshal(s.traces) // TODO: do not ignore this error.
-
-	s.sampled = false
-
-	s.ended(b)
+	return b
 }
 
 // Expected to be implemented in eBPF.
@@ -276,7 +295,7 @@ func (*span) ended(buf []byte) { ended(buf) }
 var ended = func([]byte) {}
 
 func (s *span) RecordError(err error, opts ...trace.EventOption) {
-	if s == nil || err == nil || !s.sampled {
+	if s == nil || err == nil || !s.sampled.Load() {
 		return
 	}
 
@@ -293,6 +312,9 @@ func (s *span) RecordError(err error, opts ...trace.EventOption) {
 		attrs = append(attrs, semconv.ExceptionStacktrace(string(buf[0:n])))
 	}
 
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
 	s.addEvent(semconv.ExceptionEventName, cfg.Timestamp(), attrs)
 }
 
@@ -306,14 +328,20 @@ func typeStr(i any) string {
 }
 
 func (s *span) AddEvent(name string, opts ...trace.EventOption) {
-	if s == nil || !s.sampled {
+	if s == nil || !s.sampled.Load() {
 		return
 	}
 
 	cfg := trace.NewEventConfig(opts...)
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
 	s.addEvent(name, cfg.Timestamp(), cfg.Attributes())
 }
 
+// addEvent adds an event with name and attrs at tStamp to the span. The span
+// lock (s.mu) needs to be held by the caller.
 func (s *span) addEvent(name string, tStamp time.Time, attrs []attribute.KeyValue) {
 	// TODO: handle event limits.
 
@@ -325,9 +353,12 @@ func (s *span) addEvent(name string, tStamp time.Time, attrs []attribute.KeyValu
 }
 
 func (s *span) AddLink(link trace.Link) {
-	if s == nil || !s.sampled {
+	if s == nil || !s.sampled.Load() {
 		return
 	}
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
 
 	// TODO: handle link limits.
 
@@ -353,9 +384,13 @@ func convLink(link trace.Link) *telemetry.SpanLink {
 }
 
 func (s *span) SetName(name string) {
-	if s == nil || !s.sampled {
+	if s == nil || !s.sampled.Load() {
 		return
 	}
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
 	s.span.Name = name
 }
 
