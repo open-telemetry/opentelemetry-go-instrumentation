@@ -29,6 +29,9 @@ const (
 
 	// IncludeDBStatementEnvVar is the environment variable to opt-in for sql query inclusion in the trace.
 	IncludeDBStatementEnvVar = "OTEL_GO_AUTO_INCLUDE_DB_STATEMENT"
+
+	// IncludeDBOperationEnvVar is the environment variable to opt-in for sql query operation in the trace.
+	IncludeDBOperationEnvVar = "OTEL_GO_AUTO_INCLUDE_DB_OPERATION"
 )
 
 // New returns a new [probe.Probe].
@@ -97,24 +100,30 @@ func processFn(e *event) ptrace.SpanSlice {
 	query := unix.ByteSliceToString(e.Query[:])
 	if query != "" {
 		span.Attributes().PutStr(string(semconv.DBQueryTextKey), query)
+	}
 
-		q, err := sql.Parse(query)
-		if err == nil {
-			operation := ""
-			switch q.(type) {
-			case *sql.Select:
-				operation = "SELECT"
-			case *sql.Update:
-				operation = "UPDATE"
-			case *sql.Insert:
-				operation = "INSERT"
-			case *sql.Delete:
-				operation = "DELETE"
-			}
+	includeOperationVal := os.Getenv(IncludeDBOperationEnvVar)
+	if includeOperationVal != "" {
+		include, err := strconv.ParseBool(includeOperationVal)
+		if err == nil && include {
+			q, err := sql.Parse(query)
+			if err == nil {
+				operation := ""
+				switch q.(type) {
+				case *sql.Select:
+					operation = "SELECT"
+				case *sql.Update:
+					operation = "UPDATE"
+				case *sql.Insert:
+					operation = "INSERT"
+				case *sql.Delete:
+					operation = "DELETE"
+				}
 
-			if operation != "" {
-				span.Attributes().PutStr(string(semconv.DBOperationNameKey), operation)
-				span.SetName(operation)
+				if operation != "" {
+					span.Attributes().PutStr(string(semconv.DBOperationNameKey), operation)
+					span.SetName(operation)
+				}
 			}
 		}
 	}
