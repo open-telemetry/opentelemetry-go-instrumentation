@@ -105,6 +105,7 @@ func New(logger *slog.Logger) probe.Probe {
 					Val: structfield.NewID("std", "runtime", "hmap", "buckets"),
 				},
 				tracerIDContainsSchemaURL{},
+				tracerIDContainsScopeAttributes{},
 			},
 			Uprobes: []probe.Uprobe{
 				{
@@ -138,13 +139,13 @@ func New(logger *slog.Logger) probe.Probe {
 	}
 }
 
-// framePosConst is a Probe Const defining whether the tracer key contains schemaURL.
+// tracerIDContainsSchemaURL is a Probe Const defining whether the tracer key contains schemaURL.
 type tracerIDContainsSchemaURL struct{}
 
 // Prior to v1.28 the tracer key did not contain schemaURL. However, in that version a
 // change was made to include it.
 // https://github.com/open-telemetry/opentelemetry-go/pull/5426/files
-var paramChangeVer = version.Must(version.NewVersion("1.28.0"))
+var schemaAddedToTracerKeyVer = version.Must(version.NewVersion("1.28.0"))
 
 func (c tracerIDContainsSchemaURL) InjectOption(td *process.TargetDetails) (inject.Option, error) {
 	ver, ok := td.Libraries["go.opentelemetry.io/otel"]
@@ -152,7 +153,23 @@ func (c tracerIDContainsSchemaURL) InjectOption(td *process.TargetDetails) (inje
 		return nil, fmt.Errorf("unknown module version: %s", pkg)
 	}
 
-	return inject.WithKeyValue("tracer_id_contains_schemaURL", ver.GreaterThanOrEqual(paramChangeVer)), nil
+	return inject.WithKeyValue("tracer_id_contains_schemaURL", ver.GreaterThanOrEqual(schemaAddedToTracerKeyVer)), nil
+}
+
+// In v1.32.0 the tracer key was updated to include the scope attributes.
+// https://github.com/open-telemetry/opentelemetry-go/pull/5924/files
+var scopeAttributesAddedToTracerKeyVer = version.Must(version.NewVersion("1.32.0"))
+
+// tracerIDContainsScopeAttributes is a Probe Const defining whether the tracer key contains scope attributes.
+type tracerIDContainsScopeAttributes struct{}
+
+func (c tracerIDContainsScopeAttributes) InjectOption(td *process.TargetDetails) (inject.Option, error) {
+	ver, ok := td.Libraries["go.opentelemetry.io/otel"]
+	if !ok {
+		return nil, fmt.Errorf("unknown module version: %s", pkg)
+	}
+
+	return inject.WithKeyValue("tracer_id_contains_scope_attributes", ver.GreaterThanOrEqual(scopeAttributesAddedToTracerKeyVer)), nil
 }
 
 type attributeKeyVal struct {
