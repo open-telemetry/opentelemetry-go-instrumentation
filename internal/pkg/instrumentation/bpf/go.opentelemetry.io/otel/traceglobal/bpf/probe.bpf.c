@@ -371,6 +371,8 @@ static __always_inline long fill_tracer_id(tracer_id_t *tracer_id, go_tracer_ptr
         // version of otel-go is 1.28.0 or higher
         if (tracer_id_contains_scope_attributes) {
             // version of otel-go is 1.32.0 or higher
+            // we don't collect the scope attributes, but we need to take their presence into account,
+            // when parsing the map bucket
             res = fill_tracer_id_with_scope_attributes_from_tracers_map(tracers_map, tracer, tracer_id);
         } else {
             res = fill_tracer_id_with_schema_from_tracers_map(tracers_map, tracer, tracer_id);
