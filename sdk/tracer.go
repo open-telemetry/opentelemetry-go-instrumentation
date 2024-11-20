@@ -36,7 +36,7 @@ func (t tracer) Start(ctx context.Context, name string, opts ...trace.SpanStartO
 	if sampled {
 		// Only build traces if sampled.
 		cfg := trace.NewSpanStartConfig(opts...)
-		span.traces, span.span = t.traces(ctx, name, cfg, span.spanContext, psc)
+		span.traces, span.span = t.traces(name, cfg, span.spanContext, psc)
 	}
 
 	return ctx, span
@@ -58,7 +58,7 @@ func (t *tracer) start(
 // start is used for testing.
 var start = func(context.Context, *span, *trace.SpanContext, *bool, *trace.SpanContext) {}
 
-func (t tracer) traces(ctx context.Context, name string, cfg trace.SpanConfig, sc, psc trace.SpanContext) (*telemetry.Traces, *telemetry.Span) {
+func (t tracer) traces(name string, cfg trace.SpanConfig, sc, psc trace.SpanContext) (*telemetry.Traces, *telemetry.Span) {
 	span := &telemetry.Span{
 		TraceID:      telemetry.TraceID(sc.TraceID()),
 		SpanID:       telemetry.SpanID(sc.SpanID()),
