@@ -5,15 +5,36 @@ package sdk
 
 import (
 	"context"
+	"math"
 	"strconv"
 	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"go.opentelemetry.io/otel/trace"
+
+	"go.opentelemetry.io/auto/sdk/internal/telemetry"
 )
 
 const tName = "tracer.name"
+
+func TestSpanKindTransform(t *testing.T) {
+	tests := map[trace.SpanKind]telemetry.SpanKind{
+		trace.SpanKind(-1):          telemetry.SpanKind(0),
+		trace.SpanKindUnspecified:   telemetry.SpanKind(0),
+		trace.SpanKind(math.MaxInt): telemetry.SpanKind(0),
+
+		trace.SpanKindInternal: telemetry.SpanKindInternal,
+		trace.SpanKindServer:   telemetry.SpanKindServer,
+		trace.SpanKindClient:   telemetry.SpanKindClient,
+		trace.SpanKindProducer: telemetry.SpanKindProducer,
+		trace.SpanKindConsumer: telemetry.SpanKindConsumer,
+	}
+
+	for in, want := range tests {
+		assert.Equal(t, want, spanKind(in), in.String())
+	}
+}
 
 func TestTracerStartPropagatesOrigCtx(t *testing.T) {
 	t.Parallel()

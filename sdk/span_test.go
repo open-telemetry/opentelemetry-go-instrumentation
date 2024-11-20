@@ -7,7 +7,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"math"
 	"strconv"
 	"sync"
 	"testing"
@@ -264,24 +263,6 @@ func TestSpanCreation(t *testing.T) {
 
 			tc.Eval(t, c, s)
 		})
-	}
-}
-
-func TestSpanKindTransform(t *testing.T) {
-	tests := map[trace.SpanKind]telemetry.SpanKind{
-		trace.SpanKind(-1):          telemetry.SpanKind(0),
-		trace.SpanKindUnspecified:   telemetry.SpanKind(0),
-		trace.SpanKind(math.MaxInt): telemetry.SpanKind(0),
-
-		trace.SpanKindInternal: telemetry.SpanKindInternal,
-		trace.SpanKindServer:   telemetry.SpanKindServer,
-		trace.SpanKindClient:   telemetry.SpanKindClient,
-		trace.SpanKindProducer: telemetry.SpanKindProducer,
-		trace.SpanKindConsumer: telemetry.SpanKindConsumer,
-	}
-
-	for in, want := range tests {
-		assert.Equal(t, want, spanKind(in), in.String())
 	}
 }
 
