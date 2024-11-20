@@ -4,6 +4,7 @@
 package sql
 
 import (
+	"os"
 	"testing"
 	"time"
 
@@ -70,6 +71,8 @@ func BenchmarkProcessFn(b *testing.B) {
 }
 
 func TestProbeConvertEvent(t *testing.T) {
+	err := os.Setenv(IncludeDBOperationEnvVar, "true")
+	assert.NoError(t, err)
 	start := time.Unix(0, time.Now().UnixNano()) // No wall clock.
 	end := start.Add(1 * time.Second)
 
