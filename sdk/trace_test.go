@@ -494,7 +494,6 @@ func (b spanBuilder) Build() *span {
 	s := &span{spanContext: b.SpanContext}
 	s.sampled.Store(!b.NotSampled)
 	s.traces, s.span = tracer.traces(
-		context.Background(),
 		b.Name,
 		trace.NewSpanStartConfig(b.Options...),
 		s.spanContext,
