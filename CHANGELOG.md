@@ -8,6 +8,8 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 
 ## [Unreleased]
 
+## [v0.18.0-alpha] - 2024-11-20
+
 ### Changed
 
 - Split the functionality of `Instrumentation.Run` to `Instrumentation.Load` and `Instrumentation.Run`.
@@ -496,7 +498,8 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 
 This is the first release of OpenTelemetry Go Automatic Instrumentation.
 
-[Unreleased]: https://github.com/open-telemetry/opentelemetry-go-instrumentation/compare/v0.17.0-alpha...HEAD
+[Unreleased]: https://github.com/open-telemetry/opentelemetry-go-instrumentation/compare/v0.18.0-alpha...HEAD
+[v0.18.0-alpha]: https://github.com/open-telemetry/opentelemetry-go-instrumentation/releases/tag/v0.18.0-alpha
 [v0.17.0-alpha]: https://github.com/open-telemetry/opentelemetry-go-instrumentation/releases/tag/v0.17.0-alpha
 [v0.16.0-alpha]: https://github.com/open-telemetry/opentelemetry-go-instrumentation/releases/tag/v0.16.0-alpha
 [v0.15.0-alpha]: https://github.com/open-telemetry/opentelemetry-go-instrumentation/releases/tag/v0.15.0-alpha
