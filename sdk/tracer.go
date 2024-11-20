@@ -94,3 +94,19 @@ func (t tracer) traces(ctx context.Context, name string, cfg trace.SpanConfig, s
 		},
 	}, span
 }
+
+func spanKind(kind trace.SpanKind) telemetry.SpanKind {
+	switch kind {
+	case trace.SpanKindInternal:
+		return telemetry.SpanKindInternal
+	case trace.SpanKindServer:
+		return telemetry.SpanKindServer
+	case trace.SpanKindClient:
+		return telemetry.SpanKindClient
+	case trace.SpanKindProducer:
+		return telemetry.SpanKindProducer
+	case trace.SpanKindConsumer:
+		return telemetry.SpanKindConsumer
+	}
+	return telemetry.SpanKind(0) // undefined.
+}
