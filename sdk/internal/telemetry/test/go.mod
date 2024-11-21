@@ -1,4 +1,4 @@
-module go.opentelemetry.io/auto/sdk/telemetry/test
+module go.opentelemetry.io/auto/sdk/internal/telemetry/test
 
 go 1.22.0
 
