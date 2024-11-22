@@ -51,79 +51,35 @@ func (w writeStatusConst) InjectOption(td *process.TargetDetails) (inject.Option
 	return inject.WithKeyValue("write_status_supported", writeStatus), nil
 }
 
-// New returns a new [probe.Probe].
-func New(logger *slog.Logger, version string) probe.Probe {
+type ClientProbe struct {
+	*probe.TargetSpanProducingProbe[bpfObjects, event]
+}
+
+func (g *ClientProbe) ApplyConfig(c probe.Config) error {
+	return nil
+}
+
+// New returns a new [probe.GoLibraryTelemetryProbe].
+func New(logger *slog.Logger, version string, handler func(ptrace.ScopeSpans)) probe.GoLibraryTelemetryProbe {
 	id := probe.ID{
 		SpanKind:        trace.SpanKindClient,
 		InstrumentedPkg: pkg,
 	}
-	return &probe.SpanProducer[bpfObjects, event]{
-		Base: probe.Base[bpfObjects, event]{
-			ID:     id,
-			Logger: logger,
-			Consts: []probe.Const{
-				probe.RegistersABIConst{},
-				probe.AllocationConst{},
-				writeStatusConst{},
-				probe.StructFieldConst{
-					Key: "clientconn_target_ptr_pos",
-					Val: structfield.NewID("google.golang.org/grpc", "google.golang.org/grpc", "ClientConn", "target"),
-				},
-				probe.StructFieldConst{
-					Key: "httpclient_nextid_pos",
-					Val: structfield.NewID("google.golang.org/grpc", "google.golang.org/grpc/internal/transport", "http2Client", "nextID"),
-				},
-				probe.StructFieldConst{
-					Key: "headerFrame_hf_pos",
-					Val: structfield.NewID("google.golang.org/grpc", "google.golang.org/grpc/internal/transport", "headerFrame", "hf"),
-				},
-				probe.StructFieldConst{
-					Key: "headerFrame_streamid_pos",
-					Val: structfield.NewID("google.golang.org/grpc", "google.golang.org/grpc/internal/transport", "headerFrame", "streamID"),
-				},
-				probe.StructFieldConstMinVersion{
-					StructField: probe.StructFieldConst{
-						Key: "error_status_pos",
-						Val: structfield.NewID("google.golang.org/grpc", "google.golang.org/grpc/internal/status", "Error", "s"),
-					},
-					MinVersion: writeStatusMinVersion,
-				},
-				probe.StructFieldConstMinVersion{
-					StructField: probe.StructFieldConst{
-						Key: "status_s_pos",
-						Val: structfield.NewID("google.golang.org/grpc", "google.golang.org/grpc/internal/status", "Status", "s"),
-					},
-					MinVersion: writeStatusMinVersion,
-				},
-				probe.StructFieldConstMinVersion{
-					StructField: probe.StructFieldConst{
-						Key: "status_code_pos",
-						Val: structfield.NewID("google.golang.org/grpc", "google.golang.org/genproto/googleapis/rpc/status", "Status", "Code"),
-					},
-					MinVersion: writeStatusMinVersion,
-				},
-			},
-			Uprobes: []probe.Uprobe{
-				{
-					Sym:         "google.golang.org/grpc.(*ClientConn).Invoke",
-					EntryProbe:  "uprobe_ClientConn_Invoke",
-					ReturnProbe: "uprobe_ClientConn_Invoke_Returns",
-				},
-				{
-					Sym:        "google.golang.org/grpc/internal/transport.(*http2Client).NewStream",
-					EntryProbe: "uprobe_http2Client_NewStream",
-				},
-				{
-					Sym:        "google.golang.org/grpc/internal/transport.(*loopyWriter).headerHandler",
-					EntryProbe: "uprobe_LoopyWriter_HeaderHandler",
-				},
-			},
-			SpecFn: verifyAndLoadBpf,
-		},
-		Version:   version,
-		SchemaURL: semconv.SchemaURL,
-		ProcessFn: processFn,
+
+	p := &ClientProbe{
+		TargetSpanProducingProbe: probe.NewTargetSpanProducingProbe[bpfObjects, event](),
 	}
+	p.ProbeID = id
+	p.Logger = logger
+	p.Uprobes = uprobes
+	p.Consts = consts
+	p.SpecFn = verifyAndLoadBpf
+	p.Version = version
+	p.SchemaURL = semconv.SchemaURL
+	p.ProcessFn = processFn
+	p.Handler = handler
+
+	return p
 }
 
 func verifyAndLoadBpf() (*ebpf.CollectionSpec, error) {
@@ -188,3 +144,64 @@ func processFn(e *event) ptrace.SpanSlice {
 
 	return spans
 }
+
+var (
+	consts = []probe.Const{
+		probe.RegistersABIConst{},
+		probe.AllocationConst{},
+		writeStatusConst{},
+		probe.StructFieldConst{
+			Key: "clientconn_target_ptr_pos",
+			Val: structfield.NewID("google.golang.org/grpc", "google.golang.org/grpc", "ClientConn", "target"),
+		},
+		probe.StructFieldConst{
+			Key: "httpclient_nextid_pos",
+			Val: structfield.NewID("google.golang.org/grpc", "google.golang.org/grpc/internal/transport", "http2Client", "nextID"),
+		},
+		probe.StructFieldConst{
+			Key: "headerFrame_hf_pos",
+			Val: structfield.NewID("google.golang.org/grpc", "google.golang.org/grpc/internal/transport", "headerFrame", "hf"),
+		},
+		probe.StructFieldConst{
+			Key: "headerFrame_streamid_pos",
+			Val: structfield.NewID("google.golang.org/grpc", "google.golang.org/grpc/internal/transport", "headerFrame", "streamID"),
+		},
+		probe.StructFieldConstMinVersion{
+			StructField: probe.StructFieldConst{
+				Key: "error_status_pos",
+				Val: structfield.NewID("google.golang.org/grpc", "google.golang.org/grpc/internal/status", "Error", "s"),
+			},
+			MinVersion: writeStatusMinVersion,
+		},
+		probe.StructFieldConstMinVersion{
+			StructField: probe.StructFieldConst{
+				Key: "status_s_pos",
+				Val: structfield.NewID("google.golang.org/grpc", "google.golang.org/grpc/internal/status", "Status", "s"),
+			},
+			MinVersion: writeStatusMinVersion,
+		},
+		probe.StructFieldConstMinVersion{
+			StructField: probe.StructFieldConst{
+				Key: "status_code_pos",
+				Val: structfield.NewID("google.golang.org/grpc", "google.golang.org/genproto/googleapis/rpc/status", "Status", "Code"),
+			},
+			MinVersion: writeStatusMinVersion,
+		},
+	}
+
+	uprobes = []probe.Uprobe{
+		{
+			Sym:         "google.golang.org/grpc.(*ClientConn).Invoke",
+			EntryProbe:  "uprobe_ClientConn_Invoke",
+			ReturnProbe: "uprobe_ClientConn_Invoke_Returns",
+		},
+		{
+			Sym:        "google.golang.org/grpc/internal/transport.(*http2Client).NewStream",
+			EntryProbe: "uprobe_http2Client_NewStream",
+		},
+		{
+			Sym:        "google.golang.org/grpc/internal/transport.(*loopyWriter).headerHandler",
+			EntryProbe: "uprobe_LoopyWriter_HeaderHandler",
+		},
+	}
+)

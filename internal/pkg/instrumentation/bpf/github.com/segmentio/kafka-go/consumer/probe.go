@@ -27,61 +27,34 @@ const (
 	pkg = "github.com/segmentio/kafka-go"
 )
 
-// New returns a new [probe.Probe].
-func New(logger *slog.Logger, version string) probe.Probe {
+type KafkaConsumerProbe struct {
+	*probe.TargetSpanProducingProbe[bpfObjects, event]
+}
+
+func (k *KafkaConsumerProbe) ApplyConfig(c probe.Config) error {
+	return nil
+}
+
+// New returns a new [probe.GoLibraryTelemetryProbe].
+func New(logger *slog.Logger, version string, handler func(ptrace.ScopeSpans)) probe.GoLibraryTelemetryProbe {
 	id := probe.ID{
 		SpanKind:        trace.SpanKindConsumer,
 		InstrumentedPkg: pkg,
 	}
-	return &probe.SpanProducer[bpfObjects, event]{
-		Base: probe.Base[bpfObjects, event]{
-			ID:     id,
-			Logger: logger,
-			Consts: []probe.Const{
-				probe.RegistersABIConst{},
-				probe.AllocationConst{},
-				probe.StructFieldConst{
-					Key: "message_headers_pos",
-					Val: structfield.NewID("github.com/segmentio/kafka-go", "github.com/segmentio/kafka-go", "Message", "Headers"),
-				},
-				probe.StructFieldConst{
-					Key: "message_key_pos",
-					Val: structfield.NewID("github.com/segmentio/kafka-go", "github.com/segmentio/kafka-go", "Message", "Key"),
-				},
-				probe.StructFieldConst{
-					Key: "message_topic_pos",
-					Val: structfield.NewID("github.com/segmentio/kafka-go", "github.com/segmentio/kafka-go", "Message", "Topic"),
-				},
-				probe.StructFieldConst{
-					Key: "message_partition_pos",
-					Val: structfield.NewID("github.com/segmentio/kafka-go", "github.com/segmentio/kafka-go", "Message", "Partition"),
-				},
-				probe.StructFieldConst{
-					Key: "message_offset_pos",
-					Val: structfield.NewID("github.com/segmentio/kafka-go", "github.com/segmentio/kafka-go", "Message", "Offset"),
-				},
-				probe.StructFieldConst{
-					Key: "reader_config_pos",
-					Val: structfield.NewID("github.com/segmentio/kafka-go", "github.com/segmentio/kafka-go", "Reader", "config"),
-				},
-				probe.StructFieldConst{
-					Key: "reader_config_group_id_pos",
-					Val: structfield.NewID("github.com/segmentio/kafka-go", "github.com/segmentio/kafka-go", "ReaderConfig", "GroupID"),
-				},
-			},
-			Uprobes: []probe.Uprobe{
-				{
-					Sym:         "github.com/segmentio/kafka-go.(*Reader).FetchMessage",
-					EntryProbe:  "uprobe_FetchMessage",
-					ReturnProbe: "uprobe_FetchMessage_Returns",
-				},
-			},
-			SpecFn: loadBpf,
-		},
-		Version:   version,
-		SchemaURL: semconv.SchemaURL,
-		ProcessFn: processFn,
+
+	p := &KafkaConsumerProbe{
+		TargetSpanProducingProbe: probe.NewTargetSpanProducingProbe[bpfObjects, event](),
 	}
+	p.ProbeID = id
+	p.Logger = logger
+	p.Uprobes = uprobes
+	p.Consts = consts
+	p.SpecFn = loadBpf
+	p.Version = version
+	p.SchemaURL = semconv.SchemaURL
+	p.ProcessFn = processFn
+	p.Handler = handler
+	return p
 }
 
 // event represents a kafka message received by the consumer.
@@ -129,3 +102,46 @@ func processFn(e *event) ptrace.SpanSlice {
 func kafkaConsumerSpanName(topic string) string {
 	return fmt.Sprintf("%s receive", topic)
 }
+
+var (
+	consts = []probe.Const{
+		probe.RegistersABIConst{},
+		probe.AllocationConst{},
+		probe.StructFieldConst{
+			Key: "message_headers_pos",
+			Val: structfield.NewID("github.com/segmentio/kafka-go", "github.com/segmentio/kafka-go", "Message", "Headers"),
+		},
+		probe.StructFieldConst{
+			Key: "message_key_pos",
+			Val: structfield.NewID("github.com/segmentio/kafka-go", "github.com/segmentio/kafka-go", "Message", "Key"),
+		},
+		probe.StructFieldConst{
+			Key: "message_topic_pos",
+			Val: structfield.NewID("github.com/segmentio/kafka-go", "github.com/segmentio/kafka-go", "Message", "Topic"),
+		},
+		probe.StructFieldConst{
+			Key: "message_partition_pos",
+			Val: structfield.NewID("github.com/segmentio/kafka-go", "github.com/segmentio/kafka-go", "Message", "Partition"),
+		},
+		probe.StructFieldConst{
+			Key: "message_offset_pos",
+			Val: structfield.NewID("github.com/segmentio/kafka-go", "github.com/segmentio/kafka-go", "Message", "Offset"),
+		},
+		probe.StructFieldConst{
+			Key: "reader_config_pos",
+			Val: structfield.NewID("github.com/segmentio/kafka-go", "github.com/segmentio/kafka-go", "Reader", "config"),
+		},
+		probe.StructFieldConst{
+			Key: "reader_config_group_id_pos",
+			Val: structfield.NewID("github.com/segmentio/kafka-go", "github.com/segmentio/kafka-go", "ReaderConfig", "GroupID"),
+		},
+	}
+
+	uprobes = []probe.Uprobe{
+		{
+			Sym:         "github.com/segmentio/kafka-go.(*Reader).FetchMessage",
+			EntryProbe:  "uprobe_FetchMessage",
+			ReturnProbe: "uprobe_FetchMessage_Returns",
+		},
+	}
+)

@@ -31,91 +31,32 @@ const (
 	pkg = "net/http"
 )
 
-// New returns a new [probe.Probe].
-func New(logger *slog.Logger, version string) probe.Probe {
+type HTTPServerProbe struct {
+	*probe.TargetSpanProducingProbe[bpfObjects, event]
+}
+
+func (h *HTTPServerProbe) ApplyConfig(c probe.Config) error {
+	return nil
+}
+
+// New returns a new [probe.GoLibraryTelemetryProbe].
+func New(logger *slog.Logger, version string, handler func(ptrace.ScopeSpans)) probe.GoLibraryTelemetryProbe {
 	id := probe.ID{
 		SpanKind:        trace.SpanKindServer,
 		InstrumentedPkg: pkg,
 	}
-	return &probe.SpanProducer[bpfObjects, event]{
-		Base: probe.Base[bpfObjects, event]{
-			ID:     id,
-			Logger: logger,
-			Consts: []probe.Const{
-				probe.RegistersABIConst{},
-				probe.StructFieldConst{
-					Key: "method_ptr_pos",
-					Val: structfield.NewID("std", "net/http", "Request", "Method"),
-				},
-				probe.StructFieldConst{
-					Key: "url_ptr_pos",
-					Val: structfield.NewID("std", "net/http", "Request", "URL"),
-				},
-				probe.StructFieldConst{
-					Key: "ctx_ptr_pos",
-					Val: structfield.NewID("std", "net/http", "Request", "ctx"),
-				},
-				probe.StructFieldConst{
-					Key: "path_ptr_pos",
-					Val: structfield.NewID("std", "net/url", "URL", "Path"),
-				},
-				probe.StructFieldConst{
-					Key: "headers_ptr_pos",
-					Val: structfield.NewID("std", "net/http", "Request", "Header"),
-				},
-				probe.StructFieldConst{
-					Key: "req_ptr_pos",
-					Val: structfield.NewID("std", "net/http", "response", "req"),
-				},
-				probe.StructFieldConst{
-					Key: "status_code_pos",
-					Val: structfield.NewID("std", "net/http", "response", "status"),
-				},
-				probe.StructFieldConst{
-					Key: "buckets_ptr_pos",
-					Val: structfield.NewID("std", "runtime", "hmap", "buckets"),
-				},
-				probe.StructFieldConst{
-					Key: "remote_addr_pos",
-					Val: structfield.NewID("std", "net/http", "Request", "RemoteAddr"),
-				},
-				probe.StructFieldConst{
-					Key: "host_pos",
-					Val: structfield.NewID("std", "net/http", "Request", "Host"),
-				},
-				probe.StructFieldConst{
-					Key: "proto_pos",
-					Val: structfield.NewID("std", "net/http", "Request", "Proto"),
-				},
-				probe.StructFieldConstMinVersion{
-					StructField: probe.StructFieldConst{
-						Key: "req_pat_pos",
-						Val: structfield.NewID("std", "net/http", "Request", "pat"),
-					},
-					MinVersion: patternPathMinVersion,
-				},
-				probe.StructFieldConstMinVersion{
-					StructField: probe.StructFieldConst{
-						Key: "pat_str_pos",
-						Val: structfield.NewID("std", "net/http", "pattern", "str"),
-					},
-					MinVersion: patternPathMinVersion,
-				},
-				patternPathSupportedConst{},
-			},
-			Uprobes: []probe.Uprobe{
-				{
-					Sym:         "net/http.serverHandler.ServeHTTP",
-					EntryProbe:  "uprobe_serverHandler_ServeHTTP",
-					ReturnProbe: "uprobe_serverHandler_ServeHTTP_Returns",
-				},
-			},
-			SpecFn: loadBpf,
-		},
-		Version:   version,
-		SchemaURL: semconv.SchemaURL,
-		ProcessFn: processFn,
-	}
+
+	p := &HTTPServerProbe{TargetSpanProducingProbe: probe.NewTargetSpanProducingProbe[bpfObjects, event]()}
+	p.ProbeID = id
+	p.Logger = logger
+	p.SpecFn = loadBpf
+	p.Version = version
+	p.SchemaURL = semconv.SchemaURL
+	p.ProcessFn = processFn
+	p.Handler = handler
+	p.Consts = consts
+	p.Uprobes = uprobes
+	return p
 }
 
 type patternPathSupportedConst struct{}
@@ -218,3 +159,76 @@ func processFn(e *event) ptrace.SpanSlice {
 
 	return spans
 }
+
+var (
+	consts = []probe.Const{
+		probe.RegistersABIConst{},
+		probe.StructFieldConst{
+			Key: "method_ptr_pos",
+			Val: structfield.NewID("std", "net/http", "Request", "Method"),
+		},
+		probe.StructFieldConst{
+			Key: "url_ptr_pos",
+			Val: structfield.NewID("std", "net/http", "Request", "URL"),
+		},
+		probe.StructFieldConst{
+			Key: "ctx_ptr_pos",
+			Val: structfield.NewID("std", "net/http", "Request", "ctx"),
+		},
+		probe.StructFieldConst{
+			Key: "path_ptr_pos",
+			Val: structfield.NewID("std", "net/url", "URL", "Path"),
+		},
+		probe.StructFieldConst{
+			Key: "headers_ptr_pos",
+			Val: structfield.NewID("std", "net/http", "Request", "Header"),
+		},
+		probe.StructFieldConst{
+			Key: "req_ptr_pos",
+			Val: structfield.NewID("std", "net/http", "response", "req"),
+		},
+		probe.StructFieldConst{
+			Key: "status_code_pos",
+			Val: structfield.NewID("std", "net/http", "response", "status"),
+		},
+		probe.StructFieldConst{
+			Key: "buckets_ptr_pos",
+			Val: structfield.NewID("std", "runtime", "hmap", "buckets"),
+		},
+		probe.StructFieldConst{
+			Key: "remote_addr_pos",
+			Val: structfield.NewID("std", "net/http", "Request", "RemoteAddr"),
+		},
+		probe.StructFieldConst{
+			Key: "host_pos",
+			Val: structfield.NewID("std", "net/http", "Request", "Host"),
+		},
+		probe.StructFieldConst{
+			Key: "proto_pos",
+			Val: structfield.NewID("std", "net/http", "Request", "Proto"),
+		},
+		probe.StructFieldConstMinVersion{
+			StructField: probe.StructFieldConst{
+				Key: "req_pat_pos",
+				Val: structfield.NewID("std", "net/http", "Request", "pat"),
+			},
+			MinVersion: patternPathMinVersion,
+		},
+		probe.StructFieldConstMinVersion{
+			StructField: probe.StructFieldConst{
+				Key: "pat_str_pos",
+				Val: structfield.NewID("std", "net/http", "pattern", "str"),
+			},
+			MinVersion: patternPathMinVersion,
+		},
+		patternPathSupportedConst{},
+	}
+
+	uprobes = []probe.Uprobe{
+		{
+			Sym:         "net/http.serverHandler.ServeHTTP",
+			EntryProbe:  "uprobe_serverHandler_ServeHTTP",
+			ReturnProbe: "uprobe_serverHandler_ServeHTTP_Returns",
+		},
+	}
+)

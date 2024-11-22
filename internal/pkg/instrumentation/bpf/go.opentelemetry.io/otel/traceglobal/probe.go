@@ -35,108 +35,32 @@ const (
 	pkg = "go.opentelemetry.io/otel/internal/global"
 )
 
-// New returns a new [probe.Probe].
-func New(logger *slog.Logger) probe.Probe {
+type OtelTraceGlobalProbe struct {
+	*probe.TargetTraceProducingProbe[bpfObjects, event]
+}
+
+func (o *OtelTraceGlobalProbe) ApplyConfig(c probe.Config) error {
+	return nil
+}
+
+// New returns a new [probe.GoLibraryTelemetryProbe].
+func New(logger *slog.Logger, handler func(ptrace.ScopeSpans)) probe.GoLibraryTelemetryProbe {
 	id := probe.ID{
 		SpanKind:        trace.SpanKindClient,
 		InstrumentedPkg: pkg,
 	}
-	return &probe.TraceProducer[bpfObjects, event]{
-		Base: probe.Base[bpfObjects, event]{
-			ID:     id,
-			Logger: logger,
-			Consts: []probe.Const{
-				probe.RegistersABIConst{},
-				probe.AllocationConst{},
-				probe.KeyValConst{
-					Key: "attr_type_invalid",
-					Val: uint64(attribute.INVALID),
-				},
-				probe.KeyValConst{
-					Key: "attr_type_bool",
-					Val: uint64(attribute.BOOL),
-				},
-				probe.KeyValConst{
-					Key: "attr_type_int64",
-					Val: uint64(attribute.INT64),
-				},
-				probe.KeyValConst{
-					Key: "attr_type_float64",
-					Val: uint64(attribute.FLOAT64),
-				},
-				probe.KeyValConst{
-					Key: "attr_type_string",
-					Val: uint64(attribute.STRING),
-				},
-				probe.KeyValConst{
-					Key: "attr_type_boolslice",
-					Val: uint64(attribute.BOOLSLICE),
-				},
-				probe.KeyValConst{
-					Key: "attr_type_int64slice",
-					Val: uint64(attribute.INT64SLICE),
-				},
-				probe.KeyValConst{
-					Key: "attr_type_float64slice",
-					Val: uint64(attribute.FLOAT64SLICE),
-				},
-				probe.KeyValConst{
-					Key: "attr_type_stringslice",
-					Val: uint64(attribute.STRINGSLICE),
-				},
-				probe.StructFieldConst{
-					Key: "tracer_delegate_pos",
-					Val: structfield.NewID("go.opentelemetry.io/otel", "go.opentelemetry.io/otel/internal/global", "tracer", "delegate"),
-				},
-				probe.StructFieldConst{
-					Key: "tracer_name_pos",
-					Val: structfield.NewID("go.opentelemetry.io/otel", "go.opentelemetry.io/otel/internal/global", "tracer", "name"),
-				},
-				probe.StructFieldConst{
-					Key: "tracer_provider_pos",
-					Val: structfield.NewID("go.opentelemetry.io/otel", "go.opentelemetry.io/otel/internal/global", "tracer", "provider"),
-				},
-				probe.StructFieldConst{
-					Key: "tracer_provider_tracers_pos",
-					Val: structfield.NewID("go.opentelemetry.io/otel", "go.opentelemetry.io/otel/internal/global", "tracerProvider", "tracers"),
-				},
-				probe.StructFieldConst{
-					Key: "buckets_ptr_pos",
-					Val: structfield.NewID("std", "runtime", "hmap", "buckets"),
-				},
-				tracerIDContainsSchemaURL{},
-				tracerIDContainsScopeAttributes{},
-			},
-			Uprobes: []probe.Uprobe{
-				{
-					Sym:         "go.opentelemetry.io/otel/internal/global.(*tracer).Start",
-					EntryProbe:  "uprobe_Start",
-					ReturnProbe: "uprobe_Start_Returns",
-				},
-				{
-					Sym:        "go.opentelemetry.io/otel/internal/global.(*nonRecordingSpan).End",
-					EntryProbe: "uprobe_End",
-				},
-				{
-					Sym:        "go.opentelemetry.io/otel/internal/global.(*nonRecordingSpan).SetAttributes",
-					EntryProbe: "uprobe_SetAttributes",
-					Optional:   true,
-				},
-				{
-					Sym:        "go.opentelemetry.io/otel/internal/global.(*nonRecordingSpan).SetStatus",
-					EntryProbe: "uprobe_SetStatus",
-					Optional:   true,
-				},
-				{
-					Sym:        "go.opentelemetry.io/otel/internal/global.(*nonRecordingSpan).SetName",
-					EntryProbe: "uprobe_SetName",
-					Optional:   true,
-				},
-			},
-			SpecFn: loadBpf,
-		},
-		ProcessFn: processFn,
+
+	p := &OtelTraceGlobalProbe{
+		TargetTraceProducingProbe: probe.NewTargetTraceProducingProbe[bpfObjects, event](),
 	}
+	p.ProbeID = id
+	p.Logger = logger
+	p.Consts = consts
+	p.Uprobes = uprobes
+	p.SpecFn = loadBpf
+	p.ProcessFn = processFn
+	p.Handler = handler
+	return p
 }
 
 // tracerIDContainsSchemaURL is a Probe Const defining whether the tracer key contains schemaURL.
@@ -262,3 +186,95 @@ func setAttributes(dest pcommon.Map, ab attributesBuffer) {
 		}
 	}
 }
+
+var (
+	consts = []probe.Const{
+		probe.RegistersABIConst{},
+		probe.AllocationConst{},
+		probe.KeyValConst{
+			Key: "attr_type_invalid",
+			Val: uint64(attribute.INVALID),
+		},
+		probe.KeyValConst{
+			Key: "attr_type_bool",
+			Val: uint64(attribute.BOOL),
+		},
+		probe.KeyValConst{
+			Key: "attr_type_int64",
+			Val: uint64(attribute.INT64),
+		},
+		probe.KeyValConst{
+			Key: "attr_type_float64",
+			Val: uint64(attribute.FLOAT64),
+		},
+		probe.KeyValConst{
+			Key: "attr_type_string",
+			Val: uint64(attribute.STRING),
+		},
+		probe.KeyValConst{
+			Key: "attr_type_boolslice",
+			Val: uint64(attribute.BOOLSLICE),
+		},
+		probe.KeyValConst{
+			Key: "attr_type_int64slice",
+			Val: uint64(attribute.INT64SLICE),
+		},
+		probe.KeyValConst{
+			Key: "attr_type_float64slice",
+			Val: uint64(attribute.FLOAT64SLICE),
+		},
+		probe.KeyValConst{
+			Key: "attr_type_stringslice",
+			Val: uint64(attribute.STRINGSLICE),
+		},
+		probe.StructFieldConst{
+			Key: "tracer_delegate_pos",
+			Val: structfield.NewID("go.opentelemetry.io/otel", "go.opentelemetry.io/otel/internal/global", "tracer", "delegate"),
+		},
+		probe.StructFieldConst{
+			Key: "tracer_name_pos",
+			Val: structfield.NewID("go.opentelemetry.io/otel", "go.opentelemetry.io/otel/internal/global", "tracer", "name"),
+		},
+		probe.StructFieldConst{
+			Key: "tracer_provider_pos",
+			Val: structfield.NewID("go.opentelemetry.io/otel", "go.opentelemetry.io/otel/internal/global", "tracer", "provider"),
+		},
+		probe.StructFieldConst{
+			Key: "tracer_provider_tracers_pos",
+			Val: structfield.NewID("go.opentelemetry.io/otel", "go.opentelemetry.io/otel/internal/global", "tracerProvider", "tracers"),
+		},
+		probe.StructFieldConst{
+			Key: "buckets_ptr_pos",
+			Val: structfield.NewID("std", "runtime", "hmap", "buckets"),
+		},
+		tracerIDContainsSchemaURL{},
+		tracerIDContainsScopeAttributes{},
+	}
+
+	uprobes = []probe.Uprobe{
+		{
+			Sym:         "go.opentelemetry.io/otel/internal/global.(*tracer).Start",
+			EntryProbe:  "uprobe_Start",
+			ReturnProbe: "uprobe_Start_Returns",
+		},
+		{
+			Sym:        "go.opentelemetry.io/otel/internal/global.(*nonRecordingSpan).End",
+			EntryProbe: "uprobe_End",
+		},
+		{
+			Sym:        "go.opentelemetry.io/otel/internal/global.(*nonRecordingSpan).SetAttributes",
+			EntryProbe: "uprobe_SetAttributes",
+			Optional:   true,
+		},
+		{
+			Sym:        "go.opentelemetry.io/otel/internal/global.(*nonRecordingSpan).SetStatus",
+			EntryProbe: "uprobe_SetStatus",
+			Optional:   true,
+		},
+		{
+			Sym:        "go.opentelemetry.io/otel/internal/global.(*nonRecordingSpan).SetName",
+			EntryProbe: "uprobe_SetName",
+			Optional:   true,
+		},
+	}
+)
