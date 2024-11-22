@@ -23,7 +23,19 @@ import (
 	"go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
 
+	dbSql "go.opentelemetry.io/auto/internal/pkg/instrumentation/bpf/database/sql"
+	kafkaConsumer "go.opentelemetry.io/auto/internal/pkg/instrumentation/bpf/github.com/segmentio/kafka-go/consumer"
+	kafkaProducer "go.opentelemetry.io/auto/internal/pkg/instrumentation/bpf/github.com/segmentio/kafka-go/producer"
+	autosdk "go.opentelemetry.io/auto/internal/pkg/instrumentation/bpf/go.opentelemetry.io/auto/sdk"
+	otelTraceGlobal "go.opentelemetry.io/auto/internal/pkg/instrumentation/bpf/go.opentelemetry.io/otel/traceglobal"
+	grpcClient "go.opentelemetry.io/auto/internal/pkg/instrumentation/bpf/google.golang.org/grpc/client"
+	grpcServer "go.opentelemetry.io/auto/internal/pkg/instrumentation/bpf/google.golang.org/grpc/server"
+	httpClient "go.opentelemetry.io/auto/internal/pkg/instrumentation/bpf/net/http/client"
+	httpServer "go.opentelemetry.io/auto/internal/pkg/instrumentation/bpf/net/http/server"
+
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation"
+	"go.opentelemetry.io/auto/internal/pkg/instrumentation/probe"
+	"go.opentelemetry.io/auto/internal/pkg/instrumentation/utils"
 	"go.opentelemetry.io/auto/internal/pkg/opentelemetry"
 	"go.opentelemetry.io/auto/internal/pkg/process"
 )
@@ -94,7 +106,23 @@ func NewInstrumentation(ctx context.Context, opts ...InstrumentationOption) (*In
 	}
 
 	cp := convertConfigProvider(c.cp)
-	mngr, err := instrumentation.NewManager(c.logger, ctrl, c.globalImpl, cp, Version())
+
+	// TODO: Probes should be passed by the end developer to NewInstrumentation() when they're public
+	probes := []probe.BaseProbe{
+		grpcClient.New(c.logger, Version(), ctrl.Trace),
+		grpcServer.New(c.logger, Version(), ctrl.Trace),
+		httpServer.New(c.logger, Version(), ctrl.Trace),
+		httpClient.New(c.logger, Version(), ctrl.Trace, httpClient.Config{SupportsContextPropagation: utils.SupportsContextPropagation()}),
+		dbSql.New(c.logger, Version(), ctrl.Trace),
+		kafkaProducer.New(c.logger, Version(), ctrl.Trace),
+		kafkaConsumer.New(c.logger, Version(), ctrl.Trace),
+		autosdk.New(c.logger, ctrl.Trace),
+	}
+	if c.globalImpl {
+		probes = append(probes, otelTraceGlobal.New(c.logger, ctrl.Trace))
+	}
+
+	mngr, err := instrumentation.NewManager(c.logger, ctrl, probes, cp, Version())
 	if err != nil {
 		return nil, err
 	}
@@ -117,7 +145,7 @@ func NewInstrumentation(ctx context.Context, opts ...InstrumentationOption) (*In
 		"dependencies", td.Libraries,
 		"total_functions_found", len(td.Functions),
 	)
-	mngr.FilterUnusedProbes(td)
+	mngr.FilterUnusedProbesForTarget(td)
 
 	return &Instrumentation{
 		target:   td,
