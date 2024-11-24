@@ -67,9 +67,21 @@ func (t tracer) traces(name string, cfg trace.SpanConfig, sc, psc trace.SpanCont
 		ParentSpanID: telemetry.SpanID(psc.SpanID()),
 		Name:         name,
 		Kind:         spanKind(cfg.SpanKind()),
-		Links:        convLinks(cfg.Links()),
 	}
+
 	span.Attrs, span.DroppedAttrs = convCappedAttrs(maxSpan.Attrs, cfg.Attributes())
+
+	links := cfg.Links()
+	if limit := maxSpan.Links; limit == 0 {
+		span.DroppedLinks = uint32(len(links))
+	} else {
+		if limit > 0 {
+			n := max(len(links)-limit, 0)
+			span.DroppedLinks = uint32(n)
+			links = links[n:]
+		}
+		span.Links = convLinks(links)
+	}
 
 	if t := cfg.Timestamp(); !t.IsZero() {
 		span.StartTime = cfg.Timestamp()
