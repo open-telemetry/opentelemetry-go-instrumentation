@@ -525,6 +525,44 @@ func TestSpanAttributeValueLimits(t *testing.T) {
 	}
 }
 
+func TestSpanAttributeLimits(t *testing.T) {
+	tests := []struct {
+		limit   int
+		want    []telemetry.Attr
+		dropped uint32
+	}{
+		{0, nil, uint32(len(tAttrs))},
+		{2, tAttrs[:2], uint32(len(tAttrs) - 2)},
+		{len(tAttrs), tAttrs, 0},
+		{-1, tAttrs, 0},
+	}
+
+	for _, test := range tests {
+		t.Run("Limit/"+strconv.Itoa(test.limit), func(t *testing.T) {
+			orig := maxSpan.Attrs
+			maxSpan.Attrs = test.limit
+			t.Cleanup(func() { maxSpan.Attrs = orig })
+
+			builder := spanBuilder{}
+
+			s := builder.Build()
+			s.SetAttributes(attrs...)
+			assert.Equal(t, test.want, s.span.Attrs, "set span attributes")
+			assert.Equal(t, test.dropped, s.span.DroppedAttrs, "dropped attrs")
+
+			s.SetAttributes(attrs...)
+			assert.Equal(t, test.want, s.span.Attrs, "set span attributes twice")
+			assert.Equal(t, 2*test.dropped, s.span.DroppedAttrs, "2x dropped attrs")
+
+			builder.Options = []trace.SpanStartOption{trace.WithAttributes(attrs...)}
+
+			s = builder.Build()
+			assert.Equal(t, test.want, s.span.Attrs, "new span attributes")
+			assert.Equal(t, test.dropped, s.span.DroppedAttrs, "dropped attrs")
+		})
+	}
+}
+
 func TestSpanTracerProvider(t *testing.T) {
 	var s span
 
