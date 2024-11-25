@@ -402,6 +402,77 @@ func TestSpanRecordError(t *testing.T) {
 	assert.True(t, hasST, "missing stacktrace attribute")
 }
 
+func TestAddEventLimit(t *testing.T) {
+	const a, b, c = "a", "b", "c"
+
+	ts := time.Now()
+
+	evtA := &telemetry.SpanEvent{Name: "a", Time: ts}
+	evtB := &telemetry.SpanEvent{Name: "b", Time: ts}
+	evtC := &telemetry.SpanEvent{Name: "c", Time: ts}
+
+	tests := []struct {
+		limit   int
+		want    []*telemetry.SpanEvent
+		dropped uint32
+	}{
+		{0, nil, 3},
+		{1, []*telemetry.SpanEvent{evtC}, 2},
+		{2, []*telemetry.SpanEvent{evtB, evtC}, 1},
+		{3, []*telemetry.SpanEvent{evtA, evtB, evtC}, 0},
+		{-1, []*telemetry.SpanEvent{evtA, evtB, evtC}, 0},
+	}
+
+	for _, test := range tests {
+		t.Run("Limit/"+strconv.Itoa(test.limit), func(t *testing.T) {
+			orig := maxSpan.Events
+			maxSpan.Events = test.limit
+			t.Cleanup(func() { maxSpan.Events = orig })
+
+			builder := spanBuilder{}
+
+			s := builder.Build()
+			s.addEvent(a, ts, nil)
+			s.addEvent(b, ts, nil)
+			s.addEvent(c, ts, nil)
+
+			assert.Equal(t, test.want, s.span.Events, "add event")
+			assert.Equal(t, test.dropped, s.span.DroppedEvents, "dropped events")
+		})
+	}
+}
+
+func TestAddEventAttrLimit(t *testing.T) {
+	tests := []struct {
+		limit   int
+		want    []telemetry.Attr
+		dropped uint32
+	}{
+		{0, nil, uint32(len(tAttrs))},
+		{2, tAttrs[:2], uint32(len(tAttrs) - 2)},
+		{len(tAttrs), tAttrs, 0},
+		{-1, tAttrs, 0},
+	}
+
+	for _, test := range tests {
+		t.Run("Limit/"+strconv.Itoa(test.limit), func(t *testing.T) {
+			orig := maxSpan.EventAttrs
+			maxSpan.EventAttrs = test.limit
+			t.Cleanup(func() { maxSpan.EventAttrs = orig })
+
+			builder := spanBuilder{}
+
+			s := builder.Build()
+			s.addEvent("name", time.Now(), attrs)
+
+			require.Len(t, s.span.Events, 1)
+			got := s.span.Events[0]
+			assert.Equal(t, test.want, got.Attrs, "event attrs")
+			assert.Equal(t, test.dropped, got.DroppedAttrs, "dropped event attrs")
+		})
+	}
+}
+
 func TestSpanSpanContext(t *testing.T) {
 	s := spanBuilder{SpanContext: spanContext0}.Build()
 	assert.Equal(t, spanContext0, s.SpanContext())
