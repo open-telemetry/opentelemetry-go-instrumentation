@@ -353,13 +353,24 @@ func (s *span) AddEvent(name string, opts ...trace.EventOption) {
 // addEvent adds an event with name and attrs at tStamp to the span. The span
 // lock (s.mu) needs to be held by the caller.
 func (s *span) addEvent(name string, tStamp time.Time, attrs []attribute.KeyValue) {
-	// TODO: handle event limits.
+	limit := maxSpan.Events
 
-	s.span.Events = append(s.span.Events, &telemetry.SpanEvent{
-		Time:  tStamp,
-		Name:  name,
-		Attrs: convAttrs(attrs),
-	})
+	if limit == 0 {
+		s.span.DroppedEvents++
+		return
+	}
+
+	if limit > 0 && len(s.span.Events) == limit {
+		// Drop head while avoiding allocation of more capacity.
+		copy(s.span.Events[:limit-1], s.span.Events[1:])
+		s.span.Events = s.span.Events[:limit-1]
+		s.span.DroppedEvents++
+	}
+
+	e := &telemetry.SpanEvent{Time: tStamp, Name: name}
+	e.Attrs, e.DroppedAttrs = convCappedAttrs(maxSpan.EventAttrs, attrs)
+
+	s.span.Events = append(s.span.Events, e)
 }
 
 func (s *span) AddLink(link trace.Link) {
