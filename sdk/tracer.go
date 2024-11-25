@@ -69,10 +69,7 @@ func (t tracer) traces(name string, cfg trace.SpanConfig, sc, psc trace.SpanCont
 		Kind:         spanKind(cfg.SpanKind()),
 		Links:        convLinks(cfg.Links()),
 	}
-
-	var dropped int
-	span.Attrs, dropped = convCappedAttrs(maxSpan.Attrs, cfg.Attributes())
-	span.DroppedAttrs = uint32(dropped)
+	span.Attrs, span.DroppedAttrs = convCappedAttrs(maxSpan.Attrs, cfg.Attributes())
 
 	if t := cfg.Timestamp(); !t.IsZero() {
 		span.StartTime = cfg.Timestamp()

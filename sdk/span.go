@@ -118,9 +118,9 @@ func (s *span) SetAttributes(attrs ...attribute.KeyValue) {
 
 // convCappedAttrs converts up to limit attrs into a []telemetry.Attr. The
 // number of dropped attributes is also returned.
-func convCappedAttrs(limit int, attrs []attribute.KeyValue) ([]telemetry.Attr, int) {
+func convCappedAttrs(limit int, attrs []attribute.KeyValue) ([]telemetry.Attr, uint32) {
 	if limit == 0 {
-		return nil, len(attrs)
+		return nil, uint32(len(attrs))
 	}
 
 	if limit < 0 {
@@ -129,7 +129,7 @@ func convCappedAttrs(limit int, attrs []attribute.KeyValue) ([]telemetry.Attr, i
 	}
 
 	limit = min(len(attrs), limit)
-	return convAttrs(attrs[:limit]), len(attrs) - limit
+	return convAttrs(attrs[:limit]), uint32(len(attrs) - limit)
 }
 
 func convAttrs(attrs []attribute.KeyValue) []telemetry.Attr {
