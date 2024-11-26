@@ -23,7 +23,7 @@ CGO_ENABLED?=0
 .DEFAULT_GOAL := precommit
 
 .PHONY: precommit
-precommit: license-header-check dependabot-generate golangci-lint-fix test codespell
+precommit: license-header-check golangci-lint-fix test codespell
 
 # Tools
 $(TOOLS):
@@ -147,15 +147,6 @@ verify-licenses: generate $(GOLICENSES)
       rm -rf temp; \
       exit 1; \
     fi; \
-
-DEPENDABOT_CONFIG = .github/dependabot.yml
-.PHONY: dependabot-check
-dependabot-check: | $(DBOTCONF)
-	@$(DBOTCONF) --ignore "/LICENSES" verify $(DEPENDABOT_CONFIG) || ( echo "(run: make dependabot-generate)"; exit 1 )
-
-.PHONY: dependabot-generate
-dependabot-generate: | $(DBOTCONF)
-	@$(DBOTCONF) --ignore "/LICENSES" generate > $(DEPENDABOT_CONFIG)
 
 .PHONY: license-header-check
 license-header-check:
