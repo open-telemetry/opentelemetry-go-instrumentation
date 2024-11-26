@@ -9,73 +9,80 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestSpanAttrValLenLimit(t *testing.T) {
-	testLimit(
-		t,
-		func(sl spanLimits) int { return sl.AttrValueLen },
-		-1,
-		"OTEL_SPAN_ATTRIBUTE_VALUE_LENGTH_LIMIT",
-		"OTEL_ATTRIBUTE_VALUE_LENGTH_LIMIT",
-	)
-}
+func TestSpanLimit(t *testing.T) {
+	tests := []struct {
+		name string
+		get  func(spanLimits) int
+		zero int
+		keys []string
+	}{
+		{
+			name: "AttributeValueLengthLimit",
+			get:  func(sl spanLimits) int { return sl.AttrValueLen },
+			zero: -1,
+			keys: []string{
+				"OTEL_SPAN_ATTRIBUTE_VALUE_LENGTH_LIMIT",
+				"OTEL_ATTRIBUTE_VALUE_LENGTH_LIMIT",
+			},
+		},
+		{
+			name: "AttributeCountLimit",
+			get:  func(sl spanLimits) int { return sl.Attrs },
+			zero: 128,
+			keys: []string{
+				"OTEL_SPAN_ATTRIBUTE_COUNT_LIMIT",
+				"OTEL_ATTRIBUTE_COUNT_LIMIT",
+			},
+		},
+		{
+			name: "EventCountLimit",
+			get:  func(sl spanLimits) int { return sl.Events },
+			zero: 128,
+			keys: []string{"OTEL_SPAN_EVENT_COUNT_LIMIT"},
+		},
+		{
+			name: "EventAttributeCountLimit",
+			get:  func(sl spanLimits) int { return sl.EventAttrs },
+			zero: 128,
+			keys: []string{"OTEL_EVENT_ATTRIBUTE_COUNT_LIMIT"},
+		},
+		{
+			name: "LinkCountLimit",
+			get:  func(sl spanLimits) int { return sl.Links },
+			zero: 128,
+			keys: []string{"OTEL_SPAN_LINK_COUNT_LIMIT"},
+		},
+		{
+			name: "LinkAttributeCountLimit",
+			get:  func(sl spanLimits) int { return sl.LinkAttrs },
+			zero: 128,
+			keys: []string{"OTEL_LINK_ATTRIBUTE_COUNT_LIMIT"},
+		},
+	}
 
-func TestSpanAttrsLimit(t *testing.T) {
-	testLimit(
-		t,
-		func(sl spanLimits) int { return sl.Attrs },
-		128,
-		"OTEL_SPAN_ATTRIBUTE_COUNT_LIMIT",
-		"OTEL_ATTRIBUTE_COUNT_LIMIT",
-	)
-}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Run("Default", func(t *testing.T) {
+				assert.Equal(t, test.zero, test.get(newSpanLimits()))
+			})
 
-func TestSpanEventsLimit(t *testing.T) {
-	testLimit(
-		t,
-		func(sl spanLimits) int { return sl.Events },
-		128,
-		"OTEL_SPAN_EVENT_COUNT_LIMIT",
-	)
-}
+			t.Run("ValidValue", func(t *testing.T) {
+				for _, key := range test.keys {
+					t.Run(key, func(t *testing.T) {
+						t.Setenv(key, "43")
+						assert.Equal(t, 43, test.get(newSpanLimits()))
+					})
+				}
+			})
 
-func TestSpanLinksLimit(t *testing.T) {
-	testLimit(
-		t,
-		func(sl spanLimits) int { return sl.Links },
-		128,
-		"OTEL_SPAN_LINK_COUNT_LIMIT",
-	)
-}
-
-func TestSpanEventAttrsLimit(t *testing.T) {
-	testLimit(
-		t,
-		func(sl spanLimits) int { return sl.EventAttrs },
-		128,
-		"OTEL_EVENT_ATTRIBUTE_COUNT_LIMIT",
-	)
-}
-
-func TestSpanLinkAttrsLimit(t *testing.T) {
-	testLimit(
-		t,
-		func(sl spanLimits) int { return sl.LinkAttrs },
-		128,
-		"OTEL_LINK_ATTRIBUTE_COUNT_LIMIT",
-	)
-}
-
-func testLimit(t *testing.T, f func(spanLimits) int, zero int, keys ...string) {
-	t.Helper()
-
-	t.Run("Default", func(t *testing.T) {
-		assert.Equal(t, zero, f(newSpanLimits()))
-	})
-
-	for _, key := range keys {
-		t.Run(key, func(t *testing.T) {
-			t.Setenv(key, "43")
-			assert.Equal(t, 43, f(newSpanLimits()))
+			t.Run("InvalidValue", func(t *testing.T) {
+				for _, key := range test.keys {
+					t.Run(key, func(t *testing.T) {
+						t.Setenv(key, "invalid int value.")
+						assert.Equal(t, test.zero, test.get(newSpanLimits()))
+					})
+				}
+			})
 		})
 	}
 }
