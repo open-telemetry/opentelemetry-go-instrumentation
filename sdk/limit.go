@@ -4,6 +4,7 @@
 package sdk
 
 import (
+	"log/slog"
 	"os"
 	"strconv"
 )
@@ -81,6 +82,12 @@ func firstEnv(defaultVal int, keys ...string) int {
 		if err == nil {
 			return v
 		}
+		slog.Warn(
+			"invalid limit environment variable",
+			"error", err,
+			"key", key,
+			"value", strV,
+		)
 	}
 
 	return defaultVal

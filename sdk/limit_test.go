@@ -4,9 +4,13 @@
 package sdk
 
 import (
+	"bytes"
+	"encoding/json"
+	"log/slog"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestSpanLimit(t *testing.T) {
@@ -78,8 +82,24 @@ func TestSpanLimit(t *testing.T) {
 			t.Run("InvalidValue", func(t *testing.T) {
 				for _, key := range test.keys {
 					t.Run(key, func(t *testing.T) {
-						t.Setenv(key, "invalid int value.")
+						orig := slog.Default()
+						t.Cleanup(func() { slog.SetDefault(orig) })
+
+						var buf bytes.Buffer
+						h := slog.NewJSONHandler(&buf, &slog.HandlerOptions{})
+						slog.SetDefault(slog.New(h))
+
+						const value = "invalid int value."
+						t.Setenv(key, value)
 						assert.Equal(t, test.zero, test.get(newSpanLimits()))
+
+						var data map[string]any
+						require.NoError(t, json.NewDecoder(&buf).Decode(&data))
+						assert.Equal(t, "invalid limit environment variable", data["msg"], "log message")
+						assert.Equal(t, "WARN", data["level"], "logged level")
+						assert.Equal(t, key, data["key"], "logged key")
+						assert.Equal(t, value, data["value"], "logged value")
+						assert.NotEmpty(t, data["error"], "logged error")
 					})
 				}
 			})
