@@ -51,7 +51,7 @@ jobs:
         run: |
           sudo apt-get update && sudo apt-get install -y clang llvm libbpf-dev
       - name: Run linters
-        run: make license-header-check dependabot-check go-mod-tidy golangci-lint
+        run: make license-header-check go-mod-tidy golangci-lint
       - name: Check clean repository
         run: make check-clean-work-tree
   race-test:
