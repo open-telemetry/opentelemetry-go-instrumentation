@@ -2,8 +2,6 @@ module go.opentelemetry.io/auto/sdk
 
 go 1.22.0
 
-toolchain go1.22.6
-
 require (
 	github.com/stretchr/testify v1.10.0
 	go.opentelemetry.io/otel v1.32.0
