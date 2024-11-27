@@ -8,6 +8,10 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 
 ## [Unreleased]
 
+### Fixed
+
+- The parsing of the tracers map for `go.opentelemetry.io/otel@v1.32.0` is fixed. ([#1319](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1319))
+
 ## [v0.18.0-alpha] - 2024-11-20
 
 ### Changed
