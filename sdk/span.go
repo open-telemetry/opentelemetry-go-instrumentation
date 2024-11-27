@@ -80,7 +80,12 @@ func (s *span) SetAttributes(attrs ...attribute.KeyValue) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	// TODO: handle attribute limits.
+	limit := maxSpan.Attrs
+	if limit == 0 {
+		// No attributes allowed.
+		s.span.DroppedAttrs += uint32(len(attrs))
+		return
+	}
 
 	m := make(map[string]int)
 	for i, a := range s.span.Attrs {
@@ -90,6 +95,7 @@ func (s *span) SetAttributes(attrs ...attribute.KeyValue) {
 	for _, a := range attrs {
 		val := convAttrValue(a.Value)
 		if val.Empty() {
+			s.span.DroppedAttrs++
 			continue
 		}
 
@@ -98,17 +104,40 @@ func (s *span) SetAttributes(attrs ...attribute.KeyValue) {
 				Key:   string(a.Key),
 				Value: val,
 			}
-		} else {
+		} else if limit < 0 || len(s.span.Attrs) < limit {
 			s.span.Attrs = append(s.span.Attrs, telemetry.Attr{
 				Key:   string(a.Key),
 				Value: val,
 			})
 			m[string(a.Key)] = len(s.span.Attrs) - 1
+		} else {
+			s.span.DroppedAttrs++
 		}
 	}
 }
 
+// convCappedAttrs converts up to limit attrs into a []telemetry.Attr. The
+// number of dropped attributes is also returned.
+func convCappedAttrs(limit int, attrs []attribute.KeyValue) ([]telemetry.Attr, uint32) {
+	if limit == 0 {
+		return nil, uint32(len(attrs))
+	}
+
+	if limit < 0 {
+		// Unlimited.
+		return convAttrs(attrs), 0
+	}
+
+	limit = min(len(attrs), limit)
+	return convAttrs(attrs[:limit]), uint32(len(attrs) - limit)
+}
+
 func convAttrs(attrs []attribute.KeyValue) []telemetry.Attr {
+	if len(attrs) == 0 {
+		// Avoid allocations if not necessary.
+		return nil
+	}
+
 	out := make([]telemetry.Attr, 0, len(attrs))
 	for _, attr := range attrs {
 		key := string(attr.Key)
