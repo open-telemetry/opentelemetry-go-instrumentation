@@ -4,7 +4,7 @@ go 1.22.0
 
 require (
 	github.com/stretchr/testify v1.10.0
-	go.opentelemetry.io/auto/sdk v0.1.0-alpha
+	go.opentelemetry.io/auto/sdk v1.0.0
 	go.opentelemetry.io/collector/pdata v1.20.0
 )
 
