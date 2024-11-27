@@ -24,9 +24,9 @@ jobs:
               - "5.10"
               - "5.4"
         steps:
-          - uses: actions/checkout@v4
+          - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
           - name: Set up Go
-            uses: actions/setup-go@v5
+            uses: actions/setup-go@41dfa10bad2bb2ae585af6ee5bb4d7d973ad74ed # v5
             with:
               go-version: '${{ env.go_version }}'
           - name: make docker-generate
