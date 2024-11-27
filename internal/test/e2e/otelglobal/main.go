@@ -20,7 +20,7 @@ var tracer = otel.Tracer(
 	trace.WithSchemaURL("https://some_schema"),
 )
 
-func setUnUsedTracers() {
+func setUnusedTracers() {
 	for i := range 20 {
 		otel.Tracer(fmt.Sprintf("unused%d", i))
 	}
@@ -52,7 +52,7 @@ func createMainSpan(ctx context.Context) {
 
 func main() {
 	// registering unused tracers to test how we handle a non-trivial tracers map
-	setUnUsedTracers()
+	setUnusedTracers()
 	// give time for auto-instrumentation to start up
 	time.Sleep(5 * time.Second)
 
