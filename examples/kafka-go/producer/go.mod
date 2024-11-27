@@ -4,7 +4,7 @@ go 1.22.0
 
 require github.com/segmentio/kafka-go v0.4.47
 
-require github.com/stretchr/testify v1.9.0 // indirect
+require github.com/stretchr/testify v1.10.0 // indirect
 
 require (
 	github.com/klauspost/compress v1.17.11 // indirect
