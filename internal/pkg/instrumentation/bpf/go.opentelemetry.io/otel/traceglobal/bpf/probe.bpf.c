@@ -315,7 +315,7 @@ static __always_inline long fill_tracer_id_with_scope_attributes_from_tracers_ma
         {
             break;
         }
-        res = bpf_probe_read(map_bucket, sizeof(MAP_BUCKET_TYPE(go_tracer_with_scope_attributes_t, go_tracer_ptr)), buckets_array + (j * sizeof(MAP_BUCKET_TYPE(go_tracer_with_schema_t, go_tracer_ptr))));
+        res = bpf_probe_read(map_bucket, sizeof(MAP_BUCKET_TYPE(go_tracer_with_scope_attributes_t, go_tracer_ptr)), buckets_array + (j * sizeof(MAP_BUCKET_TYPE(go_tracer_with_scope_attributes_t, go_tracer_ptr))));
         if (res < 0)
         {
             continue;
