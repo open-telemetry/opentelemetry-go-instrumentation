@@ -17,7 +17,7 @@ services:
   kafka:
     depends_on:
       - zookeeper
-    image: wurstmeister/kafka:2.12-2.3.1
+    image: wurstmeister/kafka:2.12-2.3.1@sha256:0b22bb436ecde11e0db1ce84170b979ce7130e5f1b292b16eace548cd78d7d9e
     restart: on-failure:3
     links:
     - zookeeper
@@ -51,7 +51,7 @@ services:
       retries: 5
   
   zookeeper:
-    image: wurstmeister/zookeeper
+    image: wurstmeister/zookeeper@sha256:7a7fd44a72104bfbd24a77844bad5fabc86485b036f988ea927d1780782a6680
     expose:
       - "2181"
     ports:
@@ -124,7 +124,7 @@ services:
     command: ["/otel-go-instrumentation", "-global-impl"]
 
   jaeger:
-    image: jaegertracing/all-in-one:1.60
+    image: jaegertracing/all-in-one:1.60@sha256:4fd2d70fa347d6a47e79fcb06b1c177e6079f92cba88b083153d56263082135e
     ports:
       - "16686:16686"
       - "14268:14268"

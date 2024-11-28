@@ -67,9 +67,9 @@ func (t tracer) traces(name string, cfg trace.SpanConfig, sc, psc trace.SpanCont
 		ParentSpanID: telemetry.SpanID(psc.SpanID()),
 		Name:         name,
 		Kind:         spanKind(cfg.SpanKind()),
-		Attrs:        convAttrs(cfg.Attributes()),
 		Links:        convLinks(cfg.Links()),
 	}
+	span.Attrs, span.DroppedAttrs = convCappedAttrs(maxSpan.Attrs, cfg.Attributes())
 
 	if t := cfg.Timestamp(); !t.IsZero() {
 		span.StartTime = cfg.Timestamp()
