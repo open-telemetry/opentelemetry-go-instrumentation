@@ -354,6 +354,81 @@ func TestSpanAddLink(t *testing.T) {
 	assert.Equal(t, want, s.span.Links)
 }
 
+func TestSpanAddLinkLimit(t *testing.T) {
+	tests := []struct {
+		limit   int
+		want    []*telemetry.SpanLink
+		dropped uint32
+	}{
+		{0, nil, 2},
+		{1, []*telemetry.SpanLink{tLink1}, 1},
+		{2, []*telemetry.SpanLink{tLink0, tLink1}, 0},
+		{-1, []*telemetry.SpanLink{tLink0, tLink1}, 0},
+	}
+
+	for _, test := range tests {
+		t.Run("Limit/"+strconv.Itoa(test.limit), func(t *testing.T) {
+			orig := maxSpan.Links
+			maxSpan.Links = test.limit
+			t.Cleanup(func() { maxSpan.Links = orig })
+
+			builder := spanBuilder{}
+			s := builder.Build()
+			s.AddLink(link0)
+			s.AddLink(link1)
+			assert.Equal(t, test.want, s.span.Links, "AddLink")
+			assert.Equal(t, test.dropped, s.span.DroppedLinks, "AddLink DroppedLinks")
+
+			builder.Options = []trace.SpanStartOption{
+				trace.WithLinks(link0, link1),
+			}
+			s = builder.Build()
+			assert.Equal(t, test.want, s.span.Links, "NewSpan")
+			assert.Equal(t, test.dropped, s.span.DroppedLinks, "NewSpan DroppedLinks")
+		})
+	}
+}
+
+func TestSpanLinkAttrLimit(t *testing.T) {
+	tests := []struct {
+		limit   int
+		want    []telemetry.Attr
+		dropped uint32
+	}{
+		{0, nil, uint32(len(tAttrs))},
+		{2, tAttrs[:2], uint32(len(tAttrs) - 2)},
+		{len(tAttrs), tAttrs, 0},
+		{-1, tAttrs, 0},
+	}
+
+	link := trace.Link{Attributes: attrs}
+	for _, test := range tests {
+		t.Run("Limit/"+strconv.Itoa(test.limit), func(t *testing.T) {
+			orig := maxSpan.LinkAttrs
+			maxSpan.LinkAttrs = test.limit
+			t.Cleanup(func() { maxSpan.LinkAttrs = orig })
+
+			builder := spanBuilder{}
+
+			s := builder.Build()
+			s.AddLink(link)
+
+			require.Len(t, s.span.Links, 1)
+			got := s.span.Links[0]
+			assert.Equal(t, test.want, got.Attrs, "AddLink attrs")
+			assert.Equal(t, test.dropped, got.DroppedAttrs, "dropped AddLink attrs")
+
+			builder.Options = []trace.SpanStartOption{trace.WithLinks(link)}
+			s = builder.Build()
+
+			require.Len(t, s.span.Links, 1)
+			got = s.span.Links[0]
+			assert.Equal(t, test.want, got.Attrs, "NewSpan link attrs")
+			assert.Equal(t, test.dropped, got.DroppedAttrs, "dropped NewSpan link attrs")
+		})
+	}
+}
+
 func TestSpanIsRecording(t *testing.T) {
 	builder := spanBuilder{}
 	s := builder.Build()
