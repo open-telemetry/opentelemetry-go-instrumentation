@@ -287,10 +287,22 @@ func (s *span) AddLink(link trace.Link) {
 		return
 	}
 
+	l := maxSpan.Links
+
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	// TODO: handle link limits.
+	if l == 0 {
+		s.span.DroppedLinks++
+		return
+	}
+
+	if l > 0 && len(s.span.Links) == l {
+		// Drop head while avoiding allocation of more capacity.
+		copy(s.span.Links[:l-1], s.span.Links[1:])
+		s.span.Links = s.span.Links[:l-1]
+		s.span.DroppedLinks++
+	}
 
 	s.span.Links = append(s.span.Links, convLink(link))
 }
@@ -304,13 +316,15 @@ func convLinks(links []trace.Link) []*telemetry.SpanLink {
 }
 
 func convLink(link trace.Link) *telemetry.SpanLink {
-	return &telemetry.SpanLink{
+	l := &telemetry.SpanLink{
 		TraceID:    telemetry.TraceID(link.SpanContext.TraceID()),
 		SpanID:     telemetry.SpanID(link.SpanContext.SpanID()),
 		TraceState: link.SpanContext.TraceState().String(),
-		Attrs:      convAttrs(link.Attributes),
 		Flags:      uint32(link.SpanContext.TraceFlags()),
 	}
+	l.Attrs, l.DroppedAttrs = convCappedAttrs(maxSpan.LinkAttrs, link.Attributes)
+
+	return l
 }
 
 func (s *span) SetName(name string) {
