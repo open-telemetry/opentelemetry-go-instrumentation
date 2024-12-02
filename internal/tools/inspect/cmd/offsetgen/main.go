@@ -80,6 +80,11 @@ func manifests() ([]inspect.Manifest, error) {
 		return nil, fmt.Errorf("failed to get \"github.com/gin-gonic/gin\" versions: %w", err)
 	}
 
+	chiVers, err := PkgVersions("github.com/go-chi/chi/v5")
+	if err != nil {
+		return nil, fmt.Errorf("failed to get \"github.com/go-chi/chi/v5\" versions: %w", err)
+	}
+
 	ren := func(src string) inspect.Renderer {
 		return inspect.NewRenderer(logger, src, inspect.DefaultFS)
 	}
@@ -203,6 +208,17 @@ func manifests() ([]inspect.Manifest, error) {
 			StructFields: []structfield.ID{
 				structfield.NewID("github.com/gin-gonic/gin", "github.com/gin-gonic/gin", "Context", "Request"),
 				structfield.NewID("github.com/gin-gonic/gin", "github.com/gin-gonic/gin", "Context", "fullPath"),
+			},
+		},
+		{
+			Application: inspect.Application{
+				Renderer: ren("templates/github.com/go-chi/chi/v5/*.tmpl"),
+				Versions: chiVers,
+			},
+			StructFields: []structfield.ID{
+				structfield.NewID("github.com/go-chi/chi/v5", "github.com/go-chi/chi/v5", "Context", "parentCtx"),
+				structfield.NewID("github.com/go-chi/chi/v5", "github.com/go-chi/chi/v5", "Context", "routePattern"),
+				structfield.NewID("github.com/go-chi/chi/v5", "github.com/go-chi/chi/v5", "Context", "RouteMethod"),
 			},
 		},
 	}, nil

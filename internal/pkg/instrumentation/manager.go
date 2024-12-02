@@ -7,7 +7,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"go.opentelemetry.io/auto/internal/pkg/instrumentation/bpf/github.com/gin"
 	"log/slog"
 	"sync"
 
@@ -17,6 +16,8 @@ import (
 	"go.opentelemetry.io/otel/trace"
 
 	dbSql "go.opentelemetry.io/auto/internal/pkg/instrumentation/bpf/database/sql"
+	chiV5 "go.opentelemetry.io/auto/internal/pkg/instrumentation/bpf/github.com/chi"
+	ginGonic "go.opentelemetry.io/auto/internal/pkg/instrumentation/bpf/github.com/gin"
 	kafkaConsumer "go.opentelemetry.io/auto/internal/pkg/instrumentation/bpf/github.com/segmentio/kafka-go/consumer"
 	kafkaProducer "go.opentelemetry.io/auto/internal/pkg/instrumentation/bpf/github.com/segmentio/kafka-go/producer"
 	autosdk "go.opentelemetry.io/auto/internal/pkg/instrumentation/bpf/go.opentelemetry.io/auto/sdk"
@@ -421,7 +422,8 @@ func (m *Manager) availableProbes() []probe.Probe {
 		kafkaProducer.New(m.logger, m.version),
 		kafkaConsumer.New(m.logger, m.version),
 		autosdk.New(m.logger),
-		gin.New(m.logger, m.version),
+		ginGonic.New(m.logger, m.version),
+		chiV5.New(m.logger, m.version),
 	}
 
 	if m.globalImpl {

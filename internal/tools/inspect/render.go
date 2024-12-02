@@ -20,6 +20,7 @@ import (
 //go:embed templates/go.opentelemetry.io/otel/traceglobal/*.tmpl
 //go:embed templates/github.com/segmentio/kafka-go/*.tmpl
 //go:embed templates/github.com/gin-gonic/gin/*.tmpl
+//go:embed templates/github.com/go-chi/chi/v5/*.tmpl
 var DefaultFS embed.FS
 
 // Renderer renders templates from an fs.FS.

@@ -1,0 +1,17 @@
+package main
+
+import (
+	"fmt"
+	"github.com/go-chi/chi/v5"
+	"net/http"
+)
+
+func main() {
+	r := chi.NewRouter()
+	r.Get("/hello/{id}", func(w http.ResponseWriter, _ *http.Request) {
+		fmt.Fprintf(w, "hello\n")
+	})
+
+	_ = http.ListenAndServe(":8080", r)
+
+}
