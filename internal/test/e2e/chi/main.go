@@ -5,11 +5,12 @@ package main
 
 import (
 	"fmt"
-	"github.com/go-chi/chi/v5"
 	"io"
 	"log"
 	"net/http"
 	"time"
+
+	"github.com/go-chi/chi/v5"
 )
 
 func hello(w http.ResponseWriter, _ *http.Request) {

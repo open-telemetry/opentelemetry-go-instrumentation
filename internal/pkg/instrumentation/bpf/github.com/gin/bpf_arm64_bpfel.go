@@ -75,8 +75,6 @@ type bpfSpecs struct {
 //
 // It can be passed ebpf.CollectionSpec.Assign.
 type bpfProgramSpecs struct {
-	UprobeGinEngineServeHTTP                *ebpf.ProgramSpec `ebpf:"uprobe_GinEngine_ServeHTTP"`
-	UprobeGinEngineServeHTTP_Returns        *ebpf.ProgramSpec `ebpf:"uprobe_GinEngine_ServeHTTP_Returns"`
 	UprobeGinEngineHandleHTTPRequest        *ebpf.ProgramSpec `ebpf:"uprobe_GinEngine_handleHTTPRequest"`
 	UprobeGinEngineHandleHTTPRequestReturns *ebpf.ProgramSpec `ebpf:"uprobe_GinEngine_handleHTTPRequest_Returns"`
 }
@@ -144,16 +142,12 @@ func (m *bpfMaps) Close() error {
 //
 // It can be passed to loadBpfObjects or ebpf.CollectionSpec.LoadAndAssign.
 type bpfPrograms struct {
-	UprobeGinEngineServeHTTP                *ebpf.Program `ebpf:"uprobe_GinEngine_ServeHTTP"`
-	UprobeGinEngineServeHTTP_Returns        *ebpf.Program `ebpf:"uprobe_GinEngine_ServeHTTP_Returns"`
 	UprobeGinEngineHandleHTTPRequest        *ebpf.Program `ebpf:"uprobe_GinEngine_handleHTTPRequest"`
 	UprobeGinEngineHandleHTTPRequestReturns *ebpf.Program `ebpf:"uprobe_GinEngine_handleHTTPRequest_Returns"`
 }
 
 func (p *bpfPrograms) Close() error {
 	return _BpfClose(
-		p.UprobeGinEngineServeHTTP,
-		p.UprobeGinEngineServeHTTP_Returns,
 		p.UprobeGinEngineHandleHTTPRequest,
 		p.UprobeGinEngineHandleHTTPRequestReturns,
 	)
