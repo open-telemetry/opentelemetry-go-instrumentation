@@ -50,6 +50,43 @@
       "schemaUrl": "https://opentelemetry.io/schemas/1.26.0",
       "scopeSpans": [
         {
+          "scope": {
+            "name": "go.opentelemetry.io/auto/github.com/gin-gonic/gin",
+            "version": "v0.18.0-alpha"
+          },
+          "spans": [
+            {
+              "attributes": [
+                {
+                  "key": "http.request.method",
+                  "value": {
+                    "stringValue": "GET"
+                  }
+                },
+                {
+                  "key": "url.path",
+                  "value": {
+                    "stringValue": "/hello-gin/1"
+                  }
+                },
+                {
+                  "key": "http.route",
+                  "value": {
+                    "stringValue": "/hello-gin/:id"
+                  }
+                }
+              ],
+              "flags": 256,
+              "kind": 2,
+              "name": "GET /hello-gin/:id",
+              "parentSpanId": "xxxxx",
+              "spanId": "xxxxx",
+              "status": {},
+              "traceId": "xxxxx"
+            }
+          ]
+        },
+        {
           "schemaUrl": "https://opentelemetry.io/schemas/1.26.0",
           "scope": {
             "name": "go.opentelemetry.io/auto/net/http",

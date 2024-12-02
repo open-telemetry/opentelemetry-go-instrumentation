@@ -75,6 +75,11 @@ func manifests() ([]inspect.Manifest, error) {
 		return nil, fmt.Errorf("failed to get \"github.com/segmentio/kafka-go\" versions: %w", err)
 	}
 
+	ginVers, err := PkgVersions("github.com/gin-gonic/gin")
+	if err != nil {
+		return nil, fmt.Errorf("failed to get \"github.com/gin-gonic/gin\" versions: %w", err)
+	}
+
 	ren := func(src string) inspect.Renderer {
 		return inspect.NewRenderer(logger, src, inspect.DefaultFS)
 	}
@@ -188,6 +193,16 @@ func manifests() ([]inspect.Manifest, error) {
 				structfield.NewID("github.com/segmentio/kafka-go", "github.com/segmentio/kafka-go", "Reader", "config"),
 				structfield.NewID("github.com/segmentio/kafka-go", "github.com/segmentio/kafka-go", "ReaderConfig", "GroupID"),
 				structfield.NewID("github.com/segmentio/kafka-go", "github.com/segmentio/kafka-go", "Conn", "clientID"),
+			},
+		},
+		{
+			Application: inspect.Application{
+				Renderer: ren("templates/github.com/gin-gonic/gin/*.tmpl"),
+				Versions: ginVers,
+			},
+			StructFields: []structfield.ID{
+				structfield.NewID("github.com/gin-gonic/gin", "github.com/gin-gonic/gin", "Context", "Request"),
+				structfield.NewID("github.com/gin-gonic/gin", "github.com/gin-gonic/gin", "Context", "fullPath"),
 			},
 		},
 	}, nil

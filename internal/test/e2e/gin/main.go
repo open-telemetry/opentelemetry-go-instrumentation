@@ -12,11 +12,14 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+func hello(c *gin.Context) {
+	c.String(http.StatusOK, "hello\n")
+}
+
 func main() {
 	r := gin.Default()
-	r.GET("/hello-gin", func(c *gin.Context) {
-		c.String(http.StatusOK, "hello\n")
-	})
+	r.GET("/hello-gin/:id", hello)
+
 	go func() {
 		_ = r.Run()
 	}()

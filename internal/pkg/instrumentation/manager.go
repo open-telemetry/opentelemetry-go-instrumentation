@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"go.opentelemetry.io/auto/internal/pkg/instrumentation/bpf/github.com/gin"
 	"log/slog"
 	"sync"
 
@@ -420,6 +421,7 @@ func (m *Manager) availableProbes() []probe.Probe {
 		kafkaProducer.New(m.logger, m.version),
 		kafkaConsumer.New(m.logger, m.version),
 		autosdk.New(m.logger),
+		gin.New(m.logger, m.version),
 	}
 
 	if m.globalImpl {
