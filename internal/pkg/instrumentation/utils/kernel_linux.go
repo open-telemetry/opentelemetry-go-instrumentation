@@ -51,13 +51,18 @@ func GetLinuxKernelVersion() (*version.Version, error) {
 	return version.NewVersion(ver)
 }
 
+// KernelLockdown is the lockdown state of the Linux kernel.
 type KernelLockdown uint8
 
 const (
-	KernelLockdownNone            KernelLockdown = iota + 1 // Linux Kernel security lockdown mode [none]
-	KernelLockdownIntegrity                                 // Linux Kernel security lockdown mode [integrity]
-	KernelLockdownConfidentiality                           // Linux Kernel security lockdown mode [confidentiality]
-	KernelLockdownOther                                     // Linux Kernel security lockdown mode unknown
+	// Linux Kernel security lockdown mode [none].
+	KernelLockdownNone KernelLockdown = iota + 1
+	// Linux Kernel security lockdown mode [integrity].
+	KernelLockdownIntegrity
+	// Linux Kernel security lockdown mode [confidentiality].
+	KernelLockdownConfidentiality
+	// Linux Kernel security lockdown mode unknown.
+	KernelLockdownOther
 )
 
 // Injectable for tests.
@@ -178,7 +183,7 @@ func GetCPUCount() (int, error) {
 	return 0, err
 }
 
-func EstimateBootTimeOffset() (bootTimeOffset int64, err error) {
+func estimateBootTimeOffset() (bootTimeOffset int64, err error) {
 	// The datapath is currently using ktime_get_boot_ns for the pcap timestamp,
 	// which corresponds to CLOCK_BOOTTIME. To be able to convert the the
 	// CLOCK_BOOTTIME to CLOCK_REALTIME (i.e. a unix timestamp).

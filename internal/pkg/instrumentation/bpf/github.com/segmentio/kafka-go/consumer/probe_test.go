@@ -9,25 +9,29 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/collector/pdata/pcommon"
+	"go.opentelemetry.io/collector/pdata/ptrace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
 	"go.opentelemetry.io/otel/trace"
 
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/context"
-	"go.opentelemetry.io/auto/internal/pkg/instrumentation/probe"
+	"go.opentelemetry.io/auto/internal/pkg/instrumentation/utils"
 )
 
 func TestProbeConvertEvent(t *testing.T) {
-	start := time.Now()
+	start := time.Unix(0, time.Now().UnixNano()) // No wall clock.
 	end := start.Add(1 * time.Second)
+
+	startOffset := utils.TimeToBootOffset(start)
+	endOffset := utils.TimeToBootOffset(end)
 
 	traceID := trace.TraceID{1}
 	spanID := trace.SpanID{1}
 
-	got := convertEvent(&event{
+	got := processFn(&event{
 		BaseSpanProperties: context.BaseSpanProperties{
-			StartTime:   uint64(start.UnixNano()),
-			EndTime:     uint64(end.UnixNano()),
+			StartTime:   startOffset,
+			EndTime:     endOffset,
 			SpanContext: context.EBPFSpanContext{TraceID: traceID, SpanID: spanID},
 		},
 		// topic1
@@ -40,17 +44,18 @@ func TestProbeConvertEvent(t *testing.T) {
 		Partition:     12,
 	})
 
-	sc := trace.NewSpanContext(trace.SpanContextConfig{
-		TraceID:    traceID,
-		SpanID:     spanID,
-		TraceFlags: trace.FlagsSampled,
-	})
-	want := &probe.SpanEvent{
-		SpanName:    kafkaConsumerSpanName("topic1"),
-		StartTime:   int64(start.UnixNano()),
-		EndTime:     int64(end.UnixNano()),
-		SpanContext: &sc,
-		Attributes: []attribute.KeyValue{
+	want := func() ptrace.SpanSlice {
+		spans := ptrace.NewSpanSlice()
+		span := spans.AppendEmpty()
+		span.SetName(kafkaConsumerSpanName("topic1"))
+		span.SetKind(ptrace.SpanKindConsumer)
+		span.SetStartTimestamp(utils.BootOffsetToTimestamp(startOffset))
+		span.SetEndTimestamp(utils.BootOffsetToTimestamp(endOffset))
+		span.SetTraceID(pcommon.TraceID(traceID))
+		span.SetSpanID(pcommon.SpanID(spanID))
+		span.SetFlags(uint32(trace.FlagsSampled))
+		utils.Attributes(
+			span.Attributes(),
 			semconv.MessagingSystemKafka,
 			semconv.MessagingOperationTypeReceive,
 			semconv.MessagingDestinationPartitionID("12"),
@@ -58,8 +63,8 @@ func TestProbeConvertEvent(t *testing.T) {
 			semconv.MessagingKafkaMessageOffset(42),
 			semconv.MessagingKafkaMessageKey("key1"),
 			semconv.MessagingKafkaConsumerGroup("test consumer group"),
-		},
-		TracerSchema: semconv.SchemaURL,
-	}
-	assert.Equal(t, want, got[0])
+		)
+		return spans
+	}()
+	assert.Equal(t, want, got)
 }

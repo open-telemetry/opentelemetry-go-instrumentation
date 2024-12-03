@@ -6,6 +6,7 @@ package auto
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -13,6 +14,8 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
+
+	"go.opentelemetry.io/auto/internal/pkg/instrumentation/probe/sampling"
 )
 
 func TestWithServiceName(t *testing.T) {
@@ -73,18 +76,24 @@ func TestWithEnv(t *testing.T) {
 	})
 
 	t.Run("OTEL_LOG_LEVEL", func(t *testing.T) {
-		const name = "debug"
-		mockEnv(t, map[string]string{"OTEL_LOG_LEVEL": name})
+		orig := newLogger
+		var got slog.Leveler
+		newLogger = func(level slog.Leveler) *slog.Logger {
+			got = level
+			return newLoggerFunc(level)
+		}
+		t.Cleanup(func() { newLogger = orig })
 
-		c, err := newInstConfig(context.Background(), []InstrumentationOption{WithEnv()})
+		t.Setenv(envLogLevelKey, "debug")
+		ctx, opts := context.Background(), []InstrumentationOption{WithEnv()}
+		_, err := newInstConfig(ctx, opts)
 		require.NoError(t, err)
-		assert.Equal(t, LogLevelDebug, c.logLevel)
 
-		const wrong = "invalid"
+		assert.Equal(t, slog.LevelDebug, got)
 
-		mockEnv(t, map[string]string{"OTEL_LOG_LEVEL": wrong})
-		_, err = newInstConfig(context.Background(), []InstrumentationOption{WithEnv()})
-		require.Error(t, err)
+		t.Setenv(envLogLevelKey, "invalid")
+		_, err = newInstConfig(ctx, opts)
+		require.ErrorContains(t, err, `parse log level "invalid"`)
 	})
 }
 
@@ -176,25 +185,96 @@ func TestWithResourceAttributes(t *testing.T) {
 	})
 }
 
-func TestWithLogLevel(t *testing.T) {
-	t.Run("With Valid Input", func(t *testing.T) {
-		c, err := newInstConfig(context.Background(), []InstrumentationOption{WithLogLevel("error")})
+func TestWithLogger(t *testing.T) {
+	l := slog.New(slog.Default().Handler())
+	opts := []InstrumentationOption{WithLogger(l)}
+	c, err := newInstConfig(context.Background(), opts)
+	require.NoError(t, err)
 
+	assert.Same(t, l, c.logger)
+}
+
+func TestWithSampler(t *testing.T) {
+	t.Run("Default sampler", func(t *testing.T) {
+		c, err := newInstConfig(context.Background(), []InstrumentationOption{})
 		require.NoError(t, err)
-
-		assert.Equal(t, LogLevelError, c.logLevel)
-
-		c, err = newInstConfig(context.Background(), []InstrumentationOption{WithLogLevel(LogLevelInfo)})
-
-		require.NoError(t, err)
-
-		assert.Equal(t, LogLevelInfo, c.logLevel)
+		sc, err := convertSamplerToConfig(c.sampler)
+		assert.NoError(t, err)
+		assert.Equal(t, sc.Samplers, sampling.DefaultConfig().Samplers)
+		assert.Equal(t, sc.ActiveSampler, sampling.ParentBasedID)
+		conf, ok := sc.Samplers[sampling.ParentBasedID]
+		assert.True(t, ok)
+		assert.Equal(t, conf.SamplerType, sampling.SamplerParentBased)
+		pbConfig, ok := conf.Config.(sampling.ParentBasedConfig)
+		assert.True(t, ok)
+		assert.Equal(t, pbConfig, sampling.DefaultParentBasedSampler())
 	})
 
-	t.Run("Will Validate Input", func(t *testing.T) {
-		_, err := newInstConfig(context.Background(), []InstrumentationOption{WithLogLevel("invalid")})
+	t.Run("Env config", func(t *testing.T) {
+		mockEnv(t, map[string]string{
+			tracesSamplerKey:    samplerNameParentBasedTraceIDRatio,
+			tracesSamplerArgKey: "0.42",
+		})
 
+		c, err := newInstConfig(context.Background(), []InstrumentationOption{WithEnv()})
+		require.NoError(t, err)
+		sc, err := convertSamplerToConfig(c.sampler)
+		assert.NoError(t, err)
+		assert.Equal(t, sc.ActiveSampler, sampling.ParentBasedID)
+		parentBasedConfig, ok := sc.Samplers[sampling.ParentBasedID]
+		assert.True(t, ok)
+		assert.Equal(t, parentBasedConfig.SamplerType, sampling.SamplerParentBased)
+		pbConfig, ok := parentBasedConfig.Config.(sampling.ParentBasedConfig)
+		assert.True(t, ok)
+		assert.Equal(t, pbConfig.Root, sampling.TraceIDRatioID)
+		tidRatio, ok := sc.Samplers[sampling.TraceIDRatioID]
+		assert.True(t, ok)
+		assert.Equal(t, tidRatio.SamplerType, sampling.SamplerTraceIDRatio)
+		config, ok := tidRatio.Config.(sampling.TraceIDRatioConfig)
+		assert.True(t, ok)
+		expected, _ := sampling.NewTraceIDRatioConfig(0.42)
+		assert.Equal(t, expected, config)
+	})
+
+	t.Run("Invalid Env config", func(t *testing.T) {
+		mockEnv(t, map[string]string{
+			tracesSamplerKey:    "invalid",
+			tracesSamplerArgKey: "0.42",
+		})
+
+		_, err := newInstConfig(context.Background(), []InstrumentationOption{WithEnv()})
 		require.Error(t, err)
+		require.Contains(t, err.Error(), "unknown sampler name")
+	})
+
+	t.Run("WithSampler", func(t *testing.T) {
+		c, err := newInstConfig(context.Background(), []InstrumentationOption{
+			WithSampler(ParentBasedSampler{
+				Root: TraceIDRatioSampler{Fraction: 0.42},
+			}),
+		})
+		require.NoError(t, err)
+		sc, err := convertSamplerToConfig(c.sampler)
+		assert.NoError(t, err)
+		assert.Equal(t, sc.ActiveSampler, sampling.ParentBasedID)
+		parentBasedConfig, ok := sc.Samplers[sampling.ParentBasedID]
+		assert.True(t, ok)
+		assert.Equal(t, parentBasedConfig.SamplerType, sampling.SamplerParentBased)
+		pbConfig, ok := parentBasedConfig.Config.(sampling.ParentBasedConfig)
+		assert.True(t, ok)
+		assert.Equal(t, pbConfig.Root, sampling.TraceIDRatioID)
+		assert.Equal(t, pbConfig.RemoteSampled, sampling.AlwaysOnID)
+		assert.Equal(t, pbConfig.RemoteNotSampled, sampling.AlwaysOffID)
+		assert.Equal(t, pbConfig.LocalSampled, sampling.AlwaysOnID)
+		assert.Equal(t, pbConfig.LocalNotSampled, sampling.AlwaysOffID)
+
+		tidRatio, ok := sc.Samplers[sampling.TraceIDRatioID]
+		assert.True(t, ok)
+		assert.Equal(t, tidRatio.SamplerType, sampling.SamplerTraceIDRatio)
+		config, ok := tidRatio.Config.(sampling.TraceIDRatioConfig)
+		assert.True(t, ok)
+		expected, _ := sampling.NewTraceIDRatioConfig(0.42)
+		assert.Equal(t, expected, config)
 	})
 }
 

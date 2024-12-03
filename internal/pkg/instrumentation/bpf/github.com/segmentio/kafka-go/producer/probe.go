@@ -5,8 +5,10 @@ package producer
 
 import (
 	"fmt"
+	"log/slog"
 
-	"github.com/go-logr/logr"
+	"go.opentelemetry.io/collector/pdata/pcommon"
+	"go.opentelemetry.io/collector/pdata/ptrace"
 	"go.opentelemetry.io/otel/attribute"
 	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
 	"go.opentelemetry.io/otel/trace"
@@ -14,10 +16,11 @@ import (
 
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/context"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/probe"
+	"go.opentelemetry.io/auto/internal/pkg/instrumentation/utils"
 	"go.opentelemetry.io/auto/internal/pkg/structfield"
 )
 
-//go:generate go run github.com/cilium/ebpf/cmd/bpf2go -target amd64,arm64 -cc clang -cflags $CFLAGS bpf ./bpf/probe.bpf.c
+//go:generate go run github.com/cilium/ebpf/cmd/bpf2go -target amd64,arm64 bpf ./bpf/probe.bpf.c
 
 const (
 	// pkg is the package being instrumented.
@@ -25,43 +28,47 @@ const (
 )
 
 // New returns a new [probe.Probe].
-func New(logger logr.Logger) probe.Probe {
+func New(logger *slog.Logger, version string) probe.Probe {
 	id := probe.ID{
 		SpanKind:        trace.SpanKindProducer,
 		InstrumentedPkg: pkg,
 	}
-	return &probe.Base[bpfObjects, event]{
-		ID:     id,
-		Logger: logger.WithName(id.String()),
-		Consts: []probe.Const{
-			probe.RegistersABIConst{},
-			probe.AllocationConst{},
-			probe.StructFieldConst{
-				Key: "writer_topic_pos",
-				Val: structfield.NewID("github.com/segmentio/kafka-go", "github.com/segmentio/kafka-go", "Writer", "Topic"),
+	return &probe.SpanProducer[bpfObjects, event]{
+		Base: probe.Base[bpfObjects, event]{
+			ID:     id,
+			Logger: logger,
+			Consts: []probe.Const{
+				probe.RegistersABIConst{},
+				probe.AllocationConst{},
+				probe.StructFieldConst{
+					Key: "writer_topic_pos",
+					Val: structfield.NewID("github.com/segmentio/kafka-go", "github.com/segmentio/kafka-go", "Writer", "Topic"),
+				},
+				probe.StructFieldConst{
+					Key: "message_headers_pos",
+					Val: structfield.NewID("github.com/segmentio/kafka-go", "github.com/segmentio/kafka-go", "Message", "Headers"),
+				},
+				probe.StructFieldConst{
+					Key: "message_key_pos",
+					Val: structfield.NewID("github.com/segmentio/kafka-go", "github.com/segmentio/kafka-go", "Message", "Key"),
+				},
+				probe.StructFieldConst{
+					Key: "message_time_pos",
+					Val: structfield.NewID("github.com/segmentio/kafka-go", "github.com/segmentio/kafka-go", "Message", "Time"),
+				},
 			},
-			probe.StructFieldConst{
-				Key: "message_headers_pos",
-				Val: structfield.NewID("github.com/segmentio/kafka-go", "github.com/segmentio/kafka-go", "Message", "Headers"),
+			Uprobes: []probe.Uprobe{
+				{
+					Sym:         "github.com/segmentio/kafka-go.(*Writer).WriteMessages",
+					EntryProbe:  "uprobe_WriteMessages",
+					ReturnProbe: "uprobe_WriteMessages_Returns",
+				},
 			},
-			probe.StructFieldConst{
-				Key: "message_key_pos",
-				Val: structfield.NewID("github.com/segmentio/kafka-go", "github.com/segmentio/kafka-go", "Message", "Key"),
-			},
-			probe.StructFieldConst{
-				Key: "message_time_pos",
-				Val: structfield.NewID("github.com/segmentio/kafka-go", "github.com/segmentio/kafka-go", "Message", "Time"),
-			},
+			SpecFn: loadBpf,
 		},
-		Uprobes: []probe.Uprobe{
-			{
-				Sym:         "github.com/segmentio/kafka-go.(*Writer).WriteMessages",
-				EntryProbe:  "uprobe_WriteMessages",
-				ReturnProbe: "uprobe_WriteMessages_Returns",
-			},
-		},
-		SpecFn:    loadBpf,
-		ProcessFn: convertEvent,
+		Version:   version,
+		SchemaURL: semconv.SchemaURL,
+		ProcessFn: processFn,
 	}
 }
 
@@ -84,44 +91,26 @@ type event struct {
 	ValidMessages uint64
 }
 
-func convertEvent(e *event) []*probe.SpanEvent {
-	tsc := trace.SpanContextConfig{
-		TraceID:    e.Messages[0].SpanContext.TraceID,
-		TraceFlags: trace.FlagsSampled,
-	}
-
-	var pscPtr *trace.SpanContext
-	if e.ParentSpanContext.TraceID.IsValid() {
-		psc := trace.NewSpanContext(trace.SpanContextConfig{
-			TraceID:    e.ParentSpanContext.TraceID,
-			SpanID:     e.ParentSpanContext.SpanID,
-			TraceFlags: trace.FlagsSampled,
-			Remote:     true,
-		})
-		pscPtr = &psc
-	} else {
-		pscPtr = nil
-	}
-
+func processFn(e *event) ptrace.SpanSlice {
 	globalTopic := unix.ByteSliceToString(e.GlobalTopic[:])
 
-	commonAttrs := []attribute.KeyValue{semconv.MessagingSystemKafka, semconv.MessagingOperationTypePublish}
+	attrs := []attribute.KeyValue{semconv.MessagingSystemKafka, semconv.MessagingOperationTypePublish}
 	if len(globalTopic) > 0 {
-		commonAttrs = append(commonAttrs, semconv.MessagingDestinationName(globalTopic))
+		attrs = append(attrs, semconv.MessagingDestinationName(globalTopic))
 	}
 
 	if e.ValidMessages > 0 {
-		commonAttrs = append(commonAttrs, semconv.MessagingBatchMessageCount(int(e.ValidMessages)))
+		attrs = append(attrs, semconv.MessagingBatchMessageCount(int(e.ValidMessages)))
 	}
 
-	var res []*probe.SpanEvent
+	traceID := pcommon.TraceID(e.Messages[0].SpanContext.TraceID)
+
+	spans := ptrace.NewSpanSlice()
+
 	var msgTopic string
 	for i := uint64(0); i < e.ValidMessages; i++ {
-		tsc.SpanID = e.Messages[i].SpanContext.SpanID
-		sc := trace.NewSpanContext(tsc)
 		key := unix.ByteSliceToString(e.Messages[i].Key[:])
-
-		msgAttrs := []attribute.KeyValue{}
+		var msgAttrs []attribute.KeyValue
 		if len(key) > 0 {
 			msgAttrs = append(msgAttrs, semconv.MessagingKafkaMessageKey(key))
 		}
@@ -134,20 +123,25 @@ func convertEvent(e *event) []*probe.SpanEvent {
 		}
 
 		msgAttrs = append(msgAttrs, semconv.MessagingDestinationName(msgTopic))
-		msgAttrs = append(msgAttrs, commonAttrs...)
+		msgAttrs = append(msgAttrs, attrs...)
 
-		res = append(res, &probe.SpanEvent{
-			SpanName:          kafkaProducerSpanName(msgTopic),
-			StartTime:         int64(e.StartTime),
-			EndTime:           int64(e.EndTime),
-			SpanContext:       &sc,
-			Attributes:        msgAttrs,
-			ParentSpanContext: pscPtr,
-			TracerSchema:      semconv.SchemaURL,
-		})
+		span := spans.AppendEmpty()
+		span.SetName(kafkaProducerSpanName(msgTopic))
+		span.SetKind(ptrace.SpanKindProducer)
+		span.SetStartTimestamp(utils.BootOffsetToTimestamp(e.StartTime))
+		span.SetEndTimestamp(utils.BootOffsetToTimestamp(e.EndTime))
+		span.SetTraceID(traceID)
+		span.SetSpanID(pcommon.SpanID(e.Messages[i].SpanContext.SpanID))
+		span.SetFlags(uint32(trace.FlagsSampled))
+
+		if e.ParentSpanContext.SpanID.IsValid() {
+			span.SetParentSpanID(pcommon.SpanID(e.ParentSpanContext.SpanID))
+		}
+
+		utils.Attributes(span.Attributes(), msgAttrs...)
 	}
 
-	return res
+	return spans
 }
 
 func kafkaProducerSpanName(topic string) string {

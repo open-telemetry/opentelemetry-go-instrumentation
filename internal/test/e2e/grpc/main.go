@@ -14,8 +14,10 @@ import (
 	"time"
 
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials/insecure"
 	pb "google.golang.org/grpc/examples/helloworld/helloworld"
+	"google.golang.org/grpc/status"
 )
 
 const port = 1701
@@ -26,6 +28,9 @@ type server struct {
 
 func (s *server) SayHello(ctx context.Context, in *pb.HelloRequest) (*pb.HelloReply, error) {
 	log.Printf("Received: %v", in.GetName())
+	if in.GetName() == "unimplemented" {
+		return nil, status.Error(codes.Unimplemented, "unimplmented")
+	}
 	return &pb.HelloReply{Message: "Hello " + in.GetName()}, nil
 }
 
@@ -68,8 +73,22 @@ func main() {
 	}
 	log.Printf("Greeting: %s", r.GetMessage())
 
+	// Contact the server expecting a server error
+	_, err = c.SayHello(ctx, &pb.HelloRequest{Name: "unimplemented"})
+	if err == nil {
+		log.Fatalf("expected an error but none was received")
+	}
+	log.Printf("received expected error: %+v", err)
+
 	s.GracefulStop()
 	<-done
+
+	// try making a request after the server has stopped to generate an error status
+	_, err = c.SayHello(ctx, &pb.HelloRequest{Name: "world"})
+	if err == nil {
+		log.Fatalf("expected an error but none was returned")
+	}
+	log.Printf("received expected error: %+v", err)
 
 	// Give time for auto-instrumentation to do the dew.
 	time.Sleep(5 * time.Second)

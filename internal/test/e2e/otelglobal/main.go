@@ -5,6 +5,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"go.opentelemetry.io/otel"
@@ -18,6 +19,12 @@ var tracer = otel.Tracer(
 	trace.WithInstrumentationVersion("v1.23.42"),
 	trace.WithSchemaURL("https://some_schema"),
 )
+
+func setUnusedTracers() {
+	for i := range 20 {
+		otel.Tracer(fmt.Sprintf("unused%d", i))
+	}
+}
 
 func innerFunction(ctx context.Context) {
 	_, span := tracer.Start(ctx, "child")
@@ -44,6 +51,8 @@ func createMainSpan(ctx context.Context) {
 }
 
 func main() {
+	// registering unused tracers to test how we handle a non-trivial tracers map
+	setUnusedTracers()
 	// give time for auto-instrumentation to start up
 	time.Sleep(5 * time.Second)
 

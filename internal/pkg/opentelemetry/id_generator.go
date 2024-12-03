@@ -6,9 +6,8 @@ package opentelemetry
 import (
 	"context"
 
+	"go.opentelemetry.io/collector/pdata/ptrace"
 	"go.opentelemetry.io/otel/trace"
-
-	"go.opentelemetry.io/auto/internal/pkg/instrumentation/probe"
 )
 
 type EBPFSourceIDGenerator struct{}
@@ -19,40 +18,31 @@ func NewEBPFSourceIDGenerator() *EBPFSourceIDGenerator {
 	return &EBPFSourceIDGenerator{}
 }
 
-// ContextWithEBPFEvent returns a copy of parent in which event is stored.
-func ContextWithEBPFEvent(parent context.Context, event probe.SpanEvent) context.Context {
-	return context.WithValue(parent, eBPFEventKey{}, event)
+// ContextWithSpan returns a copy of parent in which span is stored.
+func ContextWithSpan(parent context.Context, span ptrace.Span) context.Context {
+	return context.WithValue(parent, eBPFEventKey{}, span)
 }
 
-// EventFromContext returns the event within ctx if one exists.
-func EventFromContext(ctx context.Context) *probe.SpanEvent {
+// SpanFromContext returns the Span within ctx if one exists.
+func SpanFromContext(ctx context.Context) ptrace.Span {
 	val := ctx.Value(eBPFEventKey{})
 	if val == nil {
-		return nil
+		return ptrace.NewSpan()
 	}
 
-	event, ok := val.(probe.SpanEvent)
-	if !ok {
-		return nil
-	}
-
-	return &event
+	s, _ := val.(ptrace.Span)
+	return s
 }
 
 func (e *EBPFSourceIDGenerator) NewIDs(ctx context.Context) (trace.TraceID, trace.SpanID) {
-	event := EventFromContext(ctx)
-	if event == nil || event.SpanContext == nil {
+	s := SpanFromContext(ctx)
+	if s.TraceID().IsEmpty() || s.SpanID().IsEmpty() {
 		return trace.TraceID{}, trace.SpanID{}
 	}
 
-	return event.SpanContext.TraceID(), event.SpanContext.SpanID()
+	return trace.TraceID(s.TraceID()), trace.SpanID(s.SpanID())
 }
 
 func (e *EBPFSourceIDGenerator) NewSpanID(ctx context.Context, traceID trace.TraceID) trace.SpanID {
-	event := EventFromContext(ctx)
-	if event == nil {
-		return trace.SpanID{}
-	}
-
-	return event.SpanContext.SpanID()
+	return trace.SpanID(SpanFromContext(ctx).SpanID())
 }

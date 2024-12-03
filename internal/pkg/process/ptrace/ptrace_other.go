@@ -5,13 +5,13 @@
 
 package ptrace
 
-import "github.com/go-logr/logr"
+import "log/slog"
 
 // Stubs for non-linux systems
 
 type TracedProgram struct{}
 
-func NewTracedProgram(pid int, logger logr.Logger) (*TracedProgram, error) {
+func NewTracedProgram(pid int, logger *slog.Logger) (*TracedProgram, error) {
 	return nil, nil
 }
 

@@ -9,23 +9,27 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/collector/pdata/pcommon"
+	"go.opentelemetry.io/collector/pdata/ptrace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
 	"go.opentelemetry.io/otel/trace"
 
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/context"
-	"go.opentelemetry.io/auto/internal/pkg/instrumentation/probe"
+	"go.opentelemetry.io/auto/internal/pkg/instrumentation/utils"
 )
 
 func TestProbeConvertEvent(t *testing.T) {
-	start := time.Now()
+	start := time.Unix(0, time.Now().UnixNano()) // No wall clock.
 	end := start.Add(1 * time.Second)
+
+	startOffset := utils.TimeToBootOffset(start)
+	endOffset := utils.TimeToBootOffset(end)
 
 	traceID := trace.TraceID{1}
 
-	got := convertEvent(&event{
-		StartTime: uint64(start.UnixNano()),
-		EndTime:   uint64(end.UnixNano()),
+	got := processFn(&event{
+		StartTime: startOffset,
+		EndTime:   endOffset,
 		Messages: [10]messageAttributes{
 			{
 				// topic1
@@ -51,45 +55,43 @@ func TestProbeConvertEvent(t *testing.T) {
 		ValidMessages: 2,
 	})
 
-	sc1 := trace.NewSpanContext(trace.SpanContextConfig{
-		TraceID:    traceID,
-		SpanID:     trace.SpanID{1},
-		TraceFlags: trace.FlagsSampled,
-	})
-	sc2 := trace.NewSpanContext(trace.SpanContextConfig{
-		TraceID:    traceID,
-		SpanID:     trace.SpanID{2},
-		TraceFlags: trace.FlagsSampled,
-	})
-	want1 := &probe.SpanEvent{
-		SpanName:    kafkaProducerSpanName("topic1"),
-		StartTime:   int64(start.UnixNano()),
-		EndTime:     int64(end.UnixNano()),
-		SpanContext: &sc1,
-		Attributes: []attribute.KeyValue{
+	want := func() ptrace.SpanSlice {
+		spans := ptrace.NewSpanSlice()
+		span := spans.AppendEmpty()
+		span.SetName(kafkaProducerSpanName("topic1"))
+		span.SetKind(ptrace.SpanKindProducer)
+		span.SetStartTimestamp(utils.BootOffsetToTimestamp(startOffset))
+		span.SetEndTimestamp(utils.BootOffsetToTimestamp(endOffset))
+		span.SetTraceID(pcommon.TraceID(traceID))
+		span.SetSpanID(pcommon.SpanID{1})
+		span.SetFlags(uint32(trace.FlagsSampled))
+		utils.Attributes(
+			span.Attributes(),
 			semconv.MessagingKafkaMessageKey("key1"),
 			semconv.MessagingDestinationName("topic1"),
 			semconv.MessagingSystemKafka,
 			semconv.MessagingOperationTypePublish,
 			semconv.MessagingBatchMessageCount(2),
-		},
-		TracerSchema: semconv.SchemaURL,
-	}
+		)
 
-	want2 := &probe.SpanEvent{
-		SpanName:    kafkaProducerSpanName("topic2"),
-		StartTime:   int64(start.UnixNano()),
-		EndTime:     int64(end.UnixNano()),
-		SpanContext: &sc2,
-		Attributes: []attribute.KeyValue{
+		span = spans.AppendEmpty()
+		span.SetName(kafkaProducerSpanName("topic2"))
+		span.SetKind(ptrace.SpanKindProducer)
+		span.SetStartTimestamp(utils.BootOffsetToTimestamp(startOffset))
+		span.SetEndTimestamp(utils.BootOffsetToTimestamp(endOffset))
+		span.SetTraceID(pcommon.TraceID(traceID))
+		span.SetSpanID(pcommon.SpanID{2})
+		span.SetFlags(uint32(trace.FlagsSampled))
+		utils.Attributes(
+			span.Attributes(),
 			semconv.MessagingKafkaMessageKey("key2"),
 			semconv.MessagingDestinationName("topic2"),
 			semconv.MessagingSystemKafka,
 			semconv.MessagingOperationTypePublish,
 			semconv.MessagingBatchMessageCount(2),
-		},
-		TracerSchema: semconv.SchemaURL,
-	}
-	assert.Equal(t, want1, got[0])
-	assert.Equal(t, want2, got[1])
+		)
+
+		return spans
+	}()
+	assert.Equal(t, want, got)
 }

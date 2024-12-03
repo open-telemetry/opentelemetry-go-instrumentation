@@ -1,9 +1,9 @@
-FROM golang:1.22.5 AS builder
+FROM golang:1.23.3@sha256:2b01164887cecfa796f6bff6787c8c597d0e0e09e0694428fdde4a343303eb60 AS builder
 WORKDIR /sample-app
 COPY . .
 RUN CGO_ENABLED=0 go build -o main
 
-FROM bitnami/kafka:latest
+FROM bitnami/kafka:latest@sha256:978583d0859444d3bc6b6592b38b5af5a834d473db51441071a20e67e0afb945
 
 USER root
 ENV KAFKA_CFG_PROCESS_ROLES=controller,broker

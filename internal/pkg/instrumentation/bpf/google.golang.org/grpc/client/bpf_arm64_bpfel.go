@@ -13,13 +13,13 @@ import (
 )
 
 type bpfGrpcRequestT struct {
-	StartTime uint64
-	EndTime   uint64
-	Sc        bpfSpanContext
-	Psc       bpfSpanContext
-	Method    [50]int8
-	Target    [50]int8
-	_         [4]byte
+	StartTime  uint64
+	EndTime    uint64
+	Sc         bpfSpanContext
+	Psc        bpfSpanContext
+	Method     [50]int8
+	Target     [50]int8
+	StatusCode uint32
 }
 
 type bpfSliceArrayBuff struct{ Buff [1024]uint8 }
@@ -86,6 +86,8 @@ type bpfMapSpecs struct {
 	Events                 *ebpf.MapSpec `ebpf:"events"`
 	GoContextToSc          *ebpf.MapSpec `ebpf:"go_context_to_sc"`
 	GrpcEvents             *ebpf.MapSpec `ebpf:"grpc_events"`
+	ProbeActiveSamplerMap  *ebpf.MapSpec `ebpf:"probe_active_sampler_map"`
+	SamplersConfigMap      *ebpf.MapSpec `ebpf:"samplers_config_map"`
 	SliceArrayBuffMap      *ebpf.MapSpec `ebpf:"slice_array_buff_map"`
 	StreamidToSpanContexts *ebpf.MapSpec `ebpf:"streamid_to_span_contexts"`
 	TrackedSpansBySc       *ebpf.MapSpec `ebpf:"tracked_spans_by_sc"`
@@ -114,6 +116,8 @@ type bpfMaps struct {
 	Events                 *ebpf.Map `ebpf:"events"`
 	GoContextToSc          *ebpf.Map `ebpf:"go_context_to_sc"`
 	GrpcEvents             *ebpf.Map `ebpf:"grpc_events"`
+	ProbeActiveSamplerMap  *ebpf.Map `ebpf:"probe_active_sampler_map"`
+	SamplersConfigMap      *ebpf.Map `ebpf:"samplers_config_map"`
 	SliceArrayBuffMap      *ebpf.Map `ebpf:"slice_array_buff_map"`
 	StreamidToSpanContexts *ebpf.Map `ebpf:"streamid_to_span_contexts"`
 	TrackedSpansBySc       *ebpf.Map `ebpf:"tracked_spans_by_sc"`
@@ -125,6 +129,8 @@ func (m *bpfMaps) Close() error {
 		m.Events,
 		m.GoContextToSc,
 		m.GrpcEvents,
+		m.ProbeActiveSamplerMap,
+		m.SamplersConfigMap,
 		m.SliceArrayBuffMap,
 		m.StreamidToSpanContexts,
 		m.TrackedSpansBySc,

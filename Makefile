@@ -2,24 +2,28 @@
 # Assume the Makefile is in the root of the repository.
 REPODIR := $(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
 
+# Used by bpf2go to generate make compatible depinfo files.
+export BPF2GO_MAKEBASE := $(REPODIR)
+
 TOOLS_MOD_DIR := ./internal/tools
 TOOLS = $(CURDIR)/.tools
 
 ALL_GO_MOD_DIRS := $(shell find . -type f -name 'go.mod' ! -path './LICENSES/*' -exec dirname {} \; | sort)
+ALL_GO_MODS := $(shell find . -type f -name 'go.mod' ! -path '$(TOOLS_MOD_DIR)/*' ! -path './LICENSES/*' | sort)
 
-# Build the list of include directories to compile the bpf program
-BPF_INCLUDE += -I${REPODIR}/internal/include/libbpf
-BPF_INCLUDE += -I${REPODIR}/internal/include
+# BPF compile time dependencies.
+BPF2GO_CFLAGS += -I${REPODIR}/internal/include/libbpf
+BPF2GO_CFLAGS += -I${REPODIR}/internal/include
+export BPF2GO_CFLAGS
 
 # Go default variables
 GOCMD?= go
-GOOS=linux
-CGO_ENABLED=0
+CGO_ENABLED?=0
 
 .DEFAULT_GOAL := precommit
 
 .PHONY: precommit
-precommit: license-header-check dependabot-generate go-mod-tidy golangci-lint-fix codespell
+precommit: license-header-check golangci-lint-fix test codespell
 
 # Tools
 $(TOOLS):
@@ -49,19 +53,31 @@ $(TOOLS)/offsetgen: PACKAGE=go.opentelemetry.io/auto/$(TOOLS_MOD_DIR)/inspect/cm
 .PHONY: tools
 tools: $(GOLICENSES) $(MULTIMOD) $(GOLANGCI_LINT) $(DBOTCONF) $(OFFSETGEN)
 
-ALL_GO_MODS := $(shell find . -type f -name 'go.mod' ! -path '$(TOOLS_MOD_DIR)/*' ! -path './LICENSES/*' | sort)
-GO_MODS_TO_TEST := $(ALL_GO_MODS:%=test/%)
+TEST_TARGETS := test-verbose test-ebpf test-race
+.PHONY: $(TEST_TARGETS) test
+test-ebpf: ARGS = -tags=ebpf_test -run ^TestEBPF # These need to be run with sudo.
+test-verbose: ARGS = -v
+test-race: ARGS = -race
+$(TEST_TARGETS): test
+test: go-mod-tidy generate $(ALL_GO_MODS:%=test/%)
+test/%/go.mod:
+	@cd $* && $(GOCMD) test $(ARGS) ./...
 
-.PHONY: test
-test: generate $(GO_MODS_TO_TEST)
-test/%: GO_MOD=$*
-test/%:
-	cd $(shell dirname $(GO_MOD)) && $(GOCMD) test -v ./...
+PROBE_ROOT = internal/pkg/instrumentation/bpf/
+PROBE_GEN_GO := $(shell find $(PROBE_ROOT) -type f -name 'bpf_*_bpfe[lb].go')
+PROBE_GEN_OBJ := $(PROBE_GEN_GO:.go=.o)
+PROBE_GEN_ALL := $(PROBE_GEN_GO) $(PROBE_GEN_OBJ)
 
-.PHONY: generate
-generate: export CFLAGS := $(BPF_INCLUDE)
-generate: go-mod-tidy
-generate:
+# Include all depinfo files to ensure we only re-generate when needed.
+-include $(shell find $(PROBE_ROOT) -type f -name 'bpf_*_bpfel.go.d')
+
+.PHONY: generate generate/all
+generate: $(PROBE_GEN_ALL)
+
+$(PROBE_GEN_ALL):
+	$(GOCMD) generate ./$(dir $@)...
+
+generate/all:
 	$(GOCMD) generate ./...
 
 .PHONY: docker-generate
@@ -85,7 +101,7 @@ go-mod-tidy/%:
 .PHONY: golangci-lint golangci-lint-fix
 golangci-lint-fix: ARGS=--fix
 golangci-lint-fix: golangci-lint
-golangci-lint: generate $(ALL_GO_MOD_DIRS:%=golangci-lint/%)
+golangci-lint: go-mod-tidy generate $(ALL_GO_MOD_DIRS:%=golangci-lint/%)
 golangci-lint/%: DIR=$*
 golangci-lint/%: | $(GOLANGCI_LINT)
 	@echo 'golangci-lint $(if $(ARGS),$(ARGS) ,)$(DIR)' \
@@ -93,8 +109,8 @@ golangci-lint/%: | $(GOLANGCI_LINT)
 		&& $(GOLANGCI_LINT) run --allow-serial-runners --timeout=2m0s $(ARGS)
 
 .PHONY: build
-build: generate
-	$(GOCMD) build -o otel-go-instrumentation cli/main.go
+build: go-mod-tidy generate
+	CGO_ENABLED=$(CGO_ENABLED) $(GOCMD) build -o otel-go-instrumentation ./cli/...
 
 .PHONY: docker-build
 docker-build:
@@ -111,7 +127,7 @@ offsets: | $(OFFSETGEN)
 
 .PHONY: docker-offsets
 docker-offsets:
-	docker run --rm -v /tmp:/tmp -v /var/run/docker.sock:/var/run/docker.sock -v $(shell pwd):/app golang:1.22 /bin/sh -c "cd ../app && make offsets"
+	docker run -e DOCKER_USERNAME=$(DOCKER_USERNAME) -e DOCKER_PASSWORD=$(DOCKER_PASSWORD) --rm -v /tmp:/tmp -v /var/run/docker.sock:/var/run/docker.sock -v $(shell pwd):/app golang:1.22 /bin/sh -c "cd ../app && make offsets"
 
 .PHONY: update-licenses
 update-licenses: generate $(GOLICENSES)
@@ -132,15 +148,6 @@ verify-licenses: generate $(GOLICENSES)
       exit 1; \
     fi; \
 
-DEPENDABOT_CONFIG = .github/dependabot.yml
-.PHONY: dependabot-check
-dependabot-check: | $(DBOTCONF)
-	@$(DBOTCONF) --ignore "/LICENSES" verify $(DEPENDABOT_CONFIG) || ( echo "(run: make dependabot-generate)"; exit 1 )
-
-.PHONY: dependabot-generate
-dependabot-generate: | $(DBOTCONF)
-	@$(DBOTCONF) --ignore "/LICENSES" generate > $(DEPENDABOT_CONFIG)
-
 .PHONY: license-header-check
 license-header-check:
 	@licRes=$$(for f in $$(find . -type f \( -iname '*.go' -o -iname '*.sh' -o -iname '*.c' -o -iname '*.h' \) ! -path '**/third_party/*' ! -path './.git/*' ! -path './LICENSES/*' ! -path './internal/include/libbpf/*' ) ; do \
@@ -152,18 +159,23 @@ license-header-check:
 	           exit 1; \
 	   fi
 
-.PHONY: fixture-nethttp fixture-gin fixture-databasesql fixture-nethttp-custom fixture-otelglobal fixture-kafka-go
+.PHONY: fixture-nethttp fixture-gin fixture-databasesql fixture-nethttp-custom fixture-otelglobal fixture-autosdk fixture-kafka-go
 fixture-nethttp-custom: fixtures/nethttp_custom
 fixture-nethttp: fixtures/nethttp
 fixture-gin: fixtures/gin
 fixture-databasesql: fixtures/databasesql
 fixture-grpc: fixtures/grpc
 fixture-otelglobal: fixtures/otelglobal
+fixture-autosdk: fixtures/autosdk
 fixture-kafka-go: fixtures/kafka-go
 fixtures/%: LIBRARY=$*
 fixtures/%:
 	$(MAKE) docker-build
-	cd internal/test/e2e/$(LIBRARY) && docker build -t sample-app .
+	if [ -f ./internal/test/e2e/$(LIBRARY)/build.sh ]; then \
+		./internal/test/e2e/$(LIBRARY)/build.sh; \
+	else \
+		cd internal/test/e2e/$(LIBRARY) && docker build -t sample-app . ;\
+	fi
 	kind create cluster
 	kind load docker-image otel-go-instrumentation sample-app
 	helm repo add open-telemetry https://open-telemetry.github.io/opentelemetry-helm-charts

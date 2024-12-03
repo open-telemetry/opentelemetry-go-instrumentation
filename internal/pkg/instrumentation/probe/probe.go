@@ -10,16 +10,19 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"os"
 
 	"github.com/cilium/ebpf"
 	"github.com/cilium/ebpf/link"
 	"github.com/cilium/ebpf/perf"
-	"github.com/go-logr/logr"
 	"github.com/hashicorp/go-version"
+
+	"go.opentelemetry.io/collector/pdata/ptrace"
 
 	"go.opentelemetry.io/auto/internal/pkg/inject"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/bpffs"
+	"go.opentelemetry.io/auto/internal/pkg/instrumentation/probe/sampling"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/utils"
 	"go.opentelemetry.io/auto/internal/pkg/process"
 	"go.opentelemetry.io/auto/internal/pkg/structfield"
@@ -32,11 +35,14 @@ type Probe interface {
 	// the information about the package the Probe instruments.
 	Manifest() Manifest
 
-	// Load loads all instrumentation offsets.
-	Load(*link.Executable, *process.TargetDetails) error
+	// Load loads all the eBPF programs and maps required by the Probe.
+	// It also attaches the eBPF programs to the target process.
+	// TODO: currently passing Sampler as an initial configuration - this will be
+	// updated to a more generic configuration in the future.
+	Load(*link.Executable, *process.TargetDetails, *sampling.Config) error
 
 	// Run runs the events processing loop.
-	Run(eventsChan chan<- *Event)
+	Run(func(ptrace.ScopeSpans))
 
 	// Close stops the Probe.
 	Close() error
@@ -51,7 +57,7 @@ type Base[BPFObj any, BPFEvent any] struct {
 	// ID is a unique identifier for the probe.
 	ID ID
 	// Logger is used to log operations and errors.
-	Logger logr.Logger
+	Logger *slog.Logger
 
 	// Consts are the constants that need to be injected into the eBPF program
 	// that is run by this Probe.
@@ -63,12 +69,15 @@ type Base[BPFObj any, BPFEvent any] struct {
 	// SpecFn is a creation function for an eBPF CollectionSpec related to the
 	// probe.
 	SpecFn func() (*ebpf.CollectionSpec, error)
-	// ProcessFn processes probe events into a uniform Event type.
-	ProcessFn func(*BPFEvent) []*SpanEvent
+	// ProcessRecord is an optional processing function for the probe. If nil,
+	// all records will be read directly into a new BPFEvent using the
+	// encoding/binary package.
+	ProcessRecord func(perf.Record) (BPFEvent, error)
 
-	reader     *perf.Reader
-	collection *ebpf.Collection
-	closers    []io.Closer
+	reader          *perf.Reader
+	collection      *ebpf.Collection
+	closers         []io.Closer
+	samplingManager *sampling.Manager
 }
 
 const (
@@ -82,14 +91,19 @@ const (
 
 // Manifest returns the Probe's instrumentation Manifest.
 func (i *Base[BPFObj, BPFEvent]) Manifest() Manifest {
-	structfields := consts(i.Consts).structFields()
+	var structFieldIDs []structfield.ID
+	for _, cnst := range i.Consts {
+		if sfc, ok := cnst.(StructFieldConst); ok {
+			structFieldIDs = append(structFieldIDs, sfc.Val)
+		}
+	}
 
 	symbols := make([]FunctionSymbol, 0, len(i.Uprobes))
 	for _, up := range i.Uprobes {
 		symbols = append(symbols, FunctionSymbol{Symbol: up.Sym, DependsOn: up.DependsOn})
 	}
 
-	return NewManifest(i.ID, structfields, symbols)
+	return NewManifest(i.ID, structFieldIDs, symbols)
 }
 
 func (i *Base[BPFObj, BPFEvent]) Spec() (*ebpf.CollectionSpec, error) {
@@ -97,7 +111,7 @@ func (i *Base[BPFObj, BPFEvent]) Spec() (*ebpf.CollectionSpec, error) {
 }
 
 // Load loads all instrumentation offsets.
-func (i *Base[BPFObj, BPFEvent]) Load(exec *link.Executable, td *process.TargetDetails) error {
+func (i *Base[BPFObj, BPFEvent]) Load(exec *link.Executable, td *process.TargetDetails, sampler *sampling.Config) error {
 	spec, err := i.SpecFn()
 	if err != nil {
 		return err
@@ -122,16 +136,31 @@ func (i *Base[BPFObj, BPFEvent]) Load(exec *link.Executable, td *process.TargetD
 	if err != nil {
 		return err
 	}
+
+	i.samplingManager, err = sampling.NewSamplingManager(i.collection, sampler)
+	if err != nil {
+		return err
+	}
+
 	i.closers = append(i.closers, i.reader)
 
 	return nil
 }
 
 func (i *Base[BPFObj, BPFEvent]) InjectConsts(td *process.TargetDetails, spec *ebpf.CollectionSpec) error {
-	opts, err := consts(i.Consts).injectOpts(td)
+	var err error
+	var opts []inject.Option
+	for _, cnst := range i.Consts {
+		o, e := cnst.InjectOption(td)
+		err = errors.Join(err, e)
+		if e == nil && o != nil {
+			opts = append(opts, o)
+		}
+	}
 	if err != nil {
 		return err
 	}
+
 	return inject.Constants(spec, opts...)
 }
 
@@ -140,7 +169,7 @@ func (i *Base[BPFObj, BPFEvent]) loadUprobes(exec *link.Executable, td *process.
 		links, err := up.load(exec, td, i.collection)
 		if err != nil {
 			if up.Optional {
-				i.Logger.V(1).Info("failed to attach optional uprobe", "probe", i.ID, "symbol", up.Sym, "error", err)
+				i.Logger.Debug("failed to attach optional uprobe", "probe", i.ID, "symbol", up.Sym, "error", err)
 				continue
 			}
 			return err
@@ -185,46 +214,33 @@ func (i *Base[BPFObj, BPFEvent]) buildEBPFCollection(td *process.TargetDetails, 
 	return c, nil
 }
 
-// Run runs the events processing loop.
-func (i *Base[BPFObj, BPFEvent]) Run(dest chan<- *Event) {
-	for {
-		record, err := i.reader.Read()
-		if err != nil {
-			if errors.Is(err, perf.ErrClosed) {
-				return
-			}
-			i.Logger.Error(err, "error reading from perf reader")
-			continue
+// read reads a new BPFEvent from the perf Reader.
+func (i *Base[BPFObj, BPFEvent]) read() (*BPFEvent, error) {
+	record, err := i.reader.Read()
+	if err != nil {
+		if !errors.Is(err, perf.ErrClosed) {
+			i.Logger.Error("error reading from perf reader", "error", err)
 		}
-
-		if record.LostSamples != 0 {
-			i.Logger.V(1).Info("perf event ring buffer full", "dropped", record.LostSamples)
-			continue
-		}
-
-		se, err := i.processRecord(record)
-		if err != nil {
-			i.Logger.Error(err, "failed to process perf record")
-		}
-		e := &Event{
-			Package:    i.ID.InstrumentedPkg,
-			Kind:       i.ID.SpanKind,
-			SpanEvents: se,
-		}
-
-		dest <- e
+		return nil, err
 	}
-}
 
-func (i *Base[BPFObj, BPFEvent]) processRecord(record perf.Record) ([]*SpanEvent, error) {
-	buf := bytes.NewBuffer(record.RawSample)
+	if record.LostSamples != 0 {
+		i.Logger.Debug("perf event ring buffer full", "dropped", record.LostSamples)
+		return nil, err
+	}
 
 	var event BPFEvent
-	err := binary.Read(buf, binary.LittleEndian, &event)
+	if i.ProcessRecord != nil {
+		event, err = i.ProcessRecord(record)
+	} else {
+		buf := bytes.NewReader(record.RawSample)
+		err = binary.Read(buf, binary.LittleEndian, &event)
+	}
+
 	if err != nil {
 		return nil, err
 	}
-	return i.ProcessFn(&event), nil
+	return &event, nil
 }
 
 // Close stops the Probe.
@@ -237,9 +253,61 @@ func (i *Base[BPFObj, BPFEvent]) Close() error {
 		err = errors.Join(err, c.Close())
 	}
 	if err == nil {
-		i.Logger.V(1).Info("Closed", "Probe", i.ID)
+		i.Logger.Debug("Closed", "Probe", i.ID)
 	}
 	return err
+}
+
+type SpanProducer[BPFObj any, BPFEvent any] struct {
+	Base[BPFObj, BPFEvent]
+
+	Version   string
+	SchemaURL string
+	ProcessFn func(*BPFEvent) ptrace.SpanSlice
+}
+
+// Run runs the events processing loop.
+func (i *SpanProducer[BPFObj, BPFEvent]) Run(handle func(ptrace.ScopeSpans)) {
+	for {
+		event, err := i.read()
+		if err != nil {
+			if errors.Is(err, perf.ErrClosed) {
+				return
+			}
+			continue
+		}
+
+		ss := ptrace.NewScopeSpans()
+
+		ss.Scope().SetName("go.opentelemetry.io/auto/" + i.ID.InstrumentedPkg)
+		ss.Scope().SetVersion(i.Version)
+		ss.SetSchemaUrl(i.SchemaURL)
+
+		i.ProcessFn(event).CopyTo(ss.Spans())
+
+		handle(ss)
+	}
+}
+
+type TraceProducer[BPFObj any, BPFEvent any] struct {
+	Base[BPFObj, BPFEvent]
+
+	ProcessFn func(*BPFEvent) ptrace.ScopeSpans
+}
+
+// Run runs the events processing loop.
+func (i *TraceProducer[BPFObj, BPFEvent]) Run(handle func(ptrace.ScopeSpans)) {
+	for {
+		event, err := i.read()
+		if err != nil {
+			if errors.Is(err, perf.ErrClosed) {
+				return
+			}
+			continue
+		}
+
+		handle(i.ProcessFn(event))
+	}
 }
 
 // Uprobe is an eBPF program that is attached in the entry point and/or the return of a function.
@@ -308,33 +376,6 @@ type Const interface {
 	// InjectOption returns the inject.Option to run for the Const when running
 	// inject.Constants.
 	InjectOption(td *process.TargetDetails) (inject.Option, error)
-}
-
-type consts []Const
-
-func (c consts) structFields() []structfield.ID {
-	var out []structfield.ID
-	for _, cnst := range c {
-		if sfc, ok := cnst.(StructFieldConst); ok {
-			out = append(out, sfc.Val)
-		}
-	}
-	return out
-}
-
-func (c consts) injectOpts(td *process.TargetDetails) ([]inject.Option, error) {
-	var (
-		out []inject.Option
-		err error
-	)
-	for _, cnst := range c {
-		o, e := cnst.InjectOption(td)
-		err = errors.Join(err, e)
-		if e == nil && o != nil {
-			out = append(out, o)
-		}
-	}
-	return out, err
 }
 
 // StructFieldConst is a [Const] for a struct field offset. These struct field

@@ -38,6 +38,6 @@ func TestVersionMatchesYaml(t *testing.T) {
 	}
 
 	// incredibad, but it's where the intended version is declared at the moment
-	expectedVersion := versionInfo["module-sets"].(map[string]interface{})["alpha"].(map[string]interface{})["version"]
+	expectedVersion := versionInfo["module-sets"].(map[string]interface{})["auto"].(map[string]interface{})["version"]
 	assert.Equal(t, expectedVersion, Version(), "Build version should match versions.yaml.")
 }
