@@ -17,6 +17,8 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 - Add support for span attribute limits to `go.opentelemtry.io/auto/sdk`. ([#1315](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1315))
 - Add support for span link limits to `go.opentelemtry.io/auto/sdk`. ([#1320](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1320))
 - Add support for span event limits to `go.opentelemtry.io/auto/sdk`. ([#1324](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1324))
+- Support Go `1.22.10`. ([#1367](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1367))
+- Support Go `1.23.4`. ([#1367](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1367))
 
 ## [v0.18.0-alpha] - 2024-11-20
 
