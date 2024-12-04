@@ -1,4 +1,4 @@
-FROM  --platform=$BUILDPLATFORM golang:1.23.4-bookworm@sha256:97d0f37d858c35aa65369f72962dc2b6901c1a2d36f31e73db384eb7c204369b AS base
+FROM  --platform=$BUILDPLATFORM golang:1.23.4-bookworm@sha256:ef30001eeadd12890c7737c26f3be5b3a8479ccdcdc553b999c84879875a27ce AS base
 
 RUN apt-get update && apt-get install -y curl clang gcc llvm make libbpf-dev
 
