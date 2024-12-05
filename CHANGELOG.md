@@ -20,6 +20,9 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 - Add support for attribute value limits to `go.opentelemtry.io/auto/sdk`. ([#1325](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1325))
 - Support Go `1.22.10`. ([#1367](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1367))
 - Support Go `1.23.4`. ([#1367](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1367))
+- Support `golang.org/x/net` `0.32.0`. ([#1379](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1379))
+- Support `google.golang.org/grpc` `1.67.2`. ([#1379](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1379))
+- Support `google.golang.org/grpc` `1.68.1`. ([#1379](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1379))
 
 ## [v0.18.0-alpha] - 2024-11-20
 
