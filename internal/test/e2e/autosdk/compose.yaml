@@ -1,0 +1,53 @@
+# Copyright The OpenTelemetry Authors
+# SPDX-License-Identifier: Apache-2.0
+services:
+  collector:
+    build:
+      context: ../../../tools/collector/
+    container_name: collector
+    ports:
+      - "4318:4318"  # OTLP HTTP receiver
+      - "8080:8080"  # Shutdown server
+      - "13133:13133" # Health check endpoint
+    command: -out=/target/traces-orig.json
+    volumes:
+      - .:/target
+    healthcheck:
+      test: ["CMD", "curl", "--silent", "--fail", "http://collector:13133/health"]
+      interval: 50ms
+      timeout: 40ms
+  runner:
+    build:
+      context: ../../../../
+      dockerfile: internal/tools/runner/Dockerfile
+    image: test-runner:latest
+    entrypoint: ["true"] # service is just used to build image.
+  autosdk:
+    build:
+      context: ../../../../
+      dockerfile: internal/test/e2e/autosdk/Dockerfile
+      args:
+        BASE_IMAGE: "test-runner:latest"
+    image: e2e-autosdk:latest
+    depends_on:
+      - runner
+    entrypoint: ["true"] # service is just used to build image.
+  e2e:
+    image: e2e-autosdk:latest
+    privileged: true
+    environment:
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://collector:4318
+      - OTEL_SERVICE_NAME=sample-app
+      - OTEL_BSP_SCHEDULE_DELAY=60000
+    depends_on:
+      autosdk:
+        condition: service_completed_successfully
+      collector:
+        condition: service_healthy
+    command: -bin=/sample-app/main
+  shutdown-sidecar:
+    image: busybox:latest
+    depends_on:
+      e2e:
+        condition: service_completed_successfully
+    entrypoint: /bin/sh -c "while ! wget -q -O - http://collector:8080/shutdown; do sleep 2; done; exit 0"
