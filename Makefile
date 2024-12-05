@@ -159,6 +159,14 @@ license-header-check:
 	           exit 1; \
 	   fi
 
+.PHONY: e2e-autosdk
+e2e-autosdk: e2e/internal/test/e2e/autosdk
+e2e/%: DIR=$*
+e2e/%:
+	@: > $(DIR)/traces-orig.json # Truncate or ensure ownership.
+	@(cd $(DIR) && docker-compose up)
+	@bats $(DIR)/verify.bats
+
 .PHONY: fixture-nethttp fixture-gin fixture-databasesql fixture-nethttp-custom fixture-otelglobal fixture-autosdk fixture-kafka-go
 fixture-nethttp-custom: fixtures/nethttp_custom
 fixture-nethttp: fixtures/nethttp

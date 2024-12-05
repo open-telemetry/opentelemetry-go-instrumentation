@@ -12,17 +12,13 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/MrAlias/collex"
-	"github.com/open-telemetry/opentelemetry-collector-contrib/exporter/fileexporter"
-	"go.opentelemetry.io/otel/sdk/trace"
-
 	"go.opentelemetry.io/auto"
+	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp"
 )
 
 func main() {
 	logLevel := flag.String("log-level", "debug", `logging level ("debug", "info", "warn", "error")`)
 	binPath := flag.String("bin", "", "Path to the target binary")
-	outPath := flag.String("out", "traces.json", "Path to out generated traces")
 	flag.Parse()
 
 	logger := newLogger(*logLevel)
@@ -37,7 +33,7 @@ func main() {
 	defer stop()
 
 	app := App{logger: logger}
-	if err := app.Run(ctx, *binPath, *outPath); err != nil {
+	if err := app.Run(ctx, *binPath); err != nil {
 		logger.Error("failed to run", "error", err)
 		os.Exit(1)
 	}
@@ -67,45 +63,48 @@ type App struct {
 	logger *slog.Logger
 }
 
-func (a *App) Run(ctx context.Context, binPath, outPath string) error {
-	exp, err := a.newExporter(ctx, outPath)
+func (a *App) Run(ctx context.Context, binPath string) error {
+	exp, err := otlptracehttp.New(ctx)
 	if err != nil {
 		return err
 	}
 
+	a.logger.Debug("loading target")
 	cmd := exec.Command(binPath)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 
+	a.logger.Debug("starting target")
 	if err := cmd.Start(); err != nil {
 		return err
 	}
 
-	loadedIndicator := make(chan struct{})
+	a.logger.Debug("creating instrumentation")
 	inst, err := auto.NewInstrumentation(
 		ctx,
 		auto.WithTraceExporter(exp),
 		auto.WithPID(cmd.Process.Pid),
 		auto.WithServiceName("testing"),
 		auto.WithGlobal(),
-		auto.WithLoadedIndicator(loadedIndicator),
 		auto.WithLogger(a.logger),
+		auto.WithEnv(),
 	)
 	if err != nil {
 		return err
 	}
 
+	a.logger.Debug("loading")
+	err = inst.Load(ctx)
+	if err != nil {
+		return err
+	}
+
+	a.logger.Debug("running")
 	errCh := make(chan error, 1)
 	go func() {
 		errCh <- inst.Run(ctx)
 		close(errCh)
 	}()
-
-	select {
-	case <-ctx.Done():
-		return ctx.Err()
-	case <-loadedIndicator:
-	}
 
 	var sig os.Signal = syscall.SIGCONT
 	a.logger.Debug("sending signal to target")
@@ -126,16 +125,6 @@ func (a *App) Run(ctx context.Context, binPath, outPath string) error {
 	case <-done:
 	}
 
+	a.logger.Debug("closing instrumentation")
 	return inst.Close()
-}
-
-func (a *App) newExporter(ctx context.Context, outPath string) (trace.SpanExporter, error) {
-	f := fileexporter.NewFactory()
-	factory, err := collex.NewFactory(f, nil)
-	if err != nil {
-		return nil, err
-	}
-	c := f.CreateDefaultConfig().(*fileexporter.Config)
-	c.Path = outPath
-	return factory.SpanExporter(ctx, c)
 }
