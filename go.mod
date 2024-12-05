@@ -30,7 +30,7 @@ require (
 	go.opentelemetry.io/otel/trace v1.32.0
 	golang.org/x/arch v0.12.0
 	golang.org/x/sys v0.28.0
-	google.golang.org/grpc v1.68.0
+	google.golang.org/grpc v1.68.1
 	gopkg.in/yaml.v3 v3.0.1
 )
 
