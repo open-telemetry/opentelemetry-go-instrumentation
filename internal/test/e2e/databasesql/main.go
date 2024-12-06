@@ -16,8 +16,7 @@ import (
 )
 
 const (
-	sqlQuery = "SELECT * FROM contacts"
-	dbName   = "test.db"
+	dbName = "test.db"
 
 	tableDefinition = `CREATE TABLE contacts (
 							contact_id INTEGER PRIMARY KEY,
@@ -72,132 +71,20 @@ func NewServer() *Server {
 	}
 }
 
-func (s *Server) queryDb(w http.ResponseWriter, req *http.Request) {
+func (s *Server) query(w http.ResponseWriter, req *http.Request, query string) {
 	ctx := req.Context()
-
 	conn, err := s.db.Conn(ctx)
 	if err != nil {
 		panic(err)
 	}
 
-	rows, err := conn.QueryContext(req.Context(), sqlQuery)
+	rows, err := conn.QueryContext(req.Context(), query)
 	if err != nil {
-		panic(err)
+		logger.Error(err.Error())
+		return
 	}
 
-	logger.Info("queryDb called")
-	for rows.Next() {
-		var id int
-		var firstName string
-		var lastName string
-		var email string
-		var phone string
-		err := rows.Scan(&id, &firstName, &lastName, &email, &phone)
-		if err != nil {
-			panic(err)
-		}
-		fmt.Fprintf(w, "ID: %d, firstName: %s, lastName: %s, email: %s, phone: %s\n", id, firstName, lastName, email, phone)
-	}
-}
-
-func (s *Server) insert(w http.ResponseWriter, req *http.Request) {
-	ctx := req.Context()
-
-	conn, err := s.db.Conn(ctx)
-	if err != nil {
-		panic(err)
-	}
-
-	rows, err := conn.QueryContext(req.Context(), "INSERT INTO contacts (first_name) VALUES ('Mike')")
-	if err != nil {
-		panic(err)
-	}
-
-	logger.Info("insert called")
-	for rows.Next() {
-		var id int
-		var firstName string
-		var lastName string
-		var email string
-		var phone string
-		err := rows.Scan(&id, &firstName, &lastName, &email, &phone)
-		if err != nil {
-			panic(err)
-		}
-		fmt.Fprintf(w, "ID: %d, firstName: %s, lastName: %s, email: %s, phone: %s\n", id, firstName, lastName, email, phone)
-	}
-}
-
-func (s *Server) update(w http.ResponseWriter, req *http.Request) {
-	ctx := req.Context()
-
-	conn, err := s.db.Conn(ctx)
-	if err != nil {
-		panic(err)
-	}
-
-	rows, err := conn.QueryContext(req.Context(), "UPDATE contacts SET last_name = 'Santa' WHERE first_name = 'Mike'")
-	if err != nil {
-		panic(err)
-	}
-
-	logger.Info("update called")
-	for rows.Next() {
-		var id int
-		var firstName string
-		var lastName string
-		var email string
-		var phone string
-		err := rows.Scan(&id, &firstName, &lastName, &email, &phone)
-		if err != nil {
-			panic(err)
-		}
-		fmt.Fprintf(w, "ID: %d, firstName: %s, lastName: %s, email: %s, phone: %s\n", id, firstName, lastName, email, phone)
-	}
-}
-
-func (s *Server) delete(w http.ResponseWriter, req *http.Request) {
-	ctx := req.Context()
-
-	conn, err := s.db.Conn(ctx)
-	if err != nil {
-		panic(err)
-	}
-
-	rows, err := conn.QueryContext(req.Context(), "DELETE FROM contacts WHERE first_name = 'Mike'")
-	if err != nil {
-		panic(err)
-	}
-
-	logger.Info("delete called")
-	for rows.Next() {
-		var id int
-		var firstName string
-		var lastName string
-		var email string
-		var phone string
-		err := rows.Scan(&id, &firstName, &lastName, &email, &phone)
-		if err != nil {
-			panic(err)
-		}
-		fmt.Fprintf(w, "ID: %d, firstName: %s, lastName: %s, email: %s, phone: %s\n", id, firstName, lastName, email, phone)
-	}
-}
-
-func (s *Server) drop(w http.ResponseWriter, req *http.Request) {
-	ctx := req.Context()
-
-	conn, err := s.db.Conn(ctx)
-	if err != nil {
-		panic(err)
-	}
-
-	rows, err := conn.QueryContext(req.Context(), "DROP TABLE contacts")
-	if err != nil {
-		panic(err)
-	}
-
-	logger.Info("drop called")
+	logger.Info("queryDB called", zap.String("query", query))
 	for rows.Next() {
 		var id int
 		var firstName string
@@ -214,6 +101,30 @@ func (s *Server) drop(w http.ResponseWriter, req *http.Request) {
 
 var logger *zap.Logger
 
+func (s *Server) selectDb(w http.ResponseWriter, req *http.Request) {
+	s.query(w, req, "SELECT * FROM contacts")
+}
+
+func (s *Server) insert(w http.ResponseWriter, req *http.Request) {
+	s.query(w, req, "INSERT INTO contacts (first_name) VALUES ('Mike')")
+}
+
+func (s *Server) update(w http.ResponseWriter, req *http.Request) {
+	s.query(w, req, "UPDATE contacts SET last_name = 'Santa' WHERE first_name = 'Mike'")
+}
+
+func (s *Server) delete(w http.ResponseWriter, req *http.Request) {
+	s.query(w, req, "DELETE FROM contacts WHERE first_name = 'Mike'")
+}
+
+func (s *Server) drop(w http.ResponseWriter, req *http.Request) {
+	s.query(w, req, "DROP TABLE contacts")
+}
+
+func (s *Server) invalid(w http.ResponseWriter, req *http.Request) {
+	s.query(w, req, "syntax error")
+}
+
 func main() {
 	var err error
 	logger, err = zap.NewDevelopment()
@@ -226,77 +137,44 @@ func main() {
 
 	s := NewServer()
 
-	http.HandleFunc("/query_db", s.queryDb)
+	http.HandleFunc("/query_db", s.selectDb)
 	http.HandleFunc("/insert", s.insert)
 	http.HandleFunc("/update", s.update)
 	http.HandleFunc("/delete", s.delete)
 	http.HandleFunc("/drop", s.drop)
+	http.HandleFunc("/invalid", s.invalid)
 	go func() {
 		_ = http.ListenAndServe(":8080", nil)
 	}()
 
+	tests := []struct {
+		url string
+	}{
+		{url: "http://localhost:8080/query_db"},
+		{url: "http://localhost:8080/insert"},
+		{url: "http://localhost:8080/update"},
+		{url: "http://localhost:8080/delete"},
+		{url: "http://localhost:8080/drop"},
+		{url: "http://localhost:8080/invalid"},
+	}
+
 	// give time for auto-instrumentation to start up
 	time.Sleep(5 * time.Second)
 
-	resp, err := http.Get("http://localhost:8080/query_db")
-	if err != nil {
-		logger.Error("Error performing GET", zap.Error(err))
+	for _, t := range tests {
+		resp, err := http.Get(t.url)
+		if err != nil {
+			logger.Error("Error performing GET", zap.Error(err))
+		}
+		if resp != nil {
+			body, err := io.ReadAll(resp.Body)
+			if err != nil {
+				logger.Error("Error reading http body", zap.Error(err))
+			}
+			logger.Info("Body:\n", zap.String("body", string(body[:])))
+			_ = resp.Body.Close()
+		}
 	}
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		logger.Error("Error reading http body", zap.Error(err))
-	}
-
-	logger.Info("Body:\n", zap.String("body", string(body[:])))
-	_ = resp.Body.Close()
-
-	resp, err = http.Get("http://localhost:8080/insert")
-	if err != nil {
-		logger.Error("Error performing GET", zap.Error(err))
-	}
-	body, err = io.ReadAll(resp.Body)
-	if err != nil {
-		logger.Error("Error reading http body", zap.Error(err))
-	}
-
-	logger.Info("Body:\n", zap.String("body", string(body[:])))
-	_ = resp.Body.Close()
-
-	resp, err = http.Get("http://localhost:8080/update")
-	if err != nil {
-		logger.Error("Error performing GET", zap.Error(err))
-	}
-	body, err = io.ReadAll(resp.Body)
-	if err != nil {
-		logger.Error("Error reading http body", zap.Error(err))
-	}
-
-	logger.Info("Body:\n", zap.String("body", string(body[:])))
-	_ = resp.Body.Close()
-
-	resp, err = http.Get("http://localhost:8080/delete")
-	if err != nil {
-		logger.Error("Error performing GET", zap.Error(err))
-	}
-	body, err = io.ReadAll(resp.Body)
-	if err != nil {
-		logger.Error("Error reading http body", zap.Error(err))
-	}
-
-	logger.Info("Body:\n", zap.String("body", string(body[:])))
-	_ = resp.Body.Close()
-
-	resp, err = http.Get("http://localhost:8080/drop")
-	if err != nil {
-		logger.Error("Error performing GET", zap.Error(err))
-	}
-	body, err = io.ReadAll(resp.Body)
-	if err != nil {
-		logger.Error("Error reading http body", zap.Error(err))
-	}
-
-	logger.Info("Body:\n", zap.String("body", string(body[:])))
-	_ = resp.Body.Close()
 
 	// give time for auto-instrumentation to report signal
 	time.Sleep(5 * time.Second)

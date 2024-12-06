@@ -4,7 +4,6 @@
 package sql
 
 import (
-	"os"
 	"testing"
 	"time"
 
@@ -71,8 +70,7 @@ func BenchmarkProcessFn(b *testing.B) {
 }
 
 func TestProbeConvertEvent(t *testing.T) {
-	err := os.Setenv(IncludeDBOperationEnvVar, "true")
-	assert.NoError(t, err)
+	t.Setenv(IncludeDBOperationEnvVar, "true")
 	start := time.Unix(0, time.Now().UnixNano()) // No wall clock.
 	end := start.Add(1 * time.Second)
 
@@ -95,14 +93,14 @@ func TestProbeConvertEvent(t *testing.T) {
 	want := func() ptrace.SpanSlice {
 		spans := ptrace.NewSpanSlice()
 		span := spans.AppendEmpty()
-		span.SetName("SELECT")
+		span.SetName("SELECT foo")
 		span.SetKind(ptrace.SpanKindClient)
 		span.SetStartTimestamp(utils.BootOffsetToTimestamp(startOffset))
 		span.SetEndTimestamp(utils.BootOffsetToTimestamp(endOffset))
 		span.SetTraceID(pcommon.TraceID(traceID))
 		span.SetSpanID(pcommon.SpanID(spanID))
 		span.SetFlags(uint32(trace.FlagsSampled))
-		utils.Attributes(span.Attributes(), semconv.DBQueryText("SELECT * FROM foo"), semconv.DBOperationName("SELECT"))
+		utils.Attributes(span.Attributes(), semconv.DBQueryText("SELECT * FROM foo"), semconv.DBOperationName("SELECT"), semconv.DBCollectionName("foo"))
 		return spans
 	}()
 	assert.Equal(t, want, got)

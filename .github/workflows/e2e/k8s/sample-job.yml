@@ -38,7 +38,7 @@ spec:
           value: "tracecontext,baggage"
         - name: OTEL_GO_AUTO_INCLUDE_DB_STATEMENT
           value: "true"
-        - name: OTEL_GO_AUTO_INCLUDE_DB_OPERATION
+        - name: OTEL_GO_AUTO_PARSE_DB_STATEMENT
           value: "true"
         - name: OTEL_BSP_SCHEDULE_DELAY
           value: "60000"
