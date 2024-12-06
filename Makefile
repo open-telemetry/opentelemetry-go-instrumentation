@@ -169,7 +169,7 @@ e2e-nethttp: e2e/internal/test/e2e/nethttp
 e2e-nethttp-custom: e2e/internal/test/e2e/nethttp_custom
 e2e-otelglobal: e2e/internal/test/e2e/otelglobal
 e2e/%: DIR=$*
-e2e/%:
+e2e/%: generate
 	@: > $(DIR)/traces-orig.json # Truncate or ensure ownership.
 	@(cd $(DIR) && docker-compose up && docker-compose down)
 	@bats $(DIR)/verify.bats
