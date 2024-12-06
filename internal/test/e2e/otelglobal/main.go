@@ -5,9 +5,12 @@ package main
 
 import (
 	"context"
+	"flag"
 	"fmt"
-	"time"
+	"os"
+	"os/signal"
 
+	"go.opentelemetry.io/auto/internal/test/trigger"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
@@ -51,13 +54,22 @@ func createMainSpan(ctx context.Context) {
 }
 
 func main() {
+	var trig trigger.Flag
+	flag.Var(&trig, "trigger", trig.Docs())
+	flag.Parse()
+
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
+	defer stop()
+
+	// Wait for auto-instrumentation.
+	err := trig.Wait(ctx)
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+
 	// registering unused tracers to test how we handle a non-trivial tracers map
 	setUnusedTracers()
-	// give time for auto-instrumentation to start up
-	time.Sleep(5 * time.Second)
 
-	createMainSpan(context.Background())
-
-	// give time for auto-instrumentation to report signal
-	time.Sleep(5 * time.Second)
+	createMainSpan(ctx)
 }

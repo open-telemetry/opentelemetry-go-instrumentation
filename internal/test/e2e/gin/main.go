@@ -4,15 +4,26 @@
 package main
 
 import (
+	"context"
+	"flag"
 	"io"
 	"log"
 	"net/http"
-	"time"
+	"os"
+	"os/signal"
 
 	"github.com/gin-gonic/gin"
+	"go.opentelemetry.io/auto/internal/test/trigger"
 )
 
 func main() {
+	var trig trigger.Flag
+	flag.Var(&trig, "trigger", trig.Docs())
+	flag.Parse()
+
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
+	defer stop()
+
 	r := gin.Default()
 	r.GET("/hello-gin", func(c *gin.Context) {
 		c.String(http.StatusOK, "hello\n")
@@ -21,10 +32,18 @@ func main() {
 		_ = r.Run()
 	}()
 
-	// give time for auto-instrumentation to start up
-	time.Sleep(5 * time.Second)
+	// Wait for auto-instrumentation.
+	err := trig.Wait(ctx)
+	if err != nil {
+		log.Fatal(err)
+	}
 
-	resp, err := http.Get("http://localhost:8080/hello-gin")
+	url := "http://localhost:8080/hello-gin"
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, http.NoBody)
+	if err != nil {
+		log.Fatal(err)
+	}
+	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -35,7 +54,4 @@ func main() {
 
 	log.Printf("Body: %s\n", string(body))
 	_ = resp.Body.Close()
-
-	// give time for auto-instrumentation to report signal
-	time.Sleep(5 * time.Second)
 }
