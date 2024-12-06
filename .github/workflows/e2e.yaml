@@ -1,0 +1,39 @@
+name: e2e
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - 'v[0-9]+.[0-9]+.[0-9]+*'
+  pull_request:
+
+jobs:
+  test:
+    strategy:
+      matrix:
+        library:
+          - autosdk
+          - databasesql
+          - gin
+          - grpc
+          - kafka-go
+          - nethttp
+          - nethttp_custom
+          - otelglobal
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+      - name: Clean
+        run: |
+          rm -f ./internal/test/e2e/${{ matrix.library }}/traces{,-orig}.json
+          touch ./internal/test/e2e/${{ matrix.library }}/traces-orig.json
+      - name: Run docker-compose
+        uses: hoverkraft-tech/compose-action@v2.0.1
+        with:
+          compose-file: "./internal/test/e2e/${{ matrix.library }}/compose.yaml"
+      - name: Setup BATS
+        uses: mig4/setup-bats@af9a00deb21b5d795cabfeaa8d9060410377686d # v1
+      - name: Verify with BATS
+        run: bats ./internal/test/e2e/${{ matrix.library }}/verify.bats
