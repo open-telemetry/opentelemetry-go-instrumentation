@@ -22,26 +22,28 @@ services:
       dockerfile: internal/tools/runner/Dockerfile
     image: test-runner:latest
     entrypoint: ["true"] # service is just used to build image.
-  autosdk:
+  databasesql:
     build:
       context: ../../../../
-      dockerfile: internal/test/e2e/autosdk/Dockerfile
+      dockerfile: internal/test/e2e/databasesql/Dockerfile
       args:
         BASE_IMAGE: "test-runner:latest"
         TRIGGER: "signal:SIGCONT"
-    image: e2e-autosdk:latest
+    image: e2e-databasesql:latest
     depends_on:
       - runner
     entrypoint: ["true"] # service is just used to build image.
   e2e:
-    image: e2e-autosdk:latest
+    image: e2e-databasesql:latest
     privileged: true
     environment:
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://collector:4318
       - OTEL_SERVICE_NAME=sample-app
       - OTEL_BSP_SCHEDULE_DELAY=60000
+      - OTEL_GO_AUTO_INCLUDE_DB_STATEMENT=true
+      - OTEL_GO_AUTO_PARSE_DB_STATEMENT=true
     depends_on:
-      autosdk:
+      databasesql:
         condition: service_completed_successfully
       collector:
         condition: service_healthy

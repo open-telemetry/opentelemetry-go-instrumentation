@@ -159,12 +159,19 @@ license-header-check:
 	           exit 1; \
 	   fi
 
-.PHONY: e2e-autosdk
+.PHONY: e2e-autosdk e2e-databasesql e2e-gin e2e-grpc e2e-kafka-go e2e-nethttp e2e-nethttp-custom e2e-otelglobal
 e2e-autosdk: e2e/internal/test/e2e/autosdk
+e2e-databasesql: e2e/internal/test/e2e/databasesql
+e2e-gin: e2e/internal/test/e2e/gin
+e2e-grpc: e2e/internal/test/e2e/grpc
+e2e-kafka-go: e2e/internal/test/e2e/kafka-go
+e2e-nethttp: e2e/internal/test/e2e/nethttp
+e2e-nethttp-custom: e2e/internal/test/e2e/nethttp_custom
+e2e-otelglobal: e2e/internal/test/e2e/otelglobal
 e2e/%: DIR=$*
 e2e/%:
 	@: > $(DIR)/traces-orig.json # Truncate or ensure ownership.
-	@(cd $(DIR) && docker-compose up)
+	@(cd $(DIR) && docker-compose up && docker-compose down)
 	@bats $(DIR)/verify.bats
 
 .PHONY: fixture-nethttp fixture-gin fixture-databasesql fixture-nethttp-custom fixture-otelglobal fixture-autosdk fixture-kafka-go
