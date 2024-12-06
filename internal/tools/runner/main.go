@@ -71,6 +71,7 @@ func (a *App) Run(ctx context.Context, binPath string) error {
 
 	a.logger.Debug("loading target")
 	cmd := exec.Command(binPath)
+	cmd.Args = append(cmd.Args, "-trigger=signal:SIGCONT")
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 

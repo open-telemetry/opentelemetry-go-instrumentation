@@ -28,6 +28,7 @@ services:
       dockerfile: internal/test/e2e/autosdk/Dockerfile
       args:
         BASE_IMAGE: "test-runner:latest"
+        TRIGGER: "signal:SIGCONT"
     image: e2e-autosdk:latest
     depends_on:
       - runner
@@ -44,7 +45,7 @@ services:
         condition: service_completed_successfully
       collector:
         condition: service_healthy
-    command: -bin=/sample-app/main
+    command: -bin=/usr/local/bin/autosdk
   shutdown-sidecar:
     image: busybox:latest
     depends_on:

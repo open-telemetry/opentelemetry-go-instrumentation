@@ -4,14 +4,17 @@
 package main
 
 import (
+	"context"
 	"database/sql"
+	"flag"
 	"fmt"
 	"io"
 	"net/http"
 	"os"
-	"time"
+	"os/signal"
 
 	_ "github.com/mattn/go-sqlite3"
+	"go.opentelemetry.io/auto/internal/test/trigger"
 	"go.uber.org/zap"
 )
 
@@ -103,6 +106,13 @@ func (s *Server) queryDb(w http.ResponseWriter, req *http.Request) {
 var logger *zap.Logger
 
 func main() {
+	var trig trigger.Flag
+	flag.Var(&trig, "trigger", trig.Docs())
+	flag.Parse()
+
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
+	defer stop()
+
 	var err error
 	logger, err = zap.NewDevelopment()
 	if err != nil {
@@ -119,8 +129,12 @@ func main() {
 		_ = http.ListenAndServe(":8080", nil)
 	}()
 
-	// give time for auto-instrumentation to start up
-	time.Sleep(5 * time.Second)
+	// Wait for auto-instrumentation.
+	err = trig.Wait(ctx)
+	if err != nil {
+		logger.Error("Error waiting for auto-instrumentation", zap.Error(err))
+		os.Exit(1)
+	}
 
 	resp, err := http.Get("http://localhost:8080/query_db")
 	if err != nil {
@@ -133,7 +147,4 @@ func main() {
 
 	logger.Info("Body:\n", zap.String("body", string(body[:])))
 	_ = resp.Body.Close()
-
-	// give time for auto-instrumentation to report signal
-	time.Sleep(5 * time.Second)
 }
