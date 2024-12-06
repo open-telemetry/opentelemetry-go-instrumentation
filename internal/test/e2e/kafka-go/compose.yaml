@@ -21,6 +21,7 @@ services:
       context: ../../../../
       dockerfile: internal/tools/runner/Dockerfile
     image: test-runner:latest
+    pull_policy: build
     entrypoint: ["true"] # service is just used to build image.
   kafka-go:
     build:
@@ -30,11 +31,13 @@ services:
         BASE_IMAGE: "test-runner:latest"
         TRIGGER: "signal:SIGCONT"
     image: e2e-kafka-go:latest
+    pull_policy: build
     depends_on:
       - runner
     entrypoint: ["true"] # service is just used to build image.
   e2e:
     image: e2e-kafka-go:latest
+    pull_policy: build
     privileged: true
     environment:
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://collector:4318
