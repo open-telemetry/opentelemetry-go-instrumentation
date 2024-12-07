@@ -9,7 +9,26 @@ on:
   pull_request:
 
 jobs:
+  setup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+      - name: Install build dependencies
+        run: sudo apt-get install -y clang llvm libbpf-dev
+      - name: Install Go
+        uses: actions/setup-go@41dfa10bad2bb2ae585af6ee5bb4d7d973ad74ed # v5
+        with:
+          go-version: "~1.23.1"
+          check-latest: true
+      - name: Run generate
+        run: make generate
+      - uses: actions/upload-artifact@v4
+        with:
+          name: repo
+          path: ./
   test:
+    needs: setup
     strategy:
       matrix:
         library:
@@ -23,12 +42,9 @@ jobs:
           - otelglobal
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout Repo
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
-      - name: Install build dependencies
-        run: sudo apt-get update && sudo apt-get install -y clang llvm libbpf-dev
-      - name: Run generate
-        run: make generate
+      - uses: actions/download-artifact@v4
+        with:
+          name: repo
       - name: Clean
         run: |
           rm -f ./internal/test/e2e/${{ matrix.library }}/traces{,-orig}.json
