@@ -4,11 +4,16 @@
 package main
 
 import (
+	"context"
+	"flag"
 	"fmt"
 	"io"
 	"log"
 	"net/http"
-	"time"
+	"os"
+	"os/signal"
+
+	"go.opentelemetry.io/auto/internal/test/trigger"
 )
 
 func hello(w http.ResponseWriter, _ *http.Request) {
@@ -16,15 +21,31 @@ func hello(w http.ResponseWriter, _ *http.Request) {
 }
 
 func main() {
+	var trig trigger.Flag
+	flag.Var(&trig, "trigger", trig.Docs())
+	flag.Parse()
+
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
+	defer stop()
+
 	http.HandleFunc("/hello/{id}", hello)
 	go func() {
 		_ = http.ListenAndServe(":8080", nil)
 	}()
 
-	// give time for auto-instrumentation to start up
-	time.Sleep(5 * time.Second)
+	// Wait for auto-instrumentation.
+	err := trig.Wait(ctx)
+	if err != nil {
+		log.Fatal(err)
+	}
 
-	resp, err := http.Get("http://user@localhost:8080/hello/42?query=true#fragment")
+	url := "http://user@localhost:8080/hello/42?query=true#fragment"
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, http.NoBody)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -35,7 +56,4 @@ func main() {
 
 	log.Printf("Body: %s\n", string(body))
 	_ = resp.Body.Close()
-
-	// give time for auto-instrumentation to report signal
-	time.Sleep(5 * time.Second)
 }
