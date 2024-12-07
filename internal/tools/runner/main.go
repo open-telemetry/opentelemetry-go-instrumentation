@@ -12,8 +12,9 @@ import (
 	"os/signal"
 	"syscall"
 
-	"go.opentelemetry.io/auto"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp"
+
+	"go.opentelemetry.io/auto"
 )
 
 func main() {
@@ -32,8 +33,8 @@ func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer stop()
 
-	app := App{logger: logger}
-	if err := app.Run(ctx, *binPath); err != nil {
+	app := app{logger: logger}
+	if err := app.run(ctx, *binPath); err != nil {
 		logger.Error("failed to run", "error", err)
 		os.Exit(1)
 	}
@@ -59,11 +60,11 @@ func newLogger(lvlStr string) *slog.Logger {
 	return logger
 }
 
-type App struct {
+type app struct {
 	logger *slog.Logger
 }
 
-func (a *App) Run(ctx context.Context, binPath string) error {
+func (a *app) run(ctx context.Context, binPath string) error {
 	exp, err := otlptracehttp.New(ctx)
 	if err != nil {
 		return err
@@ -109,13 +110,18 @@ func (a *App) Run(ctx context.Context, binPath string) error {
 
 	var sig os.Signal = syscall.SIGCONT
 	a.logger.Debug("sending signal to target")
-	cmd.Process.Signal(sig)
+	if err := cmd.Process.Signal(sig); err != nil {
+		return err
+	}
 	a.logger.Debug("sent signal to target")
 
 	done := make(chan struct{})
 	go func() {
-		cmd.Wait()
+		err := cmd.Wait()
 		close(done)
+		if err != nil {
+			a.logger.Error("command failed", "error", err)
+		}
 	}()
 
 	select {

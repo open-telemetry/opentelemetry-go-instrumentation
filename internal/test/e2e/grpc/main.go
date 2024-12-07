@@ -16,7 +16,6 @@ import (
 	"os/signal"
 	"time"
 
-	"go.opentelemetry.io/auto/internal/test/trigger"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"google.golang.org/grpc"
@@ -24,6 +23,8 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 	pb "google.golang.org/grpc/examples/helloworld/helloworld"
 	"google.golang.org/grpc/status"
+
+	"go.opentelemetry.io/auto/internal/test/trigger"
 )
 
 const port = 1701

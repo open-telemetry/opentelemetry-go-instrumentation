@@ -15,6 +15,7 @@ import (
 	"os/signal"
 
 	_ "github.com/mattn/go-sqlite3"
+
 	"go.opentelemetry.io/auto/internal/test/trigger"
 )
 

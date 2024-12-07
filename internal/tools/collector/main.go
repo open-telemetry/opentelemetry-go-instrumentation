@@ -84,8 +84,8 @@ func main() {
 
 	configYaml := fmt.Sprintf(config, *outPath)
 	logger.Debug("built config", "config", configYaml)
-	coll := Collector{logger: logger}
-	if err := coll.Start(ctx, configYaml); err != nil {
+	coll := collector{logger: logger}
+	if err := coll.start(ctx, configYaml); err != nil {
 		logger.Error("failed to start collector", "error", err)
 		os.Exit(1)
 	}
@@ -98,7 +98,7 @@ func main() {
 	// Wait for the context to be canceled
 	<-ctx.Done()
 
-	coll.Stop()
+	coll.stop()
 }
 
 func newLogger(lvlStr string) *slog.Logger {
@@ -121,14 +121,14 @@ func newLogger(lvlStr string) *slog.Logger {
 	return logger
 }
 
-type Collector struct {
+type collector struct {
 	logger *slog.Logger
 
 	collMu sync.Mutex
 	coll   *otelcol.Collector
 }
 
-func (c *Collector) Start(ctx context.Context, configYaml string) error {
+func (c *collector) start(ctx context.Context, configYaml string) error {
 	c.collMu.Lock()
 	defer c.collMu.Unlock()
 
@@ -174,7 +174,7 @@ func (c *Collector) Start(ctx context.Context, configYaml string) error {
 	return nil
 }
 
-func (c *Collector) Stop() {
+func (c *collector) stop() {
 	c.logger.Info("stopping collector")
 	c.collMu.Lock()
 	defer c.collMu.Unlock()
@@ -193,7 +193,7 @@ func startHTTPServer(addr string, cancel context.CancelFunc, logger *slog.Logger
 		logger.Info("shutdown endpoint hit")
 		cancel()
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("Shutting down collector..."))
+		_, _ = w.Write([]byte("Shutting down collector..."))
 	})
 
 	logger.Info("starting shutdown HTTP server", "addr", addr)

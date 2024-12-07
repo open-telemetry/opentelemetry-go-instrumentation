@@ -13,6 +13,7 @@ import (
 	"time"
 
 	kafka "github.com/segmentio/kafka-go"
+
 	"go.opentelemetry.io/auto/internal/test/trigger"
 )
 
