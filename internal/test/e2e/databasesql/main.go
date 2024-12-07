@@ -14,8 +14,9 @@ import (
 	"os/signal"
 
 	_ "github.com/mattn/go-sqlite3"
-	"go.opentelemetry.io/auto/internal/test/trigger"
 	"go.uber.org/zap"
+
+	"go.opentelemetry.io/auto/internal/test/trigger"
 )
 
 const (

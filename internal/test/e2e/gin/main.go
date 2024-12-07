@@ -13,6 +13,7 @@ import (
 	"os/signal"
 
 	"github.com/gin-gonic/gin"
+
 	"go.opentelemetry.io/auto/internal/test/trigger"
 )
 
