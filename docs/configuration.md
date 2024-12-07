@@ -27,6 +27,7 @@ Alternatively, you can add support for additional or different configurations by
 | Environment variable                | Description                                            | Default value |
 |-------------------------------------|--------------------------------------------------------|---------------|
 | `OTEL_GO_AUTO_INCLUDE_DB_STATEMENT` | Sets whether to include SQL queries in the trace data. |               |
+| `OTEL_GO_AUTO_PARSE_DB_STATEMENT` | Sets whether to parse the SQL statement for trace data, setting `db.operation.name`. Only valid if `OTEL_GO_AUTO_INCLUDE_DB_STATEMENT` is also set. |               |
 
 ## Traces exporter
 
