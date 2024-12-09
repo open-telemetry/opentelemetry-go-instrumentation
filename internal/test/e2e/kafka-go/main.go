@@ -5,10 +5,16 @@ package main
 
 import (
 	"context"
+	"flag"
 	"fmt"
+	"os"
+	"os/exec"
+	"os/signal"
 	"time"
 
 	kafka "github.com/segmentio/kafka-go"
+
+	"go.opentelemetry.io/auto/internal/test/trigger"
 )
 
 func produceMessages(kafkaWriter *kafka.Writer) {
@@ -73,13 +79,38 @@ func reader(readChan chan bool) {
 }
 
 func main() {
+	var trig trigger.Flag
+	flag.Var(&trig, "trigger", trig.Docs())
+	setup := flag.String("setup", "./start.sh", "Kafka setup script")
+	flag.Parse()
+
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
+	defer stop()
+
+	// Wait for auto-instrumentation.
+	err := trig.Wait(ctx)
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+
+	cmd := exec.Command(*setup)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	fmt.Println("starting Kafka...")
+	if err := cmd.Run(); err != nil {
+		fmt.Printf("failed to start Kafka: %v\n", err)
+		os.Exit(1)
+	}
+	fmt.Println("started Kafka")
+
 	kafkaWriter := getKafkaWriter()
 	defer kafkaWriter.Close()
 
 	// to create topics when auto.create.topics.enable='true'
 	fmt.Println("trying to connect to kafka")
 	for range time.Tick(5 * time.Second) {
-		_, err := kafka.DialLeader(context.Background(), "tcp", "127.0.0.1:9092", "topic1", 0)
+		_, err := kafka.DialLeader(ctx, "tcp", "127.0.0.1:9092", "topic1", 0)
 		if err == nil {
 			break
 		}
@@ -87,7 +118,7 @@ func main() {
 	}
 
 	fmt.Println("successfully connected to kafka")
-	_, err := kafka.DialLeader(context.Background(), "tcp", "127.0.0.1:9092", "topic2", 0)
+	_, err = kafka.DialLeader(ctx, "tcp", "127.0.0.1:9092", "topic2", 0)
 	if err != nil {
 		panic(err.Error())
 	}
@@ -95,12 +126,6 @@ func main() {
 	readChan := make(chan bool)
 	go reader(readChan)
 
-	// give time for auto-instrumentation to start up
-	time.Sleep(5 * time.Second)
-
 	produceMessages(kafkaWriter)
 	<-readChan
-
-	// give time for auto-instrumentation to report signal
-	time.Sleep(5 * time.Second)
 }
