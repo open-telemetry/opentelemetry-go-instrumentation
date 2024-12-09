@@ -22,14 +22,14 @@ spec:
         imagePullPolicy: IfNotPresent
         command: ["/bin/sh", "-c"]
         # send SIGTERM to otel-go-instrumentation once the sample app has generated data so the job completes.
-        args: ["(/sample-app/start.sh || /sample-app/main) && kill -TERM $(pidof otel-go-instrumentation)"]
+        args: ["/usr/local/bin/app; kill -TERM $(pidof otel-go-instrumentation)"]
       - name: auto-instrumentation
         image: otel-go-instrumentation
         imagePullPolicy: IfNotPresent
         command: ["/otel-go-instrumentation", "-global-impl", "-log-level=debug"]
         env:
         - name: OTEL_GO_AUTO_TARGET_EXE
-          value: /sample-app/main
+          value: /usr/local/bin/app
         - name: OTEL_EXPORTER_OTLP_ENDPOINT
           value: "http://test-opentelemetry-collector:4318"
         - name: OTEL_SERVICE_NAME
