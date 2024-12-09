@@ -5,11 +5,10 @@ package main
 
 import (
 	"fmt"
+	"log/slog"
 	"math/rand"
 	"net/http"
 	"time"
-
-	"go.uber.org/zap"
 )
 
 // Server is Http server that exposes multiple endpoints.
@@ -27,11 +26,9 @@ func NewServer() *Server {
 
 func (s *Server) rolldice(w http.ResponseWriter, _ *http.Request) {
 	n := s.rand.Intn(6) + 1
-	logger.Info("rolldice called", zap.Int("dice", n))
+	slog.Info("rolldice called", "dice", n)
 	fmt.Fprintf(w, "%v", n)
 }
-
-var logger *zap.Logger
 
 func setupHandler(s *Server) *http.ServeMux {
 	mux := http.NewServeMux()
@@ -40,18 +37,12 @@ func setupHandler(s *Server) *http.ServeMux {
 }
 
 func main() {
-	var err error
-	logger, err = zap.NewDevelopment()
-	if err != nil {
-		fmt.Printf("error creating zap logger, error:%v", err)
-		return
-	}
 	port := fmt.Sprintf(":%d", 8080)
-	logger.Info("starting http server", zap.String("port", port))
+	slog.Info("starting http server", "port", port)
 
 	s := NewServer()
 	mux := setupHandler(s)
 	if err := http.ListenAndServe(port, mux); err != nil {
-		logger.Error("error running server", zap.Error(err))
+		slog.Error("error running server", "error", err)
 	}
 }
