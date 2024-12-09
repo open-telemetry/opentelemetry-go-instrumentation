@@ -8,7 +8,6 @@ import (
 	"log/slog"
 	"os"
 	"strconv"
-	"strings"
 
 	"github.com/xwb1989/sqlparser"
 
@@ -32,8 +31,8 @@ const (
 	// IncludeDBStatementEnvVar is the environment variable to opt-in for sql query inclusion in the trace.
 	IncludeDBStatementEnvVar = "OTEL_GO_AUTO_INCLUDE_DB_STATEMENT"
 
-	// IncludeDBOperationEnvVar is the environment variable to opt-in for sql query operation in the trace.
-	IncludeDBOperationEnvVar = "OTEL_GO_AUTO_PARSE_DB_STATEMENT"
+	// ParseDBStatementEnvVar is the environment variable to opt-in for sql query operation in the trace.
+	ParseDBStatementEnvVar = "OTEL_GO_AUTO_PARSE_DB_STATEMENT"
 )
 
 // New returns a new [probe.Probe].
@@ -104,18 +103,26 @@ func processFn(e *event) ptrace.SpanSlice {
 		span.Attributes().PutStr(string(semconv.DBQueryTextKey), query)
 	}
 
-	includeOperationVal := os.Getenv(IncludeDBOperationEnvVar)
+	includeOperationVal := os.Getenv(ParseDBStatementEnvVar)
 	if includeOperationVal != "" {
 		include, err := strconv.ParseBool(includeOperationVal)
 		if err == nil && include {
 			operation, target, err := Parse(query)
 			if err == nil {
-				span.SetName(strings.Join([]string{operation, target}, " "))
+				name := ""
 				if operation != "" {
 					span.Attributes().PutStr(string(semconv.DBOperationNameKey), operation)
+					name = operation
 				}
 				if target != "" {
 					span.Attributes().PutStr(string(semconv.DBCollectionNameKey), target)
+					if name != "" {
+						// if operation is in the name and target is available, set name to {operation} {target}
+						name += " " + target
+					}
+				}
+				if name != "" {
+					span.SetName(name)
 				}
 			}
 		}

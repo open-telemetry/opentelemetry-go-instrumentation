@@ -54,6 +54,7 @@ func BenchmarkProcessFn(b *testing.B) {
 		b.Run(t.name, func(b *testing.B) {
 			var byteQuery [256]byte
 			copy(byteQuery[:], []byte(t.query))
+			b.ReportAllocs()
 			b.ResetTimer()
 			for i := 0; i < b.N; i++ {
 				_ = processFn(&event{
@@ -70,7 +71,7 @@ func BenchmarkProcessFn(b *testing.B) {
 }
 
 func TestProbeConvertEvent(t *testing.T) {
-	t.Setenv(IncludeDBOperationEnvVar, "true")
+	t.Setenv(ParseDBStatementEnvVar, "true")
 	start := time.Unix(0, time.Now().UnixNano()) // No wall clock.
 	end := start.Add(1 * time.Second)
 
