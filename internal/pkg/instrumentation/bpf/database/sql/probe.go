@@ -29,45 +29,34 @@ const (
 	IncludeDBStatementEnvVar = "OTEL_GO_AUTO_INCLUDE_DB_STATEMENT"
 )
 
-// New returns a new [probe.Probe].
-func New(logger *slog.Logger, version string) probe.Probe {
+type DatabaseSQLProbe struct {
+	*probe.TargetSpanProducingProbe[bpfObjects, event]
+}
+
+func (d *DatabaseSQLProbe) ApplyConfig(c probe.Config) error {
+	return nil
+}
+
+// New returns a new [probe.GoLibraryTelemetryProbe].
+func New(logger *slog.Logger, version string, handler func(ptrace.ScopeSpans)) probe.GoLibraryTelemetryProbe {
 	id := probe.ID{
 		SpanKind:        trace.SpanKindClient,
 		InstrumentedPkg: pkg,
 	}
-	return &probe.SpanProducer[bpfObjects, event]{
-		Base: probe.Base[bpfObjects, event]{
-			ID:     id,
-			Logger: logger,
-			Consts: []probe.Const{
-				probe.RegistersABIConst{},
-				probe.AllocationConst{},
-				probe.KeyValConst{
-					Key: "should_include_db_statement",
-					Val: shouldIncludeDBStatement(),
-				},
-			},
-			Uprobes: []probe.Uprobe{
-				{
-					Sym:         "database/sql.(*DB).queryDC",
-					EntryProbe:  "uprobe_queryDC",
-					ReturnProbe: "uprobe_queryDC_Returns",
-					Optional:    true,
-				},
-				{
-					Sym:         "database/sql.(*DB).execDC",
-					EntryProbe:  "uprobe_execDC",
-					ReturnProbe: "uprobe_execDC_Returns",
-					Optional:    true,
-				},
-			},
 
-			SpecFn: loadBpf,
-		},
-		Version:   version,
-		SchemaURL: semconv.SchemaURL,
-		ProcessFn: processFn,
+	p := &DatabaseSQLProbe{
+		TargetSpanProducingProbe: probe.NewTargetSpanProducingProbe[bpfObjects, event](),
 	}
+	p.ProbeID = id
+	p.Logger = logger
+	p.Consts = consts
+	p.Uprobes = uprobes
+	p.SpecFn = loadBpf
+	p.Version = version
+	p.SchemaURL = semconv.SchemaURL
+	p.ProcessFn = processFn
+	p.Handler = handler
+	return p
 }
 
 // event represents an event in an SQL database
@@ -112,3 +101,29 @@ func shouldIncludeDBStatement() bool {
 
 	return false
 }
+
+var (
+	consts = []probe.Const{
+		probe.RegistersABIConst{},
+		probe.AllocationConst{},
+		probe.KeyValConst{
+			Key: "should_include_db_statement",
+			Val: shouldIncludeDBStatement(),
+		},
+	}
+
+	uprobes = []probe.Uprobe{
+		{
+			Sym:         "database/sql.(*DB).queryDC",
+			EntryProbe:  "uprobe_queryDC",
+			ReturnProbe: "uprobe_queryDC_Returns",
+			Optional:    true,
+		},
+		{
+			Sym:         "database/sql.(*DB).execDC",
+			EntryProbe:  "uprobe_execDC",
+			ReturnProbe: "uprobe_execDC_Returns",
+			Optional:    true,
+		},
+	}
+)

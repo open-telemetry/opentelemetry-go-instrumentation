@@ -18,63 +18,34 @@ import (
 
 //go:generate go run github.com/cilium/ebpf/cmd/bpf2go -target amd64,arm64 bpf ./bpf/probe.bpf.c
 
-// New returns a new [probe.Probe].
-func New(logger *slog.Logger) probe.Probe {
+type OtelAutoProbe struct {
+	*probe.TargetTraceProducingProbe[bpfObjects, event]
+}
+
+func (o *OtelAutoProbe) ApplyConfig(c probe.Config) error {
+	return nil
+}
+
+// New returns a new [probe.GoLibraryTelemetryProbe].
+func New(logger *slog.Logger, handler func(ptrace.ScopeSpans)) probe.GoLibraryTelemetryProbe {
 	id := probe.ID{
 		SpanKind:        trace.SpanKindClient,
 		InstrumentedPkg: "go.opentelemetry.io/auto",
 	}
 	c := &converter{logger: logger}
-	return &probe.TraceProducer[bpfObjects, event]{
-		Base: probe.Base[bpfObjects, event]{
-			ID:     id,
-			Logger: logger,
-			Consts: []probe.Const{
-				probe.RegistersABIConst{},
-				probe.AllocationConst{},
-				probe.StructFieldConst{
-					Key: "span_context_trace_id_pos",
-					Val: structfield.NewID(
-						"go.opentelemetry.io/otel",
-						"go.opentelemetry.io/otel/trace",
-						"SpanContext",
-						"traceID",
-					),
-				},
-				probe.StructFieldConst{
-					Key: "span_context_span_id_pos",
-					Val: structfield.NewID(
-						"go.opentelemetry.io/otel",
-						"go.opentelemetry.io/otel/trace",
-						"SpanContext",
-						"spanID",
-					),
-				},
-				probe.StructFieldConst{
-					Key: "span_context_trace_flags_pos",
-					Val: structfield.NewID(
-						"go.opentelemetry.io/otel",
-						"go.opentelemetry.io/otel/trace",
-						"SpanContext",
-						"traceFlags",
-					),
-				},
-			},
-			Uprobes: []probe.Uprobe{
-				{
-					Sym:        "go.opentelemetry.io/auto/sdk.(*tracer).start",
-					EntryProbe: "uprobe_Tracer_start",
-				},
-				{
-					Sym:        "go.opentelemetry.io/auto/sdk.(*span).ended",
-					EntryProbe: "uprobe_Span_ended",
-				},
-			},
-			SpecFn:        loadBpf,
-			ProcessRecord: c.decodeEvent,
-		},
-		ProcessFn: c.processFn,
+
+	p := &OtelAutoProbe{
+		TargetTraceProducingProbe: probe.NewTargetTraceProducingProbe[bpfObjects, event](),
 	}
+	p.ProbeID = id
+	p.Logger = logger
+	p.Consts = consts
+	p.Uprobes = uprobes
+	p.SpecFn = loadBpf
+	p.ProcessRecord = c.decodeEvent
+	p.ProcessFn = c.processFn
+	p.Handler = handler
+	return p
 }
 
 type event struct {
@@ -129,3 +100,48 @@ func (c *converter) processFn(e *event) ptrace.ScopeSpans {
 
 	return ss.At(0)
 }
+
+var (
+	consts = []probe.Const{
+		probe.RegistersABIConst{},
+		probe.AllocationConst{},
+		probe.StructFieldConst{
+			Key: "span_context_trace_id_pos",
+			Val: structfield.NewID(
+				"go.opentelemetry.io/otel",
+				"go.opentelemetry.io/otel/trace",
+				"SpanContext",
+				"traceID",
+			),
+		},
+		probe.StructFieldConst{
+			Key: "span_context_span_id_pos",
+			Val: structfield.NewID(
+				"go.opentelemetry.io/otel",
+				"go.opentelemetry.io/otel/trace",
+				"SpanContext",
+				"spanID",
+			),
+		},
+		probe.StructFieldConst{
+			Key: "span_context_trace_flags_pos",
+			Val: structfield.NewID(
+				"go.opentelemetry.io/otel",
+				"go.opentelemetry.io/otel/trace",
+				"SpanContext",
+				"traceFlags",
+			),
+		},
+	}
+
+	uprobes = []probe.Uprobe{
+		{
+			Sym:        "go.opentelemetry.io/auto/sdk.(*tracer).start",
+			EntryProbe: "uprobe_Tracer_start",
+		},
+		{
+			Sym:        "go.opentelemetry.io/auto/sdk.(*span).ended",
+			EntryProbe: "uprobe_Span_ended",
+		},
+	}
+)

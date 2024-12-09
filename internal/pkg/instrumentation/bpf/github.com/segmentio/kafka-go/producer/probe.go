@@ -27,49 +27,33 @@ const (
 	pkg = "github.com/segmentio/kafka-go"
 )
 
-// New returns a new [probe.Probe].
-func New(logger *slog.Logger, version string) probe.Probe {
+type KafkaProducerProbe struct {
+	*probe.TargetSpanProducingProbe[bpfObjects, event]
+}
+
+func (k *KafkaProducerProbe) ApplyConfig(c probe.Config) error {
+	return nil
+}
+
+// New returns a new [probe.GoLibraryTelemetryProbe].
+func New(logger *slog.Logger, version string, handler func(ptrace.ScopeSpans)) probe.GoLibraryTelemetryProbe {
 	id := probe.ID{
 		SpanKind:        trace.SpanKindProducer,
 		InstrumentedPkg: pkg,
 	}
-	return &probe.SpanProducer[bpfObjects, event]{
-		Base: probe.Base[bpfObjects, event]{
-			ID:     id,
-			Logger: logger,
-			Consts: []probe.Const{
-				probe.RegistersABIConst{},
-				probe.AllocationConst{},
-				probe.StructFieldConst{
-					Key: "writer_topic_pos",
-					Val: structfield.NewID("github.com/segmentio/kafka-go", "github.com/segmentio/kafka-go", "Writer", "Topic"),
-				},
-				probe.StructFieldConst{
-					Key: "message_headers_pos",
-					Val: structfield.NewID("github.com/segmentio/kafka-go", "github.com/segmentio/kafka-go", "Message", "Headers"),
-				},
-				probe.StructFieldConst{
-					Key: "message_key_pos",
-					Val: structfield.NewID("github.com/segmentio/kafka-go", "github.com/segmentio/kafka-go", "Message", "Key"),
-				},
-				probe.StructFieldConst{
-					Key: "message_time_pos",
-					Val: structfield.NewID("github.com/segmentio/kafka-go", "github.com/segmentio/kafka-go", "Message", "Time"),
-				},
-			},
-			Uprobes: []probe.Uprobe{
-				{
-					Sym:         "github.com/segmentio/kafka-go.(*Writer).WriteMessages",
-					EntryProbe:  "uprobe_WriteMessages",
-					ReturnProbe: "uprobe_WriteMessages_Returns",
-				},
-			},
-			SpecFn: loadBpf,
-		},
-		Version:   version,
-		SchemaURL: semconv.SchemaURL,
-		ProcessFn: processFn,
+
+	p := &KafkaProducerProbe{
+		TargetSpanProducingProbe: probe.NewTargetSpanProducingProbe[bpfObjects, event](),
 	}
+	p.ProbeID = id
+	p.Logger = logger
+	p.Consts = consts
+	p.Uprobes = uprobes
+	p.Version = version
+	p.SchemaURL = semconv.SchemaURL
+	p.ProcessFn = processFn
+	p.Handler = handler
+	return p
 }
 
 type messageAttributes struct {
@@ -147,3 +131,34 @@ func processFn(e *event) ptrace.SpanSlice {
 func kafkaProducerSpanName(topic string) string {
 	return fmt.Sprintf("%s publish", topic)
 }
+
+var (
+	consts = []probe.Const{
+		probe.RegistersABIConst{},
+		probe.AllocationConst{},
+		probe.StructFieldConst{
+			Key: "writer_topic_pos",
+			Val: structfield.NewID("github.com/segmentio/kafka-go", "github.com/segmentio/kafka-go", "Writer", "Topic"),
+		},
+		probe.StructFieldConst{
+			Key: "message_headers_pos",
+			Val: structfield.NewID("github.com/segmentio/kafka-go", "github.com/segmentio/kafka-go", "Message", "Headers"),
+		},
+		probe.StructFieldConst{
+			Key: "message_key_pos",
+			Val: structfield.NewID("github.com/segmentio/kafka-go", "github.com/segmentio/kafka-go", "Message", "Key"),
+		},
+		probe.StructFieldConst{
+			Key: "message_time_pos",
+			Val: structfield.NewID("github.com/segmentio/kafka-go", "github.com/segmentio/kafka-go", "Message", "Time"),
+		},
+	}
+
+	uprobes = []probe.Uprobe{
+		{
+			Sym:         "github.com/segmentio/kafka-go.(*Writer).WriteMessages",
+			EntryProbe:  "uprobe_WriteMessages",
+			ReturnProbe: "uprobe_WriteMessages_Returns",
+		},
+	}
+)
