@@ -36,13 +36,34 @@ jobs:
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
       - name: Setup BATS
         uses: mig4/setup-bats@af9a00deb21b5d795cabfeaa8d9060410377686d # v1
-      - name: Build sample app from script
-        if: ${{ hashFiles(format('internal/test/e2e/{0}/build.sh', matrix.library)) != '' }}
-        run: ./internal/test/e2e/${{ matrix.library }}/build.sh -t sample-app:latest
-      - name: Build sample app
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Cache Docker layers
+        uses: actions/cache@v3
+        with:
+          path: /tmp/.buildx-cache
+          key: ${{ runner.os }}-docker-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-docker-
+      - name: Build and push local
         if: ${{ hashFiles(format('internal/test/e2e/{0}/build.sh', matrix.library)) == '' }}
-        working-directory: ./internal/test/e2e/${{ matrix.library }}
-        run: docker build -t sample-app:latest .
+        uses: docker/build-push-action@v5
+        with:
+          context: ./internal/test/e2e/${{ matrix.library }}
+          tags: "sample-app:latest,go.opentelemetry.io/auto-test-${{ matrix.library }}:latest"
+          load: true
+          cache-from: type=local,src=/tmp/.buildx-cache
+          cache-to: type=local,dest=/tmp/.buildx-cache,mode=max
+      - name: Build and push global
+        if: ${{ hashFiles(format('internal/test/e2e/{0}/build.sh', matrix.library)) != '' }}
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./internal/test/e2e/${{ matrix.library }}/Dockerfile
+          tags: "sample-app:latest,go.opentelemetry.io/auto-test-${{ matrix.library }}:latest"
+          load: true
+          cache-from: type=local,src=/tmp/.buildx-cache
+          cache-to: type=local,dest=/tmp/.buildx-cache,mode=max
       - name: Set up Helm
         uses: azure/setup-helm@fe7b79cd5ee1e45176fcad797de68ecaf3ca4814 # v4
         with:
@@ -106,6 +127,7 @@ jobs:
         if: always() && steps.job-status.outcome == 'success'
       - name: print auto-instrumentation logs
         run: |
+          kubectl logs -l app=sample -c sample-app
           kubectl logs -l app=sample -c auto-instrumentation --tail=300
           exit 1
         if: always() && steps.job-status.outcome == 'failure'
