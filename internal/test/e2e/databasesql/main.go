@@ -7,12 +7,12 @@ import (
 	"database/sql"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"os"
 	"time"
 
 	_ "github.com/mattn/go-sqlite3"
-	"go.uber.org/zap"
 )
 
 const (
@@ -80,11 +80,11 @@ func (s *Server) query(w http.ResponseWriter, req *http.Request, query string) {
 
 	rows, err := conn.QueryContext(req.Context(), query)
 	if err != nil {
-		logger.Error(err.Error())
+		slog.Error("query failed", "query", query, "error", err)
 		return
 	}
 
-	logger.Info("queryDB called", zap.String("query", query))
+	slog.Info("queryDB called", "query", query)
 	for rows.Next() {
 		var id int
 		var firstName string
@@ -98,8 +98,6 @@ func (s *Server) query(w http.ResponseWriter, req *http.Request, query string) {
 		fmt.Fprintf(w, "ID: %d, firstName: %s, lastName: %s, email: %s, phone: %s\n", id, firstName, lastName, email, phone)
 	}
 }
-
-var logger *zap.Logger
 
 func (s *Server) selectDb(w http.ResponseWriter, req *http.Request) {
 	s.query(w, req, "SELECT * FROM contacts")
@@ -126,14 +124,8 @@ func (s *Server) invalid(w http.ResponseWriter, req *http.Request) {
 }
 
 func main() {
-	var err error
-	logger, err = zap.NewDevelopment()
-	if err != nil {
-		fmt.Printf("error creating zap logger, error:%v", err)
-		return
-	}
 	port := fmt.Sprintf(":%d", 8080)
-	logger.Info("starting http server", zap.String("port", port))
+	slog.Info("starting http server", "port", port)
 
 	s := NewServer()
 
@@ -164,14 +156,14 @@ func main() {
 	for _, t := range tests {
 		resp, err := http.Get(t.url)
 		if err != nil {
-			logger.Error("Error performing GET", zap.Error(err))
+			slog.Error("failed GET", "error", err)
 		}
 		if resp != nil {
 			body, err := io.ReadAll(resp.Body)
 			if err != nil {
-				logger.Error("Error reading http body", zap.Error(err))
+				slog.Error("failed to read HTTP body", "error", err)
 			}
-			logger.Info("Body:\n", zap.String("body", string(body[:])))
+			slog.Info("request successful", "body", string(body[:]))
 			_ = resp.Body.Close()
 		}
 	}
