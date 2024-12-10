@@ -14,10 +14,24 @@ jobs:
     steps:
       - name: Checkout Repo
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
-      - name: Build auto-instrumentation
-        run: |
-          IMG=otel-go-instrumentation:latest make docker-build
-          docker save otel-go-instrumentation:latest -o otel-go-instrumentation.tar
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Cache Docker layers
+        uses: actions/cache@v3
+        with:
+          path: /tmp/.buildx-cache
+          key: ${{ runner.os }}-docker-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-docker-
+      - name: Docker build
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          tags: "otel-go-instrumentation:latest"
+          load: true
+          cache-from: type=local,src=/tmp/.buildx-cache
+          cache-to: type=local,dest=/tmp/.buildx-cache,mode=max
+          outputs: type=tar,dest=otel-go-instrumentation.tar
       - name: Upload Docker image artifact
         uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882 # v4
         with:
@@ -42,9 +56,9 @@ jobs:
         uses: actions/cache@v3
         with:
           path: /tmp/.buildx-cache
-          key: ${{ runner.os }}-docker-${{ github.sha }}
+          key: ${{ runner.os }}-docker-${{ matrix.library }}-${{ github.sha }}
           restore-keys: |
-            ${{ runner.os }}-docker-
+            ${{ runner.os }}-docker-${{ matrix.library }}-
       - name: Build and push local
         if: ${{ hashFiles(format('internal/test/e2e/{0}/build.sh', matrix.library)) == '' }}
         uses: docker/build-push-action@v5
