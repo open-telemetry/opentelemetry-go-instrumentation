@@ -100,6 +100,7 @@ type bpfProgramSpecs struct {
 	UprobeSetStatus     *ebpf.ProgramSpec `ebpf:"uprobe_SetStatus"`
 	UprobeStart         *ebpf.ProgramSpec `ebpf:"uprobe_Start"`
 	UprobeStartReturns  *ebpf.ProgramSpec `ebpf:"uprobe_Start_Returns"`
+	UprobeNewStart      *ebpf.ProgramSpec `ebpf:"uprobe_newStart"`
 }
 
 // bpfMapSpecs contains maps before they are loaded into the kernel.
@@ -186,6 +187,7 @@ type bpfPrograms struct {
 	UprobeSetStatus     *ebpf.Program `ebpf:"uprobe_SetStatus"`
 	UprobeStart         *ebpf.Program `ebpf:"uprobe_Start"`
 	UprobeStartReturns  *ebpf.Program `ebpf:"uprobe_Start_Returns"`
+	UprobeNewStart      *ebpf.Program `ebpf:"uprobe_newStart"`
 }
 
 func (p *bpfPrograms) Close() error {
@@ -196,6 +198,7 @@ func (p *bpfPrograms) Close() error {
 		p.UprobeSetStatus,
 		p.UprobeStart,
 		p.UprobeStartReturns,
+		p.UprobeNewStart,
 	)
 }
 
