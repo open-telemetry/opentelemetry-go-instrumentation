@@ -10,10 +10,11 @@ import (
 	"os/signal"
 	"time"
 
-	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/trace"
+
+	"go.opentelemetry.io/auto/sdk"
 )
 
 const (
@@ -78,7 +79,7 @@ func main() {
 	// give time for auto-instrumentation to start up
 	time.Sleep(5 * time.Second)
 
-	provider := otel.GetTracerProvider()
+	provider := sdk.TracerProvider()
 	tracer := provider.Tracer(
 		pkgName,
 		trace.WithInstrumentationVersion(pkgVer),

@@ -72,7 +72,7 @@
                 }
               ],
               "flags": 256,
-              "kind": 3,
+              "kind": 1,
               "name": "child override",
               "parentSpanId": "xxxxx",
               "spanId": "xxxxx",
@@ -110,7 +110,7 @@
                 }
               ],
               "flags": 256,
-              "kind": 3,
+              "kind": 1,
               "name": "parent",
               "parentSpanId": "",
               "spanId": "xxxxx",
