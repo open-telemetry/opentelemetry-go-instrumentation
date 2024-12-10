@@ -24,6 +24,7 @@ parse_opts() {
 
     local deliminator option
     local arg=
+    local tag=()
 
     # Translate --gnu-long-options to -g (short options)
     for arg
@@ -50,7 +51,7 @@ parse_opts() {
     do
         case "$option" in
             t)
-                readonly TAG="$OPTARG"
+                tag+=("$OPTARG")
                 ;;
             h)
                 usage
@@ -65,8 +66,11 @@ parse_opts() {
     done
 
     # Default values
-    [ -z "${TAG}" ] \
-        && readonly TAG="sample-app"
+    if [ ${#tag[@]} -eq 0 ]; then
+        readonly TAG=("sample-app")
+    else
+		readonly TAG=("${tag[@]}")
+    fi
 
     return 0
 }
@@ -75,7 +79,7 @@ build() {
     local root_dir="$1"
     local local_dir="$2"
     local dockerfile="${local_dir}/Dockerfile"
-    local tag_arg
+    local tag_arg tag
 
     if [ ! -f "$dockerfile" ]; then
         echo "Dockerfile does not exist: $dockerfile"
@@ -87,9 +91,9 @@ build() {
         return 1
     fi
 
-    if [ -n "$TAG" ]; then
-        tag_arg=("-t" "$TAG")
-    fi
+    for tag in "${TAG[@]}"; do
+        tag_arg+=("-t" "$tag")
+    done
 
     (cd "$root_dir" && docker build "${tag_arg[@]}" -f "$dockerfile" .)
     return 0
