@@ -3,7 +3,9 @@
   "extends": [
     "config:best-practices"
   ],
-  "ignorePaths": [],
+  "ignorePaths": [
+    "**/LICENSES/**"
+  ],
   "labels": ["Skip Changelog", "dependencies"],
   "postUpdateOptions" : [
     "gomodTidy"
