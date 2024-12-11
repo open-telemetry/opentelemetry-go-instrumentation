@@ -152,3 +152,8 @@ SCOPE="go.opentelemetry.io/auto/internal/test/e2e/autosdk"
   got=$(span_links ${SCOPE} "Run" | jq ".attributes[] | select(.key == \"data\").value.stringValue")
   assert_equal "$got" '"Hello World"'
 }
+
+@test "autosdk :: expected (redacted) trace output" {
+  redact_json
+  assert_equal "$(git --no-pager diff ${BATS_TEST_DIRNAME}/traces.json)" ""
+}
