@@ -129,18 +129,25 @@ redact_json() {
 		jq --sort-keys '
 			del(
 				.resourceSpans[].scopeSpans[].spans[].startTimeUnixNano,
-				.resourceSpans[].scopeSpans[].spans[].endTimeUnixNano
+				.resourceSpans[].scopeSpans[].spans[].endTimeUnixNano,
+				.resourceSpans[].scopeSpans[].spans[].events[]?.timeUnixNano
 			)
 			| .resourceSpans[].scopeSpans[].spans[].traceId|= (if
+					. // "" | test("^[A-Fa-f0-9]{32}$") then "xxxxx" else (. + "<-INVALID")
+				end)
+			| .resourceSpans[].scopeSpans[].spans[].links[]?.traceId |= (if
 					. // "" | test("^[A-Fa-f0-9]{32}$") then "xxxxx" else (. + "<-INVALID")
 				end)
 			| .resourceSpans[].scopeSpans[].spans[].spanId|= (if
 					. // "" | test("^[A-Fa-f0-9]{16}$") then "xxxxx" else (. + "<-INVALID")
 				end)
+			| .resourceSpans[].scopeSpans[].spans[].links[]?.spanId |= (if
+					. // "" | test("^[A-Fa-f0-9]{16}$") then "xxxxx" else (. + "<-INVALID")
+				end)
 			| .resourceSpans[].scopeSpans[].spans[].parentSpanId|= (if
 					. // "" | test("^[A-Fa-f0-9]{16}$") then "xxxxx" else (. + "")
 				end)
-			| .resourceSpans[].scopeSpans[].spans[].attributes[] |= if 
+			| .resourceSpans[].scopeSpans[].spans[].attributes[]? |= if 
 					(.key == "network.peer.port") then .value.intValue |= (if
 				   		. // "" | test("^[1-9][0-9]{0,4}$") then "xxxxx" else (. + "") 
 					end) else . 
