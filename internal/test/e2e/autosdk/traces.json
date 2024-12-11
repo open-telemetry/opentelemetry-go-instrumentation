@@ -90,7 +90,7 @@
                     {
                       "key": "exception.stacktrace",
                       "value": {
-                        "stringValue": "goroutine 1 [running]:\ngo.opentelemetry.io/auto/sdk.(*span).RecordError(0xc000124000, {0x542488, 0xc000104770}, {0xc00010aff0?, 0x1?, 0xc000104050?})\n\t/usr/src/go.opentelemetry.io/auto/sdk/span.go:321 +0x4bc\nmain.main()\n\t/usr/src/go.opentelemetry.io/auto/internal/test/e2e/autosdk/main.go:98 +0x6a7\n"
+                        "stringValue": "xxxxx"
                       }
                     }
                   ],
