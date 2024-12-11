@@ -47,37 +47,27 @@
           }
         ]
       },
+      "schemaUrl": "https://opentelemetry.io/schemas/1.26.0",
       "scopeSpans": [
         {
+          "schemaUrl": "https://some_schema",
           "scope": {
             "name": "go.opentelemetry.io/auto/internal/test/e2e/autosdk",
             "version": "v1.23.42"
           },
           "spans": [
             {
-              "traceId": "xxxxx",
-              "spanId": "xxxxx",
-              "parentSpanId": "xxxxx",
               "flags": 256,
-              "name": "sig",
               "kind": 1,
-              "startTimeUnixNano": "946684800000010000",
-              "endTimeUnixNano": "946684800000110000",
-              "status": {}
+              "name": "sig",
+              "parentSpanId": "xxxxx",
+              "spanId": "xxxxx",
+              "status": {},
+              "traceId": "xxxxx"
             },
             {
-              "traceId": "xxxxx",
-              "spanId": "xxxxx",
-              "parentSpanId": "xxxxx",
-              "flags": 256,
-              "name": "Run",
-              "kind": 2,
-              "startTimeUnixNano": "946684800500000000",
-              "endTimeUnixNano": "946684801000000000",
               "events": [
                 {
-                  "timeUnixNano": "946684802000000000",
-                  "name": "exception",
                   "attributes": [
                     {
                       "key": "impact",
@@ -100,27 +90,25 @@
                     {
                       "key": "exception.stacktrace",
                       "value": {
-                        "stringValue": "xxxxx"
-                      }
-                    }
-                  ]
-                }
-              ],
-              "links": [
-                {
-                  "traceId": "xxxxx",
-                  "spanId": "xxxxx",
-                  "attributes": [
-                    {
-                      "key": "data",
-                      "value": {
-                        "stringValue": "Hello World"
+                        "stringValue": "goroutine 1 [running]:\ngo.opentelemetry.io/auto/sdk.(*span).RecordError(0xc000124000, {0x542488, 0xc000104770}, {0xc00010aff0?, 0x1?, 0xc000104050?})\n\t/usr/src/go.opentelemetry.io/auto/sdk/span.go:321 +0x4bc\nmain.main()\n\t/usr/src/go.opentelemetry.io/auto/internal/test/e2e/autosdk/main.go:98 +0x6a7\n"
                       }
                     }
                   ],
-                  "flags": 256
+                  "name": "exception"
                 }
               ],
+              "flags": 256,
+              "kind": 1,
+              "name": "main",
+              "parentSpanId": "",
+              "spanId": "xxxxx",
+              "status": {
+                "code": 2,
+                "message": "application error"
+              },
+              "traceId": "xxxxx"
+            },
+            {
               "attributes": [
                 {
                   "key": "user",
@@ -135,27 +123,32 @@
                   }
                 }
               ],
-              "status": {}
-            },
-            {
-              "traceId": "xxxxx",
-              "spanId": "xxxxx",
-              "parentSpanId": "",
               "flags": 256,
-              "name": "main",
-              "kind": 1,
-              "startTimeUnixNano": "946684800000000000",
-              "endTimeUnixNano": "946684805000000000",
-              "status": {
-                "message": "application error",
-                "code": 2
-              }
+              "kind": 2,
+              "links": [
+                {
+                  "attributes": [
+                    {
+                      "key": "data",
+                      "value": {
+                        "stringValue": "Hello World"
+                      }
+                    }
+                  ],
+                  "flags": 256,
+                  "spanId": "xxxxx",
+                  "traceId": "xxxxx"
+                }
+              ],
+              "name": "Run",
+              "parentSpanId": "xxxxx",
+              "spanId": "xxxxx",
+              "status": {},
+              "traceId": "xxxxx"
             }
-          ],
-          "schemaUrl": "https://some_schema"
+          ]
         }
-      ],
-      "schemaUrl": "https://opentelemetry.io/schemas/1.26.0"
+      ]
     }
   ]
 }
