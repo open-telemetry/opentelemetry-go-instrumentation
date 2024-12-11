@@ -60,7 +60,7 @@
               "parentSpanId": "xxxxx",
               "flags": 256,
               "name": "sig",
-              "kind": 3,
+              "kind": 1,
               "startTimeUnixNano": "946684800000010000",
               "endTimeUnixNano": "946684800000110000",
               "status": {}
@@ -71,7 +71,7 @@
               "parentSpanId": "xxxxx",
               "flags": 256,
               "name": "Run",
-              "kind": 1,
+              "kind": 2,
               "startTimeUnixNano": "946684800500000000",
               "endTimeUnixNano": "946684801000000000",
               "events": [
@@ -143,7 +143,7 @@
               "parentSpanId": "",
               "flags": 256,
               "name": "main",
-              "kind": 3,
+              "kind": 1,
               "startTimeUnixNano": "946684800000000000",
               "endTimeUnixNano": "946684805000000000",
               "status": {
