@@ -152,6 +152,13 @@ redact_json() {
 				   		. // "" | test("^[1-9][0-9]{0,4}$") then "xxxxx" else (. + "") 
 					end) else . 
 				end
+			| .resourceSpans[].scopeSpans[].spans[].events[]?.attributes[]? |= if 
+					(.key == "exception.stacktrace")
+				then
+					.value.stringValue |= "xxxxx"
+				else
+					.
+				end
 			| .resourceSpans[].scopeSpans|=sort_by(.scope.name)
 			| .resourceSpans[].scopeSpans[].spans|=sort_by(.kind)
 			' > ${BATS_TEST_DIRNAME}/traces.json
