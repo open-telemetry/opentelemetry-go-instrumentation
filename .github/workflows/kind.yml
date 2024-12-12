@@ -34,8 +34,6 @@ jobs:
     steps:
       - name: Checkout Repo
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
-      - name: Setup BATS
-        uses: mig4/setup-bats@af9a00deb21b5d795cabfeaa8d9060410377686d # v1
       - name: Build sample app from script
         if: ${{ hashFiles(format('internal/test/e2e/{0}/build.sh', matrix.library)) != '' }}
         run: ./internal/test/e2e/${{ matrix.library }}/build.sh -t sample-app:latest
@@ -109,6 +107,9 @@ jobs:
           kubectl logs -l app=sample -c auto-instrumentation --tail=300
           exit 1
         if: always() && steps.job-status.outcome == 'failure'
+      - name: Setup BATS
+        if: always() && steps.job-status.outcome == 'success'
+        uses: mig4/setup-bats@af9a00deb21b5d795cabfeaa8d9060410377686d # v1
       - name: verify output and redact to traces.json
         run: |
           bats ./internal/test/e2e/${{ matrix.library }}/verify.bats
