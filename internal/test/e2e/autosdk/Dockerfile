@@ -9,9 +9,9 @@ COPY sdk/ /usr/src/go.opentelemetry.io/auto/sdk/
 COPY internal/test/e2e/autosdk/go.mod internal/test/e2e/autosdk/go.sum ./
 RUN go mod download && go mod verify
 
-COPY internal/test/e2e/autosdk/main.go .
-RUN go build -v -o /sample-app/main
+COPY internal/test/e2e/autosdk/*.go .
+RUN --mount=type=cache,target=/root/.cache/go-build \
+    --mount=type=cache,target=/go/pkg \
+	go build -v -o /usr/local/bin/app .
 
-WORKDIR /sample-app
-
-CMD ["/sample-app/main"]
+ENTRYPOINT ["/usr/local/bin/app"]
