@@ -109,6 +109,11 @@ func New(logger *slog.Logger) probe.Probe {
 			},
 			Uprobes: []probe.Uprobe{
 				{
+					Sym:        "go.opentelemetry.io/otel/internal/global.(*tracer).newSpan",
+					EntryProbe: "uprobe_newStart",
+					Optional:   true,
+				},
+				{
 					Sym:         "go.opentelemetry.io/otel/internal/global.(*tracer).Start",
 					EntryProbe:  "uprobe_Start",
 					ReturnProbe: "uprobe_Start_Returns",
