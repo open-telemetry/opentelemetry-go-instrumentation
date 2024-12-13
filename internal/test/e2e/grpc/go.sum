@@ -12,7 +12,7 @@ google.golang.org/genproto/googleapis/rpc v0.0.0-20241209162323-e6fa225c2576 h1:
 google.golang.org/genproto/googleapis/rpc v0.0.0-20241209162323-e6fa225c2576/go.mod h1:5uTbfoYQed2U9p3KIj2/Zzm02PYhndfdmML0qC3q3FU=
 google.golang.org/grpc v1.68.1 h1:oI5oTa11+ng8r8XMMN7jAOmWfPZWbYpCFaMUTACxkM0=
 google.golang.org/grpc v1.68.1/go.mod h1:+q1XYFJjShcqn0QZHvCyeR4CXPA+llXIeUIfIe00waw=
-google.golang.org/grpc/examples v0.0.0-20241212062025-38a8b9a70572 h1:yT+sfGcF7IUweMreZA5FRGDyVGahFn5F4m9SNuKbzJU=
-google.golang.org/grpc/examples v0.0.0-20241212062025-38a8b9a70572/go.mod h1:HVNtBgD4Eabbp5OKdqHN3NyLvanTomwWTV4ioyf1mFU=
+google.golang.org/grpc/examples v0.0.0-20241213221405-3f762759a728 h1:0dhhwC+7bbDkrwDIrpkHBkTfBbDiOVTp6K86BNF8kok=
+google.golang.org/grpc/examples v0.0.0-20241213221405-3f762759a728/go.mod h1:HVNtBgD4Eabbp5OKdqHN3NyLvanTomwWTV4ioyf1mFU=
 google.golang.org/protobuf v1.35.2 h1:8Ar7bF+apOIoThw1EdZl0p1oWvMqTHmpA2fRTyZO8io=
 google.golang.org/protobuf v1.35.2/go.mod h1:9fA7Ob0pmnwhb644+1+CVWFRbNajQ6iRojtC/QF5bRE=
