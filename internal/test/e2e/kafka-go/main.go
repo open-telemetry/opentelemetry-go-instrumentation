@@ -5,7 +5,10 @@ package main
 
 import (
 	"context"
+	"flag"
 	"fmt"
+	"os"
+	"os/exec"
 	"time"
 
 	kafka "github.com/segmentio/kafka-go"
@@ -73,6 +76,19 @@ func reader(readChan chan bool) {
 }
 
 func main() {
+	setup := flag.String("setup", "./start.sh", "Kafka setup script")
+	flag.Parse()
+
+	cmd := exec.Command(*setup)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	fmt.Println("starting Kafka...")
+	if err := cmd.Run(); err != nil {
+		fmt.Printf("failed to start Kafka: %v\n", err)
+		os.Exit(1)
+	}
+	fmt.Println("started Kafka")
+
 	kafkaWriter := getKafkaWriter()
 	defer kafkaWriter.Close()
 
