@@ -10,6 +10,3 @@ while ! kafka-topics.sh --bootstrap-server 127.0.0.1:9092 --topic hc --create --
   echo "kafka is not available yet. Retrying in 1 second..."
   sleep 1
 done
-
-# # Run the Go application
-/sample-app/main
