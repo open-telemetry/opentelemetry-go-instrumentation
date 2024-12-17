@@ -84,11 +84,6 @@ static __always_inline long dummy_extract_span_context_from_headers(void *stream
 //
 // Returns 0 on success, otherwise a negative error value in case of failure.
 static __always_inline int handleStream(struct pt_regs *ctx, void *stream_ptr, struct go_iface *go_context) {
-    if (ctx == NULL) {
-        bpf_printk("grpc:server:handleStream: NULL ctx");
-        return -1;
-    }
-
     if (go_context == NULL) {
         bpf_printk("grpc:server:handleStream: NULL go_context");
         return -1;
@@ -179,11 +174,6 @@ static __always_inline int handleStream(struct pt_regs *ctx, void *stream_ptr, s
 //
 // Returns 0 on success, otherwise a negative error value in case of failure.
 static __always_inline int writeStatus(struct pt_regs *ctx, void *status_ptr, struct go_iface *go_context) {
-    if (ctx == NULL) {
-        bpf_printk("grpc:server:writeStatus: NULL ctx");
-        return -1;
-    }
-
     if (go_context == NULL) {
         bpf_printk("grpc:server:writeStatus: NULL go_context");
         return -1;
