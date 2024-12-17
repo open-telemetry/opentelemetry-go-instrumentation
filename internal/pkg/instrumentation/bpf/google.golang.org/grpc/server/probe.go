@@ -35,13 +35,15 @@ const (
 	// parsing.
 	writeStatusMin = "1.40.0"
 
-	// writeStatusV2 is the version the writeStatus method changed.
-	writeStatusV2 = "1.69.0"
+	// serverStream is the version the both the writeStatus and handleStream
+	// methods changed to accept a *transport.ServerStream instead of a
+	// *transport.Stream.
+	serverStream = "1.69.0"
 )
 
 var (
 	writeStatusMinVersion = version.Must(version.NewVersion(writeStatusMin))
-	writeStatusV2Version  = version.Must(version.NewVersion(writeStatusV2))
+	serverStreamVersion   = version.Must(version.NewVersion(serverStream))
 )
 
 // New returns a new [probe.Probe].
@@ -76,7 +78,7 @@ func New(logger *slog.Logger, ver string) probe.Probe {
 						Key: "server_stream_stream_pos",
 						Val: structfield.NewID("google.golang.org/grpc", "google.golang.org/grpc/internal/transport", "ServerStream", "Stream"),
 					},
-					MinVersion: writeStatusV2Version,
+					MinVersion: serverStreamVersion,
 				},
 				probe.StructFieldConst{
 					Key: "frame_fields_pos",
@@ -133,9 +135,7 @@ func New(logger *slog.Logger, ver string) probe.Probe {
 						{
 							Package: "google.golang.org/grpc",
 							Constraints: version.MustConstraints(
-								version.NewConstraint(fmt.Sprintf(
-									"> %s, < %s", writeStatusMin, writeStatusV2),
-								),
+								version.NewConstraint(fmt.Sprintf("< %s", serverStream)),
 							),
 							FailureMode: probe.FailureModeIgnore,
 						},
@@ -149,7 +149,7 @@ func New(logger *slog.Logger, ver string) probe.Probe {
 						{
 							Package: "google.golang.org/grpc",
 							Constraints: version.MustConstraints(
-								version.NewConstraint(">= 1.69.0"),
+								version.NewConstraint(fmt.Sprintf(">= %s", serverStream)),
 							),
 							FailureMode: probe.FailureModeIgnore,
 						},
@@ -166,8 +166,8 @@ func New(logger *slog.Logger, ver string) probe.Probe {
 						{
 							Package: "google.golang.org/grpc",
 							Constraints: version.MustConstraints(
-								version.NewConstraint(fmt.Sprintf(
-									"> %s, < %s", writeStatusMin, writeStatusV2),
+								version.NewConstraint(
+									fmt.Sprintf("> %s, < %s", writeStatusMin, serverStream),
 								),
 							),
 							FailureMode: probe.FailureModeIgnore,
@@ -181,7 +181,7 @@ func New(logger *slog.Logger, ver string) probe.Probe {
 						{
 							Package: "google.golang.org/grpc",
 							Constraints: version.MustConstraints(
-								version.NewConstraint(">= 1.69.0"),
+								version.NewConstraint(fmt.Sprintf(">= %s", serverStream)),
 							),
 							FailureMode: probe.FailureModeIgnore,
 						},
