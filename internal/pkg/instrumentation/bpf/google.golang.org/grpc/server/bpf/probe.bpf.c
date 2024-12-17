@@ -213,7 +213,7 @@ static __always_inline int writeStatus(struct pt_regs *ctx, void *status_ptr, st
 // This instrumentation attaches uprobe to the following function:
 // func (s *Server) handleStream(t transport.ServerTransport, stream *transport.Stream, trInfo *traceInfo)
 //
-// This is only compatible with versions < 1.40 and > 1.69.0 of the Server.
+// This is only compatible with versions < 1.69.0 of the Server.
 SEC("uprobe/server_handleStream")
 int uprobe_server_handleStream(struct pt_regs *ctx) {
     u64 stream_pos = 4;
@@ -356,7 +356,7 @@ int uprobe_http2Server_operateHeader(struct pt_regs *ctx)
 // func (ht *http2Server) WriteStatus(s *Stream, st *status.Status)
 // https://github.com/grpc/grpc-go/blob/bcf9171a20e44ed81a6eb152e3ca9e35b2c02c5d/internal/transport/http2_server.go#L1049
 //
-// This is only compatible with versions < 1.40 and > 1.69.0 of the Server.
+// This is only compatible with versions > 1.40 and < 1.69.0 of the Server.
 SEC("uprobe/http2Server_WriteStatus")
 int uprobe_http2Server_WriteStatus(struct pt_regs *ctx) {
     struct go_iface go_context = {0};
