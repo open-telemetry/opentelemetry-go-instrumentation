@@ -286,6 +286,47 @@
               "traceId": "xxxxx"
             }
           ]
+        },
+        {
+          "scope": {
+            "name": "go.opentelemetry.io/auto/internal/test/e2e/grpc"
+          },
+          "spans": [
+            {
+              "attributes": [
+                {
+                  "key": "name",
+                  "value": {
+                    "stringValue": "world"
+                  }
+                }
+              ],
+              "flags": 256,
+              "kind": 3,
+              "name": "SayHello",
+              "parentSpanId": "xxxxx",
+              "spanId": "xxxxx",
+              "status": {},
+              "traceId": "xxxxx"
+            },
+            {
+              "attributes": [
+                {
+                  "key": "name",
+                  "value": {
+                    "stringValue": "unimplemented"
+                  }
+                }
+              ],
+              "flags": 256,
+              "kind": 3,
+              "name": "SayHello",
+              "parentSpanId": "xxxxx",
+              "spanId": "xxxxx",
+              "status": {},
+              "traceId": "xxxxx"
+            }
+          ]
         }
       ]
     }
