@@ -71,9 +71,10 @@ func loadBpfObjects(obj interface{}, opts *ebpf.CollectionOptions) error {
 type bpfSpecs struct {
 	bpfProgramSpecs
 	bpfMapSpecs
+	bpfVariableSpecs
 }
 
-// bpfSpecs contains programs before they are loaded into the kernel.
+// bpfProgramSpecs contains programs before they are loaded into the kernel.
 //
 // It can be passed ebpf.CollectionSpec.Assign.
 type bpfProgramSpecs struct {
@@ -102,12 +103,38 @@ type bpfMapSpecs struct {
 	TrackedSpansBySc      *ebpf.MapSpec `ebpf:"tracked_spans_by_sc"`
 }
 
+// bpfVariableSpecs contains global variables before they are loaded into the kernel.
+//
+// It can be passed ebpf.CollectionSpec.Assign.
+type bpfVariableSpecs struct {
+	TCPAddrIP_offset      *ebpf.VariableSpec `ebpf:"TCPAddr_IP_offset"`
+	TCPAddrPortOffset     *ebpf.VariableSpec `ebpf:"TCPAddr_Port_offset"`
+	EndAddr               *ebpf.VariableSpec `ebpf:"end_addr"`
+	FrameFieldsPos        *ebpf.VariableSpec `ebpf:"frame_fields_pos"`
+	FrameStreamIdPod      *ebpf.VariableSpec `ebpf:"frame_stream_id_pod"`
+	Hex                   *ebpf.VariableSpec `ebpf:"hex"`
+	Http2serverPeerPos    *ebpf.VariableSpec `ebpf:"http2server_peer_pos"`
+	IsNewFramePos         *ebpf.VariableSpec `ebpf:"is_new_frame_pos"`
+	IsRegistersAbi        *ebpf.VariableSpec `ebpf:"is_registers_abi"`
+	PeerLocalAddrPos      *ebpf.VariableSpec `ebpf:"peer_local_addr_pos"`
+	ServerAddrSupported   *ebpf.VariableSpec `ebpf:"server_addr_supported"`
+	ServerStreamStreamPos *ebpf.VariableSpec `ebpf:"server_stream_stream_pos"`
+	StartAddr             *ebpf.VariableSpec `ebpf:"start_addr"`
+	StatusCodePos         *ebpf.VariableSpec `ebpf:"status_code_pos"`
+	StatusS_pos           *ebpf.VariableSpec `ebpf:"status_s_pos"`
+	StreamCtxPos          *ebpf.VariableSpec `ebpf:"stream_ctx_pos"`
+	StreamIdPos           *ebpf.VariableSpec `ebpf:"stream_id_pos"`
+	StreamMethodPtrPos    *ebpf.VariableSpec `ebpf:"stream_method_ptr_pos"`
+	TotalCpus             *ebpf.VariableSpec `ebpf:"total_cpus"`
+}
+
 // bpfObjects contains all objects after they have been loaded into the kernel.
 //
 // It can be passed to loadBpfObjects or ebpf.CollectionSpec.LoadAndAssign.
 type bpfObjects struct {
 	bpfPrograms
 	bpfMaps
+	bpfVariables
 }
 
 func (o *bpfObjects) Close() error {
@@ -146,6 +173,31 @@ func (m *bpfMaps) Close() error {
 		m.StreamidToGrpcEvents,
 		m.TrackedSpansBySc,
 	)
+}
+
+// bpfVariables contains all global variables after they have been loaded into the kernel.
+//
+// It can be passed to loadBpfObjects or ebpf.CollectionSpec.LoadAndAssign.
+type bpfVariables struct {
+	TCPAddrIP_offset      *ebpf.Variable `ebpf:"TCPAddr_IP_offset"`
+	TCPAddrPortOffset     *ebpf.Variable `ebpf:"TCPAddr_Port_offset"`
+	EndAddr               *ebpf.Variable `ebpf:"end_addr"`
+	FrameFieldsPos        *ebpf.Variable `ebpf:"frame_fields_pos"`
+	FrameStreamIdPod      *ebpf.Variable `ebpf:"frame_stream_id_pod"`
+	Hex                   *ebpf.Variable `ebpf:"hex"`
+	Http2serverPeerPos    *ebpf.Variable `ebpf:"http2server_peer_pos"`
+	IsNewFramePos         *ebpf.Variable `ebpf:"is_new_frame_pos"`
+	IsRegistersAbi        *ebpf.Variable `ebpf:"is_registers_abi"`
+	PeerLocalAddrPos      *ebpf.Variable `ebpf:"peer_local_addr_pos"`
+	ServerAddrSupported   *ebpf.Variable `ebpf:"server_addr_supported"`
+	ServerStreamStreamPos *ebpf.Variable `ebpf:"server_stream_stream_pos"`
+	StartAddr             *ebpf.Variable `ebpf:"start_addr"`
+	StatusCodePos         *ebpf.Variable `ebpf:"status_code_pos"`
+	StatusS_pos           *ebpf.Variable `ebpf:"status_s_pos"`
+	StreamCtxPos          *ebpf.Variable `ebpf:"stream_ctx_pos"`
+	StreamIdPos           *ebpf.Variable `ebpf:"stream_id_pos"`
+	StreamMethodPtrPos    *ebpf.Variable `ebpf:"stream_method_ptr_pos"`
+	TotalCpus             *ebpf.Variable `ebpf:"total_cpus"`
 }
 
 // bpfPrograms contains all programs after they have been loaded into the kernel.

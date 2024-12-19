@@ -88,9 +88,10 @@ func loadBpfObjects(obj interface{}, opts *ebpf.CollectionOptions) error {
 type bpfSpecs struct {
 	bpfProgramSpecs
 	bpfMapSpecs
+	bpfVariableSpecs
 }
 
-// bpfSpecs contains programs before they are loaded into the kernel.
+// bpfProgramSpecs contains programs before they are loaded into the kernel.
 //
 // It can be passed ebpf.CollectionSpec.Assign.
 type bpfProgramSpecs struct {
@@ -122,12 +123,40 @@ type bpfMapSpecs struct {
 	TrackedSpansBySc          *ebpf.MapSpec `ebpf:"tracked_spans_by_sc"`
 }
 
+// bpfVariableSpecs contains global variables before they are loaded into the kernel.
+//
+// It can be passed ebpf.CollectionSpec.Assign.
+type bpfVariableSpecs struct {
+	AttrTypeBool                    *ebpf.VariableSpec `ebpf:"attr_type_bool"`
+	AttrTypeBoolslice               *ebpf.VariableSpec `ebpf:"attr_type_boolslice"`
+	AttrTypeFloat64                 *ebpf.VariableSpec `ebpf:"attr_type_float64"`
+	AttrTypeFloat64slice            *ebpf.VariableSpec `ebpf:"attr_type_float64slice"`
+	AttrTypeInt64                   *ebpf.VariableSpec `ebpf:"attr_type_int64"`
+	AttrTypeInt64slice              *ebpf.VariableSpec `ebpf:"attr_type_int64slice"`
+	AttrTypeInvalid                 *ebpf.VariableSpec `ebpf:"attr_type_invalid"`
+	AttrTypeString                  *ebpf.VariableSpec `ebpf:"attr_type_string"`
+	AttrTypeStringslice             *ebpf.VariableSpec `ebpf:"attr_type_stringslice"`
+	BucketsPtrPos                   *ebpf.VariableSpec `ebpf:"buckets_ptr_pos"`
+	EndAddr                         *ebpf.VariableSpec `ebpf:"end_addr"`
+	Hex                             *ebpf.VariableSpec `ebpf:"hex"`
+	IsRegistersAbi                  *ebpf.VariableSpec `ebpf:"is_registers_abi"`
+	StartAddr                       *ebpf.VariableSpec `ebpf:"start_addr"`
+	TotalCpus                       *ebpf.VariableSpec `ebpf:"total_cpus"`
+	TracerDelegatePos               *ebpf.VariableSpec `ebpf:"tracer_delegate_pos"`
+	TracerIdContainsSchemaURL       *ebpf.VariableSpec `ebpf:"tracer_id_contains_schemaURL"`
+	TracerIdContainsScopeAttributes *ebpf.VariableSpec `ebpf:"tracer_id_contains_scope_attributes"`
+	TracerNamePos                   *ebpf.VariableSpec `ebpf:"tracer_name_pos"`
+	TracerProviderPos               *ebpf.VariableSpec `ebpf:"tracer_provider_pos"`
+	TracerProviderTracersPos        *ebpf.VariableSpec `ebpf:"tracer_provider_tracers_pos"`
+}
+
 // bpfObjects contains all objects after they have been loaded into the kernel.
 //
 // It can be passed to loadBpfObjects or ebpf.CollectionSpec.LoadAndAssign.
 type bpfObjects struct {
 	bpfPrograms
 	bpfMaps
+	bpfVariables
 }
 
 func (o *bpfObjects) Close() error {
@@ -174,6 +203,33 @@ func (m *bpfMaps) Close() error {
 		m.TracerPtrToIdMap,
 		m.TrackedSpansBySc,
 	)
+}
+
+// bpfVariables contains all global variables after they have been loaded into the kernel.
+//
+// It can be passed to loadBpfObjects or ebpf.CollectionSpec.LoadAndAssign.
+type bpfVariables struct {
+	AttrTypeBool                    *ebpf.Variable `ebpf:"attr_type_bool"`
+	AttrTypeBoolslice               *ebpf.Variable `ebpf:"attr_type_boolslice"`
+	AttrTypeFloat64                 *ebpf.Variable `ebpf:"attr_type_float64"`
+	AttrTypeFloat64slice            *ebpf.Variable `ebpf:"attr_type_float64slice"`
+	AttrTypeInt64                   *ebpf.Variable `ebpf:"attr_type_int64"`
+	AttrTypeInt64slice              *ebpf.Variable `ebpf:"attr_type_int64slice"`
+	AttrTypeInvalid                 *ebpf.Variable `ebpf:"attr_type_invalid"`
+	AttrTypeString                  *ebpf.Variable `ebpf:"attr_type_string"`
+	AttrTypeStringslice             *ebpf.Variable `ebpf:"attr_type_stringslice"`
+	BucketsPtrPos                   *ebpf.Variable `ebpf:"buckets_ptr_pos"`
+	EndAddr                         *ebpf.Variable `ebpf:"end_addr"`
+	Hex                             *ebpf.Variable `ebpf:"hex"`
+	IsRegistersAbi                  *ebpf.Variable `ebpf:"is_registers_abi"`
+	StartAddr                       *ebpf.Variable `ebpf:"start_addr"`
+	TotalCpus                       *ebpf.Variable `ebpf:"total_cpus"`
+	TracerDelegatePos               *ebpf.Variable `ebpf:"tracer_delegate_pos"`
+	TracerIdContainsSchemaURL       *ebpf.Variable `ebpf:"tracer_id_contains_schemaURL"`
+	TracerIdContainsScopeAttributes *ebpf.Variable `ebpf:"tracer_id_contains_scope_attributes"`
+	TracerNamePos                   *ebpf.Variable `ebpf:"tracer_name_pos"`
+	TracerProviderPos               *ebpf.Variable `ebpf:"tracer_provider_pos"`
+	TracerProviderTracersPos        *ebpf.Variable `ebpf:"tracer_provider_tracers_pos"`
 }
 
 // bpfPrograms contains all programs after they have been loaded into the kernel.
