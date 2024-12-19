@@ -51,10 +51,29 @@ func Constants(spec *ebpf.CollectionSpec, opts ...Option) error {
 	if err != nil {
 		return err
 	}
-	if len(consts) == 0 {
-		return nil
+
+	var missing []string
+	for name, val := range consts {
+		v, ok := spec.Variables[name]
+		if !ok {
+			missing = append(missing, name)
+			continue
+		}
+
+		if !v.Constant() {
+			return fmt.Errorf("variable %s is not a constant", name)
+		}
+
+		if err := v.Set(val); err != nil {
+			return fmt.Errorf("rewriting constant %s: %w", name, err)
+		}
 	}
-	return spec.RewriteConstants(consts)
+
+	if len(missing) != 0 {
+		return fmt.Errorf("rewrite constants: constants are missing from .rodata: %v", missing)
+	}
+
+	return nil
 }
 
 func newConsts(opts []Option) (map[string]interface{}, error) {
