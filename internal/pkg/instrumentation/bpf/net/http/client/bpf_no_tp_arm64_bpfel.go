@@ -78,9 +78,10 @@ func loadBpf_no_tpObjects(obj interface{}, opts *ebpf.CollectionOptions) error {
 type bpf_no_tpSpecs struct {
 	bpf_no_tpProgramSpecs
 	bpf_no_tpMapSpecs
+	bpf_no_tpVariableSpecs
 }
 
-// bpf_no_tpSpecs contains programs before they are loaded into the kernel.
+// bpf_no_tpProgramSpecs contains programs before they are loaded into the kernel.
 //
 // It can be passed ebpf.CollectionSpec.Assign.
 type bpf_no_tpProgramSpecs struct {
@@ -105,12 +106,45 @@ type bpf_no_tpMapSpecs struct {
 	TrackedSpansBySc           *ebpf.MapSpec `ebpf:"tracked_spans_by_sc"`
 }
 
+// bpf_no_tpVariableSpecs contains global variables before they are loaded into the kernel.
+//
+// It can be passed ebpf.CollectionSpec.Assign.
+type bpf_no_tpVariableSpecs struct {
+	CtxPtrPos         *ebpf.VariableSpec `ebpf:"ctx_ptr_pos"`
+	EndAddr           *ebpf.VariableSpec `ebpf:"end_addr"`
+	ForceQueryPos     *ebpf.VariableSpec `ebpf:"force_query_pos"`
+	FragmentPos       *ebpf.VariableSpec `ebpf:"fragment_pos"`
+	HeadersPtrPos     *ebpf.VariableSpec `ebpf:"headers_ptr_pos"`
+	Hex               *ebpf.VariableSpec `ebpf:"hex"`
+	IoWriterBufPtrPos *ebpf.VariableSpec `ebpf:"io_writer_buf_ptr_pos"`
+	IoWriterN_pos     *ebpf.VariableSpec `ebpf:"io_writer_n_pos"`
+	IsRegistersAbi    *ebpf.VariableSpec `ebpf:"is_registers_abi"`
+	MethodPtrPos      *ebpf.VariableSpec `ebpf:"method_ptr_pos"`
+	OmitHostPos       *ebpf.VariableSpec `ebpf:"omit_host_pos"`
+	OpaquePos         *ebpf.VariableSpec `ebpf:"opaque_pos"`
+	PathPtrPos        *ebpf.VariableSpec `ebpf:"path_ptr_pos"`
+	RawFragmentPos    *ebpf.VariableSpec `ebpf:"raw_fragment_pos"`
+	RawPathPos        *ebpf.VariableSpec `ebpf:"raw_path_pos"`
+	RawQueryPos       *ebpf.VariableSpec `ebpf:"raw_query_pos"`
+	RequestHostPos    *ebpf.VariableSpec `ebpf:"request_host_pos"`
+	RequestProtoPos   *ebpf.VariableSpec `ebpf:"request_proto_pos"`
+	SchemePos         *ebpf.VariableSpec `ebpf:"scheme_pos"`
+	StartAddr         *ebpf.VariableSpec `ebpf:"start_addr"`
+	StatusCodePos     *ebpf.VariableSpec `ebpf:"status_code_pos"`
+	TotalCpus         *ebpf.VariableSpec `ebpf:"total_cpus"`
+	UrlHostPos        *ebpf.VariableSpec `ebpf:"url_host_pos"`
+	UrlPtrPos         *ebpf.VariableSpec `ebpf:"url_ptr_pos"`
+	UserPtrPos        *ebpf.VariableSpec `ebpf:"user_ptr_pos"`
+	UsernamePos       *ebpf.VariableSpec `ebpf:"username_pos"`
+}
+
 // bpf_no_tpObjects contains all objects after they have been loaded into the kernel.
 //
 // It can be passed to loadBpf_no_tpObjects or ebpf.CollectionSpec.LoadAndAssign.
 type bpf_no_tpObjects struct {
 	bpf_no_tpPrograms
 	bpf_no_tpMaps
+	bpf_no_tpVariables
 }
 
 func (o *bpf_no_tpObjects) Close() error {
@@ -149,6 +183,38 @@ func (m *bpf_no_tpMaps) Close() error {
 		m.SliceArrayBuffMap,
 		m.TrackedSpansBySc,
 	)
+}
+
+// bpf_no_tpVariables contains all global variables after they have been loaded into the kernel.
+//
+// It can be passed to loadBpf_no_tpObjects or ebpf.CollectionSpec.LoadAndAssign.
+type bpf_no_tpVariables struct {
+	CtxPtrPos         *ebpf.Variable `ebpf:"ctx_ptr_pos"`
+	EndAddr           *ebpf.Variable `ebpf:"end_addr"`
+	ForceQueryPos     *ebpf.Variable `ebpf:"force_query_pos"`
+	FragmentPos       *ebpf.Variable `ebpf:"fragment_pos"`
+	HeadersPtrPos     *ebpf.Variable `ebpf:"headers_ptr_pos"`
+	Hex               *ebpf.Variable `ebpf:"hex"`
+	IoWriterBufPtrPos *ebpf.Variable `ebpf:"io_writer_buf_ptr_pos"`
+	IoWriterN_pos     *ebpf.Variable `ebpf:"io_writer_n_pos"`
+	IsRegistersAbi    *ebpf.Variable `ebpf:"is_registers_abi"`
+	MethodPtrPos      *ebpf.Variable `ebpf:"method_ptr_pos"`
+	OmitHostPos       *ebpf.Variable `ebpf:"omit_host_pos"`
+	OpaquePos         *ebpf.Variable `ebpf:"opaque_pos"`
+	PathPtrPos        *ebpf.Variable `ebpf:"path_ptr_pos"`
+	RawFragmentPos    *ebpf.Variable `ebpf:"raw_fragment_pos"`
+	RawPathPos        *ebpf.Variable `ebpf:"raw_path_pos"`
+	RawQueryPos       *ebpf.Variable `ebpf:"raw_query_pos"`
+	RequestHostPos    *ebpf.Variable `ebpf:"request_host_pos"`
+	RequestProtoPos   *ebpf.Variable `ebpf:"request_proto_pos"`
+	SchemePos         *ebpf.Variable `ebpf:"scheme_pos"`
+	StartAddr         *ebpf.Variable `ebpf:"start_addr"`
+	StatusCodePos     *ebpf.Variable `ebpf:"status_code_pos"`
+	TotalCpus         *ebpf.Variable `ebpf:"total_cpus"`
+	UrlHostPos        *ebpf.Variable `ebpf:"url_host_pos"`
+	UrlPtrPos         *ebpf.Variable `ebpf:"url_ptr_pos"`
+	UserPtrPos        *ebpf.Variable `ebpf:"user_ptr_pos"`
+	UsernamePos       *ebpf.Variable `ebpf:"username_pos"`
 }
 
 // bpf_no_tpPrograms contains all programs after they have been loaded into the kernel.
