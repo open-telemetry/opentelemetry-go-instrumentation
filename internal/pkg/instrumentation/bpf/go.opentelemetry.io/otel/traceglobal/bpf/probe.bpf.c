@@ -23,6 +23,9 @@ char __license[] SEC("license") = "Dual MIT/GPL";
 #define MAX_BUCKETS 8
 #define MAX_TRACERS 64
 
+// Records state of our write to auto-instrumentation flag.
+bool wrote_flag = false;
+
 struct span_description_t {
     char buf[MAX_STATUS_DESCRIPTION_LEN];
 };
@@ -385,6 +388,33 @@ static __always_inline long fill_tracer_id(tracer_id_t *tracer_id, go_tracer_ptr
     }
 
     bpf_map_update_elem(&tracer_ptr_to_id_map, &tracer, tracer_id, 0);
+    return 0;
+}
+
+// This instrumentation attaches uprobe to the following function:
+// func (t *tracer) newSpan(ctx context.Context, autoSpan *bool, name string, opts []trace.SpanStartOption) (context.Context, trace.Span) {
+// https://github.com/open-telemetry/opentelemetry-go/blob/ac386f383cdfc14f546b4e55e8726a0a45e8a409/internal/global/trace.go#L161
+SEC("uprobe/newSpan")
+int uprobe_newStart(struct pt_regs *ctx) {
+    if (wrote_flag) {
+        // Already wrote flag value.
+        return 0;
+    }
+
+    void *flag_ptr = get_argument(ctx, 4);
+    if (flag_ptr == NULL) {
+        bpf_printk("invalid flag_ptr: NULL");
+        return -1;
+    }
+
+    bool true_value = true;
+    long res = bpf_probe_write_user(flag_ptr, &true_value, sizeof(bool));
+    if (res != 0) {
+        bpf_printk("failed to write bool flag value: %ld", res);
+        return -2;
+    }
+
+    wrote_flag = true;
     return 0;
 }
 
