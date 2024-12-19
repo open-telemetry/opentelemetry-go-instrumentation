@@ -23,7 +23,8 @@ type bpfGrpcRequestT struct {
 		Ip   [16]uint8
 		Port uint32
 	}
-	_ [4]byte
+	HasStatus uint8
+	_         [3]byte
 }
 
 type bpfSliceArrayBuff struct{ Buff [1024]uint8 }
@@ -76,10 +77,13 @@ type bpfSpecs struct {
 //
 // It can be passed ebpf.CollectionSpec.Assign.
 type bpfProgramSpecs struct {
-	UprobeHttp2ServerWriteStatus    *ebpf.ProgramSpec `ebpf:"uprobe_http2Server_WriteStatus"`
-	UprobeHttp2ServerOperateHeader  *ebpf.ProgramSpec `ebpf:"uprobe_http2Server_operateHeader"`
-	UprobeServerHandleStream        *ebpf.ProgramSpec `ebpf:"uprobe_server_handleStream"`
-	UprobeServerHandleStreamReturns *ebpf.ProgramSpec `ebpf:"uprobe_server_handleStream_Returns"`
+	UprobeHttp2ServerWriteStatus     *ebpf.ProgramSpec `ebpf:"uprobe_http2Server_WriteStatus"`
+	UprobeHttp2ServerWriteStatus2    *ebpf.ProgramSpec `ebpf:"uprobe_http2Server_WriteStatus2"`
+	UprobeHttp2ServerOperateHeader   *ebpf.ProgramSpec `ebpf:"uprobe_http2Server_operateHeader"`
+	UprobeServerHandleStream         *ebpf.ProgramSpec `ebpf:"uprobe_server_handleStream"`
+	UprobeServerHandleStream2        *ebpf.ProgramSpec `ebpf:"uprobe_server_handleStream2"`
+	UprobeServerHandleStream2Returns *ebpf.ProgramSpec `ebpf:"uprobe_server_handleStream2_Returns"`
+	UprobeServerHandleStreamReturns  *ebpf.ProgramSpec `ebpf:"uprobe_server_handleStream_Returns"`
 }
 
 // bpfMapSpecs contains maps before they are loaded into the kernel.
@@ -148,17 +152,23 @@ func (m *bpfMaps) Close() error {
 //
 // It can be passed to loadBpfObjects or ebpf.CollectionSpec.LoadAndAssign.
 type bpfPrograms struct {
-	UprobeHttp2ServerWriteStatus    *ebpf.Program `ebpf:"uprobe_http2Server_WriteStatus"`
-	UprobeHttp2ServerOperateHeader  *ebpf.Program `ebpf:"uprobe_http2Server_operateHeader"`
-	UprobeServerHandleStream        *ebpf.Program `ebpf:"uprobe_server_handleStream"`
-	UprobeServerHandleStreamReturns *ebpf.Program `ebpf:"uprobe_server_handleStream_Returns"`
+	UprobeHttp2ServerWriteStatus     *ebpf.Program `ebpf:"uprobe_http2Server_WriteStatus"`
+	UprobeHttp2ServerWriteStatus2    *ebpf.Program `ebpf:"uprobe_http2Server_WriteStatus2"`
+	UprobeHttp2ServerOperateHeader   *ebpf.Program `ebpf:"uprobe_http2Server_operateHeader"`
+	UprobeServerHandleStream         *ebpf.Program `ebpf:"uprobe_server_handleStream"`
+	UprobeServerHandleStream2        *ebpf.Program `ebpf:"uprobe_server_handleStream2"`
+	UprobeServerHandleStream2Returns *ebpf.Program `ebpf:"uprobe_server_handleStream2_Returns"`
+	UprobeServerHandleStreamReturns  *ebpf.Program `ebpf:"uprobe_server_handleStream_Returns"`
 }
 
 func (p *bpfPrograms) Close() error {
 	return _BpfClose(
 		p.UprobeHttp2ServerWriteStatus,
+		p.UprobeHttp2ServerWriteStatus2,
 		p.UprobeHttp2ServerOperateHeader,
 		p.UprobeServerHandleStream,
+		p.UprobeServerHandleStream2,
+		p.UprobeServerHandleStream2Returns,
 		p.UprobeServerHandleStreamReturns,
 	)
 }
