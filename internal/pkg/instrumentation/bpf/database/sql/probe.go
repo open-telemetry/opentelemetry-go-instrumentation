@@ -58,13 +58,13 @@ func New(logger *slog.Logger, version string) probe.Probe {
 					Sym:         "database/sql.(*DB).queryDC",
 					EntryProbe:  "uprobe_queryDC",
 					ReturnProbe: "uprobe_queryDC_Returns",
-					Optional:    true,
+					FailureMode: probe.FailureModeIgnore,
 				},
 				{
 					Sym:         "database/sql.(*DB).execDC",
 					EntryProbe:  "uprobe_execDC",
 					ReturnProbe: "uprobe_execDC_Returns",
-					Optional:    true,
+					FailureMode: probe.FailureModeIgnore,
 				},
 			},
 

@@ -13,6 +13,7 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 - Support `SELECT`, `INSERT`, `UPDATE`, and `DELETE` for database span names and `db.operation.name` attribute. ([#1253](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1253))
 - Support `go.opentelemetry.io/otel@v1.33.0`. ([#1417](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1417))
 - Support `google.golang.org/grpc` `1.69.0`. ([#1417](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1417))
+- Update `google.golang.org/grpc` probe to work with versions `>= 1.69.0`. ([#1431](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1431))
 - Support `google.golang.org/grpc` `1.67.3`. ([#1452](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1452))
 - Support `google.golang.org/grpc` `1.68.2`. ([#1462](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1462))
 - Support `google.golang.org/grpc` `1.69.2`. ([#1467](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1467))

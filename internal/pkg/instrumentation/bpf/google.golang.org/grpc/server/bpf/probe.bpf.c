@@ -22,6 +22,7 @@ struct grpc_request_t
     char method[MAX_SIZE];
     u32 status_code;
     net_addr_t local_addr;
+    u8 has_status;
 };
 
 struct
@@ -61,47 +62,60 @@ volatile const u64 frame_fields_pos;
 volatile const u64 frame_stream_id_pod;
 volatile const u64 stream_id_pos;
 volatile const u64 stream_ctx_pos;
+volatile const u64 server_stream_stream_pos;
 volatile const bool is_new_frame_pos;
 volatile const u64 status_s_pos;
 volatile const u64 status_code_pos;
 volatile const u64 http2server_peer_pos;
 volatile const u64 peer_local_addr_pos;
 
-volatile const bool write_status_supported;
 volatile const bool server_addr_supported;
 
 static __always_inline long dummy_extract_span_context_from_headers(void *stream_id, struct span_context *parent_span_context) {
     return 0;
 }
 
-// This instrumentation attaches uprobe to the following function:
-// func (s *Server) handleStream(t transport.ServerTransport, stream *transport.Stream, trInfo *traceInfo)
-SEC("uprobe/server_handleStream")
-int uprobe_server_handleStream(struct pt_regs *ctx)
-{
-    u64 stream_pos = 4;
-    void *stream_ptr = get_argument(ctx, stream_pos);
-    // Get key
-    struct go_iface go_context = {0};
-    get_Go_context(ctx, 4, stream_ctx_pos, false, &go_context);
-    void *key = get_consistent_key(ctx, go_context.data);
+// handleStream handles gRPC stream telemetry.
+//
+// Arguments:
+//   - ctx: the pt_regs passed to the uprobe function
+//   - stream_ptr: pointer to the transport.Stream tracking the stream
+//   - go_context: the parsed Go context.Context
+//
+// Returns 0 on success, otherwise a negative error value in case of failure.
+static __always_inline int handleStream(struct pt_regs *ctx, void *stream_ptr, struct go_iface *go_context) {
+    if (go_context == NULL) {
+        bpf_printk("grpc:server:handleStream: NULL go_context");
+        return -1;
+    }
+
+    if (stream_ptr == NULL) {
+        bpf_printk("grpc:server:handleStream: NULL stream_ptr");
+        return -1;
+    }
+
+    void *key = get_consistent_key(ctx, go_context->data);
     void *grpcReq_event_ptr = bpf_map_lookup_elem(&grpc_events, &key);
-    if (grpcReq_event_ptr != NULL)
-    {
-        bpf_printk("uprobe/server_handleStream already tracked with the current context");
+    if (grpcReq_event_ptr != NULL) {
+        bpf_printk("grpc:server:handleStream: event already tracked");
         return 0;
     }
 
     // Get parent context if exists
     u32 stream_id = 0;
-    bpf_probe_read(&stream_id, sizeof(stream_id), (void *)(stream_ptr + stream_id_pos));
+    long rc = bpf_probe_read_user(&stream_id, sizeof(stream_id), (void *)(stream_ptr + stream_id_pos));
+    if (rc != 0) {
+        bpf_printk("grpc:server:handleStream: failed to read stream ID");
+        return -2;
+    }
+
     struct grpc_request_t *grpcReq = bpf_map_lookup_elem(&streamid_to_grpc_events, &stream_id);
     if (grpcReq == NULL) {
         // No parent span context, generate new span context
         u32 zero = 0;
         grpcReq = bpf_map_lookup_elem(&grpc_storage_map, &zero);
         if (grpcReq == NULL) {
-            bpf_printk("failed to get grpcReq from storage map");
+            bpf_printk("grpc:server:handleStream: failed to get grpcReq");
             return 0;
         }
     }
@@ -112,7 +126,7 @@ int uprobe_server_handleStream(struct pt_regs *ctx)
         .ctx = ctx,
         .sc = &grpcReq->sc,
         .psc = &grpcReq->psc,
-        .go_context = &go_context,
+        .go_context = go_context,
         // The parent span context is set by operateHeader probe
         .get_parent_span_context_fn = dummy_extract_span_context_from_headers,
         .get_parent_span_context_arg = NULL,
@@ -120,30 +134,182 @@ int uprobe_server_handleStream(struct pt_regs *ctx)
     start_span(&start_span_params);
 
     // Set attributes
-    if (!get_go_string_from_user_ptr((void *)(stream_ptr + stream_method_ptr_pos), grpcReq->method, sizeof(grpcReq->method)))
-    {
-        bpf_printk("Failed to read gRPC method from stream");
+    void *method_ptr = stream_ptr + stream_method_ptr_pos;
+    bool parsed_method = get_go_string_from_user_ptr(method_ptr, grpcReq->method, sizeof(grpcReq->method));
+    if (!parsed_method) {
+        bpf_printk("grpc:server:handleStream: failed to read gRPC method from stream");
         bpf_map_delete_elem(&streamid_to_grpc_events, &stream_id);
-        return 0;
+        return -3;
     }
 
     if (server_addr_supported) {
         void *http2server = get_argument(ctx, 3);
-        void *peer_ptr = 0;
-        bpf_probe_read_user(&peer_ptr, sizeof(peer_ptr), (void *)(http2server + http2server_peer_pos));
-        void *local_addr_ptr = 0;
-        bpf_probe_read_user(&local_addr_ptr, sizeof(local_addr_ptr), get_go_interface_instance((void *)(http2server + http2server_peer_pos + peer_local_addr_pos)));
-        get_tcp_net_addr_from_tcp_addr(ctx, &grpcReq->local_addr, (void *)(local_addr_ptr));
+        if (http2server != NULL) {
+            void *local_addr_ptr = 0;
+            void *local_addr_pos = http2server + http2server_peer_pos + peer_local_addr_pos;
+            bpf_probe_read_user(&local_addr_ptr, sizeof(local_addr_ptr), get_go_interface_instance(local_addr_pos));
+            get_tcp_net_addr_from_tcp_addr(ctx, &grpcReq->local_addr, (void *)(local_addr_ptr));
+        } else {
+            bpf_printk("grpc:server:handleStream: failed to get http2server arg");
+        }
     }
 
     // Write event
-    bpf_map_update_elem(&grpc_events, &key, grpcReq, 0);
-    start_tracking_span(go_context.data, &grpcReq->sc);
+    rc = bpf_map_update_elem(&grpc_events, &key, grpcReq, 0);
+    if (rc != 0) {
+        bpf_printk("grpc:server:handleStream: failed to update event");
+        return -4;
+    }
+    start_tracking_span(go_context->data, &grpcReq->sc);
 
     return 0;
 }
 
+// writeStatus writes the OTel status to any active spans.
+//
+// Arguments:
+//   - ctx: the pt_regs passed to the uprobe function
+//   - status_ptr: pointer to the status.Stream holding the status info
+//   - go_context: the parsed Go context.Context
+//
+// Returns 0 on success, otherwise a negative error value in case of failure.
+static __always_inline int writeStatus(struct pt_regs *ctx, void *status_ptr, struct go_iface *go_context) {
+    if (go_context == NULL) {
+        bpf_printk("grpc:server:writeStatus: NULL go_context");
+        return -1;
+    }
+
+    if (status_ptr == NULL) {
+        bpf_printk("grpc:server:writeStatus: NULL status_ptr");
+        return -1;
+    }
+
+    void *key = get_consistent_key(ctx, go_context->data);
+
+    struct grpc_request_t *req_ptr = bpf_map_lookup_elem(&grpc_events, &key);
+    if (req_ptr == NULL) {
+        bpf_printk("grpc:server:handleStream: failed to lookup grpc request");
+        return -2;
+    }
+
+    void *s_ptr = 0;
+    long rc = bpf_probe_read_user(&s_ptr, sizeof(s_ptr), (void *)(status_ptr + status_s_pos));
+    if (rc != 0) {
+        bpf_printk("grpc:server:handleStream: failed to read Status.s");
+        return -3;
+    }
+
+    // Get status code from Status.s pointer
+    rc = bpf_probe_read_user(&req_ptr->status_code, sizeof(req_ptr->status_code), (void *)(s_ptr + status_code_pos));
+    if (rc != 0) {
+        bpf_printk("grpc:server:handleStream: failed to read status code");
+        return -4;
+    }
+    req_ptr->has_status = true;
+
+    return 0;
+}
+
+// This instrumentation attaches uprobe to the following function:
+// func (s *Server) handleStream(t transport.ServerTransport, stream *transport.Stream, trInfo *traceInfo)
+//
+// This is only compatible with versions < 1.69.0 of the Server.
+SEC("uprobe/server_handleStream")
+int uprobe_server_handleStream(struct pt_regs *ctx) {
+    u64 stream_pos = 4;
+    void *stream_ptr = get_argument(ctx, stream_pos);
+    // Get key
+    struct go_iface go_context = {0};
+    get_Go_context(ctx, stream_pos, stream_ctx_pos, false, &go_context);
+
+    return handleStream(ctx, stream_ptr, &go_context);
+}
+
 UPROBE_RETURN(server_handleStream, struct grpc_request_t, grpc_events, events, 4, stream_ctx_pos, false)
+
+// This instrumentation attaches uprobe to the following function:
+// func (s *Server) handleStream(t transport.ServerTransport, stream *transport.ServerStream)
+// https://github.com/grpc/grpc-go/blob/317271b232677b7869576a49855b01b9f4775d67/server.go#L1735
+//
+// This is only compatible with versions > 1.69.0 of the Server.
+SEC("uprobe/server_handleStream2")
+int uprobe_server_handleStream2(struct pt_regs *ctx) {
+    u64 server_stream_pos = 4;
+    void *server_stream_ptr = get_argument(ctx, server_stream_pos);
+    if (server_stream_ptr == NULL) {
+        bpf_printk("grpc:server:uprobe/server_handleStream2: failed to get ServerStream arg");
+        return -1;
+    }
+
+    void *stream_ptr;
+    long rc = bpf_probe_read_user(&stream_ptr, sizeof(stream_ptr), (void *)(server_stream_ptr + server_stream_stream_pos));
+    if (rc != 0) {
+        bpf_printk("grpc:server:uprobe/server_handleStream2: failed to read stream_ptr");
+        return -2;
+    }
+
+    struct go_iface go_context = {0};
+    rc = bpf_probe_read_user(&go_context.type, sizeof(go_context.type), (void *)(stream_ptr + stream_ctx_pos));
+    if (rc != 0) {
+        bpf_printk("grpc:server:uprobe/server_handleStream2: failed to read context type");
+        return -3;
+    }
+
+    rc = bpf_probe_read_user(&go_context.data, sizeof(go_context.data), get_go_interface_instance(stream_ptr + stream_ctx_pos));
+    if (rc != 0) {
+        bpf_printk("grpc:server:uprobe/server_handleStream2: failed to read context data");
+        return -4;
+    }
+
+    return handleStream(ctx, stream_ptr, &go_context);
+}
+
+// This instrumentation attaches a return uprobe to the following function:
+// func (s *Server) handleStream(t transport.ServerTransport, stream *transport.ServerStream)
+// https://github.com/grpc/grpc-go/blob/317271b232677b7869576a49855b01b9f4775d67/server.go#L1735
+//
+// This is only compatible with versions > 1.69.0 of the Server.
+SEC("uprobe/server_handleStream2")
+int uprobe_server_handleStream2_Returns(struct pt_regs *ctx) {
+    u64 server_stream_pos = 4;
+    void *server_stream_ptr = get_argument(ctx, server_stream_pos);
+    if (server_stream_ptr == NULL) {
+        bpf_printk("grpc:server:uprobe/server_handleStream2Return: failed to get ServerStream arg");
+        return -1;
+    }
+
+    void *stream_ptr;
+    long rc = bpf_probe_read_user(&stream_ptr, sizeof(stream_ptr), (void *)(server_stream_ptr + server_stream_stream_pos));
+    if (rc != 0) {
+        bpf_printk("grpc:server:uprobe/server_handleStream2Return: failed to read stream_ptr");
+        return -2;
+    }
+
+    struct go_iface go_context = {0};
+    rc = bpf_probe_read_user(&go_context.type, sizeof(go_context.type), (void *)(stream_ptr + stream_ctx_pos));
+    if (rc != 0) {
+        bpf_printk("grpc:server:uprobe/server_handleStream2Return: failed to read context type");
+        return -3;
+    }
+
+    rc = bpf_probe_read_user(&go_context.data, sizeof(go_context.data), get_go_interface_instance(stream_ptr + stream_ctx_pos));
+    if (rc != 0) {
+        bpf_printk("grpc:server:uprobe/server_handleStream2Return: failed to read context data");
+        return -4;
+    }
+
+    void *key = get_consistent_key(ctx, go_context.data);
+    struct grpc_request_t *event = bpf_map_lookup_elem(&grpc_events, &key);
+    if (event == NULL) {
+        bpf_printk("grpc:server:uprobe/server_handleStream2Return: event is NULL");
+        return -5;
+    }
+    event->end_time = bpf_ktime_get_ns();
+    output_span_event(ctx, event, sizeof(struct grpc_request_t), &event->sc);
+    stop_tracking_span(&event->sc, &event->psc);
+    bpf_map_delete_elem(&grpc_events, &key);
+    return 0;
+}
 
 // func (d *http2Server) operateHeader(frame *http2.MetaHeadersFrame) error
 // for version 1.60 and above:
@@ -189,28 +355,49 @@ int uprobe_http2Server_operateHeader(struct pt_regs *ctx)
 
 // func (ht *http2Server) WriteStatus(s *Stream, st *status.Status)
 // https://github.com/grpc/grpc-go/blob/bcf9171a20e44ed81a6eb152e3ca9e35b2c02c5d/internal/transport/http2_server.go#L1049
+//
+// This is only compatible with versions > 1.40 and < 1.69.0 of the Server.
 SEC("uprobe/http2Server_WriteStatus")
 int uprobe_http2Server_WriteStatus(struct pt_regs *ctx) {
-    if(!write_status_supported) {
-        bpf_printk("status probe not supported for this version of gRPC");
-        return 0;
-    }
     struct go_iface go_context = {0};
-    get_Go_context(ctx, 2, stream_ctx_pos, true, &go_context);
-    void *key = get_consistent_key(ctx, go_context.data);
+    get_Go_context(ctx, 2, stream_ctx_pos, false, &go_context);
+    void *status_ptr = get_argument(ctx, 3);
+    return writeStatus(ctx, status_ptr, &go_context);
+}
 
-    struct grpc_request_t *grpcReq_event_ptr = bpf_map_lookup_elem(&grpc_events, &key);
-    // if we fail to get an active grpc span, nothing to do here
-    if (grpcReq_event_ptr == NULL)
-    {
-        bpf_printk("failed to get grpcReq_event from events map");
+// func (ht *http2Server) writeStatus(s *Stream, st *status.Status)
+// https://github.com/grpc/grpc-go/blob/317271b232677b7869576a49855b01b9f4775d67/internal/transport/http2_server.go#L1045
+//
+// This is only compatible with versions > 1.69.0 of the Server.
+SEC("uprobe/http2Server_WriteStatus2")
+int uprobe_http2Server_WriteStatus2(struct pt_regs *ctx) {
+    u64 server_stream_pos = 2;
+    void *server_stream_ptr = get_argument(ctx, server_stream_pos);
+    if (server_stream_ptr == NULL) {
+        bpf_printk("grpc:server:uprobe/http2Server_WriteStatus2: failed to get ServerStream arg");
         return -1;
     }
 
+    void *stream_ptr;
+    long rc = bpf_probe_read_user(&stream_ptr, sizeof(stream_ptr), (void *)(server_stream_ptr + server_stream_stream_pos));
+    if (rc != 0) {
+        bpf_printk("grpc:server:uprobe/http2Server_WriteStatus2: failed to read stream_ptr");
+        return -2;
+    }
+
+    struct go_iface go_context = {0};
+    rc = bpf_probe_read_user(&go_context.type, sizeof(go_context.type), (void *)(stream_ptr + stream_ctx_pos));
+    if (rc != 0) {
+        bpf_printk("grpc:server:uprobe/http2Server_WriteStatus2: failed to read context type");
+        return -3;
+    }
+
+    rc = bpf_probe_read_user(&go_context.data, sizeof(go_context.data), get_go_interface_instance(stream_ptr + stream_ctx_pos));
+    if (rc != 0) {
+        bpf_printk("grpc:server:uprobe/http2Server_WriteStatus2: failed to read context data");
+        return -4;
+    }
+
     void *status_ptr = get_argument(ctx, 3);
-    void *s_ptr = 0;
-    bpf_probe_read_user(&s_ptr, sizeof(s_ptr), (void *)(status_ptr + status_s_pos));
-    // Get status code from Status.s pointer
-    bpf_probe_read_user(&grpcReq_event_ptr->status_code, sizeof(grpcReq_event_ptr->status_code), (void *)(s_ptr + status_code_pos));
-    return 0;
+    return writeStatus(ctx, status_ptr, &go_context);
 }
