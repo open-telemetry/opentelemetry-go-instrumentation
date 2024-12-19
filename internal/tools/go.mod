@@ -1,6 +1,8 @@
 module go.opentelemetry.io/auto/internal/tools
 
-go 1.22.7
+go 1.22.9
+
+toolchain go1.23.4
 
 require (
 	github.com/docker/docker v27.4.1+incompatible
@@ -100,7 +102,7 @@ require (
 	github.com/google/licenseclassifier/v2 v2.0.0 // indirect
 	github.com/gordonklaus/ineffassign v0.1.0 // indirect
 	github.com/gostaticanalysis/analysisutil v0.7.1 // indirect
-	github.com/gostaticanalysis/comment v1.4.2 // indirect
+	github.com/gostaticanalysis/comment v1.5.0 // indirect
 	github.com/gostaticanalysis/forcetypeassert v0.1.0 // indirect
 	github.com/gostaticanalysis/nilerr v0.1.1 // indirect
 	github.com/hashicorp/hcl v1.0.0 // indirect
