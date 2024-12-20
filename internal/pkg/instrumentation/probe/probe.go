@@ -12,6 +12,7 @@ import (
 	"io"
 	"log/slog"
 	"os"
+	"sync/atomic"
 
 	"github.com/cilium/ebpf"
 	"github.com/cilium/ebpf/link"
@@ -64,7 +65,7 @@ type Base[BPFObj any, BPFEvent any] struct {
 	Consts []Const
 	// Uprobes is a the collection of eBPF programs that need to be attached to
 	// the target process.
-	Uprobes []Uprobe
+	Uprobes []*Uprobe
 
 	// SpecFn is a creation function for an eBPF CollectionSpec related to the
 	// probe.
@@ -72,7 +73,7 @@ type Base[BPFObj any, BPFEvent any] struct {
 	// ProcessRecord is an optional processing function for the probe. If nil,
 	// all records will be read directly into a new BPFEvent using the
 	// encoding/binary package.
-	ProcessRecord func(perf.Record) (BPFEvent, error)
+	ProcessRecord func(perf.Record) (*BPFEvent, error)
 
 	reader          *perf.Reader
 	collection      *ebpf.Collection
@@ -198,7 +199,7 @@ func (i *Base[BPFObj, BPFEvent]) loadUprobes(exec *link.Executable, td *process.
 			continue
 		}
 
-		links, err := up.load(exec, td, i.collection)
+		err := up.load(exec, td, i.collection)
 		if err != nil {
 			var logFn func(string, ...any)
 			switch up.FailureMode {
@@ -213,9 +214,7 @@ func (i *Base[BPFObj, BPFEvent]) loadUprobes(exec *link.Executable, td *process.
 			logFn("failed to load uprobe", "probe", i.ID, "symbol", up.Sym, "error", err)
 			continue
 		}
-		for _, l := range links {
-			i.closers = append(i.closers, l)
-		}
+		i.closers = append(i.closers, up)
 	}
 	return nil
 }
@@ -268,18 +267,19 @@ func (i *Base[BPFObj, BPFEvent]) read() (*BPFEvent, error) {
 		return nil, err
 	}
 
-	var event BPFEvent
+	var event *BPFEvent
 	if i.ProcessRecord != nil {
 		event, err = i.ProcessRecord(record)
 	} else {
+		event = new(BPFEvent)
 		buf := bytes.NewReader(record.RawSample)
-		err = binary.Read(buf, binary.LittleEndian, &event)
+		err = binary.Read(buf, binary.LittleEndian, event)
 	}
 
 	if err != nil {
 		return nil, err
 	}
-	return &event, nil
+	return event, nil
 }
 
 // Close stops the Probe.
@@ -315,6 +315,9 @@ func (i *SpanProducer[BPFObj, BPFEvent]) Run(handle func(ptrace.ScopeSpans)) {
 			}
 			continue
 		}
+		if event == nil {
+			continue
+		}
 
 		ss := ptrace.NewScopeSpans()
 
@@ -344,6 +347,9 @@ func (i *TraceProducer[BPFObj, BPFEvent]) Run(handle func(ptrace.ScopeSpans)) {
 			}
 			continue
 		}
+		if event == nil {
+			continue
+		}
 
 		handle(i.ProcessFn(event))
 	}
@@ -365,50 +371,76 @@ type Uprobe struct {
 	// function specified by Sym. If ReturnProbe is empty, no eBPF program will be attached to the return of the function.
 	ReturnProbe string
 	DependsOn   []string
+
+	closers atomic.Pointer[[]io.Closer]
 }
 
-func (u *Uprobe) load(exec *link.Executable, target *process.TargetDetails, c *ebpf.Collection) ([]link.Link, error) {
+func (u *Uprobe) load(exec *link.Executable, target *process.TargetDetails, c *ebpf.Collection) error {
 	offset, err := target.GetFunctionOffset(u.Sym)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	var links []link.Link
+	var closers []io.Closer
 
 	if u.EntryProbe != "" {
 		entryProg, ok := c.Programs[u.EntryProbe]
 		if !ok {
-			return nil, fmt.Errorf("entry probe %s not found", u.EntryProbe)
+			return fmt.Errorf("entry probe %s not found", u.EntryProbe)
 		}
 		opts := &link.UprobeOptions{Address: offset, PID: target.PID}
 		l, err := exec.Uprobe("", entryProg, opts)
 		if err != nil {
-			return nil, err
+			return err
 		}
-		links = append(links, l)
+		closers = append(closers, l)
 	}
 
 	if u.ReturnProbe != "" {
 		retProg, ok := c.Programs[u.ReturnProbe]
 		if !ok {
-			return nil, fmt.Errorf("return probe %s not found", u.ReturnProbe)
+			return fmt.Errorf("return probe %s not found", u.ReturnProbe)
 		}
 		retOffsets, err := target.GetFunctionReturns(u.Sym)
 		if err != nil {
-			return nil, err
+			return err
 		}
 
 		for _, ret := range retOffsets {
 			opts := &link.UprobeOptions{Address: ret, PID: target.PID}
 			l, err := exec.Uprobe("", retProg, opts)
 			if err != nil {
-				return nil, err
+				return err
 			}
-			links = append(links, l)
+			closers = append(closers, l)
 		}
 	}
 
-	return links, nil
+	old := u.closers.Swap(&closers)
+	if old != nil {
+		// load called twice without calling Close. Try and handle gracefully.
+		var err error
+		for _, closer := range *old {
+			err = errors.Join(err, closer.Close())
+		}
+		return err
+	}
+
+	return nil
+}
+
+func (u *Uprobe) Close() error {
+	closersPtr := u.closers.Swap(nil)
+	if closersPtr == nil {
+		// No closers.
+		return nil
+	}
+
+	var err error
+	for _, closer := range *closersPtr {
+		err = errors.Join(err, closer.Close())
+	}
+	return err
 }
 
 // Const is an constant that needs to be injected into an eBPF program.

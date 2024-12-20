@@ -103,7 +103,7 @@ func New(logger *slog.Logger, version string) probe.Probe {
 				},
 				patternPathSupportedConst{},
 			},
-			Uprobes: []probe.Uprobe{
+			Uprobes: []*probe.Uprobe{
 				{
 					Sym:         "net/http.serverHandler.ServeHTTP",
 					EntryProbe:  "uprobe_serverHandler_ServeHTTP",

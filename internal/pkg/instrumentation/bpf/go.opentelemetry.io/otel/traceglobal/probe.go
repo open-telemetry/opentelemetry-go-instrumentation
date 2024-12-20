@@ -4,10 +4,12 @@
 package global
 
 import (
+	"bytes"
 	"encoding/binary"
 	"fmt"
 	"log/slog"
 	"math"
+	"sync"
 
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/ptrace"
@@ -18,6 +20,7 @@ import (
 	"go.opentelemetry.io/auto/internal/pkg/process"
 	"go.opentelemetry.io/auto/internal/pkg/structfield"
 
+	"github.com/cilium/ebpf/perf"
 	"github.com/hashicorp/go-version"
 	"golang.org/x/sys/unix"
 
@@ -40,6 +43,17 @@ func New(logger *slog.Logger) probe.Probe {
 	id := probe.ID{
 		SpanKind:        trace.SpanKindClient,
 		InstrumentedPkg: pkg,
+	}
+
+	uprobeNewStart := &probe.Uprobe{
+		Sym:         "go.opentelemetry.io/otel/internal/global.(*tracer).newSpan",
+		EntryProbe:  "uprobe_newStart",
+		FailureMode: probe.FailureModeWarn,
+	}
+
+	c := &converter{
+		logger:         logger,
+		uprobeNewStart: uprobeNewStart,
 	}
 	return &probe.TraceProducer[bpfObjects, event]{
 		Base: probe.Base[bpfObjects, event]{
@@ -107,12 +121,8 @@ func New(logger *slog.Logger) probe.Probe {
 				tracerIDContainsSchemaURL{},
 				tracerIDContainsScopeAttributes{},
 			},
-			Uprobes: []probe.Uprobe{
-				{
-					Sym:         "go.opentelemetry.io/otel/internal/global.(*tracer).newSpan",
-					EntryProbe:  "uprobe_newStart",
-					FailureMode: probe.FailureModeWarn,
-				},
+			Uprobes: []*probe.Uprobe{
+				uprobeNewStart,
 				{
 					Sym:         "go.opentelemetry.io/otel/internal/global.(*tracer).Start",
 					EntryProbe:  "uprobe_Start",
@@ -138,10 +148,53 @@ func New(logger *slog.Logger) probe.Probe {
 					FailureMode: probe.FailureModeIgnore,
 				},
 			},
-			SpecFn: loadBpf,
+			SpecFn:        loadBpf,
+			ProcessRecord: c.decodeEvent,
 		},
 		ProcessFn: processFn,
 	}
+}
+
+type recordKind uint32
+
+const (
+	recordKindTelemetry recordKind = iota
+	recordKindConrol
+)
+
+type converter struct {
+	logger *slog.Logger
+
+	uprobeNewStart   *probe.Uprobe
+	uprobeNewStartMu sync.Mutex
+}
+
+func (c *converter) decodeEvent(record perf.Record) (*event, error) {
+	reader := bytes.NewReader(record.RawSample)
+
+	var kind recordKind
+	err := binary.Read(reader, binary.LittleEndian, &kind)
+	if err != nil {
+		return nil, err
+	}
+
+	var e *event
+	switch kind {
+	case recordKindTelemetry:
+		e := new(event)
+		reader.Reset(record.RawSample)
+		err = binary.Read(reader, binary.LittleEndian, e)
+	case recordKindConrol:
+		c.uprobeNewStartMu.Lock()
+		if c.uprobeNewStart != nil {
+			err = c.uprobeNewStart.Close()
+			c.uprobeNewStart = nil
+		}
+		c.uprobeNewStartMu.Unlock()
+	default:
+		err = fmt.Errorf("unknown record kind: %d", kind)
+	}
+	return e, err
 }
 
 // tracerIDContainsSchemaURL is a Probe Const defining whether the tracer key contains schemaURL.
