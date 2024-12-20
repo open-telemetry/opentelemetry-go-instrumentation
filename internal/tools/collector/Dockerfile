@@ -10,5 +10,6 @@ RUN go build -o /usr/local/bin/collector ./...
 
 EXPOSE 4318
 EXPOSE 8080
+EXPOSE 8888
 EXPOSE 13133
 ENTRYPOINT ["/usr/local/bin/collector"]

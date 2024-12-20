@@ -53,9 +53,16 @@ exporters:
     rotation:
 
 service:
-  extensions: 
+  extensions:
     - health_check
   telemetry:
+    metrics:
+      readers:
+        - pull:
+            exporter:
+              prometheus:
+                host: '0.0.0.0'
+                port: 8888
     logs:
       level: "debug"
   pipelines:
