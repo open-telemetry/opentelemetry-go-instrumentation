@@ -52,9 +52,15 @@ services:
         condition: service_healthy
     entrypoint: ["/usr/local/bin/runner"]
     command: -bin=/usr/local/bin/app
-  shutdown-sidecar:
-    image: busybox:latest
+  executioner:
+    build:
+      context: ../../../../
+      dockerfile: internal/tools/executioner/Dockerfile
+    image: test-executioner:latest
+    pull_policy: build
     depends_on:
       e2e:
         condition: service_completed_successfully
-    entrypoint: /bin/sh -c "while ! wget -q -O - http://collector:8080/shutdown; do sleep 2; done; exit 0"
+    command:
+      - -collector-address=http://collector
+      - -span-count=12
