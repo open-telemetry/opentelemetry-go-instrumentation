@@ -45,7 +45,12 @@ typedef struct tracer_id {
     char schema_url[MAX_TRACER_SCHEMA_URL_LEN];
 } tracer_id_t;
 
+struct control_t {
+    u32 kind; // Required to be 1.
+};
+
 struct otel_span_t {
+    u32 kind; // Required to be 0.
     BASE_SPAN_PROPERTIES
     struct span_name_t span_name;
     otel_status_t status;
@@ -415,7 +420,10 @@ int uprobe_newStart(struct pt_regs *ctx) {
     }
 
     wrote_flag = true;
-    return 0;
+
+    // Signal this uprobe should be unloaded.
+    struct control_t ctrl = {1};
+    return bpf_perf_event_output(ctx, &events, BPF_F_CURRENT_CPU, (void *)(&ctrl), sizeof(struct control_t));
 }
 
 // This instrumentation attaches uprobe to the following function:
