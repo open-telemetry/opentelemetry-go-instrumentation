@@ -7,6 +7,7 @@ services:
     container_name: collector
     ports:
       - "4318:4318"  # OTLP HTTP receiver
+      - "8888:8888"  # Internal telemetry.
       - "8080:8080"  # Shutdown server
       - "13133:13133" # Health check endpoint
     command: -out=/target/traces-orig.json
@@ -50,9 +51,32 @@ services:
         condition: service_healthy
     entrypoint: ["/usr/local/bin/runner"]
     command: -bin=/usr/local/bin/app
-  shutdown-sidecar:
+  check:
     image: busybox:latest
     depends_on:
       e2e:
+        condition: service_completed_successfully
+    entrypoint: /bin/sh
+    command:
+      - -c
+      - |
+        data() {
+            wget -O - http://collector:8888/metrics \
+                | grep otelcol_exporter_sent_spans \
+                | grep 'exporter="file/trace"' \
+                | grep -o '[^ ]*$'
+        }
+
+        while [ "$(data)" -ne 3 ]
+        do
+            echo "Waiting on spans..."
+            sleep 2
+        done
+        echo "Received 3 spans, stopping."
+        exit 0
+  shutdown-sidecar:
+    image: busybox:latest
+    depends_on:
+      check:
         condition: service_completed_successfully
     entrypoint: /bin/sh -c "while ! wget -q -O - http://collector:8080/shutdown; do sleep 2; done; exit 0"
