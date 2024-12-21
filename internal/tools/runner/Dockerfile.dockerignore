@@ -1,0 +1,14 @@
+# since this image is built with root context, most of the files
+# need to be excluded for faster builds and to avoid spoiling build
+# cache due to unchecked files (like configs or random binaries).
+*
+
+# must-have toplevel files
+!/go.sum
+!/go.mod
+!/LICENSE
+!*.go
+
+# directories
+!/internal/pkg
+!/internal/tools
