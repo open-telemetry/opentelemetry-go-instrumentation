@@ -181,7 +181,7 @@ func (c *converter) decodeEvent(record perf.Record) (*event, error) {
 	var e *event
 	switch kind {
 	case recordKindTelemetry:
-		e := new(event)
+		e = new(event)
 		reader.Reset(record.RawSample)
 		err = binary.Read(reader, binary.LittleEndian, e)
 	case recordKindConrol:
