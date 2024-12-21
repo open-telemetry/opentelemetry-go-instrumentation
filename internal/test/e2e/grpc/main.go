@@ -8,9 +8,12 @@ package main
 
 import (
 	"context"
+	"flag"
 	"fmt"
 	"log"
 	"net"
+	"os"
+	"os/signal"
 	"time"
 
 	"go.opentelemetry.io/otel"
@@ -20,6 +23,8 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 	pb "google.golang.org/grpc/examples/helloworld/helloworld"
 	"google.golang.org/grpc/status"
+
+	"go.opentelemetry.io/auto/internal/test/trigger"
 )
 
 const port = 1701
@@ -42,6 +47,13 @@ func (s *server) SayHello(ctx context.Context, in *pb.HelloRequest) (*pb.HelloRe
 }
 
 func main() {
+	var trig trigger.Flag
+	flag.Var(&trig, "trigger", trig.Docs())
+	flag.Parse()
+
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
+	defer stop()
+
 	// Server.
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
 	if err != nil {
@@ -59,8 +71,11 @@ func main() {
 		done <- struct{}{}
 	}()
 
-	// Give time for auto-instrumentation to initialize.
-	time.Sleep(5 * time.Second)
+	// Wait for auto-instrumentation.
+	err = trig.Wait(ctx)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	// Client.
 	addr := fmt.Sprintf("localhost:%d", port)
@@ -72,7 +87,7 @@ func main() {
 	c := pb.NewGreeterClient(conn)
 
 	// Contact the server and print out its response.
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	ctx, cancel := context.WithTimeout(ctx, time.Second)
 	defer cancel()
 	r, err := c.SayHello(ctx, &pb.HelloRequest{Name: "world"})
 	if err != nil {

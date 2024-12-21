@@ -45,3 +45,5 @@ examples/kafka-go/producer/producer
 examples/kafka-go/consumer/consumer
 
 go.work*
+
+internal/test/e2e/autosdk/autosdk
