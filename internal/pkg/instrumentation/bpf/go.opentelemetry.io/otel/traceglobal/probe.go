@@ -36,6 +36,27 @@ import (
 const (
 	// pkg is the package being instrumented.
 	pkg = "go.opentelemetry.io/otel/internal/global"
+
+	// Minimum version of go.opentelemetry.io/otel that supports using the
+	// go.opentelemetry.io/auto/sdk in the global API.
+	minAutoSDK = "1.33.0"
+)
+
+var (
+	otelWithAutoSDK = probe.PackageConstrainst{
+		Package: "go.opentelemetry.io/otel",
+		Constraints: version.MustConstraints(
+			version.NewConstraint(fmt.Sprintf(">= %s", minAutoSDK)),
+		),
+		FailureMode: probe.FailureModeIgnore,
+	}
+	otelWithoutAutoSDK = probe.PackageConstrainst{
+		Package: "go.opentelemetry.io/otel",
+		Constraints: version.MustConstraints(
+			version.NewConstraint(fmt.Sprintf("< %s", minAutoSDK)),
+		),
+		FailureMode: probe.FailureModeIgnore,
+	}
 )
 
 // New returns a new [probe.Probe].
@@ -46,9 +67,11 @@ func New(logger *slog.Logger) probe.Probe {
 	}
 
 	uprobeNewStart := &probe.Uprobe{
-		Sym:         "go.opentelemetry.io/otel/internal/global.(*tracer).newSpan",
-		EntryProbe:  "uprobe_newStart",
-		FailureMode: probe.FailureModeWarn,
+		Sym:        "go.opentelemetry.io/otel/internal/global.(*tracer).newSpan",
+		EntryProbe: "uprobe_newStart",
+		PackageConstrainsts: []probe.PackageConstrainst{
+			otelWithAutoSDK,
+		},
 	}
 
 	c := &converter{
@@ -127,25 +150,40 @@ func New(logger *slog.Logger) probe.Probe {
 					Sym:         "go.opentelemetry.io/otel/internal/global.(*tracer).Start",
 					EntryProbe:  "uprobe_Start",
 					ReturnProbe: "uprobe_Start_Returns",
+					PackageConstrainsts: []probe.PackageConstrainst{
+						otelWithoutAutoSDK,
+					},
 				},
 				{
 					Sym:        "go.opentelemetry.io/otel/internal/global.(*nonRecordingSpan).End",
 					EntryProbe: "uprobe_End",
+					PackageConstrainsts: []probe.PackageConstrainst{
+						otelWithoutAutoSDK,
+					},
 				},
 				{
 					Sym:         "go.opentelemetry.io/otel/internal/global.(*nonRecordingSpan).SetAttributes",
 					EntryProbe:  "uprobe_SetAttributes",
 					FailureMode: probe.FailureModeIgnore,
+					PackageConstrainsts: []probe.PackageConstrainst{
+						otelWithoutAutoSDK,
+					},
 				},
 				{
 					Sym:         "go.opentelemetry.io/otel/internal/global.(*nonRecordingSpan).SetStatus",
 					EntryProbe:  "uprobe_SetStatus",
 					FailureMode: probe.FailureModeIgnore,
+					PackageConstrainsts: []probe.PackageConstrainst{
+						otelWithoutAutoSDK,
+					},
 				},
 				{
 					Sym:         "go.opentelemetry.io/otel/internal/global.(*nonRecordingSpan).SetName",
 					EntryProbe:  "uprobe_SetName",
 					FailureMode: probe.FailureModeIgnore,
+					PackageConstrainsts: []probe.PackageConstrainst{
+						otelWithoutAutoSDK,
+					},
 				},
 			},
 			SpecFn:        loadBpf,
