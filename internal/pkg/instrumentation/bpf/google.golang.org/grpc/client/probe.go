@@ -103,7 +103,7 @@ func New(logger *slog.Logger, version string) probe.Probe {
 					MinVersion: writeStatusMinVersion,
 				},
 			},
-			Uprobes: []probe.Uprobe{
+			Uprobes: []*probe.Uprobe{
 				{
 					Sym:         "google.golang.org/grpc.(*ClientConn).Invoke",
 					EntryProbe:  "uprobe_ClientConn_Invoke",

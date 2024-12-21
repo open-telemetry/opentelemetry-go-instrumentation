@@ -13,6 +13,8 @@ import (
 )
 
 type bpfOtelSpanT struct {
+	Kind      uint32
+	_         [4]byte
 	StartTime uint64
 	EndTime   uint64
 	Sc        bpfSpanContext
@@ -101,6 +103,7 @@ type bpfProgramSpecs struct {
 	UprobeSetStatus     *ebpf.ProgramSpec `ebpf:"uprobe_SetStatus"`
 	UprobeStart         *ebpf.ProgramSpec `ebpf:"uprobe_Start"`
 	UprobeStartReturns  *ebpf.ProgramSpec `ebpf:"uprobe_Start_Returns"`
+	UprobeNewStart      *ebpf.ProgramSpec `ebpf:"uprobe_newStart"`
 }
 
 // bpfMapSpecs contains maps before they are loaded into the kernel.
@@ -148,6 +151,7 @@ type bpfVariableSpecs struct {
 	TracerNamePos                   *ebpf.VariableSpec `ebpf:"tracer_name_pos"`
 	TracerProviderPos               *ebpf.VariableSpec `ebpf:"tracer_provider_pos"`
 	TracerProviderTracersPos        *ebpf.VariableSpec `ebpf:"tracer_provider_tracers_pos"`
+	WroteFlag                       *ebpf.VariableSpec `ebpf:"wrote_flag"`
 }
 
 // bpfObjects contains all objects after they have been loaded into the kernel.
@@ -230,6 +234,7 @@ type bpfVariables struct {
 	TracerNamePos                   *ebpf.Variable `ebpf:"tracer_name_pos"`
 	TracerProviderPos               *ebpf.Variable `ebpf:"tracer_provider_pos"`
 	TracerProviderTracersPos        *ebpf.Variable `ebpf:"tracer_provider_tracers_pos"`
+	WroteFlag                       *ebpf.Variable `ebpf:"wrote_flag"`
 }
 
 // bpfPrograms contains all programs after they have been loaded into the kernel.
@@ -242,6 +247,7 @@ type bpfPrograms struct {
 	UprobeSetStatus     *ebpf.Program `ebpf:"uprobe_SetStatus"`
 	UprobeStart         *ebpf.Program `ebpf:"uprobe_Start"`
 	UprobeStartReturns  *ebpf.Program `ebpf:"uprobe_Start_Returns"`
+	UprobeNewStart      *ebpf.Program `ebpf:"uprobe_newStart"`
 }
 
 func (p *bpfPrograms) Close() error {
@@ -252,6 +258,7 @@ func (p *bpfPrograms) Close() error {
 		p.UprobeSetStatus,
 		p.UprobeStart,
 		p.UprobeStartReturns,
+		p.UprobeNewStart,
 	)
 }
 
