@@ -23,7 +23,7 @@ services:
     image: test-runner:latest
     pull_policy: build
     entrypoint: ["true"] # service is just used to build image.
-  kafka-go:
+  e2e:
     build:
       context: ../../../../
       dockerfile: internal/test/e2e/kafka-go/Dockerfile
@@ -32,20 +32,14 @@ services:
         TRIGGER: "signal:SIGCONT"
     image: e2e-kafka-go:latest
     pull_policy: build
-    depends_on:
-      - runner
-    entrypoint: ["true"] # service is just used to build image.
-  e2e:
-    image: e2e-kafka-go:latest
-    pull_policy: build
     privileged: true
     environment:
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://collector:4318
       - OTEL_SERVICE_NAME=sample-app
       - OTEL_BSP_SCHEDULE_DELAY=60000
     depends_on:
-      kafka-go:
-        condition: service_completed_successfully
+      runner:
+        condition: service_started
       collector:
         condition: service_healthy
     entrypoint: ["/usr/local/bin/runner"]
