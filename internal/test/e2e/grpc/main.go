@@ -13,6 +13,8 @@ import (
 	"net"
 	"time"
 
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials/insecure"
@@ -27,6 +29,11 @@ type server struct {
 }
 
 func (s *server) SayHello(ctx context.Context, in *pb.HelloRequest) (*pb.HelloReply, error) {
+	tracer := otel.Tracer("go.opentelemetry.io/auto/internal/test/e2e/grpc")
+	_, span := tracer.Start(ctx, "SayHello")
+	defer span.End()
+
+	span.SetAttributes(attribute.String("name", in.GetName()))
 	log.Printf("Received: %v", in.GetName())
 	if in.GetName() == "unimplemented" {
 		return nil, status.Error(codes.Unimplemented, "unimplmented")

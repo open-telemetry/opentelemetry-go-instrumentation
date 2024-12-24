@@ -61,22 +61,50 @@ SCOPE="go.opentelemetry.io/auto/google.golang.org/grpc"
   assert_not_empty "$result"
 }
 
-@test "client, server :: spans have same trace ID" {
+@test "client, server, OTel :: spans have same trace ID" {
   # only check the first and 2nd client span (the 3rd is an error)
+  otel_trace_id=$( \
+	  spans_from_scope_named "go.opentelemetry.io/auto/internal/test/e2e/grpc" \
+	  | jq 'select(.name == "SayHello")' \
+	  | jq ".traceId" | jq -Rn '[inputs]' | jq -r .[0] \
+  )
   client_trace_id=$(client_spans_from_scope_named ${SCOPE} | jq ".traceId" | jq -Rn '[inputs]' | jq -r .[0])
   server_trace_id=$(server_spans_from_scope_named ${SCOPE} | jq ".traceId" | jq -Rn '[inputs]' | jq -r .[0])
+  assert_equal "$otel_trace_id" "$server_trace_id"
   assert_equal "$server_trace_id" "$client_trace_id"
 
+  otel_trace_id=$( \
+	  spans_from_scope_named "go.opentelemetry.io/auto/internal/test/e2e/grpc" \
+	  | jq 'select(.name == "SayHello")' \
+	  | jq ".traceId" | jq -Rn '[inputs]' | jq -r .[1] \
+  )
   client_trace_id=$(client_spans_from_scope_named ${SCOPE} | jq ".traceId" | jq -Rn '[inputs]' | jq -r .[1])
   server_trace_id=$(server_spans_from_scope_named ${SCOPE} | jq ".traceId" | jq -Rn '[inputs]' | jq -r .[1])
+  assert_equal "$otel_trace_id" "$server_trace_id"
   assert_equal "$server_trace_id" "$client_trace_id"
 }
 
-@test "client, server :: server span has client span as parent" {
+@test "client, server, OTel :: parent span ID" {
+  otel_parent_span_id=$( \
+	  spans_from_scope_named "go.opentelemetry.io/auto/internal/test/e2e/grpc" \
+	  | jq 'select(.name == "SayHello")' \
+	  | jq ".parentSpanId" | jq -Rn '[inputs]' | jq -r .[0] \
+  )
+  server_span_id=$(server_spans_from_scope_named ${SCOPE} | jq ".spanId"| jq -Rn '[inputs]' | jq -r .[0])
+  assert_equal "$server_span_id" "$otel_parent_span_id"
+
   server_parent_span_id=$(server_spans_from_scope_named ${SCOPE} | jq ".parentSpanId" | jq -Rn '[inputs]' | jq -r .[0])
   # only check the first and 2nd client span (the 3rd is an error)
   client_span_id=$(client_spans_from_scope_named ${SCOPE} | jq ".spanId"| jq -Rn '[inputs]' | jq -r .[0])
   assert_equal "$client_span_id" "$server_parent_span_id"
+
+  otel_parent_span_id=$( \
+	  spans_from_scope_named "go.opentelemetry.io/auto/internal/test/e2e/grpc" \
+	  | jq 'select(.name == "SayHello")' \
+	  | jq ".parentSpanId" | jq -Rn '[inputs]' | jq -r .[1] \
+  )
+  server_span_id=$(server_spans_from_scope_named ${SCOPE} | jq ".spanId"| jq -Rn '[inputs]' | jq -r .[1])
+  assert_equal "$server_span_id" "$otel_parent_span_id"
 
   server_parent_span_id=$(server_spans_from_scope_named ${SCOPE} | jq ".parentSpanId" | jq -Rn '[inputs]' | jq -r .[1])
   # only check the first and 2nd client span (the 3rd is an error)

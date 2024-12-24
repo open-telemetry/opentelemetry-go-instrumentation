@@ -6,11 +6,11 @@ package main
 import (
 	"database/sql"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"os"
 
 	_ "github.com/mattn/go-sqlite3"
-	"go.uber.org/zap"
 )
 
 const (
@@ -84,7 +84,7 @@ func (s *Server) queryDb(w http.ResponseWriter, req *http.Request) {
 		panic(err)
 	}
 
-	logger.Info("queryDb called")
+	slog.Info("queryDb called")
 	for rows.Next() {
 		var id int
 		var firstName string
@@ -99,8 +99,6 @@ func (s *Server) queryDb(w http.ResponseWriter, req *http.Request) {
 	}
 }
 
-var logger *zap.Logger
-
 func setupHandler(s *Server) *http.ServeMux {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/query_db", s.queryDb)
@@ -108,18 +106,12 @@ func setupHandler(s *Server) *http.ServeMux {
 }
 
 func main() {
-	var err error
-	logger, err = zap.NewDevelopment()
-	if err != nil {
-		fmt.Printf("error creating zap logger, error:%v", err)
-		return
-	}
 	port := fmt.Sprintf(":%d", 8080)
-	logger.Info("starting http server", zap.String("port", port))
+	slog.Info("starting http server", "port", port)
 
 	s := NewServer()
 	mux := setupHandler(s)
 	if err := http.ListenAndServe(port, mux); err != nil {
-		logger.Error("error running server", zap.Error(err))
+		slog.Error("error running server", "error", err)
 	}
 }

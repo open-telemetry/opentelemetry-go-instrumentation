@@ -73,9 +73,10 @@ func loadBpfObjects(obj interface{}, opts *ebpf.CollectionOptions) error {
 type bpfSpecs struct {
 	bpfProgramSpecs
 	bpfMapSpecs
+	bpfVariableSpecs
 }
 
-// bpfSpecs contains programs before they are loaded into the kernel.
+// bpfProgramSpecs contains programs before they are loaded into the kernel.
 //
 // It can be passed ebpf.CollectionSpec.Assign.
 type bpfProgramSpecs struct {
@@ -99,12 +100,38 @@ type bpfMapSpecs struct {
 	TrackedSpansBySc           *ebpf.MapSpec `ebpf:"tracked_spans_by_sc"`
 }
 
+// bpfVariableSpecs contains global variables before they are loaded into the kernel.
+//
+// It can be passed ebpf.CollectionSpec.Assign.
+type bpfVariableSpecs struct {
+	BucketsPtrPos        *ebpf.VariableSpec `ebpf:"buckets_ptr_pos"`
+	CtxPtrPos            *ebpf.VariableSpec `ebpf:"ctx_ptr_pos"`
+	EndAddr              *ebpf.VariableSpec `ebpf:"end_addr"`
+	HeadersPtrPos        *ebpf.VariableSpec `ebpf:"headers_ptr_pos"`
+	Hex                  *ebpf.VariableSpec `ebpf:"hex"`
+	HostPos              *ebpf.VariableSpec `ebpf:"host_pos"`
+	IsRegistersAbi       *ebpf.VariableSpec `ebpf:"is_registers_abi"`
+	MethodPtrPos         *ebpf.VariableSpec `ebpf:"method_ptr_pos"`
+	PatStrPos            *ebpf.VariableSpec `ebpf:"pat_str_pos"`
+	PathPtrPos           *ebpf.VariableSpec `ebpf:"path_ptr_pos"`
+	PatternPathSupported *ebpf.VariableSpec `ebpf:"pattern_path_supported"`
+	ProtoPos             *ebpf.VariableSpec `ebpf:"proto_pos"`
+	RemoteAddrPos        *ebpf.VariableSpec `ebpf:"remote_addr_pos"`
+	ReqPatPos            *ebpf.VariableSpec `ebpf:"req_pat_pos"`
+	ReqPtrPos            *ebpf.VariableSpec `ebpf:"req_ptr_pos"`
+	StartAddr            *ebpf.VariableSpec `ebpf:"start_addr"`
+	StatusCodePos        *ebpf.VariableSpec `ebpf:"status_code_pos"`
+	TotalCpus            *ebpf.VariableSpec `ebpf:"total_cpus"`
+	UrlPtrPos            *ebpf.VariableSpec `ebpf:"url_ptr_pos"`
+}
+
 // bpfObjects contains all objects after they have been loaded into the kernel.
 //
 // It can be passed to loadBpfObjects or ebpf.CollectionSpec.LoadAndAssign.
 type bpfObjects struct {
 	bpfPrograms
 	bpfMaps
+	bpfVariables
 }
 
 func (o *bpfObjects) Close() error {
@@ -143,6 +170,31 @@ func (m *bpfMaps) Close() error {
 		m.SliceArrayBuffMap,
 		m.TrackedSpansBySc,
 	)
+}
+
+// bpfVariables contains all global variables after they have been loaded into the kernel.
+//
+// It can be passed to loadBpfObjects or ebpf.CollectionSpec.LoadAndAssign.
+type bpfVariables struct {
+	BucketsPtrPos        *ebpf.Variable `ebpf:"buckets_ptr_pos"`
+	CtxPtrPos            *ebpf.Variable `ebpf:"ctx_ptr_pos"`
+	EndAddr              *ebpf.Variable `ebpf:"end_addr"`
+	HeadersPtrPos        *ebpf.Variable `ebpf:"headers_ptr_pos"`
+	Hex                  *ebpf.Variable `ebpf:"hex"`
+	HostPos              *ebpf.Variable `ebpf:"host_pos"`
+	IsRegistersAbi       *ebpf.Variable `ebpf:"is_registers_abi"`
+	MethodPtrPos         *ebpf.Variable `ebpf:"method_ptr_pos"`
+	PatStrPos            *ebpf.Variable `ebpf:"pat_str_pos"`
+	PathPtrPos           *ebpf.Variable `ebpf:"path_ptr_pos"`
+	PatternPathSupported *ebpf.Variable `ebpf:"pattern_path_supported"`
+	ProtoPos             *ebpf.Variable `ebpf:"proto_pos"`
+	RemoteAddrPos        *ebpf.Variable `ebpf:"remote_addr_pos"`
+	ReqPatPos            *ebpf.Variable `ebpf:"req_pat_pos"`
+	ReqPtrPos            *ebpf.Variable `ebpf:"req_ptr_pos"`
+	StartAddr            *ebpf.Variable `ebpf:"start_addr"`
+	StatusCodePos        *ebpf.Variable `ebpf:"status_code_pos"`
+	TotalCpus            *ebpf.Variable `ebpf:"total_cpus"`
+	UrlPtrPos            *ebpf.Variable `ebpf:"url_ptr_pos"`
 }
 
 // bpfPrograms contains all programs after they have been loaded into the kernel.

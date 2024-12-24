@@ -23,7 +23,8 @@ type bpfGrpcRequestT struct {
 		Ip   [16]uint8
 		Port uint32
 	}
-	_ [4]byte
+	HasStatus uint8
+	_         [3]byte
 }
 
 type bpfSliceArrayBuff struct{ Buff [1024]uint8 }
@@ -70,16 +71,20 @@ func loadBpfObjects(obj interface{}, opts *ebpf.CollectionOptions) error {
 type bpfSpecs struct {
 	bpfProgramSpecs
 	bpfMapSpecs
+	bpfVariableSpecs
 }
 
-// bpfSpecs contains programs before they are loaded into the kernel.
+// bpfProgramSpecs contains programs before they are loaded into the kernel.
 //
 // It can be passed ebpf.CollectionSpec.Assign.
 type bpfProgramSpecs struct {
-	UprobeHttp2ServerWriteStatus    *ebpf.ProgramSpec `ebpf:"uprobe_http2Server_WriteStatus"`
-	UprobeHttp2ServerOperateHeader  *ebpf.ProgramSpec `ebpf:"uprobe_http2Server_operateHeader"`
-	UprobeServerHandleStream        *ebpf.ProgramSpec `ebpf:"uprobe_server_handleStream"`
-	UprobeServerHandleStreamReturns *ebpf.ProgramSpec `ebpf:"uprobe_server_handleStream_Returns"`
+	UprobeHttp2ServerWriteStatus     *ebpf.ProgramSpec `ebpf:"uprobe_http2Server_WriteStatus"`
+	UprobeHttp2ServerWriteStatus2    *ebpf.ProgramSpec `ebpf:"uprobe_http2Server_WriteStatus2"`
+	UprobeHttp2ServerOperateHeader   *ebpf.ProgramSpec `ebpf:"uprobe_http2Server_operateHeader"`
+	UprobeServerHandleStream         *ebpf.ProgramSpec `ebpf:"uprobe_server_handleStream"`
+	UprobeServerHandleStream2        *ebpf.ProgramSpec `ebpf:"uprobe_server_handleStream2"`
+	UprobeServerHandleStream2Returns *ebpf.ProgramSpec `ebpf:"uprobe_server_handleStream2_Returns"`
+	UprobeServerHandleStreamReturns  *ebpf.ProgramSpec `ebpf:"uprobe_server_handleStream_Returns"`
 }
 
 // bpfMapSpecs contains maps before they are loaded into the kernel.
@@ -98,12 +103,38 @@ type bpfMapSpecs struct {
 	TrackedSpansBySc      *ebpf.MapSpec `ebpf:"tracked_spans_by_sc"`
 }
 
+// bpfVariableSpecs contains global variables before they are loaded into the kernel.
+//
+// It can be passed ebpf.CollectionSpec.Assign.
+type bpfVariableSpecs struct {
+	TCPAddrIP_offset      *ebpf.VariableSpec `ebpf:"TCPAddr_IP_offset"`
+	TCPAddrPortOffset     *ebpf.VariableSpec `ebpf:"TCPAddr_Port_offset"`
+	EndAddr               *ebpf.VariableSpec `ebpf:"end_addr"`
+	FrameFieldsPos        *ebpf.VariableSpec `ebpf:"frame_fields_pos"`
+	FrameStreamIdPod      *ebpf.VariableSpec `ebpf:"frame_stream_id_pod"`
+	Hex                   *ebpf.VariableSpec `ebpf:"hex"`
+	Http2serverPeerPos    *ebpf.VariableSpec `ebpf:"http2server_peer_pos"`
+	IsNewFramePos         *ebpf.VariableSpec `ebpf:"is_new_frame_pos"`
+	IsRegistersAbi        *ebpf.VariableSpec `ebpf:"is_registers_abi"`
+	PeerLocalAddrPos      *ebpf.VariableSpec `ebpf:"peer_local_addr_pos"`
+	ServerAddrSupported   *ebpf.VariableSpec `ebpf:"server_addr_supported"`
+	ServerStreamStreamPos *ebpf.VariableSpec `ebpf:"server_stream_stream_pos"`
+	StartAddr             *ebpf.VariableSpec `ebpf:"start_addr"`
+	StatusCodePos         *ebpf.VariableSpec `ebpf:"status_code_pos"`
+	StatusS_pos           *ebpf.VariableSpec `ebpf:"status_s_pos"`
+	StreamCtxPos          *ebpf.VariableSpec `ebpf:"stream_ctx_pos"`
+	StreamIdPos           *ebpf.VariableSpec `ebpf:"stream_id_pos"`
+	StreamMethodPtrPos    *ebpf.VariableSpec `ebpf:"stream_method_ptr_pos"`
+	TotalCpus             *ebpf.VariableSpec `ebpf:"total_cpus"`
+}
+
 // bpfObjects contains all objects after they have been loaded into the kernel.
 //
 // It can be passed to loadBpfObjects or ebpf.CollectionSpec.LoadAndAssign.
 type bpfObjects struct {
 	bpfPrograms
 	bpfMaps
+	bpfVariables
 }
 
 func (o *bpfObjects) Close() error {
@@ -144,21 +175,52 @@ func (m *bpfMaps) Close() error {
 	)
 }
 
+// bpfVariables contains all global variables after they have been loaded into the kernel.
+//
+// It can be passed to loadBpfObjects or ebpf.CollectionSpec.LoadAndAssign.
+type bpfVariables struct {
+	TCPAddrIP_offset      *ebpf.Variable `ebpf:"TCPAddr_IP_offset"`
+	TCPAddrPortOffset     *ebpf.Variable `ebpf:"TCPAddr_Port_offset"`
+	EndAddr               *ebpf.Variable `ebpf:"end_addr"`
+	FrameFieldsPos        *ebpf.Variable `ebpf:"frame_fields_pos"`
+	FrameStreamIdPod      *ebpf.Variable `ebpf:"frame_stream_id_pod"`
+	Hex                   *ebpf.Variable `ebpf:"hex"`
+	Http2serverPeerPos    *ebpf.Variable `ebpf:"http2server_peer_pos"`
+	IsNewFramePos         *ebpf.Variable `ebpf:"is_new_frame_pos"`
+	IsRegistersAbi        *ebpf.Variable `ebpf:"is_registers_abi"`
+	PeerLocalAddrPos      *ebpf.Variable `ebpf:"peer_local_addr_pos"`
+	ServerAddrSupported   *ebpf.Variable `ebpf:"server_addr_supported"`
+	ServerStreamStreamPos *ebpf.Variable `ebpf:"server_stream_stream_pos"`
+	StartAddr             *ebpf.Variable `ebpf:"start_addr"`
+	StatusCodePos         *ebpf.Variable `ebpf:"status_code_pos"`
+	StatusS_pos           *ebpf.Variable `ebpf:"status_s_pos"`
+	StreamCtxPos          *ebpf.Variable `ebpf:"stream_ctx_pos"`
+	StreamIdPos           *ebpf.Variable `ebpf:"stream_id_pos"`
+	StreamMethodPtrPos    *ebpf.Variable `ebpf:"stream_method_ptr_pos"`
+	TotalCpus             *ebpf.Variable `ebpf:"total_cpus"`
+}
+
 // bpfPrograms contains all programs after they have been loaded into the kernel.
 //
 // It can be passed to loadBpfObjects or ebpf.CollectionSpec.LoadAndAssign.
 type bpfPrograms struct {
-	UprobeHttp2ServerWriteStatus    *ebpf.Program `ebpf:"uprobe_http2Server_WriteStatus"`
-	UprobeHttp2ServerOperateHeader  *ebpf.Program `ebpf:"uprobe_http2Server_operateHeader"`
-	UprobeServerHandleStream        *ebpf.Program `ebpf:"uprobe_server_handleStream"`
-	UprobeServerHandleStreamReturns *ebpf.Program `ebpf:"uprobe_server_handleStream_Returns"`
+	UprobeHttp2ServerWriteStatus     *ebpf.Program `ebpf:"uprobe_http2Server_WriteStatus"`
+	UprobeHttp2ServerWriteStatus2    *ebpf.Program `ebpf:"uprobe_http2Server_WriteStatus2"`
+	UprobeHttp2ServerOperateHeader   *ebpf.Program `ebpf:"uprobe_http2Server_operateHeader"`
+	UprobeServerHandleStream         *ebpf.Program `ebpf:"uprobe_server_handleStream"`
+	UprobeServerHandleStream2        *ebpf.Program `ebpf:"uprobe_server_handleStream2"`
+	UprobeServerHandleStream2Returns *ebpf.Program `ebpf:"uprobe_server_handleStream2_Returns"`
+	UprobeServerHandleStreamReturns  *ebpf.Program `ebpf:"uprobe_server_handleStream_Returns"`
 }
 
 func (p *bpfPrograms) Close() error {
 	return _BpfClose(
 		p.UprobeHttp2ServerWriteStatus,
+		p.UprobeHttp2ServerWriteStatus2,
 		p.UprobeHttp2ServerOperateHeader,
 		p.UprobeServerHandleStream,
+		p.UprobeServerHandleStream2,
+		p.UprobeServerHandleStream2Returns,
 		p.UprobeServerHandleStreamReturns,
 	)
 }

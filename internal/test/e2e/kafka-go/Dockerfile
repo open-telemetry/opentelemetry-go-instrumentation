@@ -1,9 +1,18 @@
-FROM golang:1.23.3@sha256:2b01164887cecfa796f6bff6787c8c597d0e0e09e0694428fdde4a343303eb60 AS builder
-WORKDIR /sample-app
-COPY . .
-RUN CGO_ENABLED=0 go build -o main
+FROM golang:1.23.4@sha256:70031844b8c225351d0bb63e2c383f80db85d92ba894e3da7e13bcf80efa9a37 AS builder
 
-FROM bitnami/kafka:latest@sha256:978583d0859444d3bc6b6592b38b5af5a834d473db51441071a20e67e0afb945
+# pre-copy/cache go.mod for pre-downloading dependencies and only redownloading
+# them in subsequent builds if they change
+WORKDIR /usr/src/go.opentelemetry.io/auto/internal/test
+COPY go.mod go.sum ./
+RUN --mount=type=cache,target=/go/pkg go mod download && go mod verify
+
+WORKDIR /usr/src/go.opentelemetry.io/auto/internal/test/e2e/kafka-go
+COPY *.go .
+RUN --mount=type=cache,target=/root/.cache/go-build \
+    --mount=type=cache,target=/go/pkg \
+	CGO_ENABLED=0 go build -v -o /usr/local/bin/app .
+
+FROM bitnami/kafka:latest@sha256:3fb376e32af41bab0ad5d891b9749b69b0e500b285e0f3a6fc500affa5f29fb3
 
 USER root
 ENV KAFKA_CFG_PROCESS_ROLES=controller,broker
@@ -12,9 +21,12 @@ ENV KAFKA_CFG_LISTENERS=PLAINTEXT://127.0.0.1:9092,CONTROLLER://:9093
 ENV KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
 ENV KAFKA_CFG_CONTROLLER_QUORUM_VOTERS=0@127.0.0.1:9093
 ENV KAFKA_CFG_CONTROLLER_LISTENER_NAMES=CONTROLLER
-WORKDIR /sample-app
-COPY --from=builder /sample-app/main .
+COPY --from=builder /usr/local/bin/app /usr/local/bin/app
+
+# Add script target of /usr/local/bin/app
+WORKDIR /opt/kafka/
 COPY start.sh .
-RUN chmod +x start.sh
-WORKDIR /
-ENTRYPOINT ["/sample-app/start.sh"]
+RUN chmod +x /opt/kafka/start.sh
+
+ENTRYPOINT ["/usr/local/bin/app"]
+CMD ["-setup=/opt/kafka/start.sh"]

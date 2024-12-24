@@ -6,7 +6,7 @@
           {
             "key": "process.runtime.description",
             "value": {
-              "stringValue": "go version 1.23.3 linux/amd64"
+              "stringValue": "go version 1.23.4 linux/amd64"
             }
           },
           {
@@ -18,7 +18,7 @@
           {
             "key": "process.runtime.version",
             "value": {
-              "stringValue": "1.23.3"
+              "stringValue": "1.23.4"
             }
           },
           {
@@ -36,7 +36,7 @@
           {
             "key": "telemetry.distro.version",
             "value": {
-              "stringValue": "v0.18.0-alpha"
+              "stringValue": "v0.19.0-alpha"
             }
           },
           {
@@ -53,7 +53,7 @@
           "schemaUrl": "https://opentelemetry.io/schemas/1.26.0",
           "scope": {
             "name": "go.opentelemetry.io/auto/google.golang.org/grpc",
-            "version": "v0.18.0-alpha"
+            "version": "v0.19.0-alpha"
           },
           "spans": [
             {
@@ -283,6 +283,47 @@
               "status": {
                 "code": 2
               },
+              "traceId": "xxxxx"
+            }
+          ]
+        },
+        {
+          "scope": {
+            "name": "go.opentelemetry.io/auto/internal/test/e2e/grpc"
+          },
+          "spans": [
+            {
+              "attributes": [
+                {
+                  "key": "name",
+                  "value": {
+                    "stringValue": "world"
+                  }
+                }
+              ],
+              "flags": 256,
+              "kind": 3,
+              "name": "SayHello",
+              "parentSpanId": "xxxxx",
+              "spanId": "xxxxx",
+              "status": {},
+              "traceId": "xxxxx"
+            },
+            {
+              "attributes": [
+                {
+                  "key": "name",
+                  "value": {
+                    "stringValue": "unimplemented"
+                  }
+                }
+              ],
+              "flags": 256,
+              "kind": 3,
+              "name": "SayHello",
+              "parentSpanId": "xxxxx",
+              "spanId": "xxxxx",
+              "status": {},
               "traceId": "xxxxx"
             }
           ]

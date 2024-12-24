@@ -640,6 +640,75 @@ func TestSpanAttributeLimits(t *testing.T) {
 	}
 }
 
+func TestSpanAttributeValueLimits(t *testing.T) {
+	value := "hello world"
+
+	aStr := attribute.String("string", value)
+	aStrSlice := attribute.StringSlice("slice", []string{value, value})
+
+	eq := func(a, b []telemetry.Attr) bool {
+		if len(a) != len(b) {
+			return false
+		}
+		for i := range a {
+			if !a[i].Equal(b[i]) {
+				return false
+			}
+		}
+		return true
+	}
+
+	tests := []struct {
+		limit int
+		want  string
+	}{
+		{0, ""},
+		{2, value[:2]},
+		{11, value},
+		{-1, value},
+	}
+	for _, test := range tests {
+		t.Run("Limit/"+strconv.Itoa(test.limit), func(t *testing.T) {
+			orig := maxSpan.AttrValueLen
+			maxSpan.AttrValueLen = test.limit
+			t.Cleanup(func() { maxSpan.AttrValueLen = orig })
+
+			builder := spanBuilder{}
+
+			want := []telemetry.Attr{
+				telemetry.String("string", test.want),
+				telemetry.Slice(
+					"slice",
+					telemetry.StringValue(test.want),
+					telemetry.StringValue(test.want),
+				),
+			}
+
+			s := builder.Build()
+			s.SetAttributes(aStr, aStrSlice)
+			assert.Truef(t, eq(want, s.span.Attrs), "set span attributes: got %#v, want %#v", s.span.Attrs, want)
+
+			s.AddEvent("test", trace.WithAttributes(aStr, aStrSlice))
+			assert.Truef(t, eq(want, s.span.Events[0].Attrs), "span event attributes: got %#v, want %#v", s.span.Events[0].Attrs, want)
+
+			s.AddLink(trace.Link{
+				Attributes: []attribute.KeyValue{aStr, aStrSlice},
+			})
+			assert.Truef(t, eq(want, s.span.Links[0].Attrs), "span link attributes: got %#v, want %#v", s.span.Links[0].Attrs, want)
+
+			builder.Options = []trace.SpanStartOption{
+				trace.WithAttributes(aStr, aStrSlice),
+				trace.WithLinks(trace.Link{
+					Attributes: []attribute.KeyValue{aStr, aStrSlice},
+				}),
+			}
+			s = builder.Build()
+			assert.Truef(t, eq(want, s.span.Attrs), "new span attributes: got %#v, want %#v", s.span.Attrs, want)
+			assert.Truef(t, eq(want, s.span.Links[0].Attrs), "new span link attributes: got %#v, want %#v", s.span.Attrs, want)
+		})
+	}
+}
+
 func TestSpanTracerProvider(t *testing.T) {
 	var s span
 
@@ -666,6 +735,150 @@ func (b spanBuilder) Build() *span {
 	)
 
 	return s
+}
+
+func TestTruncate(t *testing.T) {
+	type group struct {
+		limit    int
+		input    string
+		expected string
+	}
+
+	tests := []struct {
+		name   string
+		groups []group
+	}{
+		// Edge case: limit is negative, no truncation should occur
+		{
+			name: "NoTruncation",
+			groups: []group{
+				{-1, "No truncation!", "No truncation!"},
+			},
+		},
+
+		// Edge case: string is already shorter than the limit, no truncation
+		// should occur
+		{
+			name: "ShortText",
+			groups: []group{
+				{10, "Short text", "Short text"},
+				{15, "Short text", "Short text"},
+				{100, "Short text", "Short text"},
+			},
+		},
+
+		// Edge case: truncation happens with ASCII characters only
+		{
+			name: "ASCIIOnly",
+			groups: []group{
+				{1, "Hello World!", "H"},
+				{5, "Hello World!", "Hello"},
+				{12, "Hello World!", "Hello World!"},
+			},
+		},
+
+		// Truncation including multi-byte characters (UTF-8)
+		{
+			name: "ValidUTF-8",
+			groups: []group{
+				{7, "Hello, 世界", "Hello, "},
+				{8, "Hello, 世界", "Hello, 世"},
+				{2, "こんにちは", "こん"},
+				{3, "こんにちは", "こんに"},
+				{5, "こんにちは", "こんにちは"},
+				{12, "こんにちは", "こんにちは"},
+			},
+		},
+
+		// Truncation with invalid UTF-8 characters
+		{
+			name: "InvalidUTF-8",
+			groups: []group{
+				{11, "Invalid\x80text", "Invalidtext"},
+				// Do not modify invalid text if equal to limit.
+				{11, "Valid text\x80", "Valid text\x80"},
+				// Do not modify invalid text if under limit.
+				{15, "Valid text\x80", "Valid text\x80"},
+				{5, "Hello\x80World", "Hello"},
+				{11, "Hello\x80World\x80!", "HelloWorld!"},
+				{15, "Hello\x80World\x80Test", "HelloWorldTest"},
+				{15, "Hello\x80\x80\x80World\x80Test", "HelloWorldTest"},
+				{15, "\x80\x80\x80Hello\x80\x80\x80World\x80Test\x80\x80", "HelloWorldTest"},
+			},
+		},
+
+		// Truncation with mixed validn and invalid UTF-8 characters
+		{
+			name: "MixedUTF-8",
+			groups: []group{
+				{6, "€"[0:2] + "hello€€", "hello€"},
+				{6, "€" + "€"[0:2] + "hello", "€hello"},
+				{11, "Valid text\x80📜", "Valid text📜"},
+				{11, "Valid text📜\x80", "Valid text📜"},
+				{14, "😊 Hello\x80World🌍🚀", "😊 HelloWorld🌍🚀"},
+				{14, "😊\x80 Hello\x80World🌍🚀", "😊 HelloWorld🌍🚀"},
+				{14, "😊\x80 Hello\x80World🌍\x80🚀", "😊 HelloWorld🌍🚀"},
+				{14, "😊\x80 Hello\x80World🌍\x80🚀\x80", "😊 HelloWorld🌍🚀"},
+				{14, "\x80😊\x80 Hello\x80World🌍\x80🚀\x80", "😊 HelloWorld🌍🚀"},
+			},
+		},
+
+		// Edge case: empty string, should return empty string
+		{
+			name: "Empty",
+			groups: []group{
+				{5, "", ""},
+			},
+		},
+
+		// Edge case: limit is 0, should return an empty string
+		{
+			name: "Zero",
+			groups: []group{
+				{0, "Some text", ""},
+				{0, "", ""},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		for _, g := range tt.groups {
+			t.Run(tt.name, func(t *testing.T) {
+				t.Parallel()
+
+				got := truncate(g.limit, g.input)
+				assert.Equalf(
+					t, g.expected, got,
+					"input: %q([]rune%v))\ngot: %q([]rune%v)\nwant %q([]rune%v)",
+					g.input, []rune(g.input),
+					got, []rune(got),
+					g.expected, []rune(g.expected),
+				)
+			})
+		}
+	}
+}
+
+func BenchmarkTruncate(b *testing.B) {
+	run := func(limit int, input string) func(b *testing.B) {
+		return func(b *testing.B) {
+			b.ReportAllocs()
+			b.RunParallel(func(pb *testing.PB) {
+				var out string
+				for pb.Next() {
+					out = truncate(limit, input)
+				}
+				_ = out
+			})
+		}
+	}
+	b.Run("Unlimited", run(-1, "hello 😊 world 🌍🚀"))
+	b.Run("Zero", run(0, "Some text"))
+	b.Run("Short", run(10, "Short Text"))
+	b.Run("ASCII", run(5, "Hello, World!"))
+	b.Run("ValidUTF-8", run(10, "hello 😊 world 🌍🚀"))
+	b.Run("InvalidUTF-8", run(6, "€"[0:2]+"hello€€"))
+	b.Run("MixedUTF-8", run(14, "\x80😊\x80 Hello\x80World🌍\x80🚀\x80"))
 }
 
 func TestSpanConcurrentSafe(t *testing.T) {

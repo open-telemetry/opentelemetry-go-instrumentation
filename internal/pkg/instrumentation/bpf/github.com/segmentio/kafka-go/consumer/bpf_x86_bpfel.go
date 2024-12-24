@@ -68,9 +68,10 @@ func loadBpfObjects(obj interface{}, opts *ebpf.CollectionOptions) error {
 type bpfSpecs struct {
 	bpfProgramSpecs
 	bpfMapSpecs
+	bpfVariableSpecs
 }
 
-// bpfSpecs contains programs before they are loaded into the kernel.
+// bpfProgramSpecs contains programs before they are loaded into the kernel.
 //
 // It can be passed ebpf.CollectionSpec.Assign.
 type bpfProgramSpecs struct {
@@ -95,12 +96,31 @@ type bpfMapSpecs struct {
 	TrackedSpansBySc       *ebpf.MapSpec `ebpf:"tracked_spans_by_sc"`
 }
 
+// bpfVariableSpecs contains global variables before they are loaded into the kernel.
+//
+// It can be passed ebpf.CollectionSpec.Assign.
+type bpfVariableSpecs struct {
+	EndAddr                *ebpf.VariableSpec `ebpf:"end_addr"`
+	Hex                    *ebpf.VariableSpec `ebpf:"hex"`
+	IsRegistersAbi         *ebpf.VariableSpec `ebpf:"is_registers_abi"`
+	MessageHeadersPos      *ebpf.VariableSpec `ebpf:"message_headers_pos"`
+	MessageKeyPos          *ebpf.VariableSpec `ebpf:"message_key_pos"`
+	MessageOffsetPos       *ebpf.VariableSpec `ebpf:"message_offset_pos"`
+	MessagePartitionPos    *ebpf.VariableSpec `ebpf:"message_partition_pos"`
+	MessageTopicPos        *ebpf.VariableSpec `ebpf:"message_topic_pos"`
+	ReaderConfigGroupIdPos *ebpf.VariableSpec `ebpf:"reader_config_group_id_pos"`
+	ReaderConfigPos        *ebpf.VariableSpec `ebpf:"reader_config_pos"`
+	StartAddr              *ebpf.VariableSpec `ebpf:"start_addr"`
+	TotalCpus              *ebpf.VariableSpec `ebpf:"total_cpus"`
+}
+
 // bpfObjects contains all objects after they have been loaded into the kernel.
 //
 // It can be passed to loadBpfObjects or ebpf.CollectionSpec.LoadAndAssign.
 type bpfObjects struct {
 	bpfPrograms
 	bpfMaps
+	bpfVariables
 }
 
 func (o *bpfObjects) Close() error {
@@ -141,6 +161,24 @@ func (m *bpfMaps) Close() error {
 		m.SliceArrayBuffMap,
 		m.TrackedSpansBySc,
 	)
+}
+
+// bpfVariables contains all global variables after they have been loaded into the kernel.
+//
+// It can be passed to loadBpfObjects or ebpf.CollectionSpec.LoadAndAssign.
+type bpfVariables struct {
+	EndAddr                *ebpf.Variable `ebpf:"end_addr"`
+	Hex                    *ebpf.Variable `ebpf:"hex"`
+	IsRegistersAbi         *ebpf.Variable `ebpf:"is_registers_abi"`
+	MessageHeadersPos      *ebpf.Variable `ebpf:"message_headers_pos"`
+	MessageKeyPos          *ebpf.Variable `ebpf:"message_key_pos"`
+	MessageOffsetPos       *ebpf.Variable `ebpf:"message_offset_pos"`
+	MessagePartitionPos    *ebpf.Variable `ebpf:"message_partition_pos"`
+	MessageTopicPos        *ebpf.Variable `ebpf:"message_topic_pos"`
+	ReaderConfigGroupIdPos *ebpf.Variable `ebpf:"reader_config_group_id_pos"`
+	ReaderConfigPos        *ebpf.Variable `ebpf:"reader_config_pos"`
+	StartAddr              *ebpf.Variable `ebpf:"start_addr"`
+	TotalCpus              *ebpf.Variable `ebpf:"total_cpus"`
 }
 
 // bpfPrograms contains all programs after they have been loaded into the kernel.

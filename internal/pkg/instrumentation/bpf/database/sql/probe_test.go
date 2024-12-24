@@ -18,7 +18,60 @@ import (
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/utils"
 )
 
+func BenchmarkProcessFn(b *testing.B) {
+	tests := []struct {
+		name  string
+		query string
+	}{
+		{
+			name:  "no query (baseline)",
+			query: "",
+		},
+		{
+			name:  "simple query",
+			query: "SELECT * FROM customers",
+		},
+		{
+			name:  "medium query",
+			query: "SELECT * FROM customers WHERE first_name='Mike' AND last_name IN ('Santa', 'Banana')",
+		},
+		{
+			name:  "hard query",
+			query: "WITH (SELECT last_name FROM customers WHERE first_name='Mike' AND country='North Pole') AS test_table SELECT * FROM test_table WHERE first_name='Mike' AND last_name IN ('Santa', 'Banana')",
+		},
+	}
+
+	start := time.Unix(0, time.Now().UnixNano()) // No wall clock.
+	end := start.Add(1 * time.Second)
+
+	startOffset := utils.TimeToBootOffset(start)
+	endOffset := utils.TimeToBootOffset(end)
+
+	traceID := trace.TraceID{1}
+	spanID := trace.SpanID{1}
+
+	for _, t := range tests {
+		b.Run(t.name, func(b *testing.B) {
+			var byteQuery [256]byte
+			copy(byteQuery[:], []byte(t.query))
+			b.ReportAllocs()
+			b.ResetTimer()
+			for i := 0; i < b.N; i++ {
+				_ = processFn(&event{
+					BaseSpanProperties: context.BaseSpanProperties{
+						StartTime:   startOffset,
+						EndTime:     endOffset,
+						SpanContext: context.EBPFSpanContext{TraceID: traceID, SpanID: spanID},
+					},
+					Query: byteQuery,
+				})
+			}
+		})
+	}
+}
+
 func TestProbeConvertEvent(t *testing.T) {
+	t.Setenv(ParseDBStatementEnvVar, "true")
 	start := time.Unix(0, time.Now().UnixNano()) // No wall clock.
 	end := start.Add(1 * time.Second)
 
@@ -41,14 +94,14 @@ func TestProbeConvertEvent(t *testing.T) {
 	want := func() ptrace.SpanSlice {
 		spans := ptrace.NewSpanSlice()
 		span := spans.AppendEmpty()
-		span.SetName("DB")
+		span.SetName("SELECT foo")
 		span.SetKind(ptrace.SpanKindClient)
 		span.SetStartTimestamp(utils.BootOffsetToTimestamp(startOffset))
 		span.SetEndTimestamp(utils.BootOffsetToTimestamp(endOffset))
 		span.SetTraceID(pcommon.TraceID(traceID))
 		span.SetSpanID(pcommon.SpanID(spanID))
 		span.SetFlags(uint32(trace.FlagsSampled))
-		utils.Attributes(span.Attributes(), semconv.DBQueryText("SELECT * FROM foo"))
+		utils.Attributes(span.Attributes(), semconv.DBQueryText("SELECT * FROM foo"), semconv.DBOperationName("SELECT"), semconv.DBCollectionName("foo"))
 		return spans
 	}()
 	assert.Equal(t, want, got)

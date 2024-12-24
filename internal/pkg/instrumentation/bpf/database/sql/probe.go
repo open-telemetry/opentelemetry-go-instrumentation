@@ -4,9 +4,12 @@
 package sql
 
 import (
+	"fmt"
 	"log/slog"
 	"os"
 	"strconv"
+
+	"github.com/xwb1989/sqlparser"
 
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/ptrace"
@@ -27,6 +30,9 @@ const (
 
 	// IncludeDBStatementEnvVar is the environment variable to opt-in for sql query inclusion in the trace.
 	IncludeDBStatementEnvVar = "OTEL_GO_AUTO_INCLUDE_DB_STATEMENT"
+
+	// ParseDBStatementEnvVar is the environment variable to opt-in for sql query operation in the trace.
+	ParseDBStatementEnvVar = "OTEL_GO_AUTO_PARSE_DB_STATEMENT"
 )
 
 // New returns a new [probe.Probe].
@@ -52,13 +58,13 @@ func New(logger *slog.Logger, version string) probe.Probe {
 					Sym:         "database/sql.(*DB).queryDC",
 					EntryProbe:  "uprobe_queryDC",
 					ReturnProbe: "uprobe_queryDC_Returns",
-					Optional:    true,
+					FailureMode: probe.FailureModeIgnore,
 				},
 				{
 					Sym:         "database/sql.(*DB).execDC",
 					EntryProbe:  "uprobe_execDC",
 					ReturnProbe: "uprobe_execDC_Returns",
-					Optional:    true,
+					FailureMode: probe.FailureModeIgnore,
 				},
 			},
 
@@ -97,6 +103,31 @@ func processFn(e *event) ptrace.SpanSlice {
 		span.Attributes().PutStr(string(semconv.DBQueryTextKey), query)
 	}
 
+	includeOperationVal := os.Getenv(ParseDBStatementEnvVar)
+	if includeOperationVal != "" {
+		include, err := strconv.ParseBool(includeOperationVal)
+		if err == nil && include {
+			operation, target, err := Parse(query)
+			if err == nil {
+				name := ""
+				if operation != "" {
+					span.Attributes().PutStr(string(semconv.DBOperationNameKey), operation)
+					name = operation
+				}
+				if target != "" {
+					span.Attributes().PutStr(string(semconv.DBCollectionNameKey), target)
+					if name != "" {
+						// if operation is in the name and target is available, set name to {operation} {target}
+						name += " " + target
+					}
+				}
+				if name != "" {
+					span.SetName(name)
+				}
+			}
+		}
+	}
+
 	return spans
 }
 
@@ -111,4 +142,43 @@ func shouldIncludeDBStatement() bool {
 	}
 
 	return false
+}
+
+// Parse takes a SQL query string and returns the parsed query statement type
+// and table name, or an error if parsing failed.
+func Parse(query string) (string, string, error) {
+	stmt, err := sqlparser.Parse(query)
+	if err != nil {
+		return "", "", fmt.Errorf("failed to parse query: %w", err)
+	}
+
+	switch stmt := stmt.(type) {
+	case *sqlparser.Select:
+		return "SELECT", getTableName(stmt.From), nil
+	case *sqlparser.Update:
+		return "UPDATE", getTableName(stmt.TableExprs), nil
+	case *sqlparser.Insert:
+		return "INSERT", stmt.Table.Name.String(), nil
+	case *sqlparser.Delete:
+		return "DELETE", getTableName(stmt.TableExprs), nil
+	default:
+		return "", "", fmt.Errorf("unsupported operation")
+	}
+}
+
+// getTableName extracts the table name from a SQL node.
+func getTableName(node sqlparser.SQLNode) string {
+	switch tableExpr := node.(type) {
+	case sqlparser.TableName:
+		return tableExpr.Name.String()
+	case sqlparser.TableExprs:
+		for _, expr := range tableExpr {
+			if tableName, ok := expr.(*sqlparser.AliasedTableExpr); ok {
+				if name, ok := tableName.Expr.(sqlparser.TableName); ok {
+					return name.Name.String()
+				}
+			}
+		}
+	}
+	return ""
 }

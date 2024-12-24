@@ -166,13 +166,52 @@ func (i *Base[BPFObj, BPFEvent]) InjectConsts(td *process.TargetDetails, spec *e
 
 func (i *Base[BPFObj, BPFEvent]) loadUprobes(exec *link.Executable, td *process.TargetDetails) error {
 	for _, up := range i.Uprobes {
-		links, err := up.load(exec, td, i.collection)
-		if err != nil {
-			if up.Optional {
-				i.Logger.Debug("failed to attach optional uprobe", "probe", i.ID, "symbol", up.Sym, "error", err)
+		var skip bool
+		for _, pc := range up.PackageConstrainsts {
+			if pc.Constraints.Check(td.Libraries[pc.Package]) {
 				continue
 			}
-			return err
+
+			var logFn func(string, ...any)
+			switch pc.FailureMode {
+			case FailureModeIgnore:
+				logFn = i.Logger.Debug
+			case FailureModeWarn:
+				logFn = i.Logger.Warn
+			default:
+				// Unknown and FailureModeError.
+				return fmt.Errorf("uprobe %s package constraint (%s) not meet", up.Sym, pc.Constraints.String())
+			}
+
+			logFn(
+				"package constraint not meet, skipping uprobe",
+				"probe", i.ID,
+				"symbol", up.Sym,
+				"package", pc.Package,
+				"constraint", pc.Constraints.String(),
+			)
+
+			skip = true
+			break
+		}
+		if skip {
+			continue
+		}
+
+		links, err := up.load(exec, td, i.collection)
+		if err != nil {
+			var logFn func(string, ...any)
+			switch up.FailureMode {
+			case FailureModeIgnore:
+				logFn = i.Logger.Debug
+			case FailureModeWarn:
+				logFn = i.Logger.Warn
+			default:
+				// Unknown and FailureModeError.
+				return err
+			}
+			logFn("failed to load uprobe", "probe", i.ID, "symbol", up.Sym, "error", err)
+			continue
 		}
 		for _, l := range links {
 			i.closers = append(i.closers, l)
@@ -314,10 +353,11 @@ func (i *TraceProducer[BPFObj, BPFEvent]) Run(handle func(ptrace.ScopeSpans)) {
 type Uprobe struct {
 	// Sym is the symbol name of the function to attach the eBPF program to.
 	Sym string
-	// Optional is a boolean flag informing if the Uprobe is optional. If the
-	// Uprobe is optional and fails to attach, the error is logged and
-	// processing continues.
-	Optional bool
+	// PackageConstrainsts are the evaluated when the Uprobe is loaded.
+	PackageConstrainsts []PackageConstrainst
+	// FailureMode defines the behavior that is performed when the Uprobe fails
+	// to attach.
+	FailureMode FailureMode
 	// EntryProbe is the name of the eBPF program to attach to the entry of the
 	// function specified by Sym. If EntryProbe is empty, no eBPF program will be attached to the entry of the function.
 	EntryProbe string

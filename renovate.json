@@ -3,7 +3,9 @@
   "extends": [
     "config:best-practices"
   ],
-  "ignorePaths": [],
+  "ignorePaths": [
+    "**/LICENSES/**"
+  ],
   "labels": ["Skip Changelog", "dependencies"],
   "postUpdateOptions" : [
     "gomodTidy"
@@ -13,12 +15,6 @@
       "matchManagers": ["gomod"],
       "matchDepTypes": ["indirect"],
       "enabled": true
-    },
-    {
-      "matchFileNames": ["internal/tools/**"],
-      "matchManagers": ["gomod"],
-      "matchDepTypes": ["indirect"],
-      "enabled": false
     },
     {
       "matchPackageNames": ["google.golang.org/genproto/googleapis/**"],

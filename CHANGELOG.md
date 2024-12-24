@@ -8,15 +8,35 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 
 ## [Unreleased]
 
-### Fixed
+### Added
 
-- The parsing of the tracers map for `go.opentelemetry.io/otel@v1.32.0` is fixed. ([#1319](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1319))
+- Support `SELECT`, `INSERT`, `UPDATE`, and `DELETE` for database span names and `db.operation.name` attribute. ([#1253](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1253))
+- Support `go.opentelemetry.io/otel@v1.33.0`. ([#1417](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1417))
+- Support `google.golang.org/grpc` `1.69.0`. ([#1417](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1417))
+- Update `google.golang.org/grpc` probe to work with versions `>= 1.69.0`. ([#1431](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1431))
+- Support `google.golang.org/grpc` `1.67.3`. ([#1452](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1452))
+- Support `google.golang.org/grpc` `1.68.2`. ([#1462](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1462))
+- Support `google.golang.org/grpc` `1.69.2`. ([#1467](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1467))
+- Support `golang.org/x/net` `0.33.0`. ([#1471](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1471))
+
+## [v0.19.0-alpha] - 2024-12-05
 
 ### Added
 
-- Add support for span attribute limits to `go.opentelemtry.io/auto/sdk`. ([#1315](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1315))
-- Add support for span link limits to `go.opentelemtry.io/auto/sdk`. ([#1320](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1320))
-- Add support for span event limits to `go.opentelemtry.io/auto/sdk`. ([#1324](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1324))
+- Support span attribute limits to `go.opentelemtry.io/auto/sdk`. ([#1315](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1315))
+- Support span link limits to `go.opentelemtry.io/auto/sdk`. ([#1320](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1320))
+- Support span event limits to `go.opentelemtry.io/auto/sdk`. ([#1324](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1324))
+- Support attribute value limits to `go.opentelemtry.io/auto/sdk`. ([#1325](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1325))
+- Support Go `1.22.10`. ([#1367](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1367))
+- Support Go `1.23.4`. ([#1367](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1367))
+- Support `golang.org/x/net` `0.32.0`. ([#1382](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1382))
+- Support `google.golang.org/grpc` `1.67.2`. ([#1382](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1382))
+- Support `google.golang.org/grpc` `1.68.1`. ([#1382](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1382))
+- Support `google.golang.org/grpc` `1.70.0-dev`. ([#1382](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1382))
+
+### Fixed
+
+- The parsing of the tracers map for `go.opentelemetry.io/otel@v1.32.0` is fixed. ([#1319](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1319))
 
 ## [v0.18.0-alpha] - 2024-11-20
 
@@ -508,7 +528,8 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 
 This is the first release of OpenTelemetry Go Automatic Instrumentation.
 
-[Unreleased]: https://github.com/open-telemetry/opentelemetry-go-instrumentation/compare/v0.18.0-alpha...HEAD
+[Unreleased]: https://github.com/open-telemetry/opentelemetry-go-instrumentation/compare/v0.19.0-alpha...HEAD
+[v0.19.0-alpha]: https://github.com/open-telemetry/opentelemetry-go-instrumentation/releases/tag/v0.19.0-alpha
 [v0.18.0-alpha]: https://github.com/open-telemetry/opentelemetry-go-instrumentation/releases/tag/v0.18.0-alpha
 [v0.17.0-alpha]: https://github.com/open-telemetry/opentelemetry-go-instrumentation/releases/tag/v0.17.0-alpha
 [v0.16.0-alpha]: https://github.com/open-telemetry/opentelemetry-go-instrumentation/releases/tag/v0.16.0-alpha

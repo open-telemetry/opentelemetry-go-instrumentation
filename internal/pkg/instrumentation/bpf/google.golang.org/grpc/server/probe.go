@@ -30,14 +30,29 @@ import (
 const (
 	// pkg is the package being instrumented.
 	pkg = "google.golang.org/grpc"
+
+	// writeStatusMin is the minimum version of grpc that supports status
+	// parsing.
+	writeStatusMin = "1.40.0"
+
+	// serverStream is the version the both the writeStatus and handleStream
+	// methods changed to accept a *transport.ServerStream instead of a
+	// *transport.Stream.
+	serverStream = "1.69.0"
+)
+
+var (
+	writeStatusMinVersion = version.Must(version.NewVersion(writeStatusMin))
+	serverStreamVersion   = version.Must(version.NewVersion(serverStream))
 )
 
 // New returns a new [probe.Probe].
-func New(logger *slog.Logger, version string) probe.Probe {
+func New(logger *slog.Logger, ver string) probe.Probe {
 	id := probe.ID{
 		SpanKind:        trace.SpanKindServer,
 		InstrumentedPkg: pkg,
 	}
+	p := &processor{Logger: logger}
 	return &probe.SpanProducer[bpfObjects, event]{
 		Base: probe.Base[bpfObjects, event]{
 			ID:     id,
@@ -45,7 +60,6 @@ func New(logger *slog.Logger, version string) probe.Probe {
 			Consts: []probe.Const{
 				probe.RegistersABIConst{},
 				probe.AllocationConst{},
-				writeStatusConst{},
 				serverAddrConst{},
 				probe.StructFieldConst{
 					Key: "stream_method_ptr_pos",
@@ -58,6 +72,13 @@ func New(logger *slog.Logger, version string) probe.Probe {
 				probe.StructFieldConst{
 					Key: "stream_ctx_pos",
 					Val: structfield.NewID("google.golang.org/grpc", "google.golang.org/grpc/internal/transport", "Stream", "ctx"),
+				},
+				probe.StructFieldConstMinVersion{
+					StructField: probe.StructFieldConst{
+						Key: "server_stream_stream_pos",
+						Val: structfield.NewID("google.golang.org/grpc", "google.golang.org/grpc/internal/transport", "ServerStream", "Stream"),
+					},
+					MinVersion: serverStreamVersion,
 				},
 				probe.StructFieldConst{
 					Key: "frame_fields_pos",
@@ -110,6 +131,29 @@ func New(logger *slog.Logger, version string) probe.Probe {
 					Sym:         "google.golang.org/grpc.(*Server).handleStream",
 					EntryProbe:  "uprobe_server_handleStream",
 					ReturnProbe: "uprobe_server_handleStream_Returns",
+					PackageConstrainsts: []probe.PackageConstrainst{
+						{
+							Package: "google.golang.org/grpc",
+							Constraints: version.MustConstraints(
+								version.NewConstraint(fmt.Sprintf("< %s", serverStream)),
+							),
+							FailureMode: probe.FailureModeIgnore,
+						},
+					},
+				},
+				{
+					Sym:         "google.golang.org/grpc.(*Server).handleStream",
+					EntryProbe:  "uprobe_server_handleStream2",
+					ReturnProbe: "uprobe_server_handleStream2_Returns",
+					PackageConstrainsts: []probe.PackageConstrainst{
+						{
+							Package: "google.golang.org/grpc",
+							Constraints: version.MustConstraints(
+								version.NewConstraint(fmt.Sprintf(">= %s", serverStream)),
+							),
+							FailureMode: probe.FailureModeIgnore,
+						},
+					},
 				},
 				{
 					Sym:        "google.golang.org/grpc/internal/transport.(*http2Server).operateHeaders",
@@ -118,13 +162,37 @@ func New(logger *slog.Logger, version string) probe.Probe {
 				{
 					Sym:        "google.golang.org/grpc/internal/transport.(*http2Server).WriteStatus",
 					EntryProbe: "uprobe_http2Server_WriteStatus",
+					PackageConstrainsts: []probe.PackageConstrainst{
+						{
+							Package: "google.golang.org/grpc",
+							Constraints: version.MustConstraints(
+								version.NewConstraint(
+									fmt.Sprintf("> %s, < %s", writeStatusMin, serverStream),
+								),
+							),
+							FailureMode: probe.FailureModeIgnore,
+						},
+					},
+				},
+				{
+					Sym:        "google.golang.org/grpc/internal/transport.(*http2Server).writeStatus",
+					EntryProbe: "uprobe_http2Server_WriteStatus2",
+					PackageConstrainsts: []probe.PackageConstrainst{
+						{
+							Package: "google.golang.org/grpc",
+							Constraints: version.MustConstraints(
+								version.NewConstraint(fmt.Sprintf(">= %s", serverStream)),
+							),
+							FailureMode: probe.FailureModeIgnore,
+						},
+					},
 				},
 			},
 			SpecFn: loadBpf,
 		},
-		Version:   version,
+		Version:   ver,
 		SchemaURL: semconv.SchemaURL,
-		ProcessFn: processFn,
+		ProcessFn: p.processFn,
 	}
 }
 
@@ -145,24 +213,6 @@ func (c framePosConst) InjectOption(td *process.TargetDetails) (inject.Option, e
 	}
 
 	return inject.WithKeyValue("is_new_frame_pos", ver.GreaterThanOrEqual(paramChangeVer)), nil
-}
-
-type writeStatusConst struct{}
-
-var (
-	writeStatus           = false
-	writeStatusMinVersion = version.Must(version.NewVersion("1.40.0"))
-)
-
-func (w writeStatusConst) InjectOption(td *process.TargetDetails) (inject.Option, error) {
-	ver, ok := td.Libraries[pkg]
-	if !ok {
-		return nil, fmt.Errorf("unknown module version: %s", pkg)
-	}
-	if ver.GreaterThanOrEqual(writeStatusMinVersion) {
-		writeStatus = true
-	}
-	return inject.WithKeyValue("write_status_supported", writeStatus), nil
 }
 
 type serverAddrConst struct{}
@@ -189,6 +239,7 @@ type event struct {
 	Method     [100]byte
 	StatusCode int32
 	LocalAddr  NetAddr
+	HasStatus  uint8
 }
 
 type NetAddr struct {
@@ -196,7 +247,12 @@ type NetAddr struct {
 	Port int32
 }
 
-func processFn(e *event) ptrace.SpanSlice {
+type processor struct {
+	Logger *slog.Logger
+}
+
+func (p *processor) processFn(e *event) ptrace.SpanSlice {
+	p.Logger.Debug("processing event", "event", e)
 	method := unix.ByteSliceToString(e.Method[:])
 
 	spans := ptrace.NewSpanSlice()
@@ -219,7 +275,7 @@ func processFn(e *event) ptrace.SpanSlice {
 		semconv.RPCGRPCStatusCodeKey.Int(int(e.StatusCode)),
 	}
 
-	if writeStatus {
+	if e.HasStatus != 0 {
 		attrs = append(attrs, semconv.RPCGRPCStatusCodeKey.Int(int(e.StatusCode)))
 
 		// Set server status codes per semconv:

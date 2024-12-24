@@ -19,7 +19,7 @@ jobs:
           IMG=otel-go-instrumentation:latest make docker-build
           docker save otel-go-instrumentation:latest -o otel-go-instrumentation.tar
       - name: Upload Docker image artifact
-        uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882 # v4
+        uses: actions/upload-artifact@6f51ac03b9356f520e9adb1b1b7802705f340c2b # v4
         with:
           name: otel-go-instrumentation
           path: otel-go-instrumentation.tar
@@ -34,8 +34,6 @@ jobs:
     steps:
       - name: Checkout Repo
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
-      - name: Setup BATS
-        uses: mig4/setup-bats@af9a00deb21b5d795cabfeaa8d9060410377686d # v1
       - name: Build sample app from script
         if: ${{ hashFiles(format('internal/test/e2e/{0}/build.sh', matrix.library)) != '' }}
         run: ./internal/test/e2e/${{ matrix.library }}/build.sh -t sample-app:latest
@@ -48,7 +46,7 @@ jobs:
         with:
           version: v3.9.0
       - name: Create kind cluster
-        uses: helm/kind-action@0025e74a8c7512023d06dc019c617aa3cf561fde # v1.10.0
+        uses: helm/kind-action@ae94020eaf628e9b9b9f341a10cc0cdcf5c018fb # v1.11.0
         with:
           node_image: kindest/node:${{ matrix.k8s-version }}
           kubectl_version: ${{ matrix.k8s-version }}
@@ -109,6 +107,9 @@ jobs:
           kubectl logs -l app=sample -c auto-instrumentation --tail=300
           exit 1
         if: always() && steps.job-status.outcome == 'failure'
+      - name: Setup BATS
+        if: always() && steps.job-status.outcome == 'success'
+        uses: mig4/setup-bats@af9a00deb21b5d795cabfeaa8d9060410377686d # v1
       - name: verify output and redact to traces.json
         run: |
           bats ./internal/test/e2e/${{ matrix.library }}/verify.bats
