@@ -129,28 +129,8 @@ static __always_inline int s64_to_str(s64 value, char *buf, int buf_size) {
     return pos + u64_to_str((u64)value, buf + pos, buf_size - pos);
 }
 
-static __always_inline int u32_to_str(u32 value, char *buf, int buf_size) {
-    return u64_to_str((u64)value, buf, buf_size);
-}
-
-static __always_inline int s32_to_str(s32 value, char *buf, int buf_size) {
-    return s64_to_str((s64)value, buf, buf_size);
-}
-
-static __always_inline int u16_to_str(u16 value, char *buf, int buf_size) {
-    return u64_to_str((u64)value, buf, buf_size);
-}
-
-static __always_inline int s16_to_str(s16 value, char *buf, int buf_size) {
-    return s64_to_str((s64)value, buf, buf_size);
-}
-
 static __always_inline int u8_to_str(u8 value, char *buf, int buf_size) {
     return u64_to_str((u64)value, buf, buf_size);
-}
-
-static __always_inline int s8_to_str(s8 value, char *buf, int buf_size) {
-    return s64_to_str((s64)value, buf, buf_size);
 }
 
 #endif
