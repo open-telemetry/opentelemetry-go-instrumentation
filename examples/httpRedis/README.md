@@ -1,6 +1,6 @@
 # Example of Auto instrumentation of HTTP server + Redis
 
-This example only test [go-redis/v8](github.com/go-redis/redis/v8).
+This example only test [go-redis/v8](https://pkg.go.dev/github.com/go-redis/redis/v8).
 
 **It is highly recommended to deploy the demo using docker compose**.
 
@@ -28,7 +28,7 @@ Every hit to the server should generate a trace that we can observe in [Jaeger U
 
 You can setup a local [OpenTelemetry Collector](https://github.com/open-telemetry/opentelemetry-collector) and start it.
 
-Assuming you've exposed port `4318`, and configured the [Jaeger](jaegertracing.io/docs) backend service in collector.
+Assuming you've exposed port `4318`, and configured the [Jaeger](http://jaegertracing.io/docs) backend service in collector.
 
 
 ### Setup auto-instrumentation binary
