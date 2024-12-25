@@ -4,6 +4,7 @@ on:
   push:
     branches: [ main ]
   pull_request:
+
 env:
   GO_VERSION: "~1.23.1"
 
@@ -59,48 +60,6 @@ jobs:
       - name: Build auto-instrumentation
         run: |
           make docker-build
-  local-build-linux-amd64:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout Repo
-        uses: actions/checkout@v4
-      - name: Env Setup
-        run: sudo apt-get update && sudo apt-get install -y clang llvm libbpf-dev
-      - name: Build
-        run: |
-          make build
-      - name: Cache binary
-        uses: actions/cache@v4
-        with:
-          path: ./otel-go-instrumentation-linux-amd64
-          key: ${{ github.sha }}-otel-go-instrumentation-linux-amd64
-      - run: make check-clean-work-tree
-  local-build-darwin-arm64:
-    runs-on: macos-latest
-    steps:
-      - name: Checkout Repo
-        uses: actions/checkout@v4
-      - name: Setup Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: '1.23'
-      - name: Validate Go Version
-        run: go version
-      - name: Install build dependencies
-        run: |
-          brew update && brew install llvm
-          echo "PATH=/opt/homebrew/opt/llvm/bin:$PATH" >> $GITHUB_ENV;
-          echo "LDFLAGS=-L/opt/homebrew/opt/llvm/lib -L/opt/homebrew/opt/llvm/lib/c++ -Wl,-rpath,/opt/homebrew/opt/llvm/lib/c++" >> $GITHUB_ENV;
-          echo "CPPFLAGS=-I/opt/homebrew/opt/llvm/include" >> $GITHUB_ENV;
-      - name: Build
-        run: |
-          make build
-      - name: Cache binary
-        uses: actions/cache@v4
-        with:
-          path: ./otel-go-instrumentation-darwin-arm64
-          key: ${{ github.sha }}-otel-go-instrumentation-darwin-arm64
-      - run: make check-clean-work-tree
   offsets:
     runs-on: ubuntu-latest
     steps:

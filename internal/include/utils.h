@@ -6,6 +6,7 @@
 
 #include "bpf_helpers.h"
 
+#define MAX_DIGITS 21
 
 static __always_inline bool bpf_memcmp(char *s1, char *s2, s32 size)
 {
@@ -83,6 +84,73 @@ static __always_inline bool bpf_is_zero(unsigned char *buff, u32 size)
     }
 
     return true;
+}
+
+static __always_inline int u64_to_str(u64 value, char *buf, int buf_size) {
+    if (!buf || buf_size < 2)
+        return 0;
+    if (value == 0) {
+        buf[0] = '0';
+        buf[1] = '\0';
+        return 1;
+    }
+
+    int pos = 0;
+    char tmp[MAX_DIGITS];
+    
+    while (value) {
+        if (pos >= MAX_DIGITS)
+            return 0;
+        tmp[pos++] = '0' + (value % 10);
+        value /= 10;
+    }
+    
+    if (pos >= buf_size)
+        return 0;
+        
+    for (int i = 0; i < pos; i++) {
+        buf[i] = tmp[pos - 1 - i];
+    }
+    buf[pos] = '\0';
+    return pos;
+}
+
+static __always_inline int s64_to_str(s64 value, char *buf, int buf_size) {
+    if (!buf || buf_size < 2)
+        return 0;
+
+    int pos = 0;
+    
+    if (value < 0) {
+        buf[pos++] = '-';
+        value = -value;
+    }
+    
+    return pos + u64_to_str((u64)value, buf + pos, buf_size - pos);
+}
+
+static __always_inline int u32_to_str(u32 value, char *buf, int buf_size) {
+    return u64_to_str((u64)value, buf, buf_size);
+}
+
+static __always_inline int s32_to_str(s32 value, char *buf, int buf_size) {
+    return s64_to_str((s64)value, buf, buf_size);
+}
+
+static __always_inline int u16_to_str(u16 value, char *buf, int buf_size) {
+    return u64_to_str((u64)value, buf, buf_size);
+}
+
+static __always_inline int s16_to_str(s16 value, char *buf, int buf_size) {
+    return s64_to_str((s64)value, buf, buf_size);
+}
+
+static __always_inline int u8_to_str(u8 value, char *buf, int buf_size) {
+    return u64_to_str((u64)value, buf, buf_size);
+}
+
+static __always_inline int s8_to_str(s8 value, char *buf, int buf_size) {
+    return s64_to_str((s64)value, buf, buf_size);
 }
 
 #endif

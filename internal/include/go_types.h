@@ -11,6 +11,7 @@
 /* Max size of slice array in bytes 
  Keep a power of 2 to help with masks */
 #define MAX_SLICE_ARRAY_SIZE 1024
+#define MAX_STR_SIZE 256
 
 typedef struct go_string
 {
@@ -182,5 +183,126 @@ static __always_inline bool get_go_string_from_user_ptr(void *user_str_ptr, char
     }
 
     return true;
+}
+
+// The input param of `interface{}` is internally represented as an eface type. 
+// This function is to retrieve the actual type of the parameter.
+/*
+    type eface struct {
+        _type *_type
+        data  unsafe.Pointer
+    }
+*/
+static __always_inline u8 get_eface_true_type(u64 eface_type_ptr) {
+    /*
+        in src file `src/internal/abi/type.go`, `Type` definition is:
+        type Type struct {
+            Size_       uintptr
+            PtrBytes    uintptr
+            ...
+            Kind_       Kind    // enumeration for C
+            ...
+        }
+    */
+   // `kind` is the field `Kind_` in `Type` struct, whose offset is 23
+    u8 kind = 0;
+    u64 eface_type_offset = 23; // `kind` field offset: 8 + 8 + 4 + 1 + 1 + 1
+    bpf_probe_read(&kind, sizeof(kind), (void *)(eface_type_ptr+eface_type_offset));
+    // bpf_printk("get an interface input param with true type: %d", kind);
+    return kind;
+}
+
+// This function is not fully complete.
+// Get the true value of a interface{} type variable
+// A most common case is function input param
+// All types val will be converted to STRING!
+static __always_inline int get_eface_true_val(char *dst, u64 eface_type_ptr, u64 eface_val_ptr) {
+    u8 varible_kind = get_eface_true_type(eface_type_ptr);
+    // ---------------- GET DATA OF INTERFACE ----------------
+    // For bool type
+    u8 eface_bool;
+    u64 eface_val = 0;
+    void *eface_data_ptr;
+    u64 eface_val_len;
+    // For go type int(int8, int16, int32, ...)
+    s8 eface_int8_val;
+    s16 eface_int16_val;
+    s32 eface_int32_val;
+    s64 eface_int64_val;
+    // For go type uint(uint, uint8, uint16, ...)
+    u64 eface_uint_val;
+    u8 eface_uint8_val;
+    u16 eface_uint16_val;
+    u32 eface_uint32_val;
+    u64 eface_uint64_val;
+    // For go type uintptr
+    u64 eface_uintptr_val;
+    // for go type string, `str_size` also for converted string length
+    u64 str_size;
+    u64 str_val_addr;
+    
+    // `src/internal/abi/type.go`
+    switch (varible_kind)
+    {
+    case 0:
+        bpf_printk("eface invalid type");
+        break;
+    case 1: // bool
+        bpf_probe_read(&eface_bool, sizeof(eface_val), (void *)eface_val_ptr);
+        str_size = (u64)u8_to_str(eface_bool, dst, sizeof(dst));
+        break;
+    case 2: // int
+        bpf_probe_read(&eface_val, sizeof(eface_val), (void *)eface_val_ptr);
+        break;
+    case 3: // int8
+        bpf_probe_read(&eface_int8_val, sizeof(eface_int8_val), (void *)eface_val_ptr);
+        break;
+    case 4: // int16
+        break;
+    case 5: // int32
+        break;
+    case 6: // int64
+        bpf_probe_read(&eface_int64_val, sizeof(eface_int64_val), (void *)eface_val_ptr);
+        str_size = (u64)s64_to_str(eface_int64_val, dst, sizeof(dst));
+        break;
+    // TODO:
+    case 7: // uint
+        break;
+    case 8: // uint8
+        break;
+    case 9: // uint16
+        break;
+    case 10: // uint32
+        break;
+    case 11: // uint64
+        break;
+    case 12: // uintptr
+        break;
+    case 13: // float32
+        break;
+    case 14: // float64
+        break;
+    case 21: // map
+        break;
+    case 23: // slice
+        break;
+    case 24: // string. Get the length first, then retrieve the byte
+        /*
+            type StringHeader struct {
+                Data uintptr
+                Len  int
+            }
+        */
+        eface_val_len = 0;
+        bpf_probe_read(&eface_val_len, sizeof(eface_val_len), (void *)(eface_val_ptr+8));
+        str_size = MAX_STR_SIZE < eface_val_len ? MAX_STR_SIZE : eface_val_len;
+        str_val_addr = 0;
+        bpf_probe_read(&str_val_addr, sizeof(str_val_addr), (void *)eface_val_ptr);
+        bpf_probe_read(dst, str_size, (void *)str_val_addr);
+        break;
+    default:
+        break;
+    }
+    return str_size;
 }
 #endif
