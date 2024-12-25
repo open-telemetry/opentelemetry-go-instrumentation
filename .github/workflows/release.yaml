@@ -3,10 +3,6 @@ on:
   push:
     tags:
       - 'v*.*.*'
-  release:
-    types: [created]
-    tags:
-      - 'v*.*.*'
 jobs:
   build-and-push-image:
     runs-on: ubuntu-latest
@@ -52,48 +48,3 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           platforms: linux/amd64,linux/arm64
-  build-and-push-binary:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      packages: write
-    env:
-      BINARY_NAME: otel-go-instrumentation
-    steps:
-      - uses: actions/checkout@v4
-
-      # - name: Download build artifact
-      #   uses: actions/download-artifact@v4
-      #   with:
-      #     name: otel-go-instrumentation
-      #     path: ./otel-go-instrumentation
-      #     run-id: ${{ github.run_id }}
-      #     github-token: ${{ secrets.GITHUB_TOKEN }}
-      - name: Retrieve binary from cache
-        uses: actions/cache@v4
-        with:
-          path: ./otel-go-instrumentation
-          key: ${{ github.sha }}-otel-go-instrumentation
-      - name: Display structure of downloaded files
-        run: ls -R
-      - name: Create Release
-        id: create_release
-        uses: softprops/action-gh-release@v2
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: ${{ github.ref }}
-          release_name: Release ${{ github.ref }}
-          draft: false
-          prerelease: false
-          allow_update: true
-        
-      - name: Upload Release Asset
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./otel-go-instrumentation
-          asset_name: otel-go-instrumentation
-          asset_content_type: application/octet-stream
