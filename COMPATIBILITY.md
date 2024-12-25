@@ -55,6 +55,6 @@ Supported version ranges:
 
 ### github.com/go-redis/redis/v8
 
-[Package documentation](github.com/go-redis/redis/v8)
+[Package documentation](https://pkg.go.dev/github.com/go-redis/redis/v8)
 
 - `v8.0.0` to `v8.11.5`
