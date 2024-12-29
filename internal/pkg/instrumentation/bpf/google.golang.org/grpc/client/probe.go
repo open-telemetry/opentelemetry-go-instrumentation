@@ -102,6 +102,13 @@ func New(logger *slog.Logger, version string) probe.Probe {
 					},
 					MinVersion: writeStatusMinVersion,
 				},
+				probe.StructFieldConstMinVersion{
+					StructField: probe.StructFieldConst{
+						Key: "status_message_pos",
+						Val: structfield.NewID("google.golang.org/grpc", "google.golang.org/genproto/googleapis/rpc/status", "Status", "Message"),
+					},
+					MinVersion: writeStatusMinVersion,
+				},
 			},
 			Uprobes: []probe.Uprobe{
 				{
@@ -137,6 +144,7 @@ func verifyAndLoadBpf() (*ebpf.CollectionSpec, error) {
 // event represents an event in the gRPC client during a gRPC request.
 type event struct {
 	context.BaseSpanProperties
+	ErrMsg     [128]byte
 	Method     [50]byte
 	Target     [50]byte
 	StatusCode int32
@@ -184,6 +192,10 @@ func processFn(e *event) ptrace.SpanSlice {
 
 	if writeStatus && e.StatusCode > 0 {
 		span.Status().SetCode(ptrace.StatusCodeError)
+		errMsg := unix.ByteSliceToString(e.ErrMsg[:])
+		if errMsg != "" {
+			span.Status().SetMessage(errMsg)
+		}
 	}
 
 	return spans
