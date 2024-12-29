@@ -16,6 +16,7 @@ import (
 	"go.opentelemetry.io/otel/trace"
 
 	dbSql "go.opentelemetry.io/auto/internal/pkg/instrumentation/bpf/database/sql"
+	goRedis "go.opentelemetry.io/auto/internal/pkg/instrumentation/bpf/github.com/redis/go-redis"
 	kafkaConsumer "go.opentelemetry.io/auto/internal/pkg/instrumentation/bpf/github.com/segmentio/kafka-go/consumer"
 	kafkaProducer "go.opentelemetry.io/auto/internal/pkg/instrumentation/bpf/github.com/segmentio/kafka-go/producer"
 	autosdk "go.opentelemetry.io/auto/internal/pkg/instrumentation/bpf/go.opentelemetry.io/auto/sdk"
@@ -417,6 +418,7 @@ func (m *Manager) availableProbes() []probe.Probe {
 		httpServer.New(m.logger, m.version),
 		httpClient.New(m.logger, m.version),
 		dbSql.New(m.logger, m.version),
+		goRedis.New(m.logger, m.version),
 		kafkaProducer.New(m.logger, m.version),
 		kafkaConsumer.New(m.logger, m.version),
 		autosdk.New(m.logger),

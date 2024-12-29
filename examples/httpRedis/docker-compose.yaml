@@ -1,0 +1,70 @@
+version: "3.9"
+
+networks:
+  default:
+    name: http-redis-network
+    driver: bridge
+
+services:
+  http-redis:
+    depends_on:
+      - jaeger
+      - redis
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+    pid: "host"
+    ports:
+      - "8080:8080"
+    volumes:
+      - /proc:/host/proc
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+
+  redis:
+    image: redis:latest
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+
+  go-auto:
+    depends_on:
+      - http-redis
+    build:
+      context: ../..
+      dockerfile: Dockerfile
+    privileged: true
+    pid: "host"
+    environment:
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://jaeger:4318
+      - OTEL_GO_AUTO_TARGET_EXE=/app/main
+      - OTEL_GO_AUTO_INCLUDE_DB_STATEMENT=true
+      - OTEL_SERVICE_NAME=eBPF-httpRedis
+      - OTEL_PROPAGATORS=tracecontext,baggage
+      - CGO_ENABLED=1
+    volumes:
+      - /proc:/host/proc
+
+  jaeger:
+    image: jaegertracing/all-in-one:1.60@sha256:4fd2d70fa347d6a47e79fcb06b1c177e6079f92cba88b083153d56263082135e
+    ports:
+      - "16686:16686"
+      - "14268:14268"
+    environment:
+      - COLLECTOR_OTLP_ENABLED=true
+      - LOG_LEVEL=debug
+    deploy:
+      resources:
+        limits:
+          memory: 300M
+    restart: unless-stopped
+
+volumes:
+  redis_data:

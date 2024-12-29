@@ -19,6 +19,7 @@ Tracing instrumentation is provided for the following Go libraries.
 - [`github.com/segmentio/kafka-go`](#githubcomsegmentiokafka-go)
 - [`google.golang.org/grpc`](#googlegolangorggrpc)
 - [`net/http`](#nethttp)
+- [`github.com/go-redis/redis/v8`](#githubcomgo-redisredisv8)
 
 ### database/sql
 
@@ -51,3 +52,9 @@ Supported version ranges:
 Supported version ranges:
 
 - `go1.12` to `go1.23.4`
+
+### github.com/go-redis/redis/v8
+
+[Package documentation](https://pkg.go.dev/github.com/go-redis/redis/v8)
+
+- `v8.0.0` to `v8.11.5`
