@@ -1,26 +1,28 @@
-version: "3.9"
-
 networks:
   default:
-    name: http-db
+    name: rueidis
     driver: bridge
 
 services:
-  http-plus-db:
+  redis:
+    image: redis:7.2
+
+  app:
     depends_on:
       - jaeger
+      - redis
     build:
-      no_cache: true
       context: .
       dockerfile: ./Dockerfile
     pid: "host"
     ports:
-      - "8080:8080"
+      - "8081:8081"
     volumes:
       - /proc:/host/proc
+
   go-auto:
     depends_on:
-      - http-plus-db
+      - app
     build:
       context: ../..
       dockerfile: Dockerfile
@@ -29,11 +31,8 @@ services:
     environment:
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://jaeger:4318
       - OTEL_GO_AUTO_TARGET_EXE=/app/main
-      - OTEL_GO_AUTO_INCLUDE_DB_STATEMENT=true
-      - OTEL_GO_AUTO_PARSE_DB_STATEMENT=true
-      - OTEL_SERVICE_NAME=httpPlusdb
+      - OTEL_SERVICE_NAME=rueidis-app
       - OTEL_PROPAGATORS=tracecontext,baggage
-      - CGO_ENABLED=1
     volumes:
       - /proc:/host/proc
 
@@ -45,6 +44,7 @@ services:
     environment:
       - COLLECTOR_OTLP_ENABLED=true
       - LOG_LEVEL=debug
+      - JAEGER_DISABLED=true
     deploy:
       resources:
         limits:

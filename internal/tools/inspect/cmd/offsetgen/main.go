@@ -75,6 +75,11 @@ func manifests() ([]inspect.Manifest, error) {
 		return nil, fmt.Errorf("failed to get \"github.com/segmentio/kafka-go\" versions: %w", err)
 	}
 
+	rueidisVers, err := PkgVersions("github.com/redis/rueidis")
+	if err != nil {
+		return nil, fmt.Errorf("failed to get \"github.com/redis/rueidis\" versions: %w", err)
+	}
+
 	ren := func(src string) inspect.Renderer {
 		return inspect.NewRenderer(logger, src, inspect.DefaultFS)
 	}
@@ -125,6 +130,9 @@ func manifests() ([]inspect.Manifest, error) {
 				structfield.NewID("std", "bufio", "Writer", "n"),
 				structfield.NewID("std", "net", "TCPAddr", "IP"),
 				structfield.NewID("std", "net", "TCPAddr", "Port"),
+				structfield.NewID("std", "net", "netFD", "raddr"),
+				structfield.NewID("std", "net", "conn", "fd"),
+				structfield.NewID("std", "net", "TCPConn", "conn"),
 			},
 		},
 		{
@@ -190,6 +198,18 @@ func manifests() ([]inspect.Manifest, error) {
 				structfield.NewID("github.com/segmentio/kafka-go", "github.com/segmentio/kafka-go", "Reader", "config"),
 				structfield.NewID("github.com/segmentio/kafka-go", "github.com/segmentio/kafka-go", "ReaderConfig", "GroupID"),
 				structfield.NewID("github.com/segmentio/kafka-go", "github.com/segmentio/kafka-go", "Conn", "clientID"),
+			},
+		},
+		{
+			Application: inspect.Application{
+				Renderer: ren("templates/github.com/redis/rueidis/*.tmpl"),
+				Versions: rueidisVers,
+			},
+			StructFields: []structfield.ID{
+				structfield.NewID("github.com/redis/rueidis", "github.com/redis/rueidis/internal/cmds", "Completed", "cs"),
+				structfield.NewID("github.com/redis/rueidis", "github.com/redis/rueidis/internal/cmds", "CommandSlice", "s"),
+				structfield.NewID("github.com/redis/rueidis", "github.com/redis/rueidis", "RedisResult", "err"),
+				structfield.NewID("github.com/redis/rueidis", "github.com/redis/rueidis", "pipe", "conn"),
 			},
 		},
 	}, nil
