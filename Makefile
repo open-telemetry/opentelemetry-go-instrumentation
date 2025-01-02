@@ -159,7 +159,7 @@ license-header-check:
 	           exit 1; \
 	   fi
 
-.PHONY: fixture-nethttp fixture-gin fixture-databasesql fixture-nethttp-custom fixture-otelglobal fixture-autosdk fixture-kafka-go
+.PHONY: fixture-nethttp fixture-gin fixture-databasesql fixture-nethttp-custom fixture-otelglobal fixture-autosdk fixture-kafka-go fixture-rueidis
 fixture-nethttp-custom: fixtures/nethttp_custom
 fixture-nethttp: fixtures/nethttp
 fixture-gin: fixtures/gin
@@ -168,6 +168,7 @@ fixture-grpc: fixtures/grpc
 fixture-otelglobal: fixtures/otelglobal
 fixture-autosdk: fixtures/autosdk
 fixture-kafka-go: fixtures/kafka-go
+fixture-rueidis: fixtures/rueidis
 fixtures/%: LIBRARY=$*
 fixtures/%:
 	$(MAKE) docker-build
