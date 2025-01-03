@@ -273,9 +273,12 @@ SEC("uprobe/server_handleStream2")
 int uprobe_server_handleStream2_Returns(struct pt_regs *ctx) {
     u64 server_stream_pos = 4;
     void *server_stream_ptr = get_argument(ctx, server_stream_pos);
+    struct go_iface go_context = {0};
+    void *key = NULL;
     if (server_stream_ptr == NULL) {
-        bpf_printk("grpc:server:uprobe/server_handleStream2Return: failed to get ServerStream arg");
-        return -1;
+        // we might fail get the pointer for versions of go which use register ABI, as this function does not return anything
+        // this is not an error in that case so we can just go to the lookup which will happen by goroutine
+        goto lookup;
     }
 
     void *stream_ptr;
@@ -285,7 +288,6 @@ int uprobe_server_handleStream2_Returns(struct pt_regs *ctx) {
         return -2;
     }
 
-    struct go_iface go_context = {0};
     rc = bpf_probe_read_user(&go_context.type, sizeof(go_context.type), (void *)(stream_ptr + stream_ctx_pos));
     if (rc != 0) {
         bpf_printk("grpc:server:uprobe/server_handleStream2Return: failed to read context type");
@@ -298,7 +300,8 @@ int uprobe_server_handleStream2_Returns(struct pt_regs *ctx) {
         return -4;
     }
 
-    void *key = get_consistent_key(ctx, go_context.data);
+lookup:
+    key = get_consistent_key(ctx, go_context.data);
     struct grpc_request_t *event = bpf_map_lookup_elem(&grpc_events, &key);
     if (event == NULL) {
         bpf_printk("grpc:server:uprobe/server_handleStream2Return: event is NULL");
