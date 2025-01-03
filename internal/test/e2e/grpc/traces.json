@@ -302,7 +302,7 @@
                 }
               ],
               "flags": 256,
-              "kind": 3,
+              "kind": 1,
               "name": "SayHello",
               "parentSpanId": "xxxxx",
               "spanId": "xxxxx",
@@ -319,7 +319,7 @@
                 }
               ],
               "flags": 256,
-              "kind": 3,
+              "kind": 1,
               "name": "SayHello",
               "parentSpanId": "xxxxx",
               "spanId": "xxxxx",
