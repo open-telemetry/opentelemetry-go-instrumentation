@@ -30,7 +30,7 @@ jobs:
           uname -p;
           clang --version;
       - run: make test
-      - run: sudo make test-ebpf
+      - run: sudo --preserve-env=PATH make test-ebpf
       - run: make check-clean-work-tree
   docker-build:
     runs-on: ubuntu-latest
