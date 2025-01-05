@@ -39,7 +39,7 @@ require (
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/bkielbasa/cyclop v1.2.3 // indirect
 	github.com/blizzy78/varnamelen v0.8.0 // indirect
-	github.com/bombsimon/wsl/v4 v4.4.1 // indirect
+	github.com/bombsimon/wsl/v4 v4.5.0 // indirect
 	github.com/breml/bidichk v0.3.2 // indirect
 	github.com/breml/errchkjson v0.4.0 // indirect
 	github.com/butuzov/ireturn v0.3.1 // indirect
@@ -71,7 +71,7 @@ require (
 	github.com/ghostiam/protogetter v0.3.8 // indirect
 	github.com/go-critic/go-critic v0.11.5 // indirect
 	github.com/go-git/gcfg v1.5.1-0.20230307220236-3a3c6141e376 // indirect
-	github.com/go-git/go-billy/v5 v5.6.0 // indirect
+	github.com/go-git/go-billy/v5 v5.6.1 // indirect
 	github.com/go-git/go-git/v5 v5.12.0 // indirect
 	github.com/go-logr/logr v1.4.2 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
@@ -90,7 +90,7 @@ require (
 	github.com/golang/groupcache v0.0.0-20241129210726-2c02b8208cf8 // indirect
 	github.com/golangci/dupl v0.0.0-20180902072040-3e9179ac440a // indirect
 	github.com/golangci/go-printf-func-name v0.1.0 // indirect
-	github.com/golangci/gofmt v0.0.0-20240816233607-d8596aa466a9 // indirect
+	github.com/golangci/gofmt v0.0.0-20241223200906-057b0627d9b9 // indirect
 	github.com/golangci/misspell v0.6.0 // indirect
 	github.com/golangci/modinfo v0.3.4 // indirect
 	github.com/golangci/plugin-module-register v0.1.1 // indirect
@@ -120,7 +120,7 @@ require (
 	github.com/kyoh86/exportloopref v0.1.11 // indirect
 	github.com/lasiar/canonicalheader v1.1.2 // indirect
 	github.com/ldez/gomoddirectives v0.6.0 // indirect
-	github.com/ldez/grignotin v0.6.0 // indirect
+	github.com/ldez/grignotin v0.7.0 // indirect
 	github.com/ldez/tagliatelle v0.5.0 // indirect
 	github.com/leonklingele/grouper v1.1.2 // indirect
 	github.com/macabu/inamedparam v0.1.3 // indirect
@@ -134,8 +134,9 @@ require (
 	github.com/mgechev/revive v1.5.1 // indirect
 	github.com/mitchellh/go-homedir v1.1.0 // indirect
 	github.com/mitchellh/mapstructure v1.5.0 // indirect
+	github.com/mmcloughlin/avo v0.6.0 // indirect
 	github.com/moby/docker-image-spec v1.3.1 // indirect
-	github.com/moby/term v0.5.0 // indirect
+	github.com/moby/term v0.5.2 // indirect
 	github.com/moricho/tparallel v0.3.2 // indirect
 	github.com/morikuni/aec v1.0.0 // indirect
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
@@ -146,9 +147,10 @@ require (
 	github.com/olekukonko/tablewriter v0.0.5 // indirect
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/opencontainers/image-spec v1.1.0 // indirect
-	github.com/otiai10/copy v1.14.0 // indirect
+	github.com/otiai10/copy v1.14.1 // indirect
+	github.com/otiai10/mint v1.6.3 // indirect
 	github.com/pelletier/go-toml/v2 v2.2.3 // indirect
-	github.com/pjbgf/sha1cd v0.3.0 // indirect
+	github.com/pjbgf/sha1cd v0.3.1 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
 	github.com/polyfloyd/go-errorlint v1.7.0 // indirect
@@ -163,7 +165,7 @@ require (
 	github.com/quasilyte/stdinfo v0.0.0-20220114132959-f7386bf02567 // indirect
 	github.com/raeperd/recvcheck v0.1.2 // indirect
 	github.com/rivo/uniseg v0.4.7 // indirect
-	github.com/rogpeppe/go-internal v1.13.1 // indirect
+	github.com/rogpeppe/go-internal v1.13.2-0.20241226121412-a5dc8ff20d0a // indirect
 	github.com/ryancurrah/gomodguard v1.3.5 // indirect
 	github.com/ryanrolds/sqlclosecheck v0.5.1 // indirect
 	github.com/sagikazarmark/locafero v0.6.0 // indirect
@@ -193,7 +195,7 @@ require (
 	github.com/stretchr/testify v1.10.0 // indirect
 	github.com/subosito/gotenv v1.6.0 // indirect
 	github.com/tdakkota/asciicheck v0.3.0 // indirect
-	github.com/tetafro/godot v1.4.18 // indirect
+	github.com/tetafro/godot v1.4.20 // indirect
 	github.com/timakin/bodyclose v0.0.0-20241222091800-1db5c5ca4d67 // indirect
 	github.com/timonwong/loggercheck v0.10.1 // indirect
 	github.com/tomarrell/wrapcheck/v2 v2.10.0 // indirect
@@ -237,7 +239,7 @@ require (
 	honnef.co/go/tools v0.5.1 // indirect
 	k8s.io/klog/v2 v2.130.1 // indirect
 	mvdan.cc/gofumpt v0.7.0 // indirect
-	mvdan.cc/unparam v0.0.0-20240917084806-57a3b4290ba3 // indirect
+	mvdan.cc/unparam v0.0.0-20241226123437-447d509598f3 // indirect
 )
 
 replace go.opentelemetry.io/auto => ../../
