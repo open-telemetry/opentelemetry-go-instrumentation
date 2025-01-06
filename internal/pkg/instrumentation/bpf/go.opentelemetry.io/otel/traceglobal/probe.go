@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"log/slog"
 	"math"
-	"sync"
 
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/ptrace"
@@ -203,8 +202,7 @@ const (
 type converter struct {
 	logger *slog.Logger
 
-	uprobeNewStart   *probe.Uprobe
-	uprobeNewStartMu sync.Mutex
+	uprobeNewStart *probe.Uprobe
 }
 
 func (c *converter) decodeEvent(record perf.Record) (*event, error) {
@@ -223,12 +221,10 @@ func (c *converter) decodeEvent(record perf.Record) (*event, error) {
 		reader.Reset(record.RawSample)
 		err = binary.Read(reader, binary.LittleEndian, e)
 	case recordKindConrol:
-		c.uprobeNewStartMu.Lock()
 		if c.uprobeNewStart != nil {
 			err = c.uprobeNewStart.Close()
 			c.uprobeNewStart = nil
 		}
-		c.uprobeNewStartMu.Unlock()
 	default:
 		err = fmt.Errorf("unknown record kind: %d", kind)
 	}
