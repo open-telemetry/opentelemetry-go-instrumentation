@@ -276,8 +276,8 @@ int uprobe_server_handleStream2_Returns(struct pt_regs *ctx) {
     struct go_iface go_context = {0};
     void *key = NULL;
     if (server_stream_ptr == NULL) {
-        // we might fail get the pointer for versions of go which use register ABI, as this function does not return anything
-        // this is not an error in that case so we can just go to the lookup which will happen by goroutine
+        // We might fail to get the pointer for versions of Go which use register ABI, as this function does not return anything.
+        // This is not an error in that case so we can just go to the lookup which will happen by goroutine.
         goto lookup;
     }
 

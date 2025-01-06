@@ -143,9 +143,9 @@ int uprobe_ClientConn_Invoke_Returns(struct pt_regs *ctx) {
     // }
     // The `Status` proto object contains a `Code` int32 field, which is what we want
     // type Status struct {
-	//   Code int32
-	//   Message string
-	//   Details []*anypb.Any
+    //     Code int32
+    //     Message string
+    //     Details []*anypb.Any
     // }
     void *resp_ptr = get_argument(ctx, 2);
     if(resp_ptr == 0) {
