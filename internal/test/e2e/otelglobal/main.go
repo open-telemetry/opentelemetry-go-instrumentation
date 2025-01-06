@@ -15,10 +15,16 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
+const (
+	name    = "trace-example"
+	version = "v1.23.42"
+	schema  = "https://some_schema"
+)
+
 var tracer = otel.Tracer(
-	"trace-example",
-	trace.WithInstrumentationVersion("v1.23.42"),
-	trace.WithSchemaURL("https://some_schema"),
+	name,
+	trace.WithInstrumentationVersion(version),
+	trace.WithSchemaURL(schema),
 )
 
 func setUnusedTracers() {
@@ -28,7 +34,13 @@ func setUnusedTracers() {
 }
 
 func innerFunction(ctx context.Context) {
-	_, span := tracer.Start(ctx, "child")
+	t := trace.SpanFromContext(ctx).TracerProvider().Tracer(
+		name,
+		trace.WithInstrumentationVersion(version),
+		trace.WithSchemaURL(schema),
+	)
+
+	_, span := t.Start(ctx, "child")
 	defer span.End()
 
 	span.SetAttributes(attribute.String("inner.key", "inner.value"))
