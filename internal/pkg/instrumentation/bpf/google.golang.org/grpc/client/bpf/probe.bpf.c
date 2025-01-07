@@ -12,10 +12,12 @@ char __license[] SEC("license") = "Dual MIT/GPL";
 
 #define MAX_SIZE 50
 #define MAX_CONCURRENT 50
+#define MAX_ERROR_LEN 128
 
 struct grpc_request_t
 {
     BASE_SPAN_PROPERTIES
+    char err_msg[MAX_ERROR_LEN];
     char method[MAX_SIZE];
     char target[MAX_SIZE];
     u32 status_code;
@@ -51,6 +53,7 @@ volatile const u64 headerFrame_streamid_pos;
 volatile const u64 headerFrame_hf_pos;
 volatile const u64 error_status_pos;
 volatile const u64 status_s_pos;
+volatile const u64 status_message_pos;
 volatile const u64 status_code_pos;
 
 volatile const bool write_status_supported;
@@ -139,6 +142,11 @@ int uprobe_ClientConn_Invoke_Returns(struct pt_regs *ctx) {
     //   s *Status
     // }
     // The `Status` proto object contains a `Code` int32 field, which is what we want
+    // type Status struct {
+    //     Code int32
+    //     Message string
+    //     Details []*anypb.Any
+    // }
     void *resp_ptr = get_argument(ctx, 2);
     if(resp_ptr == 0) {
         // err == nil
@@ -152,6 +160,7 @@ int uprobe_ClientConn_Invoke_Returns(struct pt_regs *ctx) {
     bpf_probe_read_user(&s_ptr, sizeof(s_ptr), (void *)(status_ptr + status_s_pos));
     // Get status code from Status.s pointer
     bpf_probe_read_user(&grpc_span->status_code, sizeof(grpc_span->status_code), (void *)(s_ptr + status_code_pos));
+    get_go_string_from_user_ptr((void *)(s_ptr + status_message_pos), grpc_span->err_msg, sizeof(grpc_span->err_msg));
 
 done:
     grpc_span->end_time = bpf_ktime_get_ns();
