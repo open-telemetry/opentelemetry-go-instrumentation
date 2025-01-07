@@ -115,7 +115,7 @@ services:
     environment:
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://jaeger:4318
       - OTEL_GO_AUTO_TARGET_EXE=/app/consumer
-      - OTEL_SERVICE_NAME=kkafkaconsumer
+      - OTEL_SERVICE_NAME=kafkaconsumer
       - OTEL_PROPAGATORS=tracecontext,baggage
       - OTEL_GO_AUTO_SHOW_VERIFIER_LOG=true
     volumes:
