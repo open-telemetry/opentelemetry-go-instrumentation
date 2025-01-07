@@ -17,6 +17,7 @@ type bpfGrpcRequestT struct {
 	EndTime    uint64
 	Sc         bpfSpanContext
 	Psc        bpfSpanContext
+	ErrMsg     [128]int8
 	Method     [50]int8
 	Target     [50]int8
 	StatusCode uint32
@@ -108,6 +109,7 @@ type bpfVariableSpecs struct {
 	IsRegistersAbi         *ebpf.VariableSpec `ebpf:"is_registers_abi"`
 	StartAddr              *ebpf.VariableSpec `ebpf:"start_addr"`
 	StatusCodePos          *ebpf.VariableSpec `ebpf:"status_code_pos"`
+	StatusMessagePos       *ebpf.VariableSpec `ebpf:"status_message_pos"`
 	StatusS_pos            *ebpf.VariableSpec `ebpf:"status_s_pos"`
 	TotalCpus              *ebpf.VariableSpec `ebpf:"total_cpus"`
 	WriteStatusSupported   *ebpf.VariableSpec `ebpf:"write_status_supported"`
@@ -172,6 +174,7 @@ type bpfVariables struct {
 	IsRegistersAbi         *ebpf.Variable `ebpf:"is_registers_abi"`
 	StartAddr              *ebpf.Variable `ebpf:"start_addr"`
 	StatusCodePos          *ebpf.Variable `ebpf:"status_code_pos"`
+	StatusMessagePos       *ebpf.Variable `ebpf:"status_message_pos"`
 	StatusS_pos            *ebpf.Variable `ebpf:"status_s_pos"`
 	TotalCpus              *ebpf.Variable `ebpf:"total_cpus"`
 	WriteStatusSupported   *ebpf.Variable `ebpf:"write_status_supported"`
