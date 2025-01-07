@@ -53,7 +53,7 @@ func New(logger *slog.Logger, version string) probe.Probe {
 					Val: shouldIncludeDBStatement(),
 				},
 			},
-			Uprobes: []probe.Uprobe{
+			Uprobes: []*probe.Uprobe{
 				{
 					Sym:         "database/sql.(*DB).queryDC",
 					EntryProbe:  "uprobe_queryDC",

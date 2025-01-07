@@ -126,7 +126,7 @@ func New(logger *slog.Logger, ver string) probe.Probe {
 				},
 				framePosConst{},
 			},
-			Uprobes: []probe.Uprobe{
+			Uprobes: []*probe.Uprobe{
 				{
 					Sym:         "google.golang.org/grpc.(*Server).handleStream",
 					EntryProbe:  "uprobe_server_handleStream",

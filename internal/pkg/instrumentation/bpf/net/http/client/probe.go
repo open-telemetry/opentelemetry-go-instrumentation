@@ -40,7 +40,7 @@ func New(logger *slog.Logger, version string) probe.Probe {
 		InstrumentedPkg: pkg,
 	}
 
-	uprobes := []probe.Uprobe{
+	uprobes := []*probe.Uprobe{
 		{
 			Sym:         "net/http.(*Transport).roundTrip",
 			EntryProbe:  "uprobe_Transport_roundTrip",
@@ -52,7 +52,7 @@ func New(logger *slog.Logger, version string) probe.Probe {
 	// probe which writes the data in the outgoing buffer.
 	if utils.SupportsContextPropagation() {
 		uprobes = append(uprobes,
-			probe.Uprobe{
+			&probe.Uprobe{
 				Sym:        "net/http.Header.writeSubset",
 				EntryProbe: "uprobe_writeSubset",
 				// We mark this probe as dependent on roundTrip, so we don't accidentally

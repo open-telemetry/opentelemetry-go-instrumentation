@@ -4,6 +4,7 @@
 package global
 
 import (
+	"bytes"
 	"encoding/binary"
 	"fmt"
 	"log/slog"
@@ -18,6 +19,7 @@ import (
 	"go.opentelemetry.io/auto/internal/pkg/process"
 	"go.opentelemetry.io/auto/internal/pkg/structfield"
 
+	"github.com/cilium/ebpf/perf"
 	"github.com/hashicorp/go-version"
 	"golang.org/x/sys/unix"
 
@@ -33,6 +35,27 @@ import (
 const (
 	// pkg is the package being instrumented.
 	pkg = "go.opentelemetry.io/otel/internal/global"
+
+	// Minimum version of go.opentelemetry.io/otel that supports using the
+	// go.opentelemetry.io/auto/sdk in the global API.
+	minAutoSDK = "1.33.0"
+)
+
+var (
+	otelWithAutoSDK = probe.PackageConstrainst{
+		Package: "go.opentelemetry.io/otel",
+		Constraints: version.MustConstraints(
+			version.NewConstraint(fmt.Sprintf(">= %s", minAutoSDK)),
+		),
+		FailureMode: probe.FailureModeIgnore,
+	}
+	otelWithoutAutoSDK = probe.PackageConstrainst{
+		Package: "go.opentelemetry.io/otel",
+		Constraints: version.MustConstraints(
+			version.NewConstraint(fmt.Sprintf("< %s", minAutoSDK)),
+		),
+		FailureMode: probe.FailureModeIgnore,
+	}
 )
 
 // New returns a new [probe.Probe].
@@ -40,6 +63,19 @@ func New(logger *slog.Logger) probe.Probe {
 	id := probe.ID{
 		SpanKind:        trace.SpanKindClient,
 		InstrumentedPkg: pkg,
+	}
+
+	uprobeNewStart := &probe.Uprobe{
+		Sym:        "go.opentelemetry.io/otel/internal/global.(*tracer).newSpan",
+		EntryProbe: "uprobe_newStart",
+		PackageConstrainsts: []probe.PackageConstrainst{
+			otelWithAutoSDK,
+		},
+	}
+
+	c := &converter{
+		logger:         logger,
+		uprobeNewStart: uprobeNewStart,
 	}
 	return &probe.TraceProducer[bpfObjects, event]{
 		Base: probe.Base[bpfObjects, event]{
@@ -107,36 +143,92 @@ func New(logger *slog.Logger) probe.Probe {
 				tracerIDContainsSchemaURL{},
 				tracerIDContainsScopeAttributes{},
 			},
-			Uprobes: []probe.Uprobe{
+			Uprobes: []*probe.Uprobe{
+				uprobeNewStart,
 				{
 					Sym:         "go.opentelemetry.io/otel/internal/global.(*tracer).Start",
 					EntryProbe:  "uprobe_Start",
 					ReturnProbe: "uprobe_Start_Returns",
+					PackageConstrainsts: []probe.PackageConstrainst{
+						otelWithoutAutoSDK,
+					},
 				},
 				{
 					Sym:        "go.opentelemetry.io/otel/internal/global.(*nonRecordingSpan).End",
 					EntryProbe: "uprobe_End",
+					PackageConstrainsts: []probe.PackageConstrainst{
+						otelWithoutAutoSDK,
+					},
 				},
 				{
 					Sym:         "go.opentelemetry.io/otel/internal/global.(*nonRecordingSpan).SetAttributes",
 					EntryProbe:  "uprobe_SetAttributes",
 					FailureMode: probe.FailureModeIgnore,
+					PackageConstrainsts: []probe.PackageConstrainst{
+						otelWithoutAutoSDK,
+					},
 				},
 				{
 					Sym:         "go.opentelemetry.io/otel/internal/global.(*nonRecordingSpan).SetStatus",
 					EntryProbe:  "uprobe_SetStatus",
 					FailureMode: probe.FailureModeIgnore,
+					PackageConstrainsts: []probe.PackageConstrainst{
+						otelWithoutAutoSDK,
+					},
 				},
 				{
 					Sym:         "go.opentelemetry.io/otel/internal/global.(*nonRecordingSpan).SetName",
 					EntryProbe:  "uprobe_SetName",
 					FailureMode: probe.FailureModeIgnore,
+					PackageConstrainsts: []probe.PackageConstrainst{
+						otelWithoutAutoSDK,
+					},
 				},
 			},
-			SpecFn: loadBpf,
+			SpecFn:        loadBpf,
+			ProcessRecord: c.decodeEvent,
 		},
 		ProcessFn: processFn,
 	}
+}
+
+type recordKind uint32
+
+const (
+	recordKindTelemetry recordKind = iota
+	recordKindConrol
+)
+
+type converter struct {
+	logger *slog.Logger
+
+	uprobeNewStart *probe.Uprobe
+}
+
+func (c *converter) decodeEvent(record perf.Record) (*event, error) {
+	reader := bytes.NewReader(record.RawSample)
+
+	var kind recordKind
+	err := binary.Read(reader, binary.LittleEndian, &kind)
+	if err != nil {
+		return nil, err
+	}
+
+	var e *event
+	switch kind {
+	case recordKindTelemetry:
+		e = new(event)
+		reader.Reset(record.RawSample)
+		err = binary.Read(reader, binary.LittleEndian, e)
+	case recordKindConrol:
+		if c.uprobeNewStart != nil {
+			err = c.uprobeNewStart.Close()
+			c.uprobeNewStart = nil
+		}
+	default:
+		err = fmt.Errorf("unknown record kind: %d", kind)
+	}
+	return e, err
 }
 
 // tracerIDContainsSchemaURL is a Probe Const defining whether the tracer key contains schemaURL.

@@ -69,7 +69,7 @@ func New(logger *slog.Logger, version string) probe.Probe {
 					Val: structfield.NewID("github.com/segmentio/kafka-go", "github.com/segmentio/kafka-go", "ReaderConfig", "GroupID"),
 				},
 			},
-			Uprobes: []probe.Uprobe{
+			Uprobes: []*probe.Uprobe{
 				{
 					Sym:         "github.com/segmentio/kafka-go.(*Reader).FetchMessage",
 					EntryProbe:  "uprobe_FetchMessage",
