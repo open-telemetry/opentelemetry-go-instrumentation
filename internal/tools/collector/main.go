@@ -11,7 +11,6 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
-	"sync"
 
 	"github.com/open-telemetry/opentelemetry-collector-contrib/exporter/fileexporter"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/extension/healthcheckextension"
@@ -97,8 +96,6 @@ func main() {
 		os.Exit(1)
 	}
 
-	*listen = getEnv("SHUTDOWN_SERVER_ADDR", ":8080")
-
 	// Start the HTTP server for shutdown endpoint
 	go startHTTPServer(*listen, cancel, logger)
 
@@ -131,14 +128,10 @@ func newLogger(lvlStr string) *slog.Logger {
 type collector struct {
 	logger *slog.Logger
 
-	collMu sync.Mutex
-	coll   *otelcol.Collector
+	coll *otelcol.Collector
 }
 
 func (c *collector) start(ctx context.Context, configYaml string) error {
-	c.collMu.Lock()
-	defer c.collMu.Unlock()
-
 	c.logger.Debug("starting collector")
 
 	info := component.BuildInfo{
@@ -183,8 +176,6 @@ func (c *collector) start(ctx context.Context, configYaml string) error {
 
 func (c *collector) stop() {
 	c.logger.Info("stopping collector")
-	c.collMu.Lock()
-	defer c.collMu.Unlock()
 
 	if c.coll == nil {
 		return
@@ -196,7 +187,8 @@ func (c *collector) stop() {
 }
 
 func startHTTPServer(addr string, cancel context.CancelFunc, logger *slog.Logger) {
-	http.HandleFunc(shutdownPath, func(w http.ResponseWriter, r *http.Request) {
+	mux := http.NewServeMux()
+	mux.HandleFunc(shutdownPath, func(w http.ResponseWriter, r *http.Request) {
 		logger.Info("shutdown endpoint hit")
 		cancel()
 		w.WriteHeader(http.StatusOK)
@@ -204,16 +196,10 @@ func startHTTPServer(addr string, cancel context.CancelFunc, logger *slog.Logger
 	})
 
 	logger.Info("starting shutdown HTTP server", "addr", addr)
-	if err := http.ListenAndServe(addr, nil); err != nil && !errors.Is(err, http.ErrServerClosed) {
+	err := http.ListenAndServe(addr, mux)
+	if err != nil && !errors.Is(err, http.ErrServerClosed) {
 		logger.Error("failed to start HTTP server", "error", err)
 	}
-}
-
-func getEnv(key, defaultValue string) string {
-	if value, exists := os.LookupEnv(key); exists {
-		return value
-	}
-	return defaultValue
 }
 
 func components() (otelcol.Factories, error) {
