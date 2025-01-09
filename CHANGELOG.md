@@ -23,6 +23,10 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 - Support `golang.org/x/net` `0.34.0`. ([#1552](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1552))
 - Support `google.golang.org/grpc` `1.71.0-dev`. ([#1467](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1467))
 
+### Changed
+
+- Preemptively drop support for the `traceglobal` probe when `Go >= 1.24` is used. ([#1573](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1573))
+
 ## [v0.19.0-alpha] - 2024-12-05
 
 ### Added
