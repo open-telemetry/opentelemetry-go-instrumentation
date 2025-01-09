@@ -37,9 +37,6 @@ const (
 	// envResourceAttrKey is the key for the environment variable value containing
 	// OpenTelemetry Resource attributes.
 	envResourceAttrKey = "OTEL_RESOURCE_ATTRIBUTES"
-	// envTracesExportersKey is the key for the environment variable value
-	// containing what OpenTelemetry trace exporter to use.
-	envTracesExportersKey = "OTEL_TRACES_EXPORTER"
 	// envOtelGlobalImplKey is the key for the environment variable value enabling to opt-in for the
 	// OpenTelemetry global implementation. It should be a boolean value.
 	envOtelGlobalImplKey = "OTEL_GO_AUTO_GLOBAL"
@@ -408,14 +405,11 @@ func WithEnv() InstrumentationOption {
 		if v, ok := lookupEnv(envTargetExeKey); ok {
 			c.target = process.TargetArgs{ExePath: v}
 		}
-		if _, ok := lookupEnv(envTracesExportersKey); ok {
-			// Don't track the lookup value because autoexport does not provide
-			// a way to just pass the environment value currently. Just use
-			// NewSpanExporter which will re-read this value.
-
+		{
 			var e error
 			// NewSpanExporter will use an OTLP (HTTP/protobuf) exporter as the
-			// default. This is the OTel recommended default.
+			// default, unless OTLP_TRACES_EXPORTER is set. This is the OTel
+			// recommended default.
 			c.traceExp, e = autoexport.NewSpanExporter(ctx)
 			err = errors.Join(err, e)
 		}

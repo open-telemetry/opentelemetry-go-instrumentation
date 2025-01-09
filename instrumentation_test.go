@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -94,6 +95,16 @@ func TestWithEnv(t *testing.T) {
 		t.Setenv(envLogLevelKey, "invalid")
 		_, err = newInstConfig(ctx, opts)
 		require.ErrorContains(t, err, `parse log level "invalid"`)
+	})
+
+	// Test that autoexport.NewSpanExporter works when OTEL_TRACES_EXPORTER is
+	// not set
+	t.Run("With OTEL_TRACES_EXPORTER not set", func(t *testing.T) {
+		os.Unsetenv("OTEL_TRACES_EXPORTER")
+		c, err := newInstConfig(context.Background(), []InstrumentationOption{WithEnv()})
+
+		require.NoError(t, err)
+		assert.NotNil(t, c.traceExp)
 	})
 }
 
