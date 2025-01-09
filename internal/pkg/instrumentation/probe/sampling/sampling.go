@@ -6,6 +6,7 @@ package sampling
 import (
 	"bytes"
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"math"
 
@@ -244,7 +245,18 @@ func (m *Manager) applyConfig(conf *Config) error {
 
 	n, err := m.samplersConfigMap.BatchUpdate(samplerIDs, configsBytes, &ebpf.BatchOptions{})
 	if err != nil {
-		return err
+		if errors.Is(err, ebpf.ErrNotSupported) {
+			// batch update is supported for kernels >= 5.6
+			// fallback to single updates
+			for i := range samplerIDs {
+				err = m.samplersConfigMap.Put(uint32(samplerIDs[i]), configsBytes[i])
+				if err != nil {
+					return err
+				}
+			}
+		} else {
+			return err
+		}
 	}
 	if n != len(samplerIDs) {
 		return fmt.Errorf("failed to update samplers, expected %d, updated %d", len(samplerIDs), n)
