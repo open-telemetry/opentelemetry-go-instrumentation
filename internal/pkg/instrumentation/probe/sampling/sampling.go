@@ -243,7 +243,7 @@ func (m *Manager) applyConfig(conf *Config) error {
 		copy(configsBytes[i][:], b)
 	}
 
-	n, err := m.samplersConfigMap.BatchUpdate(samplerIDs, configsBytes, &ebpf.BatchOptions{})
+	_, err := m.samplersConfigMap.BatchUpdate(samplerIDs, configsBytes, &ebpf.BatchOptions{})
 	if err != nil {
 		if errors.Is(err, ebpf.ErrNotSupported) {
 			// batch update is supported for kernels >= 5.6
@@ -255,11 +255,8 @@ func (m *Manager) applyConfig(conf *Config) error {
 				}
 			}
 		} else {
-			return err
+			return fmt.Errorf("failed to update samplers config map: %w", err)
 		}
-	}
-	if n != len(samplerIDs) {
-		return fmt.Errorf("failed to update samplers, expected %d, updated %d", len(samplerIDs), n)
 	}
 
 	err = m.setActiveSampler(conf.ActiveSampler)
