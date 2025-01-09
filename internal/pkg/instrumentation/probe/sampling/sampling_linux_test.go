@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 //go:build ebpf_test
+//go:build multi_kernel_test
 package sampling
 
 import (
