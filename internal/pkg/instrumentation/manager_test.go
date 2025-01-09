@@ -1,4 +1,4 @@
-//go:build !multi_kernel_test
+//go:build !ebpf_test
 
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
