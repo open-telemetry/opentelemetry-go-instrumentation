@@ -41,7 +41,9 @@ jobs:
                 sudo chmod 0666 /dev/kvm
           - name: Test without verifier logs
             id: no_verifier_logs_test
-            run: OTEL_GO_AUTO_SHOW_VERIFIER_LOG=false vimto -kernel :${{ matrix.tag }} -- go test -v -count=1 -tags=multi_kernel_test go.opentelemetry.io/auto/internal/pkg/instrumentation
+            run: OTEL_GO_AUTO_SHOW_VERIFIER_LOG=false vimto -kernel :${{ matrix.tag }} -- go test -v -count=1 -tags=ebpf_test go.opentelemetry.io/auto/internal/pkg/instrumentation
           - name: Test with verifier logs
-            run: OTEL_GO_AUTO_SHOW_VERIFIER_LOG=true vimto -kernel :${{ matrix.tag }} -- go test -v -count=1 -tags=multi_kernel_test go.opentelemetry.io/auto/internal/pkg/instrumentation
+            run: OTEL_GO_AUTO_SHOW_VERIFIER_LOG=true vimto -kernel :${{ matrix.tag }} -- go test -v -count=1 -tags=ebpf_test go.opentelemetry.io/auto/internal/pkg/instrumentation
             if: always() && steps.no_verifier_logs_test.outcome == 'failure'
+          - name: Test eBPF sampling
+            run: vimto -kernel :${{ matrix.tag }} -- go test -v -count=1 -tags=ebpf_test go.opentelemetry.io/auto/internal/pkg/instrumentation/probe/sampling

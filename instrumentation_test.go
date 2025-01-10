@@ -4,15 +4,21 @@
 package auto
 
 import (
+	"bytes"
 	"context"
 	"fmt"
+	"io"
+	"log"
 	"log/slog"
+	"os"
 	"testing"
 
+	"github.com/go-logr/stdr"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/exporters/otlp/otlptrace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
 
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/probe/sampling"
@@ -94,6 +100,26 @@ func TestWithEnv(t *testing.T) {
 		t.Setenv(envLogLevelKey, "invalid")
 		_, err = newInstConfig(ctx, opts)
 		require.ErrorContains(t, err, `parse log level "invalid"`)
+	})
+
+	// Test that autoexport.NewSpanExporter works when OTEL_TRACES_EXPORTER is
+	// not set and OTEL_EXPORTER_OTLP_PROTOCOL is set to 'grpc'
+	t.Run("With OTEL_TRACES_EXPORTER not set", func(t *testing.T) {
+		os.Unsetenv("OTEL_TRACES_EXPORTER")
+		t.Setenv("OTEL_EXPORTER_OTLP_PROTOCOL", "grpc")
+		c, err := newInstConfig(context.Background(), []InstrumentationOption{WithEnv()})
+
+		require.NoError(t, err)
+		require.NotNil(t, c.traceExp)
+		require.IsType(t, &otlptrace.Exporter{}, c.traceExp)
+		exp := c.traceExp.(*otlptrace.Exporter)
+		var buf bytes.Buffer
+		logger := stdr.New(log.New(&buf, "", log.LstdFlags))
+		logger.Info("", "exporter", exp)
+		got, err := io.ReadAll(&buf)
+		require.NoError(t, err)
+		// "otlphttphttp" should be "otlptracegrpc". This is a bug upstream.
+		assert.Contains(t, string(got), "otlphttpgrpc")
 	})
 }
 
