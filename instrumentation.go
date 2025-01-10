@@ -405,14 +405,14 @@ func WithEnv() InstrumentationOption {
 		if v, ok := lookupEnv(envTargetExeKey); ok {
 			c.target = process.TargetArgs{ExePath: v}
 		}
-		{
-			var e error
-			// NewSpanExporter will use an OTLP (HTTP/protobuf) exporter as the
-			// default, unless OTLP_TRACES_EXPORTER is set. This is the OTel
-			// recommended default.
-			c.traceExp, e = autoexport.NewSpanExporter(ctx)
-			err = errors.Join(err, e)
-		}
+
+		var e error
+		// NewSpanExporter will use an OTLP (HTTP/protobuf) exporter as the
+		// default, unless OTLP_TRACES_EXPORTER is set. This is the OTel
+		// recommended default.
+		c.traceExp, e = autoexport.NewSpanExporter(ctx)
+		err = errors.Join(err, e)
+
 		if name, attrs, ok := lookupResourceData(); ok {
 			c.serviceName = name
 			c.additionalResAttrs = append(c.additionalResAttrs, attrs...)
