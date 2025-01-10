@@ -8,8 +8,8 @@ require (
 	github.com/google/go-licenses/v2 v2.0.0-alpha.1
 	github.com/hashicorp/go-version v1.7.0
 	go.opentelemetry.io/auto v0.7.0-alpha
-	go.opentelemetry.io/build-tools/dbotconf v0.15.0
-	go.opentelemetry.io/build-tools/multimod v0.15.0
+	go.opentelemetry.io/build-tools/dbotconf v0.16.0
+	go.opentelemetry.io/build-tools/multimod v0.16.0
 	golang.org/x/sync v0.10.0
 )
 
@@ -132,7 +132,7 @@ require (
 	github.com/maratori/testableexamples v1.0.0 // indirect
 	github.com/maratori/testpackage v1.1.1 // indirect
 	github.com/matoous/godox v0.0.0-20241202171805-94d1edd68ebb // indirect
-	github.com/mattn/go-colorable v0.1.13 // indirect
+	github.com/mattn/go-colorable v0.1.14 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/mattn/go-runewidth v0.0.16 // indirect
 	github.com/mgechev/revive v1.5.1 // indirect
@@ -218,7 +218,7 @@ require (
 	go-simpler.org/sloglint v0.7.2 // indirect
 	go.opencensus.io v0.24.0 // indirect
 	go.opentelemetry.io/auto/sdk v1.1.0 // indirect
-	go.opentelemetry.io/build-tools v0.15.0 // indirect
+	go.opentelemetry.io/build-tools v0.16.0 // indirect
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.58.0 // indirect
 	go.opentelemetry.io/otel v1.33.0 // indirect
 	go.opentelemetry.io/otel/metric v1.33.0 // indirect
