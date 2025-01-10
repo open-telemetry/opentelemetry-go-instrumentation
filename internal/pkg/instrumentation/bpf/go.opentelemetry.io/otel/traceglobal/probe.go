@@ -39,6 +39,7 @@ const (
 	// Minimum version of go.opentelemetry.io/otel that supports using the
 	// go.opentelemetry.io/auto/sdk in the global API.
 	minAutoSDK = "1.33.0"
+	minGoMaps  = "1.24.0"
 )
 
 var (
@@ -55,6 +56,14 @@ var (
 			version.NewConstraint(fmt.Sprintf("< %s", minAutoSDK)),
 		),
 		FailureMode: probe.FailureModeIgnore,
+	}
+	goWithoutSwissMaps = probe.PackageConstrainst{
+		Package: "std",
+		Constraints: version.MustConstraints(
+			version.NewConstraint(fmt.Sprintf("< %s", minGoMaps)),
+		),
+		// Warn in logs that this is not supported.
+		FailureMode: probe.FailureModeWarn,
 	}
 )
 
@@ -151,6 +160,7 @@ func New(logger *slog.Logger) probe.Probe {
 					ReturnProbe: "uprobe_Start_Returns",
 					PackageConstrainsts: []probe.PackageConstrainst{
 						otelWithoutAutoSDK,
+						goWithoutSwissMaps,
 					},
 				},
 				{
@@ -158,6 +168,7 @@ func New(logger *slog.Logger) probe.Probe {
 					EntryProbe: "uprobe_End",
 					PackageConstrainsts: []probe.PackageConstrainst{
 						otelWithoutAutoSDK,
+						goWithoutSwissMaps,
 					},
 				},
 				{
@@ -166,6 +177,7 @@ func New(logger *slog.Logger) probe.Probe {
 					FailureMode: probe.FailureModeIgnore,
 					PackageConstrainsts: []probe.PackageConstrainst{
 						otelWithoutAutoSDK,
+						goWithoutSwissMaps,
 					},
 				},
 				{
@@ -174,6 +186,7 @@ func New(logger *slog.Logger) probe.Probe {
 					FailureMode: probe.FailureModeIgnore,
 					PackageConstrainsts: []probe.PackageConstrainst{
 						otelWithoutAutoSDK,
+						goWithoutSwissMaps,
 					},
 				},
 				{
@@ -182,6 +195,7 @@ func New(logger *slog.Logger) probe.Probe {
 					FailureMode: probe.FailureModeIgnore,
 					PackageConstrainsts: []probe.PackageConstrainst{
 						otelWithoutAutoSDK,
+						goWithoutSwissMaps,
 					},
 				},
 			},
