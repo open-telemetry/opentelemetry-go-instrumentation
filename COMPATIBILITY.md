@@ -9,7 +9,11 @@ Supported versions of [`otel`]:
 
 - `v0.14.0` to `v1.33.0`
 
+**Note**: Versions of `go.opentelemetry.io/otel < v1.33.0` are not supported
+when using Go >= `1.24`. See [this issue] for details.
+
 [`otel`]: https://pkg.go.dev/go.opentelemetry.io/otel
+[this issue]: https://github.com/open-telemetry/opentelemetry-go-instrumentation/issues/1318
 
 ## Instrumented Library Compatibility
 
