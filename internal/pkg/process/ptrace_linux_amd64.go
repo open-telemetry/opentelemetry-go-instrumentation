@@ -35,7 +35,7 @@ func setRegs(pid int, regs *syscall.PtraceRegs) error {
 }
 
 // Syscall runs a syscall at main thread of process.
-func (p *TracedProgram) Syscall(number uint64, args ...uint64) (uint64, error) {
+func (p *tracedProgram) Syscall(number uint64, args ...uint64) (uint64, error) {
 	// save the original registers and the current instructions
 	err := p.Protect()
 	if err != nil {

@@ -9,28 +9,28 @@ import "log/slog"
 
 // Stubs for non-linux systems
 
-type TracedProgram struct{}
+type tracedProgram struct{}
 
-func NewTracedProgram(pid int, logger *slog.Logger) (*TracedProgram, error) {
+func newTracedProgram(pid int, logger *slog.Logger) (*tracedProgram, error) {
 	return nil, nil
 }
 
-func (p *TracedProgram) Detach() error {
+func (p *tracedProgram) Detach() error {
 	return nil
 }
 
-func (p *TracedProgram) SetMemLockInfinity() error {
+func (p *tracedProgram) SetMemLockInfinity() error {
 	return nil
 }
 
-func (p *TracedProgram) Mmap(length uint64, fd uint64) (uint64, error) {
+func (p *tracedProgram) Mmap(length uint64, fd uint64) (uint64, error) {
 	return 0, nil
 }
 
-func (p *TracedProgram) Madvise(addr uint64, length uint64) error {
+func (p *tracedProgram) Madvise(addr uint64, length uint64) error {
 	return nil
 }
 
-func (p *TracedProgram) Mlock(addr uint64, length uint64) error {
+func (p *tracedProgram) Mlock(addr uint64, length uint64) error {
 	return nil
 }

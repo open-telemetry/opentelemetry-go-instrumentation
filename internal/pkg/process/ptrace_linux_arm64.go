@@ -39,7 +39,7 @@ func setRegs(pid int, regs *syscall.PtraceRegs) error {
 }
 
 // Syscall runs a syscall at main thread of process.
-func (p *TracedProgram) Syscall(number uint64, args ...uint64) (uint64, error) {
+func (p *tracedProgram) Syscall(number uint64, args ...uint64) (uint64, error) {
 	if len(args) > 7 {
 		return 0, errors.New("too many arguments for a syscall")
 	}
