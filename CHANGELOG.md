@@ -27,6 +27,7 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 
 ### Changed
 
+- Update the `rolldice` example to better show the functionality of the project. ([#1566](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1566))
 - Preemptively drop support for the `traceglobal` probe when `Go >= 1.24` is used. ([#1573](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1573))
 
 ### Fixed

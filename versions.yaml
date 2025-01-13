@@ -16,7 +16,8 @@ excluded-modules:
   - go.opentelemetry.io/auto/examples/httpPlusdb
   - go.opentelemetry.io/auto/examples/kafka-go/producer
   - go.opentelemetry.io/auto/examples/kafka-go/consumer
-  - go.opentelemetry.io/auto/examples/rolldice
+  - go.opentelemetry.io/auto/examples/rolldice/frontend
+  - go.opentelemetry.io/auto/examples/rolldice/user
   - go.opentelemetry.io/auto/internal/test/e2e/autosdk
   - go.opentelemetry.io/auto/internal/test/e2e/databasesql
   - go.opentelemetry.io/auto/internal/test/e2e/gin
