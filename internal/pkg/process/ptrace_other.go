@@ -3,7 +3,7 @@
 
 //go:build !linux
 
-package ptrace
+package process
 
 import "log/slog"
 
