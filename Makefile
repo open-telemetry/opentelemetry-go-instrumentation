@@ -169,8 +169,7 @@ fixture-otelglobal: fixtures/otelglobal
 fixture-autosdk: fixtures/autosdk
 fixture-kafka-go: fixtures/kafka-go
 fixtures/%: LIBRARY=$*
-fixtures/%:
-	$(MAKE) docker-build
+fixtures/%: docker-build
 	if [ -f ./internal/test/e2e/$(LIBRARY)/build.sh ]; then \
 		./internal/test/e2e/$(LIBRARY)/build.sh; \
 	else \
