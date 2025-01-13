@@ -8,13 +8,12 @@ import (
 	"debug/dwarf"
 	"debug/elf"
 	"errors"
-	"fmt"
-	"io"
 	"log/slog"
 	"os"
 
 	"github.com/hashicorp/go-version"
 
+	"go.opentelemetry.io/auto/internal/pkg/process"
 	"go.opentelemetry.io/auto/internal/pkg/structfield"
 )
 
@@ -88,84 +87,22 @@ func newApp(ctx context.Context, l *slog.Logger, j job) (*app, error) {
 func (a *app) GetOffset(id structfield.ID) (uint64, bool) {
 	a.log.Debug("analyzing binary...", "id", id, "binary", a.exec)
 
-	strct := fmt.Sprintf("%s.%s", id.PkgPath, id.Struct)
-	r := a.data.Reader()
-	if !gotoEntry(r, dwarf.TagStructType, strct) {
+	d := process.DWARF{Reader: a.data.Reader()}
+	v, err := d.GoStructField(id)
+	if err != nil || v < 0 {
+		a.log.Error(
+			"failed to get offset",
+			"error", err,
+			"id", id,
+			"got", v,
+		)
 		return 0, false
 	}
 
-	e, err := findEntryInChildren(r, dwarf.TagMember, id.Field)
-	if err != nil {
-		return 0, false
-	}
-
-	f, ok := entryField(e, dwarf.AttrDataMemberLoc)
-	if !ok {
-		return 0, false
-	}
-
-	return uint64(f.Val.(int64)), true
+	return uint64(v), true
 }
 
 // Close closes the app, releasing all held resources.
 func (a *app) Close() error {
 	return os.RemoveAll(a.tmpDir)
-}
-
-// gotoEntry reads from r until the entry with a tag equal to name is found.
-// True is returned if the entry is found, otherwise false is returned.
-func gotoEntry(r *dwarf.Reader, tag dwarf.Tag, name string) bool {
-	_, err := findEntry(r, tag, name)
-	return err == nil
-}
-
-// findEntry returns the DWARF entry with a tag equal to name read from r. An
-// error is returned if the entry cannot be found.
-func findEntry(r *dwarf.Reader, tag dwarf.Tag, name string) (*dwarf.Entry, error) {
-	for {
-		entry, err := r.Next()
-		if err == io.EOF || entry == nil {
-			break
-		}
-
-		if entry.Tag == tag {
-			if f, ok := entryField(entry, dwarf.AttrName); ok {
-				if name == f.Val.(string) {
-					return entry, nil
-				}
-			}
-		}
-	}
-	return nil, errors.New("not found")
-}
-
-// findEntryInChildren returns the DWARF entry with a tag equal to name read from r, only
-// considering the children of the current entry. An error is returned if the entry cannot be found.
-func findEntryInChildren(r *dwarf.Reader, tag dwarf.Tag, name string) (*dwarf.Entry, error) {
-	for {
-		entry, err := r.Next()
-		if err == io.EOF || entry == nil || entry.Tag == 0 {
-			break
-		}
-
-		if entry.Tag == tag {
-			if f, ok := entryField(entry, dwarf.AttrName); ok {
-				if name == f.Val.(string) {
-					return entry, nil
-				}
-			}
-		}
-	}
-	return nil, errors.New("not found")
-}
-
-// entryField returns the DWARF field from DWARF entry e that has the passed
-// DWARF attribute a.
-func entryField(e *dwarf.Entry, a dwarf.Attr) (dwarf.Field, bool) {
-	for _, f := range e.Field {
-		if f.Attr == a {
-			return f, true
-		}
-	}
-	return dwarf.Field{}, false
 }
