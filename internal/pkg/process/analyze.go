@@ -21,7 +21,7 @@ type TargetDetails struct {
 	PID               int
 	Functions         []*binary.Func
 	GoVersion         *version.Version
-	Libraries         map[string]*version.Version
+	Modules           map[string]*version.Version
 	AllocationDetails *AllocationDetails
 }
 
@@ -76,16 +76,16 @@ func (a *Analyzer) Analyze(pid int, relevantFuncs map[string]interface{}) (*Targ
 		return nil, err
 	}
 	result.GoVersion = goVersion
-	result.Libraries = make(map[string]*version.Version, len(a.BuildInfo.Deps)+1)
+	result.Modules = make(map[string]*version.Version, len(a.BuildInfo.Deps)+1)
 	for _, dep := range a.BuildInfo.Deps {
 		depVersion, err := version.NewVersion(dep.Version)
 		if err != nil {
 			a.logger.Error("parsing dependency version", "error", err, "dependency", dep)
 			continue
 		}
-		result.Libraries[dep.Path] = depVersion
+		result.Modules[dep.Path] = depVersion
 	}
-	result.Libraries["std"] = goVersion
+	result.Modules["std"] = goVersion
 
 	funcs, err := a.findFunctions(elfF, relevantFuncs)
 	if err != nil {
