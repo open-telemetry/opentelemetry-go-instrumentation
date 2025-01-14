@@ -41,7 +41,7 @@ var (
 type writeStatusConst struct{}
 
 func (w writeStatusConst) InjectOption(td *process.TargetDetails) (inject.Option, error) {
-	ver, ok := td.Libraries[pkg]
+	ver, ok := td.Modules[pkg]
 	if !ok {
 		return nil, fmt.Errorf("unknown module version: %s", pkg)
 	}

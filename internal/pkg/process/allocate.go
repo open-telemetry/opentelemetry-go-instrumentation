@@ -11,7 +11,6 @@ import (
 	"runtime"
 
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/utils"
-	"go.opentelemetry.io/auto/internal/pkg/process/ptrace"
 )
 
 // AllocationDetails are the details about allocated memory.
@@ -61,7 +60,7 @@ func Allocate(logger *slog.Logger, pid int) (*AllocationDetails, error) {
 func remoteAllocate(logger *slog.Logger, pid int, mapSize uint64) (uint64, error) {
 	runtime.LockOSThread()
 	defer runtime.UnlockOSThread()
-	program, err := ptrace.NewTracedProgram(pid, logger)
+	program, err := newTracedProgram(pid, logger)
 	if err != nil {
 		return 0, err
 	}

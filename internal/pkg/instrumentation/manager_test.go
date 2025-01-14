@@ -40,7 +40,7 @@ func TestProbeFiltering(t *testing.T) {
 			PID:               1,
 			Functions:         []*binary.Func{},
 			GoVersion:         ver,
-			Libraries:         map[string]*version.Version{},
+			Modules:           map[string]*version.Version{},
 			AllocationDetails: nil,
 		}
 		m.FilterUnusedProbes(&td)
@@ -58,7 +58,7 @@ func TestProbeFiltering(t *testing.T) {
 			PID:               1,
 			Functions:         httpFuncs,
 			GoVersion:         ver,
-			Libraries:         map[string]*version.Version{},
+			Modules:           map[string]*version.Version{},
 			AllocationDetails: nil,
 		}
 		m.FilterUnusedProbes(&td)
@@ -77,7 +77,7 @@ func TestProbeFiltering(t *testing.T) {
 			PID:               1,
 			Functions:         httpFuncs,
 			GoVersion:         ver,
-			Libraries:         map[string]*version.Version{},
+			Modules:           map[string]*version.Version{},
 			AllocationDetails: nil,
 		}
 		m.FilterUnusedProbes(&td)
@@ -97,7 +97,7 @@ func TestProbeFiltering(t *testing.T) {
 			PID:               1,
 			Functions:         httpFuncs,
 			GoVersion:         ver,
-			Libraries:         map[string]*version.Version{},
+			Modules:           map[string]*version.Version{},
 			AllocationDetails: nil,
 		}
 		m.FilterUnusedProbes(&td)
