@@ -21,7 +21,7 @@ type FunctionSymbol struct {
 // Manifest contains information about a package being instrumented.
 type Manifest struct {
 	// ID is a unique identifier for the probe.
-	Id ID
+	ID ID
 
 	// StructFields are the struct fields in an instrumented package that are
 	// used for instrumentation.
@@ -66,7 +66,7 @@ func NewManifest(id ID, structfields []structfield.ID, symbols []FunctionSymbol)
 	})
 
 	return Manifest{
-		Id:           id,
+		ID:           id,
 		StructFields: structfields,
 		Symbols:      symbols,
 	}
