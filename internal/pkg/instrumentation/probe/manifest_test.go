@@ -44,7 +44,7 @@ func TestNewManifest(t *testing.T) {
 		[]FunctionSymbol{fs(d), fs(a), fs(c), fs(b)},
 	)
 	want := Manifest{
-		Id:           ID{spanKind, pkg},
+		ID:           ID{spanKind, pkg},
 		StructFields: []structfield.ID{sAAAA, sAAAB, sAAAC, sAABA, sAABB, sAABC, sABAA, sBAAA},
 		Symbols:      []FunctionSymbol{fs(a), fs(b), fs(c), fs(d)},
 	}
