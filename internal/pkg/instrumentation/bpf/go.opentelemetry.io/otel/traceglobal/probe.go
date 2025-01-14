@@ -131,23 +131,23 @@ func New(logger *slog.Logger) probe.Probe {
 				},
 				probe.StructFieldConst{
 					Key: "tracer_delegate_pos",
-					Val: structfield.NewID("go.opentelemetry.io/otel", "go.opentelemetry.io/otel/internal/global", "tracer", "delegate"),
+					ID:  structfield.NewID("go.opentelemetry.io/otel", "go.opentelemetry.io/otel/internal/global", "tracer", "delegate"),
 				},
 				probe.StructFieldConst{
 					Key: "tracer_name_pos",
-					Val: structfield.NewID("go.opentelemetry.io/otel", "go.opentelemetry.io/otel/internal/global", "tracer", "name"),
+					ID:  structfield.NewID("go.opentelemetry.io/otel", "go.opentelemetry.io/otel/internal/global", "tracer", "name"),
 				},
 				probe.StructFieldConst{
 					Key: "tracer_provider_pos",
-					Val: structfield.NewID("go.opentelemetry.io/otel", "go.opentelemetry.io/otel/internal/global", "tracer", "provider"),
+					ID:  structfield.NewID("go.opentelemetry.io/otel", "go.opentelemetry.io/otel/internal/global", "tracer", "provider"),
 				},
 				probe.StructFieldConst{
 					Key: "tracer_provider_tracers_pos",
-					Val: structfield.NewID("go.opentelemetry.io/otel", "go.opentelemetry.io/otel/internal/global", "tracerProvider", "tracers"),
+					ID:  structfield.NewID("go.opentelemetry.io/otel", "go.opentelemetry.io/otel/internal/global", "tracerProvider", "tracers"),
 				},
 				probe.StructFieldConst{
 					Key: "buckets_ptr_pos",
-					Val: structfield.NewID("std", "runtime", "hmap", "buckets"),
+					ID:  structfield.NewID("std", "runtime", "hmap", "buckets"),
 				},
 				tracerIDContainsSchemaURL{},
 				tracerIDContainsScopeAttributes{},
