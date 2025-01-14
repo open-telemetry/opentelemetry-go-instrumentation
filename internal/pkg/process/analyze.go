@@ -87,6 +87,7 @@ func (t *TargetDetails) DWARF() (*dwarf.Data, error) {
 	return data, nil
 }
 
+// OpenExe opens the executable of the target process for reading.
 func (t *TargetDetails) OpenExe() (*os.File, error) {
 	path := fmt.Sprintf("/proc/%d/exe", t.PID)
 	return os.Open(path)
