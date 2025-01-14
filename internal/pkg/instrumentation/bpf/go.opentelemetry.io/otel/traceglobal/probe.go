@@ -254,7 +254,7 @@ type tracerIDContainsSchemaURL struct{}
 var schemaAddedToTracerKeyVer = version.Must(version.NewVersion("1.28.0"))
 
 func (c tracerIDContainsSchemaURL) InjectOption(td *process.TargetDetails) (inject.Option, error) {
-	ver, ok := td.Libraries["go.opentelemetry.io/otel"]
+	ver, ok := td.Modules["go.opentelemetry.io/otel"]
 	if !ok {
 		return nil, fmt.Errorf("unknown module version: %s", pkg)
 	}
@@ -270,7 +270,7 @@ var scopeAttributesAddedToTracerKeyVer = version.Must(version.NewVersion("1.32.0
 type tracerIDContainsScopeAttributes struct{}
 
 func (c tracerIDContainsScopeAttributes) InjectOption(td *process.TargetDetails) (inject.Option, error) {
-	ver, ok := td.Libraries["go.opentelemetry.io/otel"]
+	ver, ok := td.Modules["go.opentelemetry.io/otel"]
 	if !ok {
 		return nil, fmt.Errorf("unknown module version: %s", pkg)
 	}

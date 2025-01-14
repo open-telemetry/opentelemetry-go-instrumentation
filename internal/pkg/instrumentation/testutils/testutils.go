@@ -36,13 +36,13 @@ func ProbesLoad(t *testing.T, p TestProbe, libs map[string]*version.Version) {
 			StartAddr: 140434497441792,
 			EndAddr:   140434497507328,
 		},
-		Libraries: map[string]*version.Version{
+		Modules: map[string]*version.Version{
 			"std": testGoVersion,
 		},
 		GoVersion: testGoVersion,
 	}
 	for k, v := range libs {
-		td.Libraries[k] = v
+		td.Modules[k] = v
 	}
 
 	err = bpffs.Mount(td)

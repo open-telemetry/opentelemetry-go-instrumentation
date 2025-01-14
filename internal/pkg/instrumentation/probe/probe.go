@@ -169,7 +169,7 @@ func (i *Base[BPFObj, BPFEvent]) loadUprobes(exec *link.Executable, td *process.
 	for _, up := range i.Uprobes {
 		var skip bool
 		for _, pc := range up.PackageConstrainsts {
-			if pc.Constraints.Check(td.Libraries[pc.Package]) {
+			if pc.Constraints.Check(td.Modules[pc.Package]) {
 				continue
 			}
 
@@ -461,7 +461,7 @@ type StructFieldConst struct {
 // version of the struct field module is known. If it is not, an error is
 // returned.
 func (c StructFieldConst) InjectOption(td *process.TargetDetails) (inject.Option, error) {
-	ver, ok := td.Libraries[c.Val.ModPath]
+	ver, ok := td.Modules[c.Val.ModPath]
 	if !ok {
 		return nil, fmt.Errorf("unknown module version: %s", c.Val.ModPath)
 	}
@@ -483,7 +483,7 @@ type StructFieldConstMinVersion struct {
 // injected.
 func (c StructFieldConstMinVersion) InjectOption(td *process.TargetDetails) (inject.Option, error) {
 	sf := c.StructField
-	ver, ok := td.Libraries[sf.Val.ModPath]
+	ver, ok := td.Modules[sf.Val.ModPath]
 	if !ok {
 		return nil, fmt.Errorf("unknown module version: %s", sf.Val.ModPath)
 	}
