@@ -5,7 +5,6 @@ package process
 
 import (
 	"debug/buildinfo"
-	"debug/dwarf"
 	"debug/elf"
 	"errors"
 	"fmt"
@@ -24,8 +23,6 @@ type TargetDetails struct {
 	GoVersion         *version.Version
 	Modules           map[string]*version.Version
 	AllocationDetails *AllocationDetails
-
-	dwarfData *dwarf.Data
 }
 
 // IsRegistersABI returns if t is supported.
@@ -55,36 +52,6 @@ func (t *TargetDetails) GetFunctionReturns(name string) ([]uint64, error) {
 	}
 
 	return nil, fmt.Errorf("could not find returns for function %s", name)
-}
-
-// DWARF returns the [dwarf.Data] found in the target process.
-//
-// This will return a cached copy of the data after the first successful call.
-//
-// This function is explicitly not safe to be called concurrently.
-func (t *TargetDetails) DWARF() (*dwarf.Data, error) {
-	if t.dwarfData != nil {
-		return t.dwarfData, nil
-	}
-
-	fd, err := t.OpenExe()
-	if err != nil {
-		return nil, err
-	}
-	defer fd.Close()
-
-	elfF, err := elf.NewFile(fd)
-	if err != nil {
-		return nil, err
-	}
-
-	data, err := elfF.DWARF()
-	if err != nil {
-		return nil, err
-	}
-
-	t.dwarfData = data
-	return data, nil
 }
 
 // OpenExe opens the executable of the target process for reading.

@@ -4,6 +4,7 @@
 package inject
 
 import (
+	"debug/elf"
 	_ "embed"
 	"encoding/json"
 	"errors"
@@ -160,7 +161,18 @@ func WithOffset(key string, id structfield.ID, ver *version.Version) Option {
 }
 
 func FindOffset(id structfield.ID, td *process.TargetDetails) (structfield.OffsetKey, error) {
-	data, err := td.DWARF()
+	fd, err := td.OpenExe()
+	if err != nil {
+		return structfield.OffsetKey{}, err
+	}
+	defer fd.Close()
+
+	elfF, err := elf.NewFile(fd)
+	if err != nil {
+		return structfield.OffsetKey{}, err
+	}
+
+	data, err := elfF.DWARF()
 	if err != nil {
 		return structfield.OffsetKey{}, err
 	}
