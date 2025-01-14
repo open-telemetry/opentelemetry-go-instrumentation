@@ -497,10 +497,10 @@ func (c StructFieldConst) InjectOption(td *process.TargetDetails) (inject.Option
 		var err error
 		off, err = inject.FindOffset(c.Val, td)
 		if err != nil {
-			return nil, fmt.Errorf("failed to find offset for %q: %w", c.Val.ModPath, err)
+			return nil, fmt.Errorf("failed to find offset for %q: %w", c.Val, err)
 		}
 		if !off.Valid {
-			return nil, fmt.Errorf("failed to find valid offset for %q", c.Val.ModPath)
+			return nil, fmt.Errorf("failed to find valid offset for %q", c.Val)
 		}
 	}
 
