@@ -1,7 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package ptrace
+package process
 
 import (
 	"fmt"
@@ -30,8 +30,8 @@ const (
 
 var threadRetryLimit = 10
 
-// TracedProgram is a program traced by ptrace.
-type TracedProgram struct {
+// tracedProgram is a program to be traced with ptrace.
+type tracedProgram struct {
 	pid  int
 	tids []int
 
@@ -42,7 +42,7 @@ type TracedProgram struct {
 }
 
 // Pid return the pid of traced program.
-func (p *TracedProgram) Pid() int {
+func (p *tracedProgram) Pid() int {
 	return p.pid
 }
 
@@ -58,8 +58,8 @@ func waitPid(pid int) error {
 	return errors.Errorf(waitPidErrorMessage, ret)
 }
 
-// NewTracedProgram ptrace all threads of a process.
-func NewTracedProgram(pid int, logger *slog.Logger) (*TracedProgram, error) {
+// newTracedProgram ptrace all threads of a process.
+func newTracedProgram(pid int, logger *slog.Logger) (*tracedProgram, error) {
 	tidMap := make(map[int]bool)
 	retryCount := make(map[int]int)
 
@@ -138,7 +138,7 @@ func NewTracedProgram(pid int, logger *slog.Logger) (*TracedProgram, error) {
 		tids = append(tids, key)
 	}
 
-	program := &TracedProgram{
+	program := &tracedProgram{
 		pid:        pid,
 		tids:       tids,
 		backupRegs: &syscall.PtraceRegs{},
@@ -150,7 +150,7 @@ func NewTracedProgram(pid int, logger *slog.Logger) (*TracedProgram, error) {
 }
 
 // Detach detaches from all threads of the processes.
-func (p *TracedProgram) Detach() error {
+func (p *tracedProgram) Detach() error {
 	for _, tid := range p.tids {
 		err := syscall.PtraceDetach(tid)
 		if err != nil {
@@ -164,7 +164,7 @@ func (p *TracedProgram) Detach() error {
 }
 
 // Protect will backup regs and rip into fields.
-func (p *TracedProgram) Protect() error {
+func (p *tracedProgram) Protect() error {
 	err := getRegs(p.pid, p.backupRegs)
 	if err != nil {
 		return errors.WithStack(err)
@@ -179,7 +179,7 @@ func (p *TracedProgram) Protect() error {
 }
 
 // Restore will restore regs and rip from fields.
-func (p *TracedProgram) Restore() error {
+func (p *tracedProgram) Restore() error {
 	err := setRegs(p.pid, p.backupRegs)
 	if err != nil {
 		return errors.WithStack(err)
@@ -194,13 +194,13 @@ func (p *TracedProgram) Restore() error {
 }
 
 // Wait waits until the process stops.
-func (p *TracedProgram) Wait() error {
+func (p *tracedProgram) Wait() error {
 	_, err := syscall.Wait4(p.pid, nil, 0, nil)
 	return err
 }
 
 // Step moves one step forward.
-func (p *TracedProgram) Step() error {
+func (p *tracedProgram) Step() error {
 	err := syscall.PtraceSingleStep(p.pid)
 	if err != nil {
 		return errors.WithStack(err)
@@ -210,7 +210,7 @@ func (p *TracedProgram) Step() error {
 }
 
 // SetMemLockInfinity sets the memlock rlimit to infinity.
-func (p *TracedProgram) SetMemLockInfinity() error {
+func (p *tracedProgram) SetMemLockInfinity() error {
 	// Requires CAP_SYS_RESOURCE.
 	newLimit := unix.Rlimit{Cur: unix.RLIM_INFINITY, Max: unix.RLIM_INFINITY}
 	if err := unix.Prlimit(p.pid, unix.RLIMIT_MEMLOCK, &newLimit, nil); err != nil {
@@ -221,12 +221,12 @@ func (p *TracedProgram) SetMemLockInfinity() error {
 }
 
 // Mmap runs mmap syscall.
-func (p *TracedProgram) Mmap(length uint64, fd uint64) (uint64, error) {
+func (p *tracedProgram) Mmap(length uint64, fd uint64) (uint64, error) {
 	return p.Syscall(syscall.SYS_MMAP, 0, length, syscall.PROT_READ|syscall.PROT_WRITE, syscall.MAP_ANON|syscall.MAP_PRIVATE|syscall.MAP_POPULATE|syscall.MAP_LOCKED, fd, 0)
 }
 
 // Madvise runs madvise syscall.
-func (p *TracedProgram) Madvise(addr uint64, length uint64) error {
+func (p *tracedProgram) Madvise(addr uint64, length uint64) error {
 	advice := uint64(syscall.MADV_WILLNEED)
 	ver, err := utils.GetLinuxKernelVersion()
 	if err != nil {
@@ -244,7 +244,7 @@ func (p *TracedProgram) Madvise(addr uint64, length uint64) error {
 }
 
 // Mlock runs mlock syscall.
-func (p *TracedProgram) Mlock(addr uint64, length uint64) error {
+func (p *tracedProgram) Mlock(addr uint64, length uint64) error {
 	ret, err := p.Syscall(syscall.SYS_MLOCK, addr, length, 0, 0, 0, 0)
 	p.logger.Debug("mlock ret", "ret", ret)
 	return err

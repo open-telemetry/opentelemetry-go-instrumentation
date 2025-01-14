@@ -111,7 +111,7 @@ func NewInstrumentation(ctx context.Context, opts ...InstrumentationOption) (*In
 		"target process analysis completed",
 		"pid", td.PID,
 		"go_version", td.GoVersion,
-		"dependencies", td.Libraries,
+		"dependencies", td.Modules,
 		"total_functions_found", len(td.Functions),
 	)
 	mngr.FilterUnusedProbes(td)

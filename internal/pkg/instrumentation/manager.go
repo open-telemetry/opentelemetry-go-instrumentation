@@ -103,7 +103,7 @@ func (m *Manager) validateProbeDependents(id probe.ID, symbols []probe.FunctionS
 }
 
 func (m *Manager) registerProbe(p probe.Probe) error {
-	id := p.Manifest().Id
+	id := p.Manifest().ID
 	if _, exists := m.probes[id]; exists {
 		return fmt.Errorf("library %s registered twice, aborting", id)
 	}
