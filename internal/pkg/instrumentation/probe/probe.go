@@ -95,7 +95,7 @@ func (i *Base[BPFObj, BPFEvent]) Manifest() Manifest {
 	var structFieldIDs []structfield.ID
 	for _, cnst := range i.Consts {
 		if sfc, ok := cnst.(StructFieldConst); ok {
-			structFieldIDs = append(structFieldIDs, sfc.Val)
+			structFieldIDs = append(structFieldIDs, sfc.ID)
 		}
 		if sfc, ok := cnst.(StructFieldConstMinVersion); ok {
 			structFieldIDs = append(structFieldIDs, sfc.StructField.Val)
@@ -457,18 +457,18 @@ type Const interface {
 // ID needs to be known offsets in the [inject] package.
 type StructFieldConst struct {
 	Key string
-	Val structfield.ID
+	ID  structfield.ID
 }
 
 // InjectOption returns the appropriately configured [inject.WithOffset] if the
 // version of the struct field module is known. If it is not, an error is
 // returned.
 func (c StructFieldConst) InjectOption(td *process.TargetDetails) (inject.Option, error) {
-	ver, ok := td.Modules[c.Val.ModPath]
+	ver, ok := td.Modules[c.ID.ModPath]
 	if !ok {
-		return nil, fmt.Errorf("unknown module version: %s", c.Val.ModPath)
+		return nil, fmt.Errorf("unknown module version: %s", c.ID.ModPath)
 	}
-	return inject.WithOffset(c.Key, c.Val, ver), nil
+	return inject.WithOffset(c.Key, c.ID, ver), nil
 }
 
 // StructFieldConstMinVersion is a [Const] for a struct field offset. These struct field
@@ -486,16 +486,16 @@ type StructFieldConstMinVersion struct {
 // injected.
 func (c StructFieldConstMinVersion) InjectOption(td *process.TargetDetails) (inject.Option, error) {
 	sf := c.StructField
-	ver, ok := td.Modules[sf.Val.ModPath]
+	ver, ok := td.Modules[sf.ID.ModPath]
 	if !ok {
-		return nil, fmt.Errorf("unknown module version: %s", sf.Val.ModPath)
+		return nil, fmt.Errorf("unknown module version: %s", sf.ID.ModPath)
 	}
 
 	if !ver.GreaterThanOrEqual(c.MinVersion) {
 		return nil, nil
 	}
 
-	return inject.WithOffset(sf.Key, sf.Val, ver), nil
+	return inject.WithOffset(sf.Key, sf.ID, ver), nil
 }
 
 // AllocationConst is a [Const] for all the allocation details that need to be
