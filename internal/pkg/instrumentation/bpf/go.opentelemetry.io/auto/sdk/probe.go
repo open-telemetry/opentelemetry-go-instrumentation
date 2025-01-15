@@ -34,7 +34,7 @@ func New(logger *slog.Logger) probe.Probe {
 				probe.AllocationConst{},
 				probe.StructFieldConst{
 					Key: "span_context_trace_id_pos",
-					Val: structfield.NewID(
+					ID: structfield.NewID(
 						"go.opentelemetry.io/otel",
 						"go.opentelemetry.io/otel/trace",
 						"SpanContext",
@@ -43,7 +43,7 @@ func New(logger *slog.Logger) probe.Probe {
 				},
 				probe.StructFieldConst{
 					Key: "span_context_span_id_pos",
-					Val: structfield.NewID(
+					ID: structfield.NewID(
 						"go.opentelemetry.io/otel",
 						"go.opentelemetry.io/otel/trace",
 						"SpanContext",
@@ -52,7 +52,7 @@ func New(logger *slog.Logger) probe.Probe {
 				},
 				probe.StructFieldConst{
 					Key: "span_context_trace_flags_pos",
-					Val: structfield.NewID(
+					ID: structfield.NewID(
 						"go.opentelemetry.io/otel",
 						"go.opentelemetry.io/otel/trace",
 						"SpanContext",

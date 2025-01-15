@@ -72,87 +72,87 @@ func New(logger *slog.Logger, version string) probe.Probe {
 				probe.AllocationConst{},
 				probe.StructFieldConst{
 					Key: "method_ptr_pos",
-					Val: structfield.NewID("std", "net/http", "Request", "Method"),
+					ID:  structfield.NewID("std", "net/http", "Request", "Method"),
 				},
 				probe.StructFieldConst{
 					Key: "url_ptr_pos",
-					Val: structfield.NewID("std", "net/http", "Request", "URL"),
+					ID:  structfield.NewID("std", "net/http", "Request", "URL"),
 				},
 				probe.StructFieldConst{
 					Key: "path_ptr_pos",
-					Val: structfield.NewID("std", "net/url", "URL", "Path"),
+					ID:  structfield.NewID("std", "net/url", "URL", "Path"),
 				},
 				probe.StructFieldConst{
 					Key: "headers_ptr_pos",
-					Val: structfield.NewID("std", "net/http", "Request", "Header"),
+					ID:  structfield.NewID("std", "net/http", "Request", "Header"),
 				},
 				probe.StructFieldConst{
 					Key: "ctx_ptr_pos",
-					Val: structfield.NewID("std", "net/http", "Request", "ctx"),
+					ID:  structfield.NewID("std", "net/http", "Request", "ctx"),
 				},
 				probe.StructFieldConst{
 					Key: "status_code_pos",
-					Val: structfield.NewID("std", "net/http", "Response", "StatusCode"),
+					ID:  structfield.NewID("std", "net/http", "Response", "StatusCode"),
 				},
 				probe.StructFieldConst{
 					Key: "request_host_pos",
-					Val: structfield.NewID("std", "net/http", "Request", "Host"),
+					ID:  structfield.NewID("std", "net/http", "Request", "Host"),
 				},
 				probe.StructFieldConst{
 					Key: "request_proto_pos",
-					Val: structfield.NewID("std", "net/http", "Request", "Proto"),
+					ID:  structfield.NewID("std", "net/http", "Request", "Proto"),
 				},
 				probe.StructFieldConst{
 					Key: "io_writer_buf_ptr_pos",
-					Val: structfield.NewID("std", "bufio", "Writer", "buf"),
+					ID:  structfield.NewID("std", "bufio", "Writer", "buf"),
 				},
 				probe.StructFieldConst{
 					Key: "io_writer_n_pos",
-					Val: structfield.NewID("std", "bufio", "Writer", "n"),
+					ID:  structfield.NewID("std", "bufio", "Writer", "n"),
 				},
 				probe.StructFieldConst{
 					Key: "scheme_pos",
-					Val: structfield.NewID("std", "net/url", "URL", "Scheme"),
+					ID:  structfield.NewID("std", "net/url", "URL", "Scheme"),
 				},
 				probe.StructFieldConst{
 					Key: "opaque_pos",
-					Val: structfield.NewID("std", "net/url", "URL", "Opaque"),
+					ID:  structfield.NewID("std", "net/url", "URL", "Opaque"),
 				},
 				probe.StructFieldConst{
 					Key: "user_ptr_pos",
-					Val: structfield.NewID("std", "net/url", "URL", "User"),
+					ID:  structfield.NewID("std", "net/url", "URL", "User"),
 				},
 				probe.StructFieldConst{
 					Key: "raw_path_pos",
-					Val: structfield.NewID("std", "net/url", "URL", "RawPath"),
+					ID:  structfield.NewID("std", "net/url", "URL", "RawPath"),
 				},
 				probe.StructFieldConst{
 					Key: "omit_host_pos",
-					Val: structfield.NewID("std", "net/url", "URL", "OmitHost"),
+					ID:  structfield.NewID("std", "net/url", "URL", "OmitHost"),
 				},
 				probe.StructFieldConst{
 					Key: "force_query_pos",
-					Val: structfield.NewID("std", "net/url", "URL", "ForceQuery"),
+					ID:  structfield.NewID("std", "net/url", "URL", "ForceQuery"),
 				},
 				probe.StructFieldConst{
 					Key: "raw_query_pos",
-					Val: structfield.NewID("std", "net/url", "URL", "RawQuery"),
+					ID:  structfield.NewID("std", "net/url", "URL", "RawQuery"),
 				},
 				probe.StructFieldConst{
 					Key: "fragment_pos",
-					Val: structfield.NewID("std", "net/url", "URL", "Fragment"),
+					ID:  structfield.NewID("std", "net/url", "URL", "Fragment"),
 				},
 				probe.StructFieldConst{
 					Key: "raw_fragment_pos",
-					Val: structfield.NewID("std", "net/url", "URL", "RawFragment"),
+					ID:  structfield.NewID("std", "net/url", "URL", "RawFragment"),
 				},
 				probe.StructFieldConst{
 					Key: "username_pos",
-					Val: structfield.NewID("std", "net/url", "Userinfo", "username"),
+					ID:  structfield.NewID("std", "net/url", "Userinfo", "username"),
 				},
 				probe.StructFieldConst{
 					Key: "url_host_pos",
-					Val: structfield.NewID("std", "net/url", "URL", "Host"),
+					ID:  structfield.NewID("std", "net/url", "URL", "Host"),
 				},
 			},
 			Uprobes: uprobes,

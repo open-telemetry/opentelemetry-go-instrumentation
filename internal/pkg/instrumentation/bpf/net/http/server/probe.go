@@ -45,59 +45,59 @@ func New(logger *slog.Logger, version string) probe.Probe {
 				probe.RegistersABIConst{},
 				probe.StructFieldConst{
 					Key: "method_ptr_pos",
-					Val: structfield.NewID("std", "net/http", "Request", "Method"),
+					ID:  structfield.NewID("std", "net/http", "Request", "Method"),
 				},
 				probe.StructFieldConst{
 					Key: "url_ptr_pos",
-					Val: structfield.NewID("std", "net/http", "Request", "URL"),
+					ID:  structfield.NewID("std", "net/http", "Request", "URL"),
 				},
 				probe.StructFieldConst{
 					Key: "ctx_ptr_pos",
-					Val: structfield.NewID("std", "net/http", "Request", "ctx"),
+					ID:  structfield.NewID("std", "net/http", "Request", "ctx"),
 				},
 				probe.StructFieldConst{
 					Key: "path_ptr_pos",
-					Val: structfield.NewID("std", "net/url", "URL", "Path"),
+					ID:  structfield.NewID("std", "net/url", "URL", "Path"),
 				},
 				probe.StructFieldConst{
 					Key: "headers_ptr_pos",
-					Val: structfield.NewID("std", "net/http", "Request", "Header"),
+					ID:  structfield.NewID("std", "net/http", "Request", "Header"),
 				},
 				probe.StructFieldConst{
 					Key: "req_ptr_pos",
-					Val: structfield.NewID("std", "net/http", "response", "req"),
+					ID:  structfield.NewID("std", "net/http", "response", "req"),
 				},
 				probe.StructFieldConst{
 					Key: "status_code_pos",
-					Val: structfield.NewID("std", "net/http", "response", "status"),
+					ID:  structfield.NewID("std", "net/http", "response", "status"),
 				},
 				probe.StructFieldConst{
 					Key: "buckets_ptr_pos",
-					Val: structfield.NewID("std", "runtime", "hmap", "buckets"),
+					ID:  structfield.NewID("std", "runtime", "hmap", "buckets"),
 				},
 				probe.StructFieldConst{
 					Key: "remote_addr_pos",
-					Val: structfield.NewID("std", "net/http", "Request", "RemoteAddr"),
+					ID:  structfield.NewID("std", "net/http", "Request", "RemoteAddr"),
 				},
 				probe.StructFieldConst{
 					Key: "host_pos",
-					Val: structfield.NewID("std", "net/http", "Request", "Host"),
+					ID:  structfield.NewID("std", "net/http", "Request", "Host"),
 				},
 				probe.StructFieldConst{
 					Key: "proto_pos",
-					Val: structfield.NewID("std", "net/http", "Request", "Proto"),
+					ID:  structfield.NewID("std", "net/http", "Request", "Proto"),
 				},
 				probe.StructFieldConstMinVersion{
 					StructField: probe.StructFieldConst{
 						Key: "req_pat_pos",
-						Val: structfield.NewID("std", "net/http", "Request", "pat"),
+						ID:  structfield.NewID("std", "net/http", "Request", "pat"),
 					},
 					MinVersion: patternPathMinVersion,
 				},
 				probe.StructFieldConstMinVersion{
 					StructField: probe.StructFieldConst{
 						Key: "pat_str_pos",
-						Val: structfield.NewID("std", "net/http", "pattern", "str"),
+						ID:  structfield.NewID("std", "net/http", "pattern", "str"),
 					},
 					MinVersion: patternPathMinVersion,
 				},
