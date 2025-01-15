@@ -120,6 +120,15 @@ docker-build:
 docker-build-base:
 	docker buildx build -t $(IMG_NAME_BASE) --target base .
 
+.PHONY: sample-app/nethttp sample-app/gin sample-app/databasesql sample-app/nethttp-custom sample-app/otelglobal sample-app/autosdk sample-app/kafka-go
+sample-app/%: LIBRARY=$*
+sample-app/%:
+	if [ -f ./internal/test/e2e/$(LIBRARY)/build.sh ]; then \
+		./internal/test/e2e/$(LIBRARY)/build.sh; \
+	else \
+		cd internal/test/e2e/$(LIBRARY) && docker build -t sample-app . ;\
+	fi
+
 OFFSETS_OUTPUT_FILE="$(REPODIR)/internal/pkg/inject/offset_results.json"
 .PHONY: offsets
 offsets: | $(OFFSETGEN)
@@ -169,12 +178,7 @@ fixture-otelglobal: fixtures/otelglobal
 fixture-autosdk: fixtures/autosdk
 fixture-kafka-go: fixtures/kafka-go
 fixtures/%: LIBRARY=$*
-fixtures/%: docker-build
-	if [ -f ./internal/test/e2e/$(LIBRARY)/build.sh ]; then \
-		./internal/test/e2e/$(LIBRARY)/build.sh; \
-	else \
-		cd internal/test/e2e/$(LIBRARY) && docker build -t sample-app . ;\
-	fi
+fixtures/%: docker-build sample-app/%
 	kind create cluster
 	kind load docker-image otel-go-instrumentation sample-app
 	helm repo add open-telemetry https://open-telemetry.github.io/opentelemetry-helm-charts
