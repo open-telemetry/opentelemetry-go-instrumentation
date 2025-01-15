@@ -1,0 +1,23 @@
+# Copyright The OpenTelemetry Authors
+# SPDX-License-Identifier: Apache-2.0
+
+# Ignore everything by default.
+*
+
+# Make tooling
+!/Makefile
+
+# Copyright requirements.
+!/LICENSE
+!/LICENSES
+
+# Go
+!/go.sum
+!/go.mod
+!/*.go
+
+# Packages
+!/cli
+!/sdk
+!/internal/include/
+!/internal/pkg/
