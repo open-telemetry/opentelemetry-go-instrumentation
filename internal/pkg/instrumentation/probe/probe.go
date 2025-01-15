@@ -95,7 +95,7 @@ func (i *Base[BPFObj, BPFEvent]) Manifest() Manifest {
 	var structFieldIDs []structfield.ID
 	for _, cnst := range i.Consts {
 		if sfc, ok := cnst.(StructFieldConst); ok {
-			structFieldIDs = append(structFieldIDs, sfc.Val)
+			structFieldIDs = append(structFieldIDs, sfc.ID)
 		}
 	}
 
@@ -462,7 +462,7 @@ type setLogger interface {
 // ID needs to be known offsets in the [inject] package.
 type StructFieldConst struct {
 	Key string
-	Val structfield.ID
+	ID  structfield.ID
 
 	logger *slog.Logger
 }
@@ -479,33 +479,33 @@ func (c StructFieldConst) SetLogger(l *slog.Logger) Const {
 // version of the struct field module is known. If it is not, an error is
 // returned.
 func (c StructFieldConst) InjectOption(td *process.TargetDetails) (inject.Option, error) {
-	ver, ok := td.Modules[c.Val.ModPath]
+	ver, ok := td.Modules[c.ID.ModPath]
 	if !ok {
-		return nil, fmt.Errorf("unknown module: %s", c.Val.ModPath)
+		return nil, fmt.Errorf("unknown module: %s", c.ID.ModPath)
 	}
 
-	off, ok := inject.GetOffset(c.Val, ver)
+	off, ok := inject.GetOffset(c.ID, ver)
 	if !ok || !off.Valid {
 		if c.logger != nil {
 			c.logger.Info(
 				"Offset not cached, analyzing directly",
 				"key", c.Key,
-				"id", c.Val,
+				"id", c.ID,
 			)
 		}
 
 		var err error
-		off, err = inject.FindOffset(c.Val, td)
+		off, err = inject.FindOffset(c.ID, td)
 		if err != nil {
-			return nil, fmt.Errorf("failed to find offset for %q: %w", c.Val, err)
+			return nil, fmt.Errorf("failed to find offset for %q: %w", c.ID, err)
 		}
 		if !off.Valid {
-			return nil, fmt.Errorf("failed to find valid offset for %q", c.Val)
+			return nil, fmt.Errorf("failed to find valid offset for %q", c.ID)
 		}
 	}
 
 	if c.logger != nil {
-		c.logger.Debug("Offset found", "key", c.Key, "id", c.Val, "offset", off.Offset)
+		c.logger.Debug("Offset found", "key", c.Key, "id", c.ID, "offset", off.Offset)
 	}
 	return inject.WithKeyValue(c.Key, off.Offset), nil
 }
@@ -525,9 +525,9 @@ type StructFieldConstMinVersion struct {
 // injected.
 func (c StructFieldConstMinVersion) InjectOption(td *process.TargetDetails) (inject.Option, error) {
 	sf := c.StructField
-	ver, ok := td.Modules[sf.Val.ModPath]
+	ver, ok := td.Modules[sf.ID.ModPath]
 	if !ok {
-		return nil, fmt.Errorf("unknown module version: %s", sf.Val.ModPath)
+		return nil, fmt.Errorf("unknown module version: %s", sf.ID.ModPath)
 	}
 
 	if !ver.GreaterThanOrEqual(c.MinVersion) {
