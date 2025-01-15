@@ -152,6 +152,10 @@ func (i *Base[BPFObj, BPFEvent]) InjectConsts(td *process.TargetDetails, spec *e
 	var err error
 	var opts []inject.Option
 	for _, cnst := range i.Consts {
+		if l, ok := cnst.(setLogger); ok {
+			cnst = l.SetLogger(i.Logger)
+		}
+
 		o, e := cnst.InjectOption(td)
 		err = errors.Join(err, e)
 		if e == nil && o != nil {
@@ -450,11 +454,25 @@ type Const interface {
 	InjectOption(td *process.TargetDetails) (inject.Option, error)
 }
 
+type setLogger interface {
+	SetLogger(*slog.Logger) Const
+}
+
 // StructFieldConst is a [Const] for a struct field offset. These struct field
 // ID needs to be known offsets in the [inject] package.
 type StructFieldConst struct {
 	Key string
 	ID  structfield.ID
+
+	logger *slog.Logger
+}
+
+var _ setLogger = StructFieldConst{}
+
+// SetLogger sets the Logger for StructFieldConst operations.
+func (c StructFieldConst) SetLogger(l *slog.Logger) Const {
+	c.logger = l
+	return c
 }
 
 // InjectOption returns the appropriately configured [inject.WithOffset] if the
@@ -463,9 +481,33 @@ type StructFieldConst struct {
 func (c StructFieldConst) InjectOption(td *process.TargetDetails) (inject.Option, error) {
 	ver, ok := td.Modules[c.ID.ModPath]
 	if !ok {
-		return nil, fmt.Errorf("unknown module version: %s", c.ID.ModPath)
+		return nil, fmt.Errorf("unknown module: %s", c.ID.ModPath)
 	}
-	return inject.WithOffset(c.Key, c.ID, ver), nil
+
+	off, ok := inject.GetOffset(c.ID, ver)
+	if !ok || !off.Valid {
+		if c.logger != nil {
+			c.logger.Info(
+				"Offset not cached, analyzing directly",
+				"key", c.Key,
+				"id", c.ID,
+			)
+		}
+
+		var err error
+		off, err = inject.FindOffset(c.ID, td)
+		if err != nil {
+			return nil, fmt.Errorf("failed to find offset for %q: %w", c.ID, err)
+		}
+		if !off.Valid {
+			return nil, fmt.Errorf("failed to find valid offset for %q", c.ID)
+		}
+	}
+
+	if c.logger != nil {
+		c.logger.Debug("Offset found", "key", c.Key, "id", c.ID, "offset", off.Offset)
+	}
+	return inject.WithKeyValue(c.Key, off.Offset), nil
 }
 
 // StructFieldConstMinVersion is a [Const] for a struct field offset. These struct field
@@ -492,7 +534,7 @@ func (c StructFieldConstMinVersion) InjectOption(td *process.TargetDetails) (inj
 		return nil, nil
 	}
 
-	return inject.WithOffset(sf.Key, sf.ID, ver), nil
+	return sf.InjectOption(td)
 }
 
 // AllocationConst is a [Const] for all the allocation details that need to be
