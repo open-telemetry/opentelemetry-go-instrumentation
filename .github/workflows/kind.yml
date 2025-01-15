@@ -14,9 +14,11 @@ jobs:
     steps:
       - name: Checkout Repo
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+      - name: Install build dependencies
+        run: sudo apt-get install -y clang llvm libbpf-dev
       - name: Build auto-instrumentation
         run: |
-          IMG=otel-go-instrumentation:latest make docker-build
+          IMG=otel-go-instrumentation:latest make docker-build-test
           docker save otel-go-instrumentation:latest -o otel-go-instrumentation.tar
       - name: Upload Docker image artifact
         uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4
