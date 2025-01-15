@@ -29,6 +29,8 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 
 - Update the `rolldice` example to better show the functionality of the project. ([#1566](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1566))
 - Preemptively drop support for the `traceglobal` probe when `Go >= 1.24` is used. ([#1573](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1573))
+- Support non-cached offsets.
+  If the target process uses an unknown version of an instrumented pacakge but has DAWRF data included, the offset is now found on startup instead of erroring. ([#1593](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1593))
 
 ### Fixed
 
