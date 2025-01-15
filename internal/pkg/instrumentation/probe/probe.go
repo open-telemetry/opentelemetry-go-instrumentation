@@ -98,7 +98,7 @@ func (i *Base[BPFObj, BPFEvent]) Manifest() Manifest {
 			structFieldIDs = append(structFieldIDs, sfc.ID)
 		}
 		if sfc, ok := cnst.(StructFieldConstMinVersion); ok {
-			structFieldIDs = append(structFieldIDs, sfc.StructField.Val)
+			structFieldIDs = append(structFieldIDs, sfc.StructField.ID)
 		}
 	}
 
