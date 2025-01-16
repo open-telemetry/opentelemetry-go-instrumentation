@@ -109,6 +109,10 @@ func New(logger *slog.Logger, version string) probe.Probe {
 					EntryProbe:  "uprobe_serverHandler_ServeHTTP",
 					ReturnProbe: "uprobe_serverHandler_ServeHTTP_Returns",
 				},
+				{
+					Sym:         "net/textproto.(*Reader).readContinuedLineSlice",
+					ReturnProbe: "uprobe_textproto_Reader_readContinuedLineSlice_Returns",
+				},
 			},
 			SpecFn: loadBpf,
 		},
