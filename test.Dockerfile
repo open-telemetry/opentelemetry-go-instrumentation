@@ -1,7 +1,5 @@
 FROM golang:1.23.4-bookworm@sha256:e4906bc13f563c90ea22151e831cda45d58838f2bee18823f0bcc717464ccfe5
 
-RUN apt-get update && apt-get install -y curl clang gcc llvm make libbpf-dev
-
 WORKDIR /usr/src/go.opentelemetry.io/auto/
 
 COPY go.mod go.sum ./
