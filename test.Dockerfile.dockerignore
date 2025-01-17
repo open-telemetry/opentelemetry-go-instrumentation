@@ -4,9 +4,6 @@
 # Ignore everything by default.
 *
 
-# Make tooling
-!/Makefile
-
 # Copyright requirements.
 !/LICENSE
 !/LICENSES
