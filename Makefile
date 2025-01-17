@@ -120,7 +120,7 @@ docker-build:
 docker-build-base:
 	docker buildx build -t $(IMG_NAME_BASE) --target base .
 
-.PHONY: docker-test
+.PHONY: docker-build-test
 docker-build-test: generate
 	docker buildx build -t $(IMG_NAME) -f test.Dockerfile .
 
