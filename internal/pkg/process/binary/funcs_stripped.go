@@ -4,12 +4,24 @@
 package binary
 
 import (
+	"bytes"
+	"debug/buildinfo"
 	"debug/elf"
 	"debug/gosym"
+	"encoding/binary"
 	"fmt"
+	"strings"
 )
 
-func FindFunctionsStripped(elfF *elf.File, relevantFuncs map[string]interface{}) ([]*Func, error) {
+// From go/src/debug/gosym/pclntab.go.
+const (
+	go12magic  = 0xfffffffb
+	go116magic = 0xfffffffa
+	go118magic = 0xfffffff0
+	go120magic = 0xfffffff1
+)
+
+func FindFunctionsStripped(elfF *elf.File, relevantFuncs map[string]interface{}, bi *buildinfo.BuildInfo) ([]*Func, error) {
 	var sec *elf.Section
 	if sec = elfF.Section(".gopclntab"); sec == nil {
 		return nil, fmt.Errorf("%s section not found in target binary", ".gopclntab")
@@ -18,16 +30,29 @@ func FindFunctionsStripped(elfF *elf.File, relevantFuncs map[string]interface{})
 	if err != nil {
 		return nil, err
 	}
-	sec = elfF.Section(".gosymtab")
-	if sec == nil {
-		return nil, fmt.Errorf("%s section not found in target binary, make sure this is a Go application", ".gosymtab")
+
+	// locate the header of the pclntab, by finding the magic number
+	magic := magicNumber(bi.GoVersion)
+	pclntabIndex := bytes.Index(pclndat, magic)
+	if pclntabIndex < 0 {
+		return nil, fmt.Errorf("could not find pclntab magic number")
 	}
-	symTabRaw, err := sec.Data()
-	if err != nil {
-		return nil, err
+
+	pclndat = pclndat[pclntabIndex:]
+	// reading the `runtime.text` value from the table,
+	// this value may differ from the actual text segment start address
+	// in case the binary is compiled with CGO_ENABLED=1
+	var runtimeText uint64
+	// Get textStart from pclntable
+	ptrSize := uint32(pclndat[7])
+	if ptrSize == 4 {
+		runtimeText = uint64(binary.LittleEndian.Uint32(pclndat[8+2*ptrSize:]))
+	} else {
+		runtimeText = binary.LittleEndian.Uint64(pclndat[8+2*ptrSize:])
 	}
-	pcln := gosym.NewLineTable(pclndat, elfF.Section(".text").Addr)
-	symTab, err := gosym.NewTable(symTabRaw, pcln)
+
+	pcln := gosym.NewLineTable(pclndat, runtimeText)
+	symTab, err := gosym.NewTable(nil, pcln)
 	if err != nil {
 		return nil, err
 	}
@@ -53,7 +78,46 @@ func FindFunctionsStripped(elfF *elf.File, relevantFuncs map[string]interface{})
 	return result, nil
 }
 
+// Select the magic number based on the Go version.
+func magicNumber(goVersion string) []byte {
+	// goVersion here is not the original string returned from BuildInfo.GoVersion
+	// which has the form of "go1.17.1". Instead, it is the version number without
+	// the "go" prefix, e.g. "1.17.1".
+	bs := make([]byte, 4)
+	var magic uint32
+	if strings.Compare(goVersion, "1.20") >= 0 {
+		magic = go120magic
+	} else if strings.Compare(goVersion, "1.18") >= 0 {
+		magic = go118magic
+	} else if strings.Compare(goVersion, "1.16") >= 0 {
+		magic = go116magic
+	} else {
+		magic = go12magic
+	}
+	binary.LittleEndian.PutUint32(bs, magic)
+	return bs
+}
+
 func findFuncOffsetStripped(f *gosym.Func, elfF *elf.File) (uint64, []uint64, error) {
+	text := elfF.Section(".text")
+	if text == nil {
+		return 0, nil, fmt.Errorf(".text section not found in target binary")
+	}
+
+	var off uint64
+	funcLen := f.End - f.Entry
+	data := make([]byte, funcLen)
+
+	_, err := text.ReadAt(data, int64(f.Entry-text.Addr))
+	if err != nil {
+		return 0, nil, err
+	}
+
+	retInstructionOffsets, err := findRetInstructions(data)
+	if err != nil {
+		return 0, nil, err
+	}
+
 	for _, prog := range elfF.Progs {
 		if prog.Type != elf.PT_LOAD || (prog.Flags&elf.PF_X) == 0 {
 			continue
@@ -61,27 +125,19 @@ func findFuncOffsetStripped(f *gosym.Func, elfF *elf.File) (uint64, []uint64, er
 
 		// For more info on this calculation: stackoverflow.com/a/40249502
 		if prog.Vaddr <= f.Value && f.Value < (prog.Vaddr+prog.Memsz) {
-			off := f.Value - prog.Vaddr + prog.Off
-
-			funcLen := f.End - f.Entry
-			data := make([]byte, funcLen)
-			_, err := prog.ReadAt(data, int64(f.Value-prog.Vaddr))
-			if err != nil {
-				return 0, nil, err
-			}
-
-			instructionIndices, err := findRetInstructions(data)
-			if err != nil {
-				return 0, nil, err
-			}
-
-			newLocations := make([]uint64, len(instructionIndices))
-			for i, instructionIndex := range instructionIndices {
-				newLocations[i] = instructionIndex + off
-			}
-
-			return off, newLocations, nil
+			off = f.Value - prog.Vaddr + prog.Off
+			break
 		}
 	}
-	return 0, nil, fmt.Errorf("prog not found")
+
+	if off == 0 {
+		return 0, nil, fmt.Errorf("could not find function offset")
+	}
+
+	retOffsets := make([]uint64, len(retInstructionOffsets))
+	for i, instructionOffset := range retInstructionOffsets {
+		retOffsets[i] = instructionOffset + off
+	}
+
+	return off, retOffsets, nil
 }

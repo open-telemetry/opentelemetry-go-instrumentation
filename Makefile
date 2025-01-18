@@ -120,7 +120,7 @@ docker-build:
 docker-build-base:
 	docker buildx build -t $(IMG_NAME_BASE) --target base .
 
-.PHONY: sample-app/nethttp sample-app/gin sample-app/databasesql sample-app/nethttp-custom sample-app/otelglobal sample-app/autosdk sample-app/kafka-go
+.PHONY: sample-app/%
 sample-app/%: LIBRARY=$*
 sample-app/%:
 	if [ -f ./internal/test/e2e/$(LIBRARY)/build.sh ]; then \
