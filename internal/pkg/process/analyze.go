@@ -139,7 +139,7 @@ func (a *Analyzer) findFunctions(elfF *elf.File, relevantFuncs map[string]interf
 	if err != nil {
 		if errors.Is(err, elf.ErrNoSymbols) {
 			a.logger.Debug("No symbols found in binary, trying to find functions using .gosymtab")
-			return binary.FindFunctionsStripped(elfF, relevantFuncs, a.BuildInfo)
+			return binary.FindFunctionsStripped(elfF, relevantFuncs)
 		}
 		return nil, err
 	}

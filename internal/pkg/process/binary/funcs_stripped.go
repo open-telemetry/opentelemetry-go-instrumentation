@@ -4,24 +4,13 @@
 package binary
 
 import (
-	"bytes"
-	"debug/buildinfo"
 	"debug/elf"
 	"debug/gosym"
 	"encoding/binary"
 	"fmt"
-	"strings"
 )
 
-// From go/src/debug/gosym/pclntab.go.
-const (
-	go12magic  = 0xfffffffb
-	go116magic = 0xfffffffa
-	go118magic = 0xfffffff0
-	go120magic = 0xfffffff1
-)
-
-func FindFunctionsStripped(elfF *elf.File, relevantFuncs map[string]interface{}, bi *buildinfo.BuildInfo) ([]*Func, error) {
+func FindFunctionsStripped(elfF *elf.File, relevantFuncs map[string]interface{}) ([]*Func, error) {
 	var sec *elf.Section
 	if sec = elfF.Section(".gopclntab"); sec == nil {
 		return nil, fmt.Errorf("%s section not found in target binary", ".gopclntab")
@@ -31,19 +20,11 @@ func FindFunctionsStripped(elfF *elf.File, relevantFuncs map[string]interface{},
 		return nil, err
 	}
 
-	// locate the header of the pclntab, by finding the magic number
-	magic := magicNumber(bi.GoVersion)
-	pclntabIndex := bytes.Index(pclndat, magic)
-	if pclntabIndex < 0 {
-		return nil, fmt.Errorf("could not find pclntab magic number")
-	}
-
-	pclndat = pclndat[pclntabIndex:]
-	// reading the `runtime.text` value from the table,
-	// this value may differ from the actual text segment start address
-	// in case the binary is compiled with CGO_ENABLED=1
+	// we extract the `textStart` value based on the header of the pclntab,
+	// this is used to parse the line number table, and is not necessarily the start of the `.text` section.
+	// when a binary is build with C code, the value of `textStart` is not the same as the start of the `.text` section.
+	// https://github.com/golang/go/blob/master/src/runtime/symtab.go#L374
 	var runtimeText uint64
-	// Get textStart from pclntable
 	ptrSize := uint32(pclndat[7])
 	if ptrSize == 4 {
 		runtimeText = uint64(binary.LittleEndian.Uint32(pclndat[8+2*ptrSize:]))
@@ -76,26 +57,6 @@ func FindFunctionsStripped(elfF *elf.File, relevantFuncs map[string]interface{},
 	}
 
 	return result, nil
-}
-
-// Select the magic number based on the Go version.
-func magicNumber(goVersion string) []byte {
-	// goVersion here is not the original string returned from BuildInfo.GoVersion
-	// which has the form of "go1.17.1". Instead, it is the version number without
-	// the "go" prefix, e.g. "1.17.1".
-	bs := make([]byte, 4)
-	var magic uint32
-	if strings.Compare(goVersion, "1.20") >= 0 {
-		magic = go120magic
-	} else if strings.Compare(goVersion, "1.18") >= 0 {
-		magic = go118magic
-	} else if strings.Compare(goVersion, "1.16") >= 0 {
-		magic = go116magic
-	} else {
-		magic = go12magic
-	}
-	binary.LittleEndian.PutUint32(bs, magic)
-	return bs
 }
 
 func findFuncOffsetStripped(f *gosym.Func, elfF *elf.File) (uint64, []uint64, error) {
