@@ -7,7 +7,7 @@ Auto-instrumentation can be configured to capture the telemetry sent to the
 
 Supported versions of [`otel`]:
 
-- `v0.14.0` to `v1.33.0`
+- `v0.14.0` to `v1.34.0`
 
 **Note**: Versions of `go.opentelemetry.io/otel < v1.33.0` are not supported
 when using Go >= `1.24`. See [this issue] for details.
@@ -30,7 +30,7 @@ Tracing instrumentation is provided for the following Go libraries.
 
 Supported version ranges:
 
-- `go1.12` to `go1.23.4`
+- `go1.12` to `go1.23.5`
 
 ### github.com/segmentio/kafka-go
 
@@ -54,4 +54,4 @@ Supported version ranges:
 
 Supported version ranges:
 
-- `go1.12` to `go1.23.4`
+- `go1.12` to `go1.23.5`
