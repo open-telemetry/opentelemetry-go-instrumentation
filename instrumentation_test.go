@@ -118,8 +118,7 @@ func TestWithEnv(t *testing.T) {
 		logger.Info("", "exporter", exp)
 		got, err := io.ReadAll(&buf)
 		require.NoError(t, err)
-		// "otlphttphttp" should be "otlptracegrpc". This is a bug upstream.
-		assert.Contains(t, string(got), "otlphttpgrpc")
+		assert.Contains(t, string(got), "otlptracegrpc")
 	})
 }
 
