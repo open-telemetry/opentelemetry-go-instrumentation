@@ -144,8 +144,6 @@ Any [Maintainer] can merge the PR once the above criteria have been met.
 
 ### Approvers
 
-- [Aaron Clawson](https://github.com/MadVikingGod), LightStep
-- [Dinesh Gurumurthy](https://github.com/dineshg13), DataDog
 - [Nikola Grcevski](https://github.com/grcevski), Grafana Labs
 - [Robert Pająk](https://github.com/pellared), Splunk
 
@@ -159,6 +157,7 @@ Any [Maintainer] can merge the PR once the above criteria have been met.
 
 ### Emeritus
 
+- [Dinesh Gurumurthy](https://github.com/dineshg13), DataDog
 - [Mike Goldsmith](https://github.com/MikeGoldsmith), Honeycomb
 
 ### Become an Approver or a Maintainer
