@@ -9,7 +9,7 @@ require (
 	github.com/hashicorp/go-version v1.7.0
 	go.opentelemetry.io/auto v0.7.0-alpha
 	go.opentelemetry.io/build-tools/dbotconf v0.17.0
-	go.opentelemetry.io/build-tools/multimod v0.16.0
+	go.opentelemetry.io/build-tools/multimod v0.17.0
 	golang.org/x/sync v0.10.0
 )
 
