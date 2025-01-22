@@ -144,7 +144,6 @@ Any [Maintainer] can merge the PR once the above criteria have been met.
 
 ### Approvers
 
-- [Aaron Clawson](https://github.com/MadVikingGod), LightStep
 - [Nikola Grcevski](https://github.com/grcevski), Grafana Labs
 - [Robert Pająk](https://github.com/pellared), Splunk
 
