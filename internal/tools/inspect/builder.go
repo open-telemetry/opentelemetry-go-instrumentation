@@ -48,7 +48,7 @@ func newBuilder(l *slog.Logger, cli *client.Client, goVer *version.Version) *bui
 		// Use goVer.String here so 1.12 means 1.12.0. If Original is used, it
 		// would mean that the 1.12.17 docker image (which is tagged as the
 		// latest "1.12" release) would be used.
-		img = fmt.Sprintf("golang:%s", goVer.String())
+		img = "golang:" + goVer.String()
 	}
 	return &builder{
 		log:     l,
@@ -62,7 +62,7 @@ func newBuilder(l *slog.Logger, cli *client.Client, goVer *version.Version) *bui
 func (b *builder) Build(ctx context.Context, dir string, appV *version.Version, modName string) (string, error) {
 	b.log.Debug("building application...", "version", appV, "dir", dir, "image", b.GoImage)
 
-	app := fmt.Sprintf("app%s", appV.Original())
+	app := "app" + appV.Original()
 	goGetCmd := fmt.Sprintf("go get %s@%s", modName, appV.Original())
 	goModTidyCmd := "go mod tidy -compat=1.17"
 	var cmd string

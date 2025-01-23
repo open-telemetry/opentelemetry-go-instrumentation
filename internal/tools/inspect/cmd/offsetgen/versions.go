@@ -6,7 +6,6 @@ package main
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"io"
 	"net/http"
 	"os/exec"
@@ -26,7 +25,7 @@ type goListResponse struct {
 // PkgVersions returns all locally known version of module with
 // moduleName.
 func PkgVersions(name string) ([]*version.Version, error) {
-	command := fmt.Sprintf("go list -m -json -versions %s", name)
+	command := "go list -m -json -versions " + name
 	cmd := exec.Command("bash", "-c", command)
 
 	var stdout bytes.Buffer
