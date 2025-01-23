@@ -68,7 +68,7 @@ func getFuncOffsetUnstripped(f *elf.File, symbol elf.Symbol) (uint64, error) {
 		return 0, errors.New("could not find symbol in executable sections of binary")
 	}
 
-	return uint64(symbol.Value - execSection.Addr + execSection.Offset), nil
+	return symbol.Value - execSection.Addr + execSection.Offset, nil
 }
 
 func findFuncReturnsUnstripped(elfFile *elf.File, sym elf.Symbol, functionOffset uint64) ([]uint64, error) {

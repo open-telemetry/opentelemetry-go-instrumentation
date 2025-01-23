@@ -347,7 +347,7 @@ func setStatus(dest ptrace.Status, stat status) {
 	case codes.Error:
 		dest.SetCode(ptrace.StatusCodeError)
 	}
-	dest.SetMessage(string(unix.ByteSliceToString(stat.Description[:])))
+	dest.SetMessage(unix.ByteSliceToString(stat.Description[:]))
 }
 
 func setAttributes(dest pcommon.Map, ab attributesBuffer) {
