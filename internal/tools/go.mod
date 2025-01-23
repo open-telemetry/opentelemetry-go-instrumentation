@@ -3,13 +3,13 @@ module go.opentelemetry.io/auto/internal/tools
 go 1.22.9
 
 require (
-	github.com/docker/docker v27.5.0+incompatible
+	github.com/docker/docker v27.5.1+incompatible
 	github.com/golangci/golangci-lint v1.63.4
 	github.com/google/go-licenses/v2 v2.0.0-alpha.1
 	github.com/hashicorp/go-version v1.7.0
 	go.opentelemetry.io/auto v0.7.0-alpha
 	go.opentelemetry.io/build-tools/dbotconf v0.17.0
-	go.opentelemetry.io/build-tools/multimod v0.16.0
+	go.opentelemetry.io/build-tools/multimod v0.17.0
 	golang.org/x/sync v0.10.0
 )
 
