@@ -143,7 +143,7 @@ func TestSpanCreation(t *testing.T) {
 		{
 			TestName: "SampledByDefault",
 			Eval: func(t *testing.T, _ context.Context, s *span) {
-				assertTracer(s.traces)
+				t.Run("Tracer", assertTracer(s.traces))
 
 				assert.True(t, s.sampled.Load(), "not sampled by default.")
 			},
@@ -158,7 +158,7 @@ func TestSpanCreation(t *testing.T) {
 				}
 			},
 			Eval: func(t *testing.T, _ context.Context, s *span) {
-				assertTracer(s.traces)
+				t.Run("Tracer", assertTracer(s.traces))
 
 				want := spanContext0.SpanID().String()
 				got := s.span.ParentSpanID.String()
@@ -175,7 +175,7 @@ func TestSpanCreation(t *testing.T) {
 				}
 			},
 			Eval: func(t *testing.T, _ context.Context, s *span) {
-				assertTracer(s.traces)
+				t.Run("Tracer", assertTracer(s.traces))
 
 				str := func(i interface{ String() string }) string {
 					return i.String()
@@ -203,7 +203,7 @@ func TestSpanCreation(t *testing.T) {
 			TestName: "WithName",
 			SpanName: spanName,
 			Eval: func(t *testing.T, _ context.Context, s *span) {
-				assertTracer(s.traces)
+				t.Run("Tracer", assertTracer(s.traces))
 				assert.Equal(t, spanName, s.span.Name)
 			},
 		},
@@ -213,7 +213,7 @@ func TestSpanCreation(t *testing.T) {
 				trace.WithSpanKind(trace.SpanKindClient),
 			},
 			Eval: func(t *testing.T, _ context.Context, s *span) {
-				assertTracer(s.traces)
+				t.Run("Tracer", assertTracer(s.traces))
 				assert.Equal(t, telemetry.SpanKindClient, s.span.Kind)
 			},
 		},
@@ -223,7 +223,7 @@ func TestSpanCreation(t *testing.T) {
 				trace.WithTimestamp(ts),
 			},
 			Eval: func(t *testing.T, _ context.Context, s *span) {
-				assertTracer(s.traces)
+				t.Run("Tracer", assertTracer(s.traces))
 				assert.Equal(t, ts, s.span.StartTime)
 			},
 		},
@@ -233,7 +233,7 @@ func TestSpanCreation(t *testing.T) {
 				trace.WithAttributes(attrs...),
 			},
 			Eval: func(t *testing.T, _ context.Context, s *span) {
-				assertTracer(s.traces)
+				t.Run("Tracer", assertTracer(s.traces))
 				assert.Equal(t, tAttrs, s.span.Attrs)
 			},
 		},
@@ -243,7 +243,7 @@ func TestSpanCreation(t *testing.T) {
 				trace.WithLinks(link0, link1),
 			},
 			Eval: func(t *testing.T, _ context.Context, s *span) {
-				assertTracer(s.traces)
+				t.Run("Tracer", assertTracer(s.traces))
 				want := []*telemetry.SpanLink{tLink0, tLink1}
 				assert.Equal(t, want, s.span.Links)
 			},
@@ -913,18 +913,18 @@ func TestSpanConcurrentSafe(t *testing.T) {
 				go func(n int) {
 					defer wg.Done()
 
-					_ = s.IsRecording()
-					_ = s.SpanContext()
-					_ = s.TracerProvider()
+					_ = span.IsRecording()
+					_ = span.SpanContext()
+					_ = span.TracerProvider()
 
-					s.AddEvent("event")
-					s.AddLink(trace.Link{})
-					s.RecordError(errors.New("err"))
-					s.SetStatus(codes.Error, "error")
-					s.SetName("span" + strconv.Itoa(n))
-					s.SetAttributes(attribute.Bool("key", true))
+					span.AddEvent("event")
+					span.AddLink(trace.Link{})
+					span.RecordError(errors.New("err"))
+					span.SetStatus(codes.Error, "error")
+					span.SetName("span" + strconv.Itoa(n))
+					span.SetAttributes(attribute.Bool("key", true))
 
-					s.End()
+					span.End()
 				}(i)
 			}
 
