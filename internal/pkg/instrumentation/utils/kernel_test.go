@@ -8,17 +8,20 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestBootOffsetConversion(t *testing.T) {
-	var sec, nsec int64 = 1e3, 9328646329 + bootTimeOffset
+	const sec = 1e3
+	nsec := 9328646329 + bootTimeOffset
 
 	timestamp := time.Unix(sec, nsec)
 	t.Logf("timestamp: %v", timestamp)
 
-	offset := uint64((sec * 1e9) + nsec - bootTimeOffset)
+	offset := (sec * 1e9) + nsec - bootTimeOffset
+	require.GreaterOrEqual(t, offset, 0)
 	t.Logf("offset: %d", offset)
 
 	assert.Equal(t, offset, TimeToBootOffset(timestamp), "TimeToBootOffset")
-	assert.Equal(t, timestamp, BootOffsetToTime(offset), "BootOffsetToTime")
+	assert.Equal(t, timestamp, BootOffsetToTime(uint64(offset)), "BootOffsetToTime") // nolint: gosec // Bound tested.
 }

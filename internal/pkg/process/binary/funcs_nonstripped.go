@@ -7,6 +7,7 @@ import (
 	"debug/elf"
 	"errors"
 	"fmt"
+	"math"
 )
 
 func FindFunctionsUnStripped(elfF *elf.File, relevantFuncs map[string]interface{}) ([]*Func, error) {
@@ -78,11 +79,18 @@ func findFuncReturnsUnstripped(elfFile *elf.File, sym elf.Symbol, functionOffset
 	}
 
 	lowPC := sym.Value
-	highPC := lowPC + sym.Size
+	if textSection.Addr > lowPC {
+		return nil, fmt.Errorf("invalid .text setion address: %d (symbol value %d)", textSection.Addr, lowPC)
+	}
 	offset := lowPC - textSection.Addr
-	buf := make([]byte, int(highPC-lowPC))
+	if offset > math.MaxInt64 {
+		return nil, fmt.Errorf("invalid offset: %d", offset)
+	}
 
-	readBytes, err := textSection.ReadAt(buf, int64(offset))
+	highPC := lowPC + sym.Size
+	buf := make([]byte, highPC-lowPC)
+
+	readBytes, err := textSection.ReadAt(buf, int64(offset)) // nolint: gosec  // Bounds checked.
 	if err != nil {
 		return nil, fmt.Errorf("could not read text section: %w", err)
 	}

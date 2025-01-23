@@ -96,7 +96,7 @@ func TestLockdownParsing(t *testing.T) {
 
 // Utils.
 func setContent(t *testing.T, path, text string) {
-	err := os.WriteFile(path, []byte(text), 0o644)
+	err := os.WriteFile(path, []byte(text), 0o600)
 	assert.NoError(t, err)
 }
 

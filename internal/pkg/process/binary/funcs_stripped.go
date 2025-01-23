@@ -8,6 +8,7 @@ import (
 	"debug/gosym"
 	"errors"
 	"fmt"
+	"math"
 )
 
 func FindFunctionsStripped(elfF *elf.File, relevantFuncs map[string]interface{}) ([]*Func, error) {
@@ -64,9 +65,13 @@ func findFuncOffsetStripped(f *gosym.Func, elfF *elf.File) (uint64, []uint64, er
 		if prog.Vaddr <= f.Value && f.Value < (prog.Vaddr+prog.Memsz) {
 			off := f.Value - prog.Vaddr + prog.Off
 
-			funcLen := f.End - f.Entry
+			funcLen := max(f.End-f.Entry, 0)
 			data := make([]byte, funcLen)
-			_, err := prog.ReadAt(data, int64(f.Value-prog.Vaddr))
+			n := f.Value - prog.Vaddr // Non-negative based on loop condition.
+			if n > math.MaxInt64 {
+				return 0, nil, fmt.Errorf("overflow program read: %d", n)
+			}
+			_, err := prog.ReadAt(data, int64(n)) // nolint: gosec  // Overflow handled.
 			if err != nil {
 				return 0, nil, err
 			}

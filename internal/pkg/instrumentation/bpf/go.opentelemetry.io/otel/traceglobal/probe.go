@@ -358,8 +358,9 @@ func setAttributes(dest pcommon.Map, ab attributesBuffer) {
 		case uint8(attribute.BOOL):
 			dest.PutBool(key, akv.Value[0] != 0)
 		case uint8(attribute.INT64):
-			v := int64(binary.LittleEndian.Uint64(akv.Value[:8]))
-			dest.PutInt(key, v)
+			v := binary.LittleEndian.Uint64(akv.Value[:8])
+			v = min(v, math.MaxInt64)
+			dest.PutInt(key, int64(v)) // nolint: gosec  // Bounded.
 		case uint8(attribute.FLOAT64):
 			v := math.Float64frombits(binary.LittleEndian.Uint64(akv.Value[:8]))
 			dest.PutDouble(key, v)
