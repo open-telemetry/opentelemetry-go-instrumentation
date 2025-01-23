@@ -4,6 +4,7 @@
 package sql
 
 import (
+	"errors"
 	"fmt"
 	"log/slog"
 	"os"
@@ -162,7 +163,7 @@ func Parse(query string) (string, string, error) {
 	case *sqlparser.Delete:
 		return "DELETE", getTableName(stmt.TableExprs), nil
 	default:
-		return "", "", fmt.Errorf("unsupported operation")
+		return "", "", errors.New("unsupported operation")
 	}
 }
 

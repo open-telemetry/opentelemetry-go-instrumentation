@@ -4,6 +4,7 @@
 package process
 
 import (
+	"errors"
 	"fmt"
 	"log/slog"
 	"math"
@@ -87,7 +88,7 @@ func remoteAllocate(logger *slog.Logger, pid int, mapSize uint64) (uint64, error
 	if addr == math.MaxUint64 {
 		// On success, mmap() returns a pointer to the mapped area.
 		// On error, the value MAP_FAILED (that is, (void *) -1) is returned
-		return 0, fmt.Errorf("mmap MAP_FAILED")
+		return 0, errors.New("mmap MAP_FAILED")
 	}
 
 	err = program.Madvise(addr, mapSize)

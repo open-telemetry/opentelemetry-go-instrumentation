@@ -4,7 +4,6 @@
 package producer
 
 import (
-	"fmt"
 	"log/slog"
 
 	"go.opentelemetry.io/collector/pdata/pcommon"
@@ -145,5 +144,5 @@ func processFn(e *event) ptrace.SpanSlice {
 }
 
 func kafkaProducerSpanName(topic string) string {
-	return fmt.Sprintf("%s publish", topic)
+	return topic + " publish"
 }

@@ -6,6 +6,7 @@ package binary
 import (
 	"debug/elf"
 	"debug/gosym"
+	"errors"
 	"fmt"
 )
 
@@ -83,5 +84,5 @@ func findFuncOffsetStripped(f *gosym.Func, elfF *elf.File) (uint64, []uint64, er
 			return off, newLocations, nil
 		}
 	}
-	return 0, nil, fmt.Errorf("prog not found")
+	return 0, nil, errors.New("prog not found")
 }

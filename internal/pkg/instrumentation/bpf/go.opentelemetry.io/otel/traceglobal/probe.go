@@ -46,21 +46,21 @@ var (
 	otelWithAutoSDK = probe.PackageConstrainst{
 		Package: "go.opentelemetry.io/otel",
 		Constraints: version.MustConstraints(
-			version.NewConstraint(fmt.Sprintf(">= %s", minAutoSDK)),
+			version.NewConstraint(">= " + minAutoSDK),
 		),
 		FailureMode: probe.FailureModeIgnore,
 	}
 	otelWithoutAutoSDK = probe.PackageConstrainst{
 		Package: "go.opentelemetry.io/otel",
 		Constraints: version.MustConstraints(
-			version.NewConstraint(fmt.Sprintf("< %s", minAutoSDK)),
+			version.NewConstraint("< " + minAutoSDK),
 		),
 		FailureMode: probe.FailureModeIgnore,
 	}
 	goWithoutSwissMaps = probe.PackageConstrainst{
 		Package: "std",
 		Constraints: version.MustConstraints(
-			version.NewConstraint(fmt.Sprintf("< %s", minGoMaps)),
+			version.NewConstraint("< " + minGoMaps),
 		),
 		// Warn in logs that this is not supported.
 		FailureMode: probe.FailureModeWarn,
