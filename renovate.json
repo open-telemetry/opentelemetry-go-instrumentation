@@ -22,6 +22,10 @@
       "enabled": false
     },
     {
+      "matchPackageNames": ["go.opentelemetry.io/build-tools/**"],
+      "groupName": "build-tools"
+    },
+    {
       "matchPackageNames": ["google.golang.org/genproto/googleapis/**"],
       "groupName": "googleapis"
     },
