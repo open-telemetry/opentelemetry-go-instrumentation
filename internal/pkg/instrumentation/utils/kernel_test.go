@@ -18,10 +18,11 @@ func TestBootOffsetConversion(t *testing.T) {
 	timestamp := time.Unix(sec, nsec)
 	t.Logf("timestamp: %v", timestamp)
 
-	offset := (sec * 1e9) + nsec - bootTimeOffset
-	require.GreaterOrEqual(t, offset, 0)
+	offsetInt64 := (sec * 1e9) + nsec - bootTimeOffset
+	require.GreaterOrEqual(t, offsetInt64, int64(0))
+	offset := uint64(offsetInt64) // nolint: gosec  // Bounds checked.
 	t.Logf("offset: %d", offset)
 
 	assert.Equal(t, offset, TimeToBootOffset(timestamp), "TimeToBootOffset")
-	assert.Equal(t, timestamp, BootOffsetToTime(uint64(offset)), "BootOffsetToTime") // nolint: gosec // Bound tested.
+	assert.Equal(t, timestamp, BootOffsetToTime(offset), "BootOffsetToTime") // nolint: gosec // Bound tested.
 }

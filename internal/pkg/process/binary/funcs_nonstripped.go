@@ -80,7 +80,7 @@ func findFuncReturnsUnstripped(elfFile *elf.File, sym elf.Symbol, functionOffset
 
 	lowPC := sym.Value
 	if textSection.Addr > lowPC {
-		return nil, fmt.Errorf("invalid .text setion address: %d (symbol value %d)", textSection.Addr, lowPC)
+		return nil, fmt.Errorf("invalid .text section address: %d (symbol value %d)", textSection.Addr, lowPC)
 	}
 	offset := lowPC - textSection.Addr
 	if offset > math.MaxInt64 {

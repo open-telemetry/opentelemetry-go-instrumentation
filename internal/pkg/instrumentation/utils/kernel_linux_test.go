@@ -117,7 +117,7 @@ func TestGetCPUCountFromSysDevices(t *testing.T) {
 	cpuPresentPath = notPath
 	ncpu, err := GetCPUCountFromSysDevices()
 	assert.Error(t, err)
-	assert.Equal(t, 0, ncpu)
+	assert.Equal(t, uint64(0), ncpu)
 
 	tempFile, err := os.CreateTemp("", "fake_cpu_present")
 	assert.NoError(t, err)
@@ -132,27 +132,27 @@ func TestGetCPUCountFromSysDevices(t *testing.T) {
 	setContent(t, path, "0-7")
 	ncpu, err = GetCPUCountFromSysDevices()
 	assert.NoError(t, err)
-	assert.Equal(t, 8, ncpu)
+	assert.Equal(t, uint64(8), ncpu)
 
 	setContent(t, path, "0-7,10-15")
 	ncpu, err = GetCPUCountFromSysDevices()
 	assert.NoError(t, err)
-	assert.Equal(t, 14, ncpu)
+	assert.Equal(t, uint64(14), ncpu)
 
 	setContent(t, path, "0-7,10-15,20-23")
 	ncpu, err = GetCPUCountFromSysDevices()
 	assert.NoError(t, err)
-	assert.Equal(t, 18, ncpu)
+	assert.Equal(t, uint64(18), ncpu)
 
 	setContent(t, path, "0-")
 	ncpu, err = GetCPUCountFromSysDevices()
 	assert.Error(t, err)
-	assert.Equal(t, 0, ncpu)
+	assert.Equal(t, uint64(0), ncpu)
 
 	setNotReadable(t, path)
 	ncpu, err = GetCPUCountFromSysDevices()
 	assert.Error(t, err)
-	assert.Equal(t, 0, ncpu)
+	assert.Equal(t, uint64(0), ncpu)
 }
 
 func TestGetCPUCountFromProc(t *testing.T) {
@@ -167,7 +167,7 @@ func TestGetCPUCountFromProc(t *testing.T) {
 	procInfoPath = notPath
 	ncpu, err := GetCPUCountFromProc()
 	assert.Error(t, err)
-	assert.Equal(t, 0, ncpu)
+	assert.Equal(t, uint64(0), ncpu)
 
 	tempFile, err := os.CreateTemp("", "fake_cpuinfo")
 	assert.NoError(t, err)
@@ -182,30 +182,30 @@ func TestGetCPUCountFromProc(t *testing.T) {
 	setContent(t, path, "processor	: 0")
 	ncpu, err = GetCPUCountFromProc()
 	assert.NoError(t, err)
-	assert.Equal(t, 1, ncpu)
+	assert.Equal(t, uint64(1), ncpu)
 
 	setContent(t, path, "processor	: 0\nprocessor	: 1")
 	ncpu, err = GetCPUCountFromProc()
 	assert.NoError(t, err)
-	assert.Equal(t, 2, ncpu)
+	assert.Equal(t, uint64(2), ncpu)
 
 	setContent(t, path, "processor	: 0\nprocessor	: 1\nprocessor	: 2")
 	ncpu, err = GetCPUCountFromProc()
 	assert.NoError(t, err)
-	assert.Equal(t, 3, ncpu)
+	assert.Equal(t, uint64(3), ncpu)
 
 	setContent(t, path, "processor	: 0\nprocessor	: 1\nprocessor	: 2\nprocessor	: 3")
 	ncpu, err = GetCPUCountFromProc()
 	assert.NoError(t, err)
-	assert.Equal(t, 4, ncpu)
+	assert.Equal(t, uint64(4), ncpu)
 
 	setContent(t, path, "processor	: 0\n some text \nprocessor	: 1")
 	ncpu, err = GetCPUCountFromProc()
 	assert.NoError(t, err)
-	assert.Equal(t, 2, ncpu)
+	assert.Equal(t, uint64(2), ncpu)
 
 	setNotReadable(t, path)
 	ncpu, err = GetCPUCountFromProc()
 	assert.Error(t, err)
-	assert.Equal(t, 0, ncpu)
+	assert.Equal(t, uint64(0), ncpu)
 }
