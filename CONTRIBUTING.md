@@ -151,7 +151,6 @@ Any [Maintainer] can merge the PR once the above criteria have been met.
 
 - [Eden Federman](https://github.com/edeNFed), Odigos
 - [Mike Dame](https://github.com/damemi), Google
-- [Przemyslaw Delewski](https://github.com/pdelewski), SumoLogic
 - [Ron Federman](https://github.com/RonFed), Odigos
 - [Tyler Yahn](https://github.com/MrAlias), Splunk
 
@@ -159,6 +158,7 @@ Any [Maintainer] can merge the PR once the above criteria have been met.
 
 - [Dinesh Gurumurthy](https://github.com/dineshg13), DataDog
 - [Mike Goldsmith](https://github.com/MikeGoldsmith), Honeycomb
+- [Przemyslaw Delewski](https://github.com/pdelewski), Quesma
 
 ### Become an Approver or a Maintainer
 
