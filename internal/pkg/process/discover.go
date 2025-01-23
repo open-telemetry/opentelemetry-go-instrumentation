@@ -64,7 +64,7 @@ func (a *Analyzer) DiscoverProcessID(ctx context.Context, target *TargetArgs) (i
 				a.logger.Info("found process", "pid", pid)
 				return pid, nil
 			}
-			if err == ErrProcessNotFound {
+			if errors.Is(err, ErrProcessNotFound) {
 				a.logger.Debug("process not found yet, trying again soon", "exe_path", target.ExePath)
 			} else {
 				a.logger.Error("error while searching for process", "error", err, "exe_path", target.ExePath)
