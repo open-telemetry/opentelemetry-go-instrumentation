@@ -390,13 +390,17 @@ func TestSpanAddLinkLimit(t *testing.T) {
 }
 
 func TestSpanLinkAttrLimit(t *testing.T) {
+	nInt := len(tAttrs)
+	require.GreaterOrEqual(t, len(tAttrs), 0)
+	n := uint32(nInt) // nolint: gosec  // Bound checked.
+
 	tests := []struct {
 		limit   int
 		want    []telemetry.Attr
 		dropped uint32
 	}{
-		{0, nil, uint32(len(tAttrs))},
-		{2, tAttrs[:2], uint32(len(tAttrs) - 2)},
+		{0, nil, n},
+		{2, tAttrs[:2], n - 2},
 		{len(tAttrs), tAttrs, 0},
 		{-1, tAttrs, 0},
 	}
@@ -518,13 +522,17 @@ func TestAddEventLimit(t *testing.T) {
 }
 
 func TestAddEventAttrLimit(t *testing.T) {
+	nInt := len(tAttrs)
+	require.GreaterOrEqual(t, len(tAttrs), 0)
+	n := uint32(nInt) // nolint: gosec  // Bound checked.
+
 	tests := []struct {
 		limit   int
 		want    []telemetry.Attr
 		dropped uint32
 	}{
-		{0, nil, uint32(len(tAttrs))},
-		{2, tAttrs[:2], uint32(len(tAttrs) - 2)},
+		{0, nil, n},
+		{2, tAttrs[:2], n - 2},
 		{len(tAttrs), tAttrs, 0},
 		{-1, tAttrs, 0},
 	}
@@ -603,13 +611,17 @@ func TestSpanSetAttributes(t *testing.T) {
 }
 
 func TestSpanAttributeLimits(t *testing.T) {
+	nInt := len(tAttrs)
+	require.GreaterOrEqual(t, len(tAttrs), 0)
+	n := uint32(nInt) // nolint: gosec  // Bound checked.
+
 	tests := []struct {
 		limit   int
 		want    []telemetry.Attr
 		dropped uint32
 	}{
-		{0, nil, uint32(len(tAttrs))},
-		{2, tAttrs[:2], uint32(len(tAttrs) - 2)},
+		{0, nil, n},
+		{2, tAttrs[:2], n - 2},
 		{len(tAttrs), tAttrs, 0},
 		{-1, tAttrs, 0},
 	}
