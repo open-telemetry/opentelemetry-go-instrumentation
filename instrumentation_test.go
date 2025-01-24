@@ -225,14 +225,14 @@ func TestWithSampler(t *testing.T) {
 		require.NoError(t, err)
 		sc, err := convertSamplerToConfig(c.sampler)
 		assert.NoError(t, err)
-		assert.Equal(t, sc.Samplers, sampling.DefaultConfig().Samplers)
+		assert.Equal(t, sampling.DefaultConfig().Samplers, sc.Samplers)
 		assert.Equal(t, sampling.ParentBasedID, sc.ActiveSampler)
 		conf, ok := sc.Samplers[sampling.ParentBasedID]
 		assert.True(t, ok)
 		assert.Equal(t, sampling.SamplerParentBased, conf.SamplerType)
 		pbConfig, ok := conf.Config.(sampling.ParentBasedConfig)
 		assert.True(t, ok)
-		assert.Equal(t, pbConfig, sampling.DefaultParentBasedSampler())
+		assert.Equal(t, sampling.DefaultParentBasedSampler(), pbConfig)
 	})
 
 	t.Run("Env config", func(t *testing.T) {
