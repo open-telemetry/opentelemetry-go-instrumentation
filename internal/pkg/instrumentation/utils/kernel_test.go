@@ -24,5 +24,5 @@ func TestBootOffsetConversion(t *testing.T) {
 	t.Logf("offset: %d", offset)
 
 	assert.Equal(t, offset, TimeToBootOffset(timestamp), "TimeToBootOffset")
-	assert.Equal(t, timestamp, BootOffsetToTime(offset), "BootOffsetToTime") // nolint: gosec // Bound tested.
+	assert.Equal(t, timestamp, BootOffsetToTime(offset), "BootOffsetToTime")
 }
