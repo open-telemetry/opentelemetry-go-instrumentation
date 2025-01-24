@@ -79,7 +79,7 @@ func main() {
 	setup := flag.String("setup", "./start.sh", "Kafka setup script")
 	flag.Parse()
 
-	cmd := exec.Command(*setup)
+	cmd := exec.Command(*setup) // nolint: gosec  // Testing script.
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	fmt.Println("starting Kafka...")

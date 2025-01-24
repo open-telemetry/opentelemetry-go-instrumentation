@@ -12,6 +12,7 @@ import (
 	"net"
 	"net/http"
 	"strconv"
+	"time"
 
 	"go.opentelemetry.io/auto/examples/rolldice/user"
 )
@@ -33,9 +34,10 @@ func newServer(ctx context.Context, listenAddr, userAddr string) *http.Server {
 	mux.HandleFunc("/rolldice/{player}", rolldice)
 
 	return &http.Server{
-		Addr:        listenAddr,
-		BaseContext: func(_ net.Listener) context.Context { return ctx },
-		Handler:     mux,
+		Addr:              listenAddr,
+		ReadHeaderTimeout: time.Second,
+		BaseContext:       func(_ net.Listener) context.Context { return ctx },
+		Handler:           mux,
 	}
 }
 
@@ -59,6 +61,6 @@ func rolldice(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	roll := 1 + rand.Intn(6)
+	roll := 1 + rand.Intn(6) // nolint: gosec  // Weak random number generator is fine.
 	_, _ = io.WriteString(w, strconv.Itoa(roll)+"\n")
 }
