@@ -46,21 +46,21 @@ var (
 	otelWithAutoSDK = probe.PackageConstrainst{
 		Package: "go.opentelemetry.io/otel",
 		Constraints: version.MustConstraints(
-			version.NewConstraint(fmt.Sprintf(">= %s", minAutoSDK)),
+			version.NewConstraint(">= " + minAutoSDK),
 		),
 		FailureMode: probe.FailureModeIgnore,
 	}
 	otelWithoutAutoSDK = probe.PackageConstrainst{
 		Package: "go.opentelemetry.io/otel",
 		Constraints: version.MustConstraints(
-			version.NewConstraint(fmt.Sprintf("< %s", minAutoSDK)),
+			version.NewConstraint("< " + minAutoSDK),
 		),
 		FailureMode: probe.FailureModeIgnore,
 	}
 	goWithoutSwissMaps = probe.PackageConstrainst{
 		Package: "std",
 		Constraints: version.MustConstraints(
-			version.NewConstraint(fmt.Sprintf("< %s", minGoMaps)),
+			version.NewConstraint("< " + minGoMaps),
 		),
 		// Warn in logs that this is not supported.
 		FailureMode: probe.FailureModeWarn,
@@ -347,7 +347,7 @@ func setStatus(dest ptrace.Status, stat status) {
 	case codes.Error:
 		dest.SetCode(ptrace.StatusCodeError)
 	}
-	dest.SetMessage(string(unix.ByteSliceToString(stat.Description[:])))
+	dest.SetMessage(unix.ByteSliceToString(stat.Description[:]))
 }
 
 func setAttributes(dest pcommon.Map, ab attributesBuffer) {
@@ -358,8 +358,8 @@ func setAttributes(dest pcommon.Map, ab attributesBuffer) {
 		case uint8(attribute.BOOL):
 			dest.PutBool(key, akv.Value[0] != 0)
 		case uint8(attribute.INT64):
-			v := int64(binary.LittleEndian.Uint64(akv.Value[:8]))
-			dest.PutInt(key, v)
+			v := binary.LittleEndian.Uint64(akv.Value[:8])
+			dest.PutInt(key, int64(v)) // nolint: gosec  // Raw value decode.
 		case uint8(attribute.FLOAT64):
 			v := math.Float64frombits(binary.LittleEndian.Uint64(akv.Value[:8]))
 			dest.PutDouble(key, v)

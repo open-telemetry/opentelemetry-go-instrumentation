@@ -90,7 +90,7 @@ func IntValue(v int) Value { return Int64Value(int64(v)) }
 
 // Int64Value returns a [Value] for an int64.
 func Int64Value(v int64) Value {
-	return Value{num: uint64(v), any: ValueKindInt64}
+	return Value{num: uint64(v), any: ValueKindInt64} // nolint: gosec  // Raw value conv.
 }
 
 // Float64Value returns a [Value] for a float64.
@@ -341,7 +341,7 @@ func (v *Value) MarshalJSON() ([]byte, error) {
 	case ValueKindInt64:
 		return json.Marshal(struct {
 			Value string `json:"intValue"`
-		}{strconv.FormatInt(int64(v.num), 10)})
+		}{strconv.FormatInt(int64(v.num), 10)}) // nolint: gosec  // Raw value conv.
 	case ValueKindFloat64:
 		return json.Marshal(struct {
 			Value float64 `json:"doubleValue"`

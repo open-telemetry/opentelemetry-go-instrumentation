@@ -13,19 +13,25 @@ import (
 )
 
 func findRetInstructions(data []byte) ([]uint64, error) {
+	nInt := len(data)
+	if nInt < 0 {
+		return nil, fmt.Errorf("invalid data length: %d", nInt)
+	}
+	n := uint64(nInt)
+
 	var returnOffsets []uint64
-	index := 0
-	for index < len(data) {
+	var index uint64
+	for index < n {
 		instruction, err := x86asm.Decode(data[index:], 64)
 		if err != nil {
 			return nil, fmt.Errorf("failed to decode x64 instruction at offset %d: %w", index, err)
 		}
 
 		if instruction.Op == x86asm.RET {
-			returnOffsets = append(returnOffsets, uint64(index))
+			returnOffsets = append(returnOffsets, index)
 		}
 
-		index += instruction.Len
+		index += uint64(max(0, instruction.Len)) // nolint: gosec  // Underflow handled.
 	}
 
 	return returnOffsets, nil

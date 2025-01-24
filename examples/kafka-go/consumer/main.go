@@ -48,7 +48,7 @@ func reader(ctx context.Context) {
 			span.SetAttributes(
 				attribute.String("topic", m.Topic),
 				attribute.Int64("partition", int64(m.Partition)),
-				attribute.Int64("offset", int64(m.Offset)),
+				attribute.Int64("offset", m.Offset),
 			)
 			fmt.Printf("consumed message at topic:%v partition:%v offset:%v	%s = %s\n", m.Topic, m.Partition, m.Offset, string(m.Key), string(m.Value))
 			span.End()

@@ -58,7 +58,7 @@ func (c *Client) checkStatus(resp *http.Response) error {
 // HealthCheck checks the health of the user service. It will return an error
 // if the service cannot be reached or is unhealthy, otherwise nil.
 func (c *Client) HealthCheck(ctx context.Context) error {
-	url := fmt.Sprintf("%s/healthcheck", c.endpoint)
+	url := c.endpoint + "/healthcheck"
 	resp, err := c.get(ctx, url, "/healthcheck")
 	if err != nil {
 		return err

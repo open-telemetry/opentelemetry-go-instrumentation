@@ -44,7 +44,7 @@ func TestProbeFiltering(t *testing.T) {
 			AllocationDetails: nil,
 		}
 		m.FilterUnusedProbes(&td)
-		assert.Equal(t, 0, len(m.probes))
+		assert.Empty(t, m.probes)
 	})
 
 	t.Run("only HTTP client target details", func(t *testing.T) {
@@ -62,7 +62,7 @@ func TestProbeFiltering(t *testing.T) {
 			AllocationDetails: nil,
 		}
 		m.FilterUnusedProbes(&td)
-		assert.Equal(t, 1, len(m.probes)) // one function, single probe
+		assert.Len(t, m.probes, 1) // one function, single probe
 	})
 
 	t.Run("HTTP server and client target details", func(t *testing.T) {
@@ -81,7 +81,7 @@ func TestProbeFiltering(t *testing.T) {
 			AllocationDetails: nil,
 		}
 		m.FilterUnusedProbes(&td)
-		assert.Equal(t, 2, len(m.probes))
+		assert.Len(t, m.probes, 2)
 	})
 
 	t.Run("HTTP server and client dependent function only target details", func(t *testing.T) {
@@ -101,7 +101,7 @@ func TestProbeFiltering(t *testing.T) {
 			AllocationDetails: nil,
 		}
 		m.FilterUnusedProbes(&td)
-		assert.Equal(t, 1, len(m.probes))
+		assert.Len(t, m.probes, 1)
 	})
 }
 
@@ -120,7 +120,7 @@ func TestDependencyChecks(t *testing.T) {
 			},
 		}
 
-		assert.Nil(t, m.validateProbeDependents(probe.ID{InstrumentedPkg: "test"}, syms))
+		assert.NoError(t, m.validateProbeDependents(probe.ID{InstrumentedPkg: "test"}, syms))
 	})
 
 	t.Run("Second dependent missing", func(t *testing.T) {
@@ -135,7 +135,7 @@ func TestDependencyChecks(t *testing.T) {
 			},
 		}
 
-		assert.NotNil(t, m.validateProbeDependents(probe.ID{InstrumentedPkg: "test"}, syms))
+		assert.Error(t, m.validateProbeDependents(probe.ID{InstrumentedPkg: "test"}, syms))
 	})
 
 	t.Run("Second dependent present", func(t *testing.T) {
@@ -154,7 +154,7 @@ func TestDependencyChecks(t *testing.T) {
 			},
 		}
 
-		assert.Nil(t, m.validateProbeDependents(probe.ID{InstrumentedPkg: "test"}, syms))
+		assert.NoError(t, m.validateProbeDependents(probe.ID{InstrumentedPkg: "test"}, syms))
 	})
 
 	t.Run("Dependent wrong", func(t *testing.T) {
@@ -169,7 +169,7 @@ func TestDependencyChecks(t *testing.T) {
 			},
 		}
 
-		assert.NotNil(t, m.validateProbeDependents(probe.ID{InstrumentedPkg: "test"}, syms))
+		assert.Error(t, m.validateProbeDependents(probe.ID{InstrumentedPkg: "test"}, syms))
 	})
 
 	t.Run("Two probes without dependents", func(t *testing.T) {
@@ -184,7 +184,7 @@ func TestDependencyChecks(t *testing.T) {
 			},
 		}
 
-		assert.Nil(t, m.validateProbeDependents(probe.ID{InstrumentedPkg: "test"}, syms))
+		assert.NoError(t, m.validateProbeDependents(probe.ID{InstrumentedPkg: "test"}, syms))
 	})
 }
 
@@ -321,7 +321,7 @@ func TestRunStoppingByStop(t *testing.T) {
 			return false
 		}
 	}, time.Second, 10*time.Millisecond)
-	assert.ErrorIs(t, err, nil)
+	assert.NoError(t, err)
 	assert.True(t, tp.called, "Controller not stopped")
 	assert.True(t, p.closed.Load(), "Probe not closed")
 }

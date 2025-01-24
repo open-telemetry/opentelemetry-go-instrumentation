@@ -4,6 +4,7 @@
 package process
 
 import (
+	"errors"
 	"fmt"
 	"log/slog"
 	"math"
@@ -32,11 +33,17 @@ func Allocate(logger *slog.Logger, pid int) (*AllocationDetails, error) {
 		return nil, err
 	}
 
-	mapSize := uint64(os.Getpagesize() * nCPU * 8)
+	n := os.Getpagesize()
+	if n < 0 {
+		return nil, fmt.Errorf("invalid page size: %d", n)
+	}
+	pagesize := uint64(n) // nolint: gosec  // Bound checked.
+
+	mapSize := pagesize * nCPU * 8
 	logger.Debug(
 		"Requesting memory allocation",
 		"size", mapSize,
-		"page size", os.Getpagesize(),
+		"page size", pagesize,
 		"cpu count", nCPU)
 
 	addr, err := remoteAllocate(logger, pid, mapSize)
@@ -53,7 +60,7 @@ func Allocate(logger *slog.Logger, pid int) (*AllocationDetails, error) {
 	return &AllocationDetails{
 		StartAddr: addr,
 		EndAddr:   addr + mapSize,
-		NumCPU:    uint64(nCPU),
+		NumCPU:    nCPU,
 	}, nil
 }
 
@@ -79,15 +86,14 @@ func remoteAllocate(logger *slog.Logger, pid int, mapSize uint64) (uint64, error
 		logger.Debug("Set memlock on process successfully")
 	}
 
-	fd := -1
-	addr, err := program.Mmap(mapSize, uint64(fd))
+	addr, err := program.Mmap(mapSize, math.MaxUint64)
 	if err != nil {
 		return 0, err
 	}
 	if addr == math.MaxUint64 {
 		// On success, mmap() returns a pointer to the mapped area.
 		// On error, the value MAP_FAILED (that is, (void *) -1) is returned
-		return 0, fmt.Errorf("mmap MAP_FAILED")
+		return 0, errors.New("mmap MAP_FAILED")
 	}
 
 	err = program.Madvise(addr, mapSize)
