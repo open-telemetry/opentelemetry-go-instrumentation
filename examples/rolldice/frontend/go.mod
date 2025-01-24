@@ -4,4 +4,4 @@ go 1.23.0
 
 replace go.opentelemetry.io/auto/examples/rolldice/user => ../user/
 
-require go.opentelemetry.io/auto/examples/rolldice/user v0.0.0-20250113220501-95ff7a07d6ba
+require go.opentelemetry.io/auto/examples/rolldice/user v0.0.0-20250123214519-fb77b8ec9bb3
