@@ -86,7 +86,7 @@ func remoteAllocate(logger *slog.Logger, pid int, mapSize uint64) (uint64, error
 		logger.Debug("Set memlock on process successfully")
 	}
 
-	addr, err := program.Mmap(mapSize, uint64(math.MaxUint))
+	addr, err := program.Mmap(mapSize, math.MaxUint64)
 	if err != nil {
 		return 0, err
 	}
