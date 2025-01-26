@@ -9,19 +9,29 @@ linters:
   disable-all: true
   # Specifically enable linters we want to use.
   enable:
+    - asasalint
+    - bodyclose
     - depguard
     - errcheck
+    - errorlint
     - godot
     - gofumpt
     - goimports
+    - gosec
     - gosimple
     - govet
     - ineffassign
     - misspell
+    - perfsprint
     - revive
     - staticcheck
+    - tenv
+    - testifylint
     - typecheck
+    - unconvert
     - unused
+    - unparam
+    - usestdlibvars
 
 issues:
   # Maximum issues count per one linter.
@@ -92,6 +102,12 @@ linters-settings:
     locale: US
     ignore-words:
       - cancelled
+  perfsprint:
+    err-error: true
+    errorf: true
+    int-conversion: true
+    sprintf1: true
+    strconcat: true
   revive:
     # Sets the default failure confidence.
     # This means that linting errors with less than 0.8 confidence will be ignored.
@@ -239,3 +255,9 @@ linters-settings:
       # https://github.com/mgechev/revive/blob/master/RULES_DESCRIPTIONS.md#waitgroup-by-value
       - name: waitgroup-by-value
         disabled: false
+  testifylint:
+    enable-all: true
+    disable:
+      - float-compare
+      - go-require
+      - require-error

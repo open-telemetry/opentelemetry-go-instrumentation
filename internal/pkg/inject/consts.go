@@ -181,7 +181,10 @@ func FindOffset(id structfield.ID, td *process.TargetDetails) (structfield.Offse
 	if err != nil {
 		return structfield.OffsetKey{}, err
 	}
-	return structfield.OffsetKey{Offset: uint64(v), Valid: true}, err
+	if v < 0 {
+		return structfield.OffsetKey{}, fmt.Errorf("invalid offset: %d", v)
+	}
+	return structfield.OffsetKey{Offset: uint64(v), Valid: true}, err // nolint: gosec  // Bounded.
 }
 
 func GetOffset(id structfield.ID, ver *version.Version) (structfield.OffsetKey, bool) {

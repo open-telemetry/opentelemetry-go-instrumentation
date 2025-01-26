@@ -374,9 +374,9 @@ func newVerKey(v *version.Version) verKey {
 	var segs [3]int
 	copy(segs[:], v.Segments())
 	return verKey{
-		major:      uint64(segs[0]),
-		minor:      uint64(segs[1]),
-		patch:      uint64(segs[2]),
+		major:      uint64(max(segs[0], 0)), // nolint: gosec  // Bounded.
+		minor:      uint64(max(segs[1], 0)), // nolint: gosec  // Bounded.
+		patch:      uint64(max(segs[2], 0)), // nolint: gosec  // Bounded.
 		prerelease: v.Prerelease(),
 		metadata:   v.Metadata(),
 	}

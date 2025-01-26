@@ -185,10 +185,15 @@ func processFn(e *event) ptrace.SpanSlice {
 
 	proto := unix.ByteSliceToString(e.Proto[:])
 
+	// https://www.rfc-editor.org/rfc/rfc9110.html#name-status-codes
+	const maxStatus = 599
+	if e.StatusCode > maxStatus {
+		e.StatusCode = 0
+	}
 	attrs := []attribute.KeyValue{
 		semconv.HTTPRequestMethodKey.String(method),
 		semconv.URLPath(path),
-		semconv.HTTPResponseStatusCodeKey.Int(int(e.StatusCode)),
+		semconv.HTTPResponseStatusCodeKey.Int(int(e.StatusCode)), // nolint: gosec  // Bound checked.
 	}
 
 	// Client address and port
@@ -241,7 +246,7 @@ func processFn(e *event) ptrace.SpanSlice {
 
 	utils.Attributes(span.Attributes(), attrs...)
 
-	if int(e.StatusCode) >= 500 && int(e.StatusCode) < 600 {
+	if e.StatusCode >= 500 && e.StatusCode < 600 {
 		span.Status().SetCode(ptrace.StatusCodeError)
 	}
 

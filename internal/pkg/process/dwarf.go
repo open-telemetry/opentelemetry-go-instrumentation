@@ -57,7 +57,7 @@ func (d DWARF) GoToEntry(tag dwarf.Tag, name string) bool {
 func (d DWARF) Entry(tag dwarf.Tag, name string) (*dwarf.Entry, error) {
 	for {
 		entry, err := d.Reader.Next()
-		if err == io.EOF || entry == nil {
+		if errors.Is(err, io.EOF) || entry == nil {
 			break
 		}
 
@@ -78,7 +78,7 @@ func (d DWARF) Entry(tag dwarf.Tag, name string) (*dwarf.Entry, error) {
 func (d DWARF) EntryInChildren(tag dwarf.Tag, name string) (*dwarf.Entry, error) {
 	for {
 		entry, err := d.Reader.Next()
-		if err == io.EOF || entry == nil || entry.Tag == 0 {
+		if errors.Is(err, io.EOF) || entry == nil || entry.Tag == 0 {
 			break
 		}
 

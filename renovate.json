@@ -17,6 +17,15 @@
       "enabled": true
     },
     {
+      "matchManagers": ["gomod"],
+      "matchPackageNames": ["go.opentelemetry.io/auto/examples/rolldice/user"],
+      "enabled": false
+    },
+    {
+      "matchPackageNames": ["go.opentelemetry.io/build-tools/**"],
+      "groupName": "build-tools"
+    },
+    {
       "matchPackageNames": ["google.golang.org/genproto/googleapis/**"],
       "groupName": "googleapis"
     },

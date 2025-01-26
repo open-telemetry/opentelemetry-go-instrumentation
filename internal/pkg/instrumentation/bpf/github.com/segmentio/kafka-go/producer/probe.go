@@ -4,8 +4,8 @@
 package producer
 
 import (
-	"fmt"
 	"log/slog"
+	"math"
 
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/ptrace"
@@ -100,7 +100,8 @@ func processFn(e *event) ptrace.SpanSlice {
 	}
 
 	if e.ValidMessages > 0 {
-		attrs = append(attrs, semconv.MessagingBatchMessageCount(int(e.ValidMessages)))
+		e.ValidMessages = min(e.ValidMessages, math.MaxInt)
+		attrs = append(attrs, semconv.MessagingBatchMessageCount(int(e.ValidMessages))) // nolint: gosec  // Bounded.
 	}
 
 	traceID := pcommon.TraceID(e.Messages[0].SpanContext.TraceID)
@@ -145,5 +146,5 @@ func processFn(e *event) ptrace.SpanSlice {
 }
 
 func kafkaProducerSpanName(topic string) string {
-	return fmt.Sprintf("%s publish", topic)
+	return topic + " publish"
 }

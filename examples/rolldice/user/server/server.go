@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"time"
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/codes"
@@ -20,9 +21,10 @@ func newServer(ctx context.Context, addr string) *http.Server {
 	mux.HandleFunc("/healthcheck", healthcheck)
 
 	return &http.Server{
-		Addr:        addr,
-		BaseContext: func(_ net.Listener) context.Context { return ctx },
-		Handler:     mux,
+		Addr:              addr,
+		ReadHeaderTimeout: time.Second,
+		BaseContext:       func(_ net.Listener) context.Context { return ctx },
+		Handler:           mux,
 	}
 }
 

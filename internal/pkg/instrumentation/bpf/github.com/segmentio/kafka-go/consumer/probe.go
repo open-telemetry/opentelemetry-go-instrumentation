@@ -4,7 +4,6 @@
 package consumer
 
 import (
-	"fmt"
 	"log/slog"
 	"strconv"
 
@@ -127,5 +126,5 @@ func processFn(e *event) ptrace.SpanSlice {
 }
 
 func kafkaConsumerSpanName(topic string) string {
-	return fmt.Sprintf("%s receive", topic)
+	return topic + " receive"
 }
