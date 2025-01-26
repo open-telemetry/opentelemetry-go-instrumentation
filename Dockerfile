@@ -2,6 +2,9 @@ FROM  --platform=$BUILDPLATFORM golang:1.23.5-bookworm@sha256:3149bc5043fa58cf12
 
 RUN apt-get update && apt-get install -y curl clang gcc llvm make libbpf-dev
 
+ARG GOPROXY
+ENV GOPROXY=$GOPROXY
+
 WORKDIR /app
 
 # pre-copy/cache go.mod for pre-downloading dependencies and only redownloading
