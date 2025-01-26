@@ -188,7 +188,7 @@ func (i *Base[BPFObj, BPFEvent]) loadUprobes(exec *link.Executable, td *process.
 				logFn = i.Logger.Warn
 			default:
 				// Unknown and FailureModeError.
-				return fmt.Errorf("uprobe %s package constraint (%s) not meet", up.Sym, pc.Constraints.String())
+				return fmt.Errorf("uprobe %s package constraint (%s) not met, version %v", up.Sym, pc.Constraints.String(), td.Modules[pc.Package])
 			}
 
 			logFn(
@@ -197,6 +197,7 @@ func (i *Base[BPFObj, BPFEvent]) loadUprobes(exec *link.Executable, td *process.
 				"symbol", up.Sym,
 				"package", pc.Package,
 				"constraint", pc.Constraints.String(),
+				"version", td.Modules[pc.Package],
 			)
 
 			skip = true

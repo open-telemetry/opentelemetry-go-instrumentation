@@ -123,6 +123,7 @@ type bpfVariableSpecs struct {
 	ReqPtrPos            *ebpf.VariableSpec `ebpf:"req_ptr_pos"`
 	StartAddr            *ebpf.VariableSpec `ebpf:"start_addr"`
 	StatusCodePos        *ebpf.VariableSpec `ebpf:"status_code_pos"`
+	SwissMapsUsed        *ebpf.VariableSpec `ebpf:"swiss_maps_used"`
 	TotalCpus            *ebpf.VariableSpec `ebpf:"total_cpus"`
 	UrlPtrPos            *ebpf.VariableSpec `ebpf:"url_ptr_pos"`
 }
@@ -197,6 +198,7 @@ type bpfVariables struct {
 	ReqPtrPos            *ebpf.Variable `ebpf:"req_ptr_pos"`
 	StartAddr            *ebpf.Variable `ebpf:"start_addr"`
 	StatusCodePos        *ebpf.Variable `ebpf:"status_code_pos"`
+	SwissMapsUsed        *ebpf.Variable `ebpf:"swiss_maps_used"`
 	TotalCpus            *ebpf.Variable `ebpf:"total_cpus"`
 	UrlPtrPos            *ebpf.Variable `ebpf:"url_ptr_pos"`
 }

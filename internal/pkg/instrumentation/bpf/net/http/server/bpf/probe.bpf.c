@@ -52,7 +52,7 @@ struct
 
 struct
 {
-    __uint(type, BPF_MAP_TYPE_HASH);
+    __uint(type, BPF_MAP_TYPE_LRU_HASH);
     __type(key, void *);
     __type(value, struct span_context);
     __uint(max_entries, MAX_CONCURRENT);
@@ -92,11 +92,13 @@ volatile const bool pattern_path_supported;
 // In case pattern handlers are supported the following offsets will be used:
 volatile const u64 req_pat_pos;
 volatile const u64 pat_str_pos;
+// A flag indicating whether the Go version is using swiss maps
+volatile const bool swiss_maps_used;
 
 // Extracts the span context from the request headers by looking for the 'traceparent' header.
 // Fills the parent_span_context with the extracted span context.
 // Returns 0 on success, negative value on error.
-static __always_inline long extract_context_from_req_headers(void *headers_ptr_ptr, struct span_context *parent_span_context)
+static __always_inline long extract_context_from_req_headers_go_map(void *headers_ptr_ptr, struct span_context *parent_span_context)
 {
     void *headers_ptr;
     long res;
@@ -186,7 +188,7 @@ static __always_inline long extract_context_from_req_headers(void *headers_ptr_p
     return -1;
 }
 
-static __always_inline long extract_context_from_req_headers_map(void *key, struct span_context *parent_span_context) {
+static __always_inline long extract_context_from_req_headers_pre_parsed(void *key, struct span_context *parent_span_context) {
     struct span_context *parsed_header_context = bpf_map_lookup_elem(&http_server_context_headers, &key);
     if (!parsed_header_context) {
         return -1;
@@ -194,6 +196,13 @@ static __always_inline long extract_context_from_req_headers_map(void *key, stru
 
     __builtin_memcpy(parent_span_context, parsed_header_context, sizeof(struct span_context));
     return 0;
+}
+
+static __always_inline long extract_context_from_req_headers(void *key, struct span_context *parent_span_context) {
+    if (swiss_maps_used) {
+        return extract_context_from_req_headers_pre_parsed(key, parent_span_context);
+    }
+    return extract_context_from_req_headers_go_map(key, parent_span_context);
 }
 
 static __always_inline void read_go_string(void *base, int offset, char *output, int maxLen, const char *errorMsg) {
@@ -242,9 +251,18 @@ int uprobe_serverHandler_ServeHTTP(struct pt_regs *ctx)
         .go_context = &go_context,
         .psc = &http_server_span->psc,
         .sc = &http_server_span->sc,
-        .get_parent_span_context_fn = extract_context_from_req_headers_map,
-        .get_parent_span_context_arg = key,
+        .get_parent_span_context_fn = extract_context_from_req_headers,
     };
+
+    // If Go is using swiss maps, we currently rely on the uretprobe setup
+    // on readContinuedLineSlice to store the parsed value in a map, which
+    // we query with the same goroutine/context key.
+    if (swiss_maps_used) {
+        start_span_params.get_parent_span_context_arg = key;
+    } else {
+        start_span_params.get_parent_span_context_arg = (void*)(req_ptr + headers_ptr_pos);
+    }
+
     start_span(&start_span_params);
 
     bpf_map_update_elem(&http_server_uprobes, &key, uprobe_data, 0);
@@ -303,6 +321,8 @@ int uprobe_serverHandler_ServeHTTP_Returns(struct pt_regs *ctx) {
     return 0;
 }
 
+// This instrumentation attaches uprobe to the following function:
+// func (r *Reader) readContinuedLineSlice(lim int64, validateFirstLine func([]byte) error) ([]byte, error) {
 SEC("uprobe/textproto_Reader_readContinuedLineSlice")
 int uprobe_textproto_Reader_readContinuedLineSlice_Returns(struct pt_regs *ctx) {
     struct go_iface go_context = {0};
