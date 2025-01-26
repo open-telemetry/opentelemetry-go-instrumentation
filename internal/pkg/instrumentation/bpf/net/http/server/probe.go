@@ -4,7 +4,6 @@
 package server
 
 import (
-	"fmt"
 	"log/slog"
 	"strings"
 
@@ -33,16 +32,14 @@ const (
 	minGoSwissMaps = "1.24.0"
 )
 
-var (
-	goWithSwissMaps = probe.PackageConstrainst{
-		Package: "std",
-		Constraints: version.MustConstraints(
-			version.NewConstraint(fmt.Sprintf(">= %s", minGoSwissMaps)),
-		),
-		// Don't warn, we have a backup path
-		FailureMode: probe.FailureModeIgnore,
-	}
-)
+var goWithSwissMaps = probe.PackageConstrainst{
+	Package: "std",
+	Constraints: version.MustConstraints(
+		version.NewConstraint(">= " + minGoSwissMaps),
+	),
+	// Don't warn, we have a backup path
+	FailureMode: probe.FailureModeIgnore,
+}
 
 // New returns a new [probe.Probe].
 func New(logger *slog.Logger, version string) probe.Probe {
