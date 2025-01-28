@@ -18,7 +18,7 @@ retract (
 )
 
 require (
-	github.com/cilium/ebpf v0.17.1
+	github.com/cilium/ebpf v0.17.2
 	github.com/go-logr/stdr v1.2.2
 	github.com/hashicorp/go-version v1.7.0
 	github.com/pkg/errors v0.9.1
