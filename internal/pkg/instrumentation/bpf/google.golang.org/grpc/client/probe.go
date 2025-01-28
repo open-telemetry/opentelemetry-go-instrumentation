@@ -4,6 +4,7 @@
 package grpc
 
 import (
+	"errors"
 	"fmt"
 	"log/slog"
 	"net"
@@ -135,7 +136,7 @@ func New(logger *slog.Logger, version string) probe.Probe {
 
 func verifyAndLoadBpf() (*ebpf.CollectionSpec, error) {
 	if !utils.SupportsContextPropagation() {
-		return nil, fmt.Errorf("the Linux Kernel doesn't support context propagation, please check if the kernel is in lockdown mode (/sys/kernel/security/lockdown)")
+		return nil, errors.New("the Linux Kernel doesn't support context propagation, please check if the kernel is in lockdown mode (/sys/kernel/security/lockdown)")
 	}
 
 	return loadBpf()

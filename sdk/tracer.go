@@ -5,6 +5,7 @@ package sdk
 
 import (
 	"context"
+	"math"
 	"time"
 
 	"go.opentelemetry.io/otel/trace"
@@ -73,11 +74,14 @@ func (t tracer) traces(name string, cfg trace.SpanConfig, sc, psc trace.SpanCont
 
 	links := cfg.Links()
 	if limit := maxSpan.Links; limit == 0 {
-		span.DroppedLinks = uint32(len(links))
+		n := len(links)
+		if n > 0 {
+			span.DroppedLinks = uint32(min(n, math.MaxUint32)) // nolint: gosec  // Bounds checked.
+		}
 	} else {
 		if limit > 0 {
 			n := max(len(links)-limit, 0)
-			span.DroppedLinks = uint32(n)
+			span.DroppedLinks = uint32(min(n, math.MaxUint32)) // nolint: gosec  // Bounds checked.
 			links = links[n:]
 		}
 		span.Links = convLinks(links)

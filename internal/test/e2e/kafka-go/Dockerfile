@@ -1,4 +1,4 @@
-FROM golang:1.23.4@sha256:9820aca42262f58451f006de3213055974b36f24b31508c1baa73c967fcecb99 AS builder
+FROM golang:1.23.5@sha256:8c10f21bec412f08f73aa7b97ca5ac5f28a39d8a88030ad8a339fd0a781d72b4 AS builder
 
 # pre-copy/cache go.mod for pre-downloading dependencies and only redownloading
 # them in subsequent builds if they change

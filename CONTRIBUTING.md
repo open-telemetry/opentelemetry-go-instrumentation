@@ -144,8 +144,6 @@ Any [Maintainer] can merge the PR once the above criteria have been met.
 
 ### Approvers
 
-- [Aaron Clawson](https://github.com/MadVikingGod), LightStep
-- [Dinesh Gurumurthy](https://github.com/dineshg13), DataDog
 - [Nikola Grcevski](https://github.com/grcevski), Grafana Labs
 - [Robert Pająk](https://github.com/pellared), Splunk
 
@@ -153,13 +151,14 @@ Any [Maintainer] can merge the PR once the above criteria have been met.
 
 - [Eden Federman](https://github.com/edeNFed), Odigos
 - [Mike Dame](https://github.com/damemi), Google
-- [Przemyslaw Delewski](https://github.com/pdelewski), SumoLogic
 - [Ron Federman](https://github.com/RonFed), Odigos
 - [Tyler Yahn](https://github.com/MrAlias), Splunk
 
 ### Emeritus
 
+- [Dinesh Gurumurthy](https://github.com/dineshg13), DataDog
 - [Mike Goldsmith](https://github.com/MikeGoldsmith), Honeycomb
+- [Przemyslaw Delewski](https://github.com/pdelewski), Quesma
 
 ### Become an Approver or a Maintainer
 

@@ -221,7 +221,7 @@ func NewSamplingManager(c *ebpf.Collection, conf *Config) (*Manager, error) {
 
 func (m *Manager) applyConfig(conf *Config) error {
 	if conf == nil {
-		return fmt.Errorf("cannot apply nil config")
+		return errors.New("cannot apply nil config")
 	}
 
 	samplerIDs := make([]SamplerID, 0, len(conf.Samplers))

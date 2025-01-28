@@ -135,7 +135,7 @@ func New(logger *slog.Logger, ver string) probe.Probe {
 						{
 							Package: "google.golang.org/grpc",
 							Constraints: version.MustConstraints(
-								version.NewConstraint(fmt.Sprintf("< %s", serverStream)),
+								version.NewConstraint("< " + serverStream),
 							),
 							FailureMode: probe.FailureModeIgnore,
 						},
@@ -149,7 +149,7 @@ func New(logger *slog.Logger, ver string) probe.Probe {
 						{
 							Package: "google.golang.org/grpc",
 							Constraints: version.MustConstraints(
-								version.NewConstraint(fmt.Sprintf(">= %s", serverStream)),
+								version.NewConstraint(">= " + serverStream),
 							),
 							FailureMode: probe.FailureModeIgnore,
 						},
@@ -181,7 +181,7 @@ func New(logger *slog.Logger, ver string) probe.Probe {
 						{
 							Package: "google.golang.org/grpc",
 							Constraints: version.MustConstraints(
-								version.NewConstraint(fmt.Sprintf(">= %s", serverStream)),
+								version.NewConstraint(">= " + serverStream),
 							),
 							FailureMode: probe.FailureModeIgnore,
 						},
