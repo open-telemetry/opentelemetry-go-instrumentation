@@ -7,7 +7,9 @@ import (
 	"debug/elf"
 	"debug/gosym"
 	"encoding/binary"
+	"errors"
 	"fmt"
+	"math"
 )
 
 func FindFunctionsStripped(elfF *elf.File, relevantFuncs map[string]interface{}) ([]*Func, error) {
@@ -62,14 +64,19 @@ func FindFunctionsStripped(elfF *elf.File, relevantFuncs map[string]interface{})
 func findFuncOffsetStripped(f *gosym.Func, elfF *elf.File) (uint64, []uint64, error) {
 	text := elfF.Section(".text")
 	if text == nil {
-		return 0, nil, fmt.Errorf(".text section not found in target binary")
+		return 0, nil, errors.New(".text section not found in target binary")
 	}
 
 	var off uint64
-	funcLen := f.End - f.Entry
+	funcLen := max(f.End-f.Entry, 0)
 	data := make([]byte, funcLen)
+	offInText := f.Entry - text.Addr
 
-	_, err := text.ReadAt(data, int64(f.Entry-text.Addr))
+	if offInText > math.MaxInt64 {
+		return 0, nil, fmt.Errorf("overflow in offset to read in the text section: %d", offInText)
+	}
+
+	_, err := text.ReadAt(data, int64(offInText)) // nolint: gosec // Overflow handled.
 	if err != nil {
 		return 0, nil, err
 	}
@@ -92,7 +99,7 @@ func findFuncOffsetStripped(f *gosym.Func, elfF *elf.File) (uint64, []uint64, er
 	}
 
 	if off == 0 {
-		return 0, nil, fmt.Errorf("could not find function offset")
+		return 0, nil, errors.New("could not find function offset")
 	}
 
 	retOffsets := make([]uint64, len(retInstructionOffsets))
