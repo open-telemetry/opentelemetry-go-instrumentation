@@ -23,7 +23,10 @@ jobs:
           --exclude "http://localhost*"
         fail: true
   lint:
-    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        os: [ ubuntu-latest, otel-linux-arm64]
+    runs-on: ${{ matrix.os }}
     steps:
       - name: Install Go
         uses: actions/setup-go@f111f3307d8850f501ac008e886eec1fd1932a34 # v5
@@ -50,10 +53,8 @@ jobs:
       - name: Install build dependencies
         run: |
           sudo apt-get update && sudo apt-get install -y clang llvm libbpf-dev
-      - name: Run linters on arm64
-        run: GOARCH=arm64 make license-header-check go-mod-tidy golangci-lint
-      - name: Run linters on amd64
-        run: GOARCH=amd64 make license-header-check go-mod-tidy golangci-lint
+      - name: Run linters
+        run: make license-header-check go-mod-tidy golangci-lint
       - name: Check clean repository
         run: make check-clean-work-tree
   race-test:
