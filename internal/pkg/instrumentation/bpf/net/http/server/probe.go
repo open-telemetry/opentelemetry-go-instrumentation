@@ -126,6 +126,7 @@ func New(logger *slog.Logger, version string) probe.Probe {
 					PackageConstrainsts: []probe.PackageConstrainst{
 						goWithSwissMaps,
 					},
+					DependsOn: []string{"net/http.serverHandler.ServeHTTP"},
 				},
 			},
 			SpecFn: loadBpf,
