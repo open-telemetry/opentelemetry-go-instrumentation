@@ -3,7 +3,7 @@
 
 module-sets:
   auto:
-    version: v0.19.0-alpha
+    version: v0.20.0
     modules:
       - go.opentelemetry.io/auto
   sdk:

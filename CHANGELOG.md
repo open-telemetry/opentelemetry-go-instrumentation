@@ -8,9 +8,10 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 
 ## [Unreleased]
 
+## [v0.20.0] - 2025-01-29
+
 ### Added
 
-- Update `httpPlusdb` demo with adding `OTEL_GO_AUTO_PARSE_DB_STATEMENT` env variable ([#1523](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1523))
 - Support `SELECT`, `INSERT`, `UPDATE`, and `DELETE` for database span names and `db.operation.name` attribute. ([#1253](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1253))
 - Support the full tracing API with the `otelglobal` probe. ([#1405](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1405))
 - Support `go.opentelemetry.io/otel@v1.33.0`. ([#1417](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1417))
@@ -19,10 +20,11 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 - Support `google.golang.org/grpc` `1.67.3`. ([#1452](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1452))
 - Support `google.golang.org/grpc` `1.68.2`. ([#1462](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1462))
 - Support `google.golang.org/grpc` `1.69.2`. ([#1467](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1467))
+- Support `google.golang.org/grpc` `1.71.0-dev`. ([#1467](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1467))
 - Support `golang.org/x/net` `0.33.0`. ([#1471](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1471))
+- Use `OTEL_GO_AUTO_PARSE_DB_STATEMENT` environment variable in the `httpPlusdb` demo. ([#1523](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1523))
 - Include gRPC error message for client spans. ([#1528](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1528))
 - Support `golang.org/x/net` `0.34.0`. ([#1552](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1552))
-- Support `google.golang.org/grpc` `1.71.0-dev`. ([#1467](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1467))
 - Support `google.golang.org/grpc` `1.69.4`. ([#1590](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1590))
 - Support `go.opentelemetry.io/otel@v1.34.0`. ([#1638](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1638))
 - Support Go `1.22.11`. ([#1638](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1638))
@@ -34,12 +36,12 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 - Update the `rolldice` example to better show the functionality of the project. ([#1566](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1566))
 - Preemptively drop support for the `traceglobal` probe when `Go >= 1.24` is used. ([#1573](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1573))
 - Support non-cached offsets.
-  If the target process uses an unknown version of an instrumented pacakge but has DAWRF data included, the offset is now found on startup instead of erroring. ([#1593](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1593))
+  If the target process uses an unknown version of an instrumented package but has DAWRF data included, the offset is now found on startup instead of returning an error. ([#1593](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1593))
 
 ### Fixed
 
 - Respect `OTEL_EXPORTER_OTLP_PROTOCOL` when `OTEL_TRACES_EXPORTER` is not set. ([#1572](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1572))
-- Improve support for stripped binaries, including those built with CGO libraries. ([#1641](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1641))
+- Support stripped binaries, including those built with CGO libraries. ([#1641](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1641))
 
 ## [v0.19.0-alpha] - 2024-12-05
 
@@ -550,7 +552,8 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 
 This is the first release of OpenTelemetry Go Automatic Instrumentation.
 
-[Unreleased]: https://github.com/open-telemetry/opentelemetry-go-instrumentation/compare/v0.19.0-alpha...HEAD
+[Unreleased]: https://github.com/open-telemetry/opentelemetry-go-instrumentation/compare/v0.20.0...HEAD
+[v0.20.0]: https://github.com/open-telemetry/opentelemetry-go-instrumentation/releases/tag/v0.20.0
 [v0.19.0-alpha]: https://github.com/open-telemetry/opentelemetry-go-instrumentation/releases/tag/v0.19.0-alpha
 [v0.18.0-alpha]: https://github.com/open-telemetry/opentelemetry-go-instrumentation/releases/tag/v0.18.0-alpha
 [v0.17.0-alpha]: https://github.com/open-telemetry/opentelemetry-go-instrumentation/releases/tag/v0.17.0-alpha
