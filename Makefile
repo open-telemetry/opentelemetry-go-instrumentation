@@ -240,11 +240,14 @@ PIP := $(PYTOOLS)/pip
 # The directory in the docker image where the current directory is mounted.
 WORKDIR := /workdir
 
+# Ensure correct ownership.
+DOCKER_USER=$(shell id -u):$(shell id -g)
+
 # The python image to use for the virtual environment.
 PYTHONIMAGE := python:3.11.3-slim-bullseye
 
 # Run the python image with the current directory mounted.
-DOCKERPY := docker run --rm -v "$(CURDIR):$(WORKDIR)" -w $(WORKDIR) $(PYTHONIMAGE)
+DOCKERPY := docker run --rm -u $(DOCKER_USER) -v "$(CURDIR):$(WORKDIR)" -w $(WORKDIR) $(PYTHONIMAGE)
 
 # Create a virtual environment for Python tools.
 $(PYTOOLS):
