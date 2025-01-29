@@ -40,6 +40,7 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 ### Fixed
 
 - Respect `OTEL_EXPORTER_OTLP_PROTOCOL` when `OTEL_TRACES_EXPORTER` is not set. ([#1572](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1572))
+- Improve support for stripped binaries, including those built with CGO libraries. ([#1641](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1641))
 
 ## [v0.19.0-alpha] - 2024-12-05
 

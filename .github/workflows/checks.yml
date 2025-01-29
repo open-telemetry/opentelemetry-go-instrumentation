@@ -23,7 +23,10 @@ jobs:
           --exclude "http://localhost*"
         fail: true
   lint:
-    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        os: [ ubuntu-latest, otel-linux-arm64]
+    runs-on: ${{ matrix.os }}
     steps:
       - name: Install Go
         uses: actions/setup-go@f111f3307d8850f501ac008e886eec1fd1932a34 # v5
