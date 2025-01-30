@@ -28,8 +28,18 @@ import (
 
 const (
 	// pkg is the package being instrumented.
-	pkg = "net/http"
+	pkg            = "net/http"
+	minGoSwissMaps = "1.24.0"
 )
+
+var goWithSwissMaps = probe.PackageConstrainst{
+	Package: "std",
+	Constraints: version.MustConstraints(
+		version.NewConstraint(">= " + minGoSwissMaps),
+	),
+	// Don't warn, we have a backup path.
+	FailureMode: probe.FailureModeIgnore,
+}
 
 // New returns a new [probe.Probe].
 func New(logger *slog.Logger, version string) probe.Probe {
@@ -102,12 +112,21 @@ func New(logger *slog.Logger, version string) probe.Probe {
 					MinVersion: patternPathMinVersion,
 				},
 				patternPathSupportedConst{},
+				swissMapsUsedConst{},
 			},
 			Uprobes: []*probe.Uprobe{
 				{
 					Sym:         "net/http.serverHandler.ServeHTTP",
 					EntryProbe:  "uprobe_serverHandler_ServeHTTP",
 					ReturnProbe: "uprobe_serverHandler_ServeHTTP_Returns",
+				},
+				{
+					Sym:         "net/textproto.(*Reader).readContinuedLineSlice",
+					ReturnProbe: "uprobe_textproto_Reader_readContinuedLineSlice_Returns",
+					PackageConstrainsts: []probe.PackageConstrainst{
+						goWithSwissMaps,
+					},
+					DependsOn: []string{"net/http.serverHandler.ServeHTTP"},
 				},
 			},
 			SpecFn: loadBpf,
@@ -128,6 +147,14 @@ var (
 func (c patternPathSupportedConst) InjectOption(td *process.TargetDetails) (inject.Option, error) {
 	isPatternPathSupported = td.GoVersion.GreaterThanOrEqual(patternPathMinVersion)
 	return inject.WithKeyValue("pattern_path_supported", isPatternPathSupported), nil
+}
+
+type swissMapsUsedConst struct{}
+
+func (c swissMapsUsedConst) InjectOption(td *process.TargetDetails) (inject.Option, error) {
+	minGoSwissMapsVersion := version.Must(version.NewVersion(minGoSwissMaps))
+	isUsingGoSwissMaps := td.GoVersion.GreaterThanOrEqual(minGoSwissMapsVersion)
+	return inject.WithKeyValue("swiss_maps_used", isUsingGoSwissMaps), nil
 }
 
 // event represents an event in an HTTP server during an HTTP

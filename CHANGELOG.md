@@ -8,6 +8,9 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 
 ## [Unreleased]
 
+### Added
+- Preemptively update instrumentation for `net/http` to support Go `1.24` when swiss maps are going to be added. ([#1636](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1636))
+
 ## [v0.20.0] - 2025-01-29
 
 ### Added
