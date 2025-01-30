@@ -36,7 +36,7 @@
           {
             "key": "telemetry.distro.version",
             "value": {
-              "stringValue": "v0.19.0-alpha"
+              "stringValue": "v0.20.0"
             }
           },
           {
@@ -53,7 +53,7 @@
           "schemaUrl": "https://opentelemetry.io/schemas/1.26.0",
           "scope": {
             "name": "go.opentelemetry.io/auto/google.golang.org/grpc",
-            "version": "v0.19.0-alpha"
+            "version": "v0.20.0"
           },
           "spans": [
             {
