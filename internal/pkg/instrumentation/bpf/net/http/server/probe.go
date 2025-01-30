@@ -37,7 +37,7 @@ var goWithSwissMaps = probe.PackageConstrainst{
 	Constraints: version.MustConstraints(
 		version.NewConstraint(">= " + minGoSwissMaps),
 	),
-	// Don't warn, we have a backup path
+	// Don't warn, we have a backup path.
 	FailureMode: probe.FailureModeIgnore,
 }
 
