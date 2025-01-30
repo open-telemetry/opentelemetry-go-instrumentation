@@ -28,7 +28,7 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 - Support Go `1.22.11`. ([#1638](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1638))
 - Support Go `1.23.5`. ([#1638](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1638))
 - Support `google.golang.org/grpc` `1.70.0`. ([#1682](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1682))
-- Support Go `1.24` swiss maps. ([#1636](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1636))
+- Preemptively update instrumentation for `net/http` to support Go `1.24` when swiss maps are going to be added. ([#1636](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1636))
 
 ### Changed
 
