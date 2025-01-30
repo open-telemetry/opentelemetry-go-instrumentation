@@ -80,8 +80,9 @@ type bpfSpecs struct {
 //
 // It can be passed ebpf.CollectionSpec.Assign.
 type bpfProgramSpecs struct {
-	UprobeServerHandlerServeHTTP         *ebpf.ProgramSpec `ebpf:"uprobe_serverHandler_ServeHTTP"`
-	UprobeServerHandlerServeHTTP_Returns *ebpf.ProgramSpec `ebpf:"uprobe_serverHandler_ServeHTTP_Returns"`
+	UprobeServerHandlerServeHTTP                       *ebpf.ProgramSpec `ebpf:"uprobe_serverHandler_ServeHTTP"`
+	UprobeServerHandlerServeHTTP_Returns               *ebpf.ProgramSpec `ebpf:"uprobe_serverHandler_ServeHTTP_Returns"`
+	UprobeTextprotoReaderReadContinuedLineSliceReturns *ebpf.ProgramSpec `ebpf:"uprobe_textproto_Reader_readContinuedLineSlice_Returns"`
 }
 
 // bpfMapSpecs contains maps before they are loaded into the kernel.
@@ -92,6 +93,7 @@ type bpfMapSpecs struct {
 	Events                     *ebpf.MapSpec `ebpf:"events"`
 	GoContextToSc              *ebpf.MapSpec `ebpf:"go_context_to_sc"`
 	GolangMapbucketStorageMap  *ebpf.MapSpec `ebpf:"golang_mapbucket_storage_map"`
+	HttpServerContextHeaders   *ebpf.MapSpec `ebpf:"http_server_context_headers"`
 	HttpServerUprobeStorageMap *ebpf.MapSpec `ebpf:"http_server_uprobe_storage_map"`
 	HttpServerUprobes          *ebpf.MapSpec `ebpf:"http_server_uprobes"`
 	ProbeActiveSamplerMap      *ebpf.MapSpec `ebpf:"probe_active_sampler_map"`
@@ -121,6 +123,7 @@ type bpfVariableSpecs struct {
 	ReqPtrPos            *ebpf.VariableSpec `ebpf:"req_ptr_pos"`
 	StartAddr            *ebpf.VariableSpec `ebpf:"start_addr"`
 	StatusCodePos        *ebpf.VariableSpec `ebpf:"status_code_pos"`
+	SwissMapsUsed        *ebpf.VariableSpec `ebpf:"swiss_maps_used"`
 	TotalCpus            *ebpf.VariableSpec `ebpf:"total_cpus"`
 	UrlPtrPos            *ebpf.VariableSpec `ebpf:"url_ptr_pos"`
 }
@@ -149,6 +152,7 @@ type bpfMaps struct {
 	Events                     *ebpf.Map `ebpf:"events"`
 	GoContextToSc              *ebpf.Map `ebpf:"go_context_to_sc"`
 	GolangMapbucketStorageMap  *ebpf.Map `ebpf:"golang_mapbucket_storage_map"`
+	HttpServerContextHeaders   *ebpf.Map `ebpf:"http_server_context_headers"`
 	HttpServerUprobeStorageMap *ebpf.Map `ebpf:"http_server_uprobe_storage_map"`
 	HttpServerUprobes          *ebpf.Map `ebpf:"http_server_uprobes"`
 	ProbeActiveSamplerMap      *ebpf.Map `ebpf:"probe_active_sampler_map"`
@@ -163,6 +167,7 @@ func (m *bpfMaps) Close() error {
 		m.Events,
 		m.GoContextToSc,
 		m.GolangMapbucketStorageMap,
+		m.HttpServerContextHeaders,
 		m.HttpServerUprobeStorageMap,
 		m.HttpServerUprobes,
 		m.ProbeActiveSamplerMap,
@@ -193,6 +198,7 @@ type bpfVariables struct {
 	ReqPtrPos            *ebpf.Variable `ebpf:"req_ptr_pos"`
 	StartAddr            *ebpf.Variable `ebpf:"start_addr"`
 	StatusCodePos        *ebpf.Variable `ebpf:"status_code_pos"`
+	SwissMapsUsed        *ebpf.Variable `ebpf:"swiss_maps_used"`
 	TotalCpus            *ebpf.Variable `ebpf:"total_cpus"`
 	UrlPtrPos            *ebpf.Variable `ebpf:"url_ptr_pos"`
 }
@@ -201,14 +207,16 @@ type bpfVariables struct {
 //
 // It can be passed to loadBpfObjects or ebpf.CollectionSpec.LoadAndAssign.
 type bpfPrograms struct {
-	UprobeServerHandlerServeHTTP         *ebpf.Program `ebpf:"uprobe_serverHandler_ServeHTTP"`
-	UprobeServerHandlerServeHTTP_Returns *ebpf.Program `ebpf:"uprobe_serverHandler_ServeHTTP_Returns"`
+	UprobeServerHandlerServeHTTP                       *ebpf.Program `ebpf:"uprobe_serverHandler_ServeHTTP"`
+	UprobeServerHandlerServeHTTP_Returns               *ebpf.Program `ebpf:"uprobe_serverHandler_ServeHTTP_Returns"`
+	UprobeTextprotoReaderReadContinuedLineSliceReturns *ebpf.Program `ebpf:"uprobe_textproto_Reader_readContinuedLineSlice_Returns"`
 }
 
 func (p *bpfPrograms) Close() error {
 	return _BpfClose(
 		p.UprobeServerHandlerServeHTTP,
 		p.UprobeServerHandlerServeHTTP_Returns,
+		p.UprobeTextprotoReaderReadContinuedLineSliceReturns,
 	)
 }
 
