@@ -22,6 +22,10 @@ func FindFunctionsStripped(elfF *elf.File, relevantFuncs map[string]interface{})
 		return nil, err
 	}
 
+	if len(pclndat) <= 8*2*8 {
+		return nil, errors.New(".gopclntab section too small")
+	}
+
 	// we extract the `textStart` value based on the header of the pclntab,
 	// this is used to parse the line number table, and is not necessarily the start of the `.text` section.
 	// when a binary is build with C code, the value of `textStart` is not the same as the start of the `.text` section.
@@ -30,8 +34,10 @@ func FindFunctionsStripped(elfF *elf.File, relevantFuncs map[string]interface{})
 	ptrSize := uint32(pclndat[7])
 	if ptrSize == 4 {
 		runtimeText = uint64(binary.LittleEndian.Uint32(pclndat[8+2*ptrSize:]))
-	} else {
+	} else if ptrSize == 8 {
 		runtimeText = binary.LittleEndian.Uint64(pclndat[8+2*ptrSize:])
+	} else {
+		return nil, errors.New("invalid pointer size of text section of .gopclntab")
 	}
 
 	pcln := gosym.NewLineTable(pclndat, runtimeText)
