@@ -22,6 +22,10 @@ func FindFunctionsStripped(elfF *elf.File, relevantFuncs map[string]interface{})
 		return nil, err
 	}
 
+	// We need to read the Go pcln data at offset 8 + 2 * the pointer size.
+	// The pointer size can be found at offset 7, which should be either 4 or 8.
+	// We assume that we shouldn't have a gopclntab section smaller than the
+	// 8 + 2 * the largest possible pointer size, which is 8 + 2 * 8.
 	if len(pclndat) <= 8*2*8 {
 		return nil, errors.New(".gopclntab section too small")
 	}
