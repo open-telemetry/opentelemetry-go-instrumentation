@@ -42,6 +42,10 @@ probes. A new [instrumentation probe API] is being designed. To avoid excessive
 churn and development burden, we will not be accepting new instrumentation
 probes until that API is completed.
 
+Please **do** open an issue[^1] to track your request for new instrumentation. We
+would like to know what we are missing and how you plan to use it.
+
+[^1]: TODO: link to an issue template
 [instrumentation API]: https://github.com/open-telemetry/opentelemetry-go-instrumentation/issues/1105 
 
 ### How to Send Pull Requests
