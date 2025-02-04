@@ -37,6 +37,13 @@ Questions, bug reports, and feature requests can all be submitted as [issues](ht
 
 ## Pull Requests
 
+**NOTE**: We are currently **not** accepting PRs to add new instrumentation
+probes. A new [instrumentation probe API] is being designed. To avoid excessive
+curn and development burden, we will not be accepting new instrumentation
+probes until that API is completed.
+
+[instrumentation API]: https://github.com/open-telemetry/opentelemetry-go-instrumentation/issues/1105 
+
 ### How to Send Pull Requests
 
 Everyone is welcome to contribute code to `opentelemetry-go-instrumentation` via
