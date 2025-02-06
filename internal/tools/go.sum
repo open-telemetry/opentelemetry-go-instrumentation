@@ -564,10 +564,10 @@ go.opentelemetry.io/auto/sdk v1.1.0 h1:cH53jehLUN6UFLY71z+NDOiNJqDdPRaXzTel0sJyS
 go.opentelemetry.io/auto/sdk v1.1.0/go.mod h1:3wSPjt5PWp2RhlCcmmOial7AvC4DQqZb7a7wCow3W8A=
 go.opentelemetry.io/build-tools v0.18.0 h1:c07DNSmJxLbgHm1wlvKCjvQTOhd1xtaWqe6+VpzrTXo=
 go.opentelemetry.io/build-tools v0.18.0/go.mod h1:ZhuNyO/aAkGEFTfNhH7Nhv7fIWpxIOp8t7XshpPWiOU=
-go.opentelemetry.io/build-tools/dbotconf v0.17.0 h1:RdbnhGcdti2slby1llETaOflxJuNZDG2xeHUA3C9Dy0=
-go.opentelemetry.io/build-tools/dbotconf v0.17.0/go.mod h1:PPbFyItEnuQ6PlftWkm8CCN43Pxn3F5nj9RpS59tB8c=
-go.opentelemetry.io/build-tools/multimod v0.17.0 h1:z0TWbNLcKu1eLx0Pgour/WFA0m+trsRkJ0llM5MsTug=
-go.opentelemetry.io/build-tools/multimod v0.17.0/go.mod h1:ImevmVCDyVInTn7L9lN+qVtGs/6cOMQA/Cf3jX1miQA=
+go.opentelemetry.io/build-tools/dbotconf v0.18.0 h1:WsJKTxwgKLGszVGpnV12wxZBPzBYsn30kJNfAPZs+X8=
+go.opentelemetry.io/build-tools/dbotconf v0.18.0/go.mod h1:So4y/TN/z9d/BeG75r8MAe8jrN68OgTkzqR4OT2etK8=
+go.opentelemetry.io/build-tools/multimod v0.18.0 h1:zHaEejwAtzUCPyQfPuaZFaIGPiD1JbZDegyEcCVNTKo=
+go.opentelemetry.io/build-tools/multimod v0.18.0/go.mod h1:w9GPeYisaI+PeWXsFU9FIL/N6ULXWbI7QRbJHSSOoZw=
 go.opentelemetry.io/collector/pdata v1.25.0 h1:AmgBklQfbfy0lT8qsoJtRuYMZ7ZV3VZvkvhjSDentrg=
 go.opentelemetry.io/collector/pdata v1.25.0/go.mod h1:Zs7D4RXOGS7E2faGc/jfWdbmhoiHBxA7QbpuJOioxq8=
 go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.59.0 h1:CV7UdSGJt/Ao6Gp4CXckLxVRRsRgDHoI8XjbL3PDl8s=
