@@ -12,7 +12,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/hashicorp/go-version"
+	"github.com/Masterminds/semver/v3"
 )
 
 const jsonURL = "https://go.dev/dl/?mode=json&include=all"
@@ -24,7 +24,7 @@ type goListResponse struct {
 
 // PkgVersions returns all locally known version of module with
 // moduleName.
-func PkgVersions(name string) ([]*version.Version, error) {
+func PkgVersions(name string) ([]*semver.Version, error) {
 	command := "go list -m -json -versions " + name
 	cmd := exec.Command("bash", "-c", command)
 
@@ -40,9 +40,9 @@ func PkgVersions(name string) ([]*version.Version, error) {
 		return nil, err
 	}
 
-	out := make([]*version.Version, len(resp.Versions))
+	out := make([]*semver.Version, len(resp.Versions))
 	for i, v := range resp.Versions {
-		conv, err := version.NewVersion(v)
+		conv, err := semver.NewVersion(v)
 		if err != nil {
 			return nil, err
 		}
@@ -58,7 +58,7 @@ type goDevResponse struct {
 
 // GoVersions returns all known GoVersions versions from the GoVersions package mirror at
 // https://go.dev/dl/.
-func GoVersions(constraints ...string) ([]*version.Version, error) {
+func GoVersions(constraints ...string) ([]*semver.Version, error) {
 	res, err := http.Get(jsonURL)
 	if err != nil {
 		return nil, err
@@ -76,11 +76,11 @@ func GoVersions(constraints ...string) ([]*version.Version, error) {
 		return nil, err
 	}
 
-	var versions []*version.Version
+	var versions []*semver.Version
 	for _, v := range resp {
 		if v.Stable {
 			stripepdV := strings.ReplaceAll(v.Version, "go", "")
-			v, err := version.NewVersion(stripepdV)
+			v, err := semver.NewVersion(stripepdV)
 			if err != nil {
 				return nil, err
 			}
@@ -95,17 +95,17 @@ func GoVersions(constraints ...string) ([]*version.Version, error) {
 	return constrained, err
 }
 
-func constrain(vers []*version.Version, constrains []string) ([]*version.Version, error) {
-	var cnsts []version.Constraints
+func constrain(vers []*semver.Version, constrains []string) ([]*semver.Version, error) {
+	var cnsts []*semver.Constraints
 	for _, c := range constrains {
-		parsed, err := version.NewConstraint(c)
+		parsed, err := semver.NewConstraint(c)
 		if err != nil {
 			return nil, err
 		}
 		cnsts = append(cnsts, parsed)
 	}
 
-	valid := func(v *version.Version) bool {
+	valid := func(v *semver.Version) bool {
 		for _, c := range cnsts {
 			if !c.Check(v) {
 				return false
@@ -114,7 +114,7 @@ func constrain(vers []*version.Version, constrains []string) ([]*version.Version
 		return true
 	}
 
-	var fltr []*version.Version
+	var fltr []*semver.Version
 	for _, ver := range vers {
 		if valid(ver) {
 			fltr = append(fltr, ver)

@@ -18,7 +18,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/hashicorp/go-version"
+	"github.com/Masterminds/semver/v3"
 )
 
 const (
@@ -41,7 +41,7 @@ func main() {
 	dest := flag.String("dest", "./libbpf", "Destination directory for extracted files")
 	flag.Parse()
 
-	constraint, err := version.NewConstraint(*ver)
+	constraint, err := semver.NewConstraint(*ver)
 	if err != nil {
 		log.Fatalf("Invalid version %q: %s", *ver, err)
 	}
@@ -67,11 +67,11 @@ func main() {
 
 // Release is a partial set of GitHub release info.
 type Release struct {
-	TagName    *version.Version `json:"tag_name"`
-	TarballURL string           `json:"tarball_url"`
+	TagName    *semver.Version `json:"tag_name"`
+	TarballURL string          `json:"tarball_url"`
 }
 
-func latestRelease(constraint version.Constraints) (*Release, error) {
+func latestRelease(constraint *semver.Constraints) (*Release, error) {
 	resp, err := http.Get(repoAPI)
 	if err != nil {
 		return nil, err

@@ -10,8 +10,8 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/Masterminds/semver/v3"
 	"github.com/cilium/ebpf"
-	"github.com/hashicorp/go-version"
 
 	"go.opentelemetry.io/auto/internal/pkg/process"
 	"go.opentelemetry.io/auto/internal/pkg/structfield"
@@ -139,7 +139,7 @@ func WithKeyValue(key string, value interface{}) Option {
 //
 // If the offset value is not known, an error is returned when the returned
 // Option is used.
-func WithOffset(key string, id structfield.ID, ver *version.Version) Option {
+func WithOffset(key string, id structfield.ID, ver *semver.Version) Option {
 	if ver == nil {
 		return errOpt{
 			err: fmt.Errorf("missing version: %s", id),
@@ -187,10 +187,10 @@ func FindOffset(id structfield.ID, td *process.TargetDetails) (structfield.Offse
 	return structfield.OffsetKey{Offset: uint64(v), Valid: true}, err // nolint: gosec  // Bounded.
 }
 
-func GetOffset(id structfield.ID, ver *version.Version) (structfield.OffsetKey, bool) {
+func GetOffset(id structfield.ID, ver *semver.Version) (structfield.OffsetKey, bool) {
 	return offsets.GetOffset(id, ver)
 }
 
-func GetLatestOffset(id structfield.ID) (structfield.OffsetKey, *version.Version) {
+func GetLatestOffset(id structfield.ID) (structfield.OffsetKey, *semver.Version) {
 	return offsets.GetLatestOffset(id)
 }
