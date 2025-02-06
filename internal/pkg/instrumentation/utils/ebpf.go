@@ -9,8 +9,8 @@ import (
 	"os"
 	"strconv"
 
+	"github.com/Masterminds/semver/v3"
 	"github.com/cilium/ebpf"
-	"github.com/hashicorp/go-version"
 )
 
 const (
@@ -53,16 +53,12 @@ func ShouldShowVerifierLogs() bool {
 // Does kernel version check and /sys/kernel/security/lockdown inspection to determine if it's
 // safe to use bpf_probe_write_user.
 func SupportsContextPropagation() bool {
-	ver, err := GetLinuxKernelVersion()
-	if err != nil {
+	ver := GetLinuxKernelVersion()
+	if ver == nil {
 		return false
 	}
 
-	noLockKernel, err := version.NewVersion("5.14")
-	if err != nil {
-		fmt.Printf("Error creating version 5.14 - %v\n", err)
-	}
-
+	noLockKernel := semver.New(5, 14, 0, "", "")
 	if ver.LessThan(noLockKernel) {
 		return true
 	}

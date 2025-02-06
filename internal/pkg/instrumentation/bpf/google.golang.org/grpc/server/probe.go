@@ -8,7 +8,7 @@ import (
 	"log/slog"
 	"net"
 
-	"github.com/hashicorp/go-version"
+	"github.com/Masterminds/semver/v3"
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/ptrace"
 	"go.opentelemetry.io/otel/attribute"
@@ -27,23 +27,17 @@ import (
 
 //go:generate go run github.com/cilium/ebpf/cmd/bpf2go -target amd64,arm64 bpf ./bpf/probe.bpf.c
 
-const (
-	// pkg is the package being instrumented.
-	pkg = "google.golang.org/grpc"
-
-	// writeStatusMin is the minimum version of grpc that supports status
-	// parsing.
-	writeStatusMin = "1.40.0"
-
-	// serverStream is the version the both the writeStatus and handleStream
-	// methods changed to accept a *transport.ServerStream instead of a
-	// *transport.Stream.
-	serverStream = "1.69.0"
-)
+// pkg is the package being instrumented.
+const pkg = "google.golang.org/grpc"
 
 var (
-	writeStatusMinVersion = version.Must(version.NewVersion(writeStatusMin))
-	serverStreamVersion   = version.Must(version.NewVersion(serverStream))
+	// writeStatusMinVersion is the minimum version of grpc that supports
+	// status parsing.
+	writeStatusMinVersion = semver.New(1, 40, 0, "", "")
+	// serverStreamVersion is the version the both the writeStatus and
+	// handleStream methods changed to accept a *transport.ServerStream instead
+	// of a *transport.Stream.
+	serverStreamVersion = semver.New(1, 69, 0, "", "")
 )
 
 // New returns a new [probe.Probe].
@@ -133,10 +127,8 @@ func New(logger *slog.Logger, ver string) probe.Probe {
 					ReturnProbe: "uprobe_server_handleStream_Returns",
 					PackageConstraints: []probe.PackageConstraints{
 						{
-							Package: "google.golang.org/grpc",
-							Constraints: version.MustConstraints(
-								version.NewConstraint("< " + serverStream),
-							),
+							Package:     "google.golang.org/grpc",
+							Constraints: must(semver.NewConstraint("< " + serverStreamVersion.String())),
 							FailureMode: probe.FailureModeIgnore,
 						},
 					},
@@ -147,10 +139,8 @@ func New(logger *slog.Logger, ver string) probe.Probe {
 					ReturnProbe: "uprobe_server_handleStream2_Returns",
 					PackageConstraints: []probe.PackageConstraints{
 						{
-							Package: "google.golang.org/grpc",
-							Constraints: version.MustConstraints(
-								version.NewConstraint(">= " + serverStream),
-							),
+							Package:     "google.golang.org/grpc",
+							Constraints: must(semver.NewConstraint(">= " + serverStreamVersion.String())),
 							FailureMode: probe.FailureModeIgnore,
 						},
 					},
@@ -165,11 +155,9 @@ func New(logger *slog.Logger, ver string) probe.Probe {
 					PackageConstraints: []probe.PackageConstraints{
 						{
 							Package: "google.golang.org/grpc",
-							Constraints: version.MustConstraints(
-								version.NewConstraint(
-									fmt.Sprintf("> %s, < %s", writeStatusMin, serverStream),
-								),
-							),
+							Constraints: must(semver.NewConstraint(
+								fmt.Sprintf("> %s, < %s", writeStatusMinVersion, serverStreamVersion),
+							)),
 							FailureMode: probe.FailureModeIgnore,
 						},
 					},
@@ -179,10 +167,8 @@ func New(logger *slog.Logger, ver string) probe.Probe {
 					EntryProbe: "uprobe_http2Server_WriteStatus2",
 					PackageConstraints: []probe.PackageConstraints{
 						{
-							Package: "google.golang.org/grpc",
-							Constraints: version.MustConstraints(
-								version.NewConstraint(">= " + serverStream),
-							),
+							Package:     "google.golang.org/grpc",
+							Constraints: must(semver.NewConstraint(">= " + serverStreamVersion.String())),
 							FailureMode: probe.FailureModeIgnore,
 						},
 					},
@@ -196,6 +182,13 @@ func New(logger *slog.Logger, ver string) probe.Probe {
 	}
 }
 
+func must(c *semver.Constraints, err error) *semver.Constraints {
+	if err != nil {
+		panic(err)
+	}
+	return c
+}
+
 // framePosConst is a Probe Const defining the position of the
 // http.MetaHeadersFrame parameter of the http2Server.operateHeaders method.
 type framePosConst struct{}
@@ -204,7 +197,7 @@ type framePosConst struct{}
 // context was added as the first parameter. The frame became the second
 // parameter:
 // https://github.com/grpc/grpc-go/pull/6716/files#diff-4058722211b8d52e2d5b0c0b7542059ed447a04017b69520d767e94a9493409eR334
-var paramChangeVer = version.Must(version.NewVersion("1.60.0"))
+var paramChangeVer = semver.New(1, 60, 0, "", "")
 
 func (c framePosConst) InjectOption(td *process.TargetDetails) (inject.Option, error) {
 	ver, ok := td.Modules[pkg]
@@ -212,13 +205,13 @@ func (c framePosConst) InjectOption(td *process.TargetDetails) (inject.Option, e
 		return nil, fmt.Errorf("unknown module version: %s", pkg)
 	}
 
-	return inject.WithKeyValue("is_new_frame_pos", ver.GreaterThanOrEqual(paramChangeVer)), nil
+	return inject.WithKeyValue("is_new_frame_pos", ver.GreaterThanEqual(paramChangeVer)), nil
 }
 
 type serverAddrConst struct{}
 
 var (
-	serverAddrMinVersion = version.Must(version.NewVersion("1.60.0"))
+	serverAddrMinVersion = semver.New(1, 60, 0, "", "")
 	serverAddr           = false
 )
 
@@ -227,7 +220,7 @@ func (w serverAddrConst) InjectOption(td *process.TargetDetails) (inject.Option,
 	if !ok {
 		return nil, fmt.Errorf("unknown module version: %s", pkg)
 	}
-	if ver.GreaterThanOrEqual(serverAddrMinVersion) {
+	if ver.GreaterThanEqual(serverAddrMinVersion) {
 		serverAddr = true
 	}
 	return inject.WithKeyValue("server_addr_supported", serverAddr), nil
