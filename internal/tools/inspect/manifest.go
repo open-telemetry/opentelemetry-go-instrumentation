@@ -6,7 +6,7 @@ package inspect
 import (
 	"errors"
 
-	"github.com/hashicorp/go-version"
+	"github.com/Masterminds/semver/v3"
 
 	"go.opentelemetry.io/auto/internal/pkg/structfield"
 )
@@ -38,9 +38,9 @@ type Application struct {
 	//
 	// If this is nil, the GoVerions will also be used as the application
 	// versions that are passed to the template.
-	Versions []*version.Version
+	Versions []*semver.Version
 	// GoVerions are the versions of Go to build the application with.
 	//
 	// If this is nil, the latest version of Go will be used.
-	GoVerions []*version.Version
+	GoVerions []*semver.Version
 }

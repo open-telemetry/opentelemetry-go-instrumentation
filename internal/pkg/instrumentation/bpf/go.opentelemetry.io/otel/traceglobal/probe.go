@@ -19,8 +19,8 @@ import (
 	"go.opentelemetry.io/auto/internal/pkg/process"
 	"go.opentelemetry.io/auto/internal/pkg/structfield"
 
+	"github.com/Masterminds/semver/v3"
 	"github.com/cilium/ebpf/perf"
-	"github.com/hashicorp/go-version"
 	"golang.org/x/sys/unix"
 
 	"go.opentelemetry.io/otel/attribute"
@@ -42,26 +42,27 @@ const (
 	minGoMaps  = "1.24.0"
 )
 
+func must(c *semver.Constraints, err error) *semver.Constraints {
+	if err != nil {
+		panic(err)
+	}
+	return c
+}
+
 var (
 	otelWithAutoSDK = probe.PackageConstraints{
-		Package: "go.opentelemetry.io/otel",
-		Constraints: version.MustConstraints(
-			version.NewConstraint(">= " + minAutoSDK),
-		),
+		Package:     "go.opentelemetry.io/otel",
+		Constraints: must(semver.NewConstraint(">= " + minAutoSDK)),
 		FailureMode: probe.FailureModeIgnore,
 	}
 	otelWithoutAutoSDK = probe.PackageConstraints{
-		Package: "go.opentelemetry.io/otel",
-		Constraints: version.MustConstraints(
-			version.NewConstraint("< " + minAutoSDK),
-		),
+		Package:     "go.opentelemetry.io/otel",
+		Constraints: must(semver.NewConstraint("< " + minAutoSDK)),
 		FailureMode: probe.FailureModeIgnore,
 	}
 	goWithoutSwissMaps = probe.PackageConstraints{
-		Package: "std",
-		Constraints: version.MustConstraints(
-			version.NewConstraint("< " + minGoMaps),
-		),
+		Package:     "std",
+		Constraints: must(semver.NewConstraint("< " + minGoMaps)),
 		// Warn in logs that this is not supported.
 		FailureMode: probe.FailureModeWarn,
 	}
@@ -251,7 +252,7 @@ type tracerIDContainsSchemaURL struct{}
 // Prior to v1.28 the tracer key did not contain schemaURL. However, in that version a
 // change was made to include it.
 // https://github.com/open-telemetry/opentelemetry-go/pull/5426/files
-var schemaAddedToTracerKeyVer = version.Must(version.NewVersion("1.28.0"))
+var schemaAddedToTracerKeyVer = semver.New(1, 28, 0, "", "")
 
 func (c tracerIDContainsSchemaURL) InjectOption(td *process.TargetDetails) (inject.Option, error) {
 	ver, ok := td.Modules["go.opentelemetry.io/otel"]
@@ -259,12 +260,12 @@ func (c tracerIDContainsSchemaURL) InjectOption(td *process.TargetDetails) (inje
 		return nil, fmt.Errorf("unknown module version: %s", pkg)
 	}
 
-	return inject.WithKeyValue("tracer_id_contains_schemaURL", ver.GreaterThanOrEqual(schemaAddedToTracerKeyVer)), nil
+	return inject.WithKeyValue("tracer_id_contains_schemaURL", ver.GreaterThanEqual(schemaAddedToTracerKeyVer)), nil
 }
 
 // In v1.32.0 the tracer key was updated to include the scope attributes.
 // https://github.com/open-telemetry/opentelemetry-go/pull/5924/files
-var scopeAttributesAddedToTracerKeyVer = version.Must(version.NewVersion("1.32.0"))
+var scopeAttributesAddedToTracerKeyVer = semver.New(1, 32, 0, "", "")
 
 // tracerIDContainsScopeAttributes is a Probe Const defining whether the tracer key contains scope attributes.
 type tracerIDContainsScopeAttributes struct{}
@@ -275,7 +276,7 @@ func (c tracerIDContainsScopeAttributes) InjectOption(td *process.TargetDetails)
 		return nil, fmt.Errorf("unknown module version: %s", pkg)
 	}
 
-	return inject.WithKeyValue("tracer_id_contains_scope_attributes", ver.GreaterThanOrEqual(scopeAttributesAddedToTracerKeyVer)), nil
+	return inject.WithKeyValue("tracer_id_contains_scope_attributes", ver.GreaterThanEqual(scopeAttributesAddedToTracerKeyVer)), nil
 }
 
 type attributeKeyVal struct {

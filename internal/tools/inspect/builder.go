@@ -14,6 +14,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/Masterminds/semver/v3"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/filters"
 	"github.com/docker/docker/api/types/image"
@@ -21,18 +22,17 @@ import (
 	"github.com/docker/docker/api/types/registry"
 	"github.com/docker/docker/client"
 	"github.com/docker/docker/pkg/stdcopy"
-	"github.com/hashicorp/go-version"
 )
 
 // minCompatVer is the min "go mod" version that includes the "compat" option.
-var minCompatVer = version.Must(version.NewVersion("1.17.0"))
+var minCompatVer = semver.New(1, 17, 0, "", "")
 
 // builder builds a Go application into a binary using Docker.
 type builder struct {
 	log *slog.Logger
 	cli *client.Client
 
-	goVer   *version.Version
+	goVer   *semver.Version
 	GoImage string
 }
 
@@ -42,7 +42,7 @@ type builder struct {
 //
 // If goVer is nil, the latest version of the Go docker container will be used
 // to build applications.
-func newBuilder(l *slog.Logger, cli *client.Client, goVer *version.Version) *builder {
+func newBuilder(l *slog.Logger, cli *client.Client, goVer *semver.Version) *builder {
 	img := "golang:latest"
 	if goVer != nil {
 		// Use goVer.String here so 1.12 means 1.12.0. If Original is used, it
@@ -59,7 +59,7 @@ func newBuilder(l *slog.Logger, cli *client.Client, goVer *version.Version) *bui
 }
 
 // Build builds the appV version of a Go application located in dir.
-func (b *builder) Build(ctx context.Context, dir string, appV *version.Version, modName string) (string, error) {
+func (b *builder) Build(ctx context.Context, dir string, appV *semver.Version, modName string) (string, error) {
 	b.log.Debug("building application...", "version", appV, "dir", dir, "image", b.GoImage)
 
 	app := "app" + appV.Original()

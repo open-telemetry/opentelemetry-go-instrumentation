@@ -13,7 +13,7 @@ import (
 
 	"golang.org/x/sys/unix"
 
-	"github.com/hashicorp/go-version"
+	"github.com/Masterminds/semver/v3"
 	"github.com/pkg/errors"
 
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/utils"
@@ -228,18 +228,18 @@ func (p *tracedProgram) Mmap(length uint64, fd uint64) (uint64, error) {
 // Madvise runs madvise syscall.
 func (p *tracedProgram) Madvise(addr uint64, length uint64) error {
 	advice := uint64(syscall.MADV_WILLNEED)
-	ver, err := utils.GetLinuxKernelVersion()
-	if err != nil {
-		return errors.WithStack(err)
+	ver := utils.GetLinuxKernelVersion()
+	if ver == nil {
+		return errors.WithStack(errors.New("unknown Linux version"))
 	}
 
-	minVersion := version.Must(version.NewVersion("5.14"))
+	minVersion := semver.New(5, 14, 0, "", "")
 	p.logger.Debug("Detected linux kernel version", "version", ver)
-	if ver.GreaterThanOrEqual(minVersion) {
+	if ver.GreaterThanEqual(minVersion) {
 		advice = syscall.MADV_WILLNEED | MadvisePopulateRead | MadvisePopulateWrite
 	}
 
-	_, err = p.Syscall(syscall.SYS_MADVISE, addr, length, advice, 0, 0, 0)
+	_, err := p.Syscall(syscall.SYS_MADVISE, addr, length, advice, 0, 0, 0)
 	return err
 }
 
