@@ -131,7 +131,7 @@ func New(logger *slog.Logger, ver string) probe.Probe {
 					Sym:         "google.golang.org/grpc.(*Server).handleStream",
 					EntryProbe:  "uprobe_server_handleStream",
 					ReturnProbe: "uprobe_server_handleStream_Returns",
-					PackageConstrainsts: []probe.PackageConstrainst{
+					PackageConstraints: []probe.PackageConstraints{
 						{
 							Package: "google.golang.org/grpc",
 							Constraints: version.MustConstraints(
@@ -145,7 +145,7 @@ func New(logger *slog.Logger, ver string) probe.Probe {
 					Sym:         "google.golang.org/grpc.(*Server).handleStream",
 					EntryProbe:  "uprobe_server_handleStream2",
 					ReturnProbe: "uprobe_server_handleStream2_Returns",
-					PackageConstrainsts: []probe.PackageConstrainst{
+					PackageConstraints: []probe.PackageConstraints{
 						{
 							Package: "google.golang.org/grpc",
 							Constraints: version.MustConstraints(
@@ -162,7 +162,7 @@ func New(logger *slog.Logger, ver string) probe.Probe {
 				{
 					Sym:        "google.golang.org/grpc/internal/transport.(*http2Server).WriteStatus",
 					EntryProbe: "uprobe_http2Server_WriteStatus",
-					PackageConstrainsts: []probe.PackageConstrainst{
+					PackageConstraints: []probe.PackageConstraints{
 						{
 							Package: "google.golang.org/grpc",
 							Constraints: version.MustConstraints(
@@ -177,7 +177,7 @@ func New(logger *slog.Logger, ver string) probe.Probe {
 				{
 					Sym:        "google.golang.org/grpc/internal/transport.(*http2Server).writeStatus",
 					EntryProbe: "uprobe_http2Server_WriteStatus2",
-					PackageConstrainsts: []probe.PackageConstrainst{
+					PackageConstraints: []probe.PackageConstraints{
 						{
 							Package: "google.golang.org/grpc",
 							Constraints: version.MustConstraints(
