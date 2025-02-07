@@ -175,7 +175,7 @@ func (i *Base[BPFObj, BPFEvent]) InjectConsts(td *process.TargetDetails, spec *e
 func (i *Base[BPFObj, BPFEvent]) loadUprobes(exec *link.Executable, td *process.TargetDetails) error {
 	for _, up := range i.Uprobes {
 		var skip bool
-		for _, pc := range up.PackageConstrainsts {
+		for _, pc := range up.PackageConstraints {
 			if pc.Constraints.Check(td.Modules[pc.Package]) {
 				continue
 			}
@@ -367,8 +367,8 @@ func (i *TraceProducer[BPFObj, BPFEvent]) Run(handle func(ptrace.ScopeSpans)) {
 type Uprobe struct {
 	// Sym is the symbol name of the function to attach the eBPF program to.
 	Sym string
-	// PackageConstrainsts are the evaluated when the Uprobe is loaded.
-	PackageConstrainsts []PackageConstrainst
+	// PackageConstraints are the evaluated when the Uprobe is loaded.
+	PackageConstraints []PackageConstraints
 	// FailureMode defines the behavior that is performed when the Uprobe fails
 	// to attach.
 	FailureMode FailureMode

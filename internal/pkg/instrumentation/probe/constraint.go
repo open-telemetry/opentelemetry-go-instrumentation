@@ -19,8 +19,8 @@ const (
 	FailureModeIgnore
 )
 
-// PackageConstrainst is a versioning requirement for a package.
-type PackageConstrainst struct {
+// PackageConstraints is a versioning requirement for a package.
+type PackageConstraints struct {
 	// Package is the package import path that this constraint applies to.
 	Package string
 	// Constraints is the version constraint that is evaluated. If the
