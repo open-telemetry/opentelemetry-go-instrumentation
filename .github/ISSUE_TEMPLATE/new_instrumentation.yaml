@@ -1,5 +1,5 @@
 name: New Instrumentation
-about: Request new instrumentation be added to the project
+description: Request new instrumentation be added to the project
 title: 'New Instrumentation Request for <PACKAGE>'
 labels:
   - enhancement
