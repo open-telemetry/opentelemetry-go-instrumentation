@@ -32,7 +32,7 @@ const (
 	minGoSwissMaps = "1.24.0"
 )
 
-var goWithSwissMaps = probe.PackageConstrainst{
+var goWithSwissMaps = probe.PackageConstraints{
 	Package: "std",
 	Constraints: version.MustConstraints(
 		version.NewConstraint(">= " + minGoSwissMaps),
@@ -123,7 +123,7 @@ func New(logger *slog.Logger, version string) probe.Probe {
 				{
 					Sym:         "net/textproto.(*Reader).readContinuedLineSlice",
 					ReturnProbe: "uprobe_textproto_Reader_readContinuedLineSlice_Returns",
-					PackageConstrainsts: []probe.PackageConstrainst{
+					PackageConstraints: []probe.PackageConstraints{
 						goWithSwissMaps,
 					},
 					DependsOn: []string{"net/http.serverHandler.ServeHTTP"},
