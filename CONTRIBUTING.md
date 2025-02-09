@@ -13,6 +13,20 @@ join the meeting or get in touch on
 
 ## Development
 
+### Update `internal/include/libbpf`
+
+Update using either `make` or the GitHub workflow[^1].
+
+[^1]: TODO: link GitHub workflow.
+
+#### Using `make`
+
+```terminal
+# Optionally, export a version constraint to use.
+$ export LIBBPF_VERSION="< 1.5, >= 1.4.7"
+$ make synclibbpf
+```
+
 ### Compiling the project
 
 Building requires Linux with kernel 4.4 or higher.
