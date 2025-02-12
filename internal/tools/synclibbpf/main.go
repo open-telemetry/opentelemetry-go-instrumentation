@@ -26,7 +26,7 @@ const (
 	batchSize = 1024 // Number of bytes read of the tarball per batch.
 )
 
-// Only these files are extraced to the desitination.
+// Only these files are extracted to the destination.
 var requiredFiles = []string{
 	"LICENSE",
 	"LICENSE.BSD-2-Clause",
