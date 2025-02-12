@@ -800,5 +800,5 @@ k8s.io/klog/v2 v2.130.1 h1:n9Xl7H1Xvksem4KFG4PYbdQCQxqc/tTUyrgXaOhHSzk=
 k8s.io/klog/v2 v2.130.1/go.mod h1:3Jpz1GvMt720eyJH1ckRHK1EDfpxISzJ7I9OYgaDtPE=
 mvdan.cc/gofumpt v0.7.0 h1:bg91ttqXmi9y2xawvkuMXyvAA/1ZGJqYAEGjXuP0JXU=
 mvdan.cc/gofumpt v0.7.0/go.mod h1:txVFJy/Sc/mvaycET54pV8SW8gWxTlUuGHVEcncmNUo=
-mvdan.cc/unparam v0.0.0-20241226123437-447d509598f3 h1:OPdLMIX29kquQXSiXmnwzHP1bc+JlH0S2l8SfVK9yWE=
-mvdan.cc/unparam v0.0.0-20241226123437-447d509598f3/go.mod h1:VQc4l9ccF55E7EwPxcGqwierxEf0KG8MRR8hJ9tpngw=
+mvdan.cc/unparam v0.0.0-20250211232406-0e51248738fc h1:mEpjEutR7Qjdis+HqGQNdsJY/uRbH/MnyGXzLKMhDFo=
+mvdan.cc/unparam v0.0.0-20250211232406-0e51248738fc/go.mod h1:rthT7OuvRbaGcd5ginj6dA2oLE7YNlta9qhBNNdCaLE=
