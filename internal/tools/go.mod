@@ -2,8 +2,6 @@ module go.opentelemetry.io/auto/internal/tools
 
 go 1.23.0
 
-toolchain go1.24.0
-
 require (
 	github.com/docker/docker v27.5.1+incompatible
 	github.com/golangci/golangci-lint v1.64.3
