@@ -9,15 +9,17 @@ import (
 	"log/slog"
 	"testing"
 
-	"github.com/hashicorp/go-version"
+	"github.com/Masterminds/semver/v3"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/auto/internal/pkg/inject"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/testutils"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/utils"
 )
 
 func TestLoadProbes(t *testing.T) {
-	ver, _ := utils.GetLinuxKernelVersion()
+	ver := utils.GetLinuxKernelVersion()
+	require.NotNil(t, ver)
 	t.Logf("Running on kernel %s", ver.String())
 	m := fakeManager(t)
 
@@ -27,7 +29,7 @@ func TestLoadProbes(t *testing.T) {
 	for _, p := range probes {
 		manifest := p.Manifest()
 		fields := manifest.StructFields
-		offsets := map[string]*version.Version{}
+		offsets := map[string]*semver.Version{}
 		for _, f := range fields {
 			_, ver := inject.GetLatestOffset(f)
 			if ver != nil {

@@ -5,13 +5,13 @@
 
 package utils
 
-import "github.com/hashicorp/go-version"
+import (
+	"github.com/Masterminds/semver/v3"
+)
 
 // Stubs for non-linux systems
 
-func GetLinuxKernelVersion() (*version.Version, error) {
-	return &version.Version{}, nil
-}
+func GetLinuxKernelVersion() *semver.Version { return nil }
 
 type KernelLockdown uint8
 

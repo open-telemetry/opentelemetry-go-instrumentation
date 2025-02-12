@@ -14,10 +14,10 @@ import (
 	"os"
 	"sync/atomic"
 
+	"github.com/Masterminds/semver/v3"
 	"github.com/cilium/ebpf"
 	"github.com/cilium/ebpf/link"
 	"github.com/cilium/ebpf/perf"
-	"github.com/hashicorp/go-version"
 
 	"go.opentelemetry.io/collector/pdata/ptrace"
 
@@ -519,7 +519,7 @@ func (c StructFieldConst) InjectOption(td *process.TargetDetails) (inject.Option
 // injected if the module version is greater than or equal to the MinVersion.
 type StructFieldConstMinVersion struct {
 	StructField StructFieldConst
-	MinVersion  *version.Version
+	MinVersion  *semver.Version
 }
 
 // InjectOption returns the appropriately configured [inject.WithOffset] if the
@@ -534,7 +534,7 @@ func (c StructFieldConstMinVersion) InjectOption(td *process.TargetDetails) (inj
 		return nil, fmt.Errorf("unknown module version: %s", sf.ID.ModPath)
 	}
 
-	if !ver.GreaterThanOrEqual(c.MinVersion) {
+	if !ver.GreaterThanEqual(c.MinVersion) {
 		return nil, nil
 	}
 

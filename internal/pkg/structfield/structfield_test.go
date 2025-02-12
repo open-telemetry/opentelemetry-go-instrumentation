@@ -10,17 +10,17 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/hashicorp/go-version"
+	"github.com/Masterminds/semver/v3"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 var (
-	v110 = version.Must(version.NewVersion("1.1.0"))
-	v12  = version.Must(version.NewVersion("1.2"))
-	v120 = version.Must(version.NewVersion("1.2.0"))
-	v121 = version.Must(version.NewVersion("1.2.1"))
-	v130 = version.Must(version.NewVersion("1.3.0"))
+	v110 = semver.New(1, 1, 0, "", "")
+	v12  = semver.New(1, 2, 0, "", "")
+	v120 = semver.New(1, 2, 0, "", "")
+	v121 = semver.New(1, 2, 1, "", "")
+	v130 = semver.New(1, 3, 0, "", "")
 )
 
 func TestOffsets(t *testing.T) {
@@ -54,7 +54,7 @@ func TestOffsets(t *testing.T) {
 	assert.Equal(t, OffsetKey{Offset: 2, Valid: true}, off, "invalid value for 1.2.1")
 
 	off, ver := o.getLatest()
-	assert.Equal(t, v121, ver.ToVersion(), "invalid version for latest")
+	assert.Equal(t, v121, &ver.Version, "invalid version for latest")
 	assert.Equal(t, OffsetKey{Offset: 2, Valid: true}, off, "invalid value for latest")
 
 	o.Put(v120, OffsetKey{Offset: 1, Valid: true})

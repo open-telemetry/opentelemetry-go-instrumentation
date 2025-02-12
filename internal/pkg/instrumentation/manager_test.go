@@ -13,8 +13,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Masterminds/semver/v3"
 	"github.com/cilium/ebpf/link"
-	"github.com/hashicorp/go-version"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -30,8 +30,7 @@ import (
 )
 
 func TestProbeFiltering(t *testing.T) {
-	ver, err := version.NewVersion("1.20.0")
-	assert.NoError(t, err)
+	ver := semver.New(1, 20, 0, "", "")
 
 	t.Run("empty target details", func(t *testing.T) {
 		m := fakeManager(t)
@@ -40,7 +39,7 @@ func TestProbeFiltering(t *testing.T) {
 			PID:               1,
 			Functions:         []*binary.Func{},
 			GoVersion:         ver,
-			Modules:           map[string]*version.Version{},
+			Modules:           map[string]*semver.Version{},
 			AllocationDetails: nil,
 		}
 		m.FilterUnusedProbes(&td)
@@ -58,7 +57,7 @@ func TestProbeFiltering(t *testing.T) {
 			PID:               1,
 			Functions:         httpFuncs,
 			GoVersion:         ver,
-			Modules:           map[string]*version.Version{},
+			Modules:           map[string]*semver.Version{},
 			AllocationDetails: nil,
 		}
 		m.FilterUnusedProbes(&td)
@@ -77,7 +76,7 @@ func TestProbeFiltering(t *testing.T) {
 			PID:               1,
 			Functions:         httpFuncs,
 			GoVersion:         ver,
-			Modules:           map[string]*version.Version{},
+			Modules:           map[string]*semver.Version{},
 			AllocationDetails: nil,
 		}
 		m.FilterUnusedProbes(&td)
@@ -97,7 +96,7 @@ func TestProbeFiltering(t *testing.T) {
 			PID:               1,
 			Functions:         httpFuncs,
 			GoVersion:         ver,
-			Modules:           map[string]*version.Version{},
+			Modules:           map[string]*semver.Version{},
 			AllocationDetails: nil,
 		}
 		m.FilterUnusedProbes(&td)

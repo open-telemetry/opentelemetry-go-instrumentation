@@ -11,7 +11,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/hashicorp/go-version"
+	"github.com/Masterminds/semver/v3"
 
 	"go.opentelemetry.io/auto/internal/pkg/process/binary"
 )
@@ -20,15 +20,15 @@ import (
 type TargetDetails struct {
 	PID               int
 	Functions         []*binary.Func
-	GoVersion         *version.Version
-	Modules           map[string]*version.Version
+	GoVersion         *semver.Version
+	Modules           map[string]*semver.Version
 	AllocationDetails *AllocationDetails
 }
 
 // IsRegistersABI returns if t is supported.
 func (t *TargetDetails) IsRegistersABI() bool {
-	regAbiMinVersion, _ := version.NewVersion("1.17")
-	return t.GoVersion.GreaterThanOrEqual(regAbiMinVersion)
+	regAbiMinVersion := semver.New(1, 17, 0, "", "")
+	return t.GoVersion.GreaterThanEqual(regAbiMinVersion)
 }
 
 // GetFunctionOffset returns the offset for of the function with name.
@@ -75,14 +75,14 @@ func (a *Analyzer) Analyze(pid int, relevantFuncs map[string]interface{}) (*Targ
 		return nil, err
 	}
 
-	goVersion, err := version.NewVersion(a.BuildInfo.GoVersion)
+	goVersion, err := semver.NewVersion(a.BuildInfo.GoVersion)
 	if err != nil {
 		return nil, err
 	}
 	result.GoVersion = goVersion
-	result.Modules = make(map[string]*version.Version, len(a.BuildInfo.Deps)+1)
+	result.Modules = make(map[string]*semver.Version, len(a.BuildInfo.Deps)+1)
 	for _, dep := range a.BuildInfo.Deps {
-		depVersion, err := version.NewVersion(dep.Version)
+		depVersion, err := semver.NewVersion(dep.Version)
 		if err != nil {
 			a.logger.Error("parsing dependency version", "error", err, "dependency", dep)
 			continue
