@@ -1,6 +1,8 @@
 module go.opentelemetry.io/auto/internal/tools
 
-go 1.22.9
+go 1.23
+
+toolchain go1.24.0
 
 require (
 	github.com/docker/docker v27.5.1+incompatible
@@ -244,7 +246,7 @@ require (
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	gotest.tools/v3 v3.5.2 // indirect
-	honnef.co/go/tools v0.5.1 // indirect
+	honnef.co/go/tools v0.6.0 // indirect
 	k8s.io/klog/v2 v2.130.1 // indirect
 	mvdan.cc/gofumpt v0.7.0 // indirect
 	mvdan.cc/unparam v0.0.0-20241226123437-447d509598f3 // indirect
