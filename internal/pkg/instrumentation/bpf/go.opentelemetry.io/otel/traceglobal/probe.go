@@ -65,6 +65,8 @@ var (
 		// Warn in logs that this is not supported.
 		FailureMode: probe.FailureModeWarn,
 	}
+
+	goMapsVersion = version.Must(version.NewVersion(minGoMaps))
 )
 
 // New returns a new [probe.Probe].
@@ -145,9 +147,12 @@ func New(logger *slog.Logger) probe.Probe {
 					Key: "tracer_provider_tracers_pos",
 					ID:  structfield.NewID("go.opentelemetry.io/otel", "go.opentelemetry.io/otel/internal/global", "tracerProvider", "tracers"),
 				},
-				probe.StructFieldConst{
-					Key: "buckets_ptr_pos",
-					ID:  structfield.NewID("std", "runtime", "hmap", "buckets"),
+				probe.StructFieldConstMaxVersion{
+					StructField: probe.StructFieldConst{
+						Key: "buckets_ptr_pos",
+						ID:  structfield.NewID("std", "runtime", "hmap", "buckets"),
+					},
+					MaxVersion: goMapsVersion,
 				},
 				tracerIDContainsSchemaURL{},
 				tracerIDContainsScopeAttributes{},
