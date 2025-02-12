@@ -52,7 +52,7 @@ func getFuncOffsetUnstripped(f *elf.File, symbol elf.Symbol) (uint64, error) {
 	}
 
 	if len(sections) == 0 {
-		return 0, fmt.Errorf("function %q not found in file", symbol)
+		return 0, fmt.Errorf("function %q not found in file", symbol.Name)
 	}
 
 	var execSection *elf.Section
