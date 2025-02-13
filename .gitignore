@@ -9,6 +9,9 @@
 .tools/
 **/internal/test/e2e/*/main
 
+# Python pip cache.
+.cache/
+
 # Test binary, built with `go test -c`
 *.test
 
