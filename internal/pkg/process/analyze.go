@@ -25,12 +25,6 @@ type TargetDetails struct {
 	AllocationDetails *AllocationDetails
 }
 
-// IsRegistersABI returns if t is supported.
-func (t *TargetDetails) IsRegistersABI() bool {
-	regAbiMinVersion := semver.New(1, 17, 0, "", "")
-	return t.GoVersion.GreaterThanEqual(regAbiMinVersion)
-}
-
 // GetFunctionOffset returns the offset for of the function with name.
 func (t *TargetDetails) GetFunctionOffset(name string) (uint64, error) {
 	for _, f := range t.Functions {

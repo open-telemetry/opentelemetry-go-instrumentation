@@ -30,7 +30,6 @@ func New(logger *slog.Logger) probe.Probe {
 			ID:     id,
 			Logger: logger,
 			Consts: []probe.Const{
-				probe.RegistersABIConst{},
 				probe.AllocationConst{},
 				probe.StructFieldConst{
 					Key: "span_context_trace_id_pos",

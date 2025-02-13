@@ -115,7 +115,6 @@ type bpfVariableSpecs struct {
 	Hex                   *ebpf.VariableSpec `ebpf:"hex"`
 	Http2serverPeerPos    *ebpf.VariableSpec `ebpf:"http2server_peer_pos"`
 	IsNewFramePos         *ebpf.VariableSpec `ebpf:"is_new_frame_pos"`
-	IsRegistersAbi        *ebpf.VariableSpec `ebpf:"is_registers_abi"`
 	PeerLocalAddrPos      *ebpf.VariableSpec `ebpf:"peer_local_addr_pos"`
 	ServerAddrSupported   *ebpf.VariableSpec `ebpf:"server_addr_supported"`
 	ServerStreamStreamPos *ebpf.VariableSpec `ebpf:"server_stream_stream_pos"`
@@ -187,7 +186,6 @@ type bpfVariables struct {
 	Hex                   *ebpf.Variable `ebpf:"hex"`
 	Http2serverPeerPos    *ebpf.Variable `ebpf:"http2server_peer_pos"`
 	IsNewFramePos         *ebpf.Variable `ebpf:"is_new_frame_pos"`
-	IsRegistersAbi        *ebpf.Variable `ebpf:"is_registers_abi"`
 	PeerLocalAddrPos      *ebpf.Variable `ebpf:"peer_local_addr_pos"`
 	ServerAddrSupported   *ebpf.Variable `ebpf:"server_addr_supported"`
 	ServerStreamStreamPos *ebpf.Variable `ebpf:"server_stream_stream_pos"`

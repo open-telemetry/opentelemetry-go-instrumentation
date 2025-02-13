@@ -23,12 +23,10 @@
 // 4. Submit the constructed event to the agent code using perf buffer events_map
 // 5. Delete the span from the global active spans map (in case the span is not tracked in the active spans map, this will be a no-op)
 // 6. Delete the span from the uprobe_context_map
-#define UPROBE_RETURN(name, event_type, uprobe_context_map, events_map, context_pos, context_offset, passed_as_arg) \
+#define UPROBE_RETURN(name, event_type, uprobe_context_map) \
 SEC("uprobe/##name##")                                                                                              \
 int uprobe_##name##_Returns(struct pt_regs *ctx) {                                                                  \
-    struct go_iface go_context = {0};                                                                               \
-    get_Go_context(ctx, context_pos, context_offset, passed_as_arg, &go_context);                                   \
-    void *key = get_consistent_key(ctx, go_context.data);                                                           \
+    void *key = get_consistent_key(ctx);                                                           \
     event_type *event = bpf_map_lookup_elem(&uprobe_context_map, &key);                                             \
     if (event == NULL) {                                                                                            \
         bpf_printk("event is NULL in ret probe");                                                                   \

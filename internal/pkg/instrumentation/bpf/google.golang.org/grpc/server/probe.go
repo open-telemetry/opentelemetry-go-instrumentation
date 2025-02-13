@@ -52,7 +52,6 @@ func New(logger *slog.Logger, ver string) probe.Probe {
 			ID:     id,
 			Logger: logger,
 			Consts: []probe.Const{
-				probe.RegistersABIConst{},
 				probe.AllocationConst{},
 				serverAddrConst{},
 				probe.StructFieldConst{

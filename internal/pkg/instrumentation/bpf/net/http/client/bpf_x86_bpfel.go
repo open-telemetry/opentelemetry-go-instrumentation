@@ -118,7 +118,6 @@ type bpfVariableSpecs struct {
 	Hex               *ebpf.VariableSpec `ebpf:"hex"`
 	IoWriterBufPtrPos *ebpf.VariableSpec `ebpf:"io_writer_buf_ptr_pos"`
 	IoWriterN_pos     *ebpf.VariableSpec `ebpf:"io_writer_n_pos"`
-	IsRegistersAbi    *ebpf.VariableSpec `ebpf:"is_registers_abi"`
 	MethodPtrPos      *ebpf.VariableSpec `ebpf:"method_ptr_pos"`
 	OmitHostPos       *ebpf.VariableSpec `ebpf:"omit_host_pos"`
 	OpaquePos         *ebpf.VariableSpec `ebpf:"opaque_pos"`
@@ -197,7 +196,6 @@ type bpfVariables struct {
 	Hex               *ebpf.Variable `ebpf:"hex"`
 	IoWriterBufPtrPos *ebpf.Variable `ebpf:"io_writer_buf_ptr_pos"`
 	IoWriterN_pos     *ebpf.Variable `ebpf:"io_writer_n_pos"`
-	IsRegistersAbi    *ebpf.Variable `ebpf:"is_registers_abi"`
 	MethodPtrPos      *ebpf.Variable `ebpf:"method_ptr_pos"`
 	OmitHostPos       *ebpf.Variable `ebpf:"omit_host_pos"`
 	OpaquePos         *ebpf.Variable `ebpf:"opaque_pos"`

@@ -101,7 +101,6 @@ type bpfMapSpecs struct {
 type bpfVariableSpecs struct {
 	EndAddr           *ebpf.VariableSpec `ebpf:"end_addr"`
 	Hex               *ebpf.VariableSpec `ebpf:"hex"`
-	IsRegistersAbi    *ebpf.VariableSpec `ebpf:"is_registers_abi"`
 	MessageHeadersPos *ebpf.VariableSpec `ebpf:"message_headers_pos"`
 	MessageKeyPos     *ebpf.VariableSpec `ebpf:"message_key_pos"`
 	MessageTimePos    *ebpf.VariableSpec `ebpf:"message_time_pos"`
@@ -162,7 +161,6 @@ func (m *bpfMaps) Close() error {
 type bpfVariables struct {
 	EndAddr           *ebpf.Variable `ebpf:"end_addr"`
 	Hex               *ebpf.Variable `ebpf:"hex"`
-	IsRegistersAbi    *ebpf.Variable `ebpf:"is_registers_abi"`
 	MessageHeadersPos *ebpf.Variable `ebpf:"message_headers_pos"`
 	MessageKeyPos     *ebpf.Variable `ebpf:"message_key_pos"`
 	MessageTimePos    *ebpf.Variable `ebpf:"message_time_pos"`

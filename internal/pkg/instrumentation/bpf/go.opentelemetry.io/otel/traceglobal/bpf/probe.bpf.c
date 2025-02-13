@@ -446,9 +446,7 @@ int uprobe_Start(struct pt_regs *ctx) {
     read_span_name(&span_name, span_name_len, span_name_ptr);
 
     // Save the span name in map to be read once the Start function returns
-    struct go_iface go_context = {0};
-    get_Go_context(ctx, 2, 0, true, &go_context);
-    void *key = get_consistent_key(ctx, go_context.data);
+    void *key = get_consistent_key(ctx);
     bpf_map_update_elem(&span_name_by_context, &key, &span_name, 0);
 
     // Get the tracer id
@@ -476,7 +474,8 @@ int uprobe_Start_Returns(struct pt_regs *ctx) {
     struct go_iface go_context = {0};
     // In return probe, the context is the first return value
     get_Go_context(ctx, 1, 0, true, &go_context);
-    void *key = get_consistent_key(ctx, go_context.data);
+
+    void *key = get_consistent_key(ctx);
     struct span_name_t *span_name = bpf_map_lookup_elem(&span_name_by_context, &key); 
     if (span_name == NULL) {
         return 0;

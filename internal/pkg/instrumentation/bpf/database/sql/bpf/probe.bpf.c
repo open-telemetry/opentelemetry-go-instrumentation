@@ -61,7 +61,7 @@ int uprobe_queryDC(struct pt_regs *ctx) {
     start_span(&start_span_params);
 
     // Get key
-    void *key = get_consistent_key(ctx, go_context.data);
+    void *key = get_consistent_key(ctx);
 
     bpf_map_update_elem(&sql_events, &key, &sql_request, 0);
     return 0;
@@ -69,7 +69,7 @@ int uprobe_queryDC(struct pt_regs *ctx) {
 
 // This instrumentation attaches uprobe to the following function:
 // func (db *DB) queryDC(ctx, txctx context.Context, dc *driverConn, releaseConn func(error), query string, args []any)
-UPROBE_RETURN(queryDC, struct sql_request_t, sql_events, events, 2, 0, true)
+UPROBE_RETURN(queryDC, struct sql_request_t, sql_events)
 
 // This instrumentation attaches uprobe to the following function:
 // func (db *DB) execDC(ctx context.Context, dc *driverConn, release func(error), query string, args []any)
@@ -104,7 +104,7 @@ int uprobe_execDC(struct pt_regs *ctx) {
     start_span(&start_span_params);
 
     // Get key
-    void *key = get_consistent_key(ctx, go_context.data);
+    void *key = get_consistent_key(ctx);
 
     bpf_map_update_elem(&sql_events, &key, &sql_request, 0);
     return 0;
@@ -112,4 +112,4 @@ int uprobe_execDC(struct pt_regs *ctx) {
 
 // This instrumentation attaches uprobe to the following function:
 // func (db *DB) execDC(ctx context.Context, dc *driverConn, release func(error), query string, args []any)
-UPROBE_RETURN(execDC, struct sql_request_t, sql_events, events, 3, 0, true)
+UPROBE_RETURN(execDC, struct sql_request_t, sql_events)

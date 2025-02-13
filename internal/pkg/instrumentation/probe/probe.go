@@ -584,15 +584,6 @@ func (c AllocationConst) InjectOption(td *process.TargetDetails) (inject.Option,
 	return inject.WithAllocationDetails(*td.AllocationDetails), nil
 }
 
-// RegistersABIConst is a [Const] for the boolean flag informing an eBPF
-// program if the Go space has registered ABI.
-type RegistersABIConst struct{}
-
-// InjectOption returns the appropriately configured [inject.WithRegistersABI].
-func (c RegistersABIConst) InjectOption(td *process.TargetDetails) (inject.Option, error) {
-	return inject.WithRegistersABI(td.IsRegistersABI()), nil
-}
-
 // KeyValConst is a [Const] for a generic key-value pair.
 //
 // This should not be used as a replacement for any of the other provided

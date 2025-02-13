@@ -112,7 +112,6 @@ type bpfVariableSpecs struct {
 	HeadersPtrPos        *ebpf.VariableSpec `ebpf:"headers_ptr_pos"`
 	Hex                  *ebpf.VariableSpec `ebpf:"hex"`
 	HostPos              *ebpf.VariableSpec `ebpf:"host_pos"`
-	IsRegistersAbi       *ebpf.VariableSpec `ebpf:"is_registers_abi"`
 	MethodPtrPos         *ebpf.VariableSpec `ebpf:"method_ptr_pos"`
 	PatStrPos            *ebpf.VariableSpec `ebpf:"pat_str_pos"`
 	PathPtrPos           *ebpf.VariableSpec `ebpf:"path_ptr_pos"`
@@ -187,7 +186,6 @@ type bpfVariables struct {
 	HeadersPtrPos        *ebpf.Variable `ebpf:"headers_ptr_pos"`
 	Hex                  *ebpf.Variable `ebpf:"hex"`
 	HostPos              *ebpf.Variable `ebpf:"host_pos"`
-	IsRegistersAbi       *ebpf.Variable `ebpf:"is_registers_abi"`
 	MethodPtrPos         *ebpf.Variable `ebpf:"method_ptr_pos"`
 	PatStrPos            *ebpf.Variable `ebpf:"pat_str_pos"`
 	PathPtrPos           *ebpf.Variable `ebpf:"path_ptr_pos"`

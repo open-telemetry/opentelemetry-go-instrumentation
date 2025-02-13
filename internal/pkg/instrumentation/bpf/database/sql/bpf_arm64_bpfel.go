@@ -97,7 +97,6 @@ type bpfMapSpecs struct {
 type bpfVariableSpecs struct {
 	EndAddr                  *ebpf.VariableSpec `ebpf:"end_addr"`
 	Hex                      *ebpf.VariableSpec `ebpf:"hex"`
-	IsRegistersAbi           *ebpf.VariableSpec `ebpf:"is_registers_abi"`
 	ShouldIncludeDbStatement *ebpf.VariableSpec `ebpf:"should_include_db_statement"`
 	StartAddr                *ebpf.VariableSpec `ebpf:"start_addr"`
 	TotalCpus                *ebpf.VariableSpec `ebpf:"total_cpus"`
@@ -152,7 +151,6 @@ func (m *bpfMaps) Close() error {
 type bpfVariables struct {
 	EndAddr                  *ebpf.Variable `ebpf:"end_addr"`
 	Hex                      *ebpf.Variable `ebpf:"hex"`
-	IsRegistersAbi           *ebpf.Variable `ebpf:"is_registers_abi"`
 	ShouldIncludeDbStatement *ebpf.Variable `ebpf:"should_include_db_statement"`
 	StartAddr                *ebpf.Variable `ebpf:"start_addr"`
 	TotalCpus                *ebpf.Variable `ebpf:"total_cpus"`

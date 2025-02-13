@@ -29,10 +29,9 @@ var (
 )
 
 const (
-	keyIsRegistersABI = "is_registers_abi"
-	keyTotalCPUs      = "total_cpus"
-	keyStartAddr      = "start_addr"
-	keyEndAddr        = "end_addr"
+	keyTotalCPUs = "total_cpus"
+	keyStartAddr = "start_addr"
+	keyEndAddr   = "end_addr"
 )
 
 func init() {
@@ -106,17 +105,6 @@ type errOpt struct {
 
 func (o errOpt) apply(map[string]interface{}) error {
 	return o.err
-}
-
-// WithRegistersABI returns an option that will set the "is_registers_abi" to
-// value. This information can be determined from the IsRegistersABI method of
-// the TargetDetails in "go.opentelemetry.io/auto/internal/pkg/process".
-//
-// Commonly this is called like the following:
-//
-//	WithRegistersABI(target.IsRegistersABI())
-func WithRegistersABI(value bool) Option {
-	return option{keyIsRegistersABI: value}
 }
 
 // WithAllocationDetails returns an option that will set "total_cpus",

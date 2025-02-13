@@ -14,17 +14,6 @@ import (
 	"go.opentelemetry.io/auto/internal/pkg/structfield"
 )
 
-func TestWithRegistersABI(t *testing.T) {
-	opts := []Option{WithRegistersABI(true)}
-	got, err := newConsts(opts)
-	require.NoError(t, err)
-	require.Contains(t, got, keyIsRegistersABI)
-
-	v := got[keyIsRegistersABI]
-	require.IsType(t, *(new(bool)), v)
-	assert.True(t, v.(bool))
-}
-
 func TestWithAllocationDetails(t *testing.T) {
 	const start, end, nCPU uint64 = 1, 2, 3
 	details := process.AllocationDetails{
