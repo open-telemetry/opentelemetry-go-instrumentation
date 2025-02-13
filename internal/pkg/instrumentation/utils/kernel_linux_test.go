@@ -53,7 +53,7 @@ func TestGetLinuxKernelVersion(t *testing.T) {
 }
 
 func TestLockdownParsing(t *testing.T) {
-	noFile, err := os.CreateTemp("", "not_existent_fake_lockdown")
+	noFile, err := os.CreateTemp(t.TempDir(), "not_existent_fake_lockdown")
 	assert.NoError(t, err)
 	notPath, err := filepath.Abs(noFile.Name())
 	assert.NoError(t, err)
@@ -64,7 +64,7 @@ func TestLockdownParsing(t *testing.T) {
 	lockdownPath = notPath
 	assert.Equal(t, KernelLockdownNone, KernelLockdownMode())
 
-	tempFile, err := os.CreateTemp("", "fake_lockdown")
+	tempFile, err := os.CreateTemp(t.TempDir(), "fake_lockdown")
 	assert.NoError(t, err)
 	path, err := filepath.Abs(tempFile.Name())
 	assert.NoError(t, err)
@@ -106,7 +106,7 @@ func setNotReadable(t *testing.T, path string) {
 }
 
 func TestGetCPUCountFromSysDevices(t *testing.T) {
-	noFile, err := os.CreateTemp("", "not_existent_fake_cpu_present")
+	noFile, err := os.CreateTemp(t.TempDir(), "not_existent_fake_cpu_present")
 	assert.NoError(t, err)
 	notPath, err := filepath.Abs(noFile.Name())
 	assert.NoError(t, err)
@@ -119,7 +119,7 @@ func TestGetCPUCountFromSysDevices(t *testing.T) {
 	assert.Error(t, err)
 	assert.Equal(t, uint64(0), ncpu)
 
-	tempFile, err := os.CreateTemp("", "fake_cpu_present")
+	tempFile, err := os.CreateTemp(t.TempDir(), "fake_cpu_present")
 	assert.NoError(t, err)
 	path, err := filepath.Abs(tempFile.Name())
 	assert.NoError(t, err)
@@ -156,7 +156,7 @@ func TestGetCPUCountFromSysDevices(t *testing.T) {
 }
 
 func TestGetCPUCountFromProc(t *testing.T) {
-	noFile, err := os.CreateTemp("", "not_existent_fake_cpuinfo")
+	noFile, err := os.CreateTemp(t.TempDir(), "not_existent_fake_cpuinfo")
 	assert.NoError(t, err)
 	notPath, err := filepath.Abs(noFile.Name())
 	assert.NoError(t, err)
@@ -169,7 +169,7 @@ func TestGetCPUCountFromProc(t *testing.T) {
 	assert.Error(t, err)
 	assert.Equal(t, uint64(0), ncpu)
 
-	tempFile, err := os.CreateTemp("", "fake_cpuinfo")
+	tempFile, err := os.CreateTemp(t.TempDir(), "fake_cpuinfo")
 	assert.NoError(t, err)
 	path, err := filepath.Abs(tempFile.Name())
 	assert.NoError(t, err)
