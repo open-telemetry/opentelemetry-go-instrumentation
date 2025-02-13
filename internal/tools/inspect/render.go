@@ -13,6 +13,9 @@ import (
 	"text/template"
 )
 
+// DefaultFS is the default file-system that has all the built-in templates
+// embedded.
+//
 //go:embed templates/golang.org/x/net/*.tmpl
 //go:embed templates/google.golang.org/grpc/*.tmpl
 //go:embed templates/net/http/*.tmpl

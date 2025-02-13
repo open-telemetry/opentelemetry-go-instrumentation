@@ -14,10 +14,10 @@ import (
 	"os"
 	"sync/atomic"
 
+	"github.com/Masterminds/semver/v3"
 	"github.com/cilium/ebpf"
 	"github.com/cilium/ebpf/link"
 	"github.com/cilium/ebpf/perf"
-	"github.com/hashicorp/go-version"
 
 	"go.opentelemetry.io/collector/pdata/ptrace"
 
@@ -514,12 +514,41 @@ func (c StructFieldConst) InjectOption(td *process.TargetDetails) (inject.Option
 	return inject.WithKeyValue(c.Key, off.Offset), nil
 }
 
+// StructFieldConstMaxVersion is a [Const] for a struct field offset. These
+// struct field ID needs to be known offsets in the [inject] package. The
+// offset is only injected if the module version is less than the MaxVersion.
+type StructFieldConstMaxVersion struct {
+	StructField StructFieldConst
+	// MaxVersion is the exclusive maximum version (it will only match versions
+	// less than this).
+	MaxVersion *semver.Version
+}
+
+// InjectOption returns the appropriately configured [inject.WithOffset] if the
+// version of the struct field module is known and is less than the MaxVersion.
+// If the module version is not known, an error is returned. If the module
+// version is known but is greater than or equal to the MaxVersion, no offset
+// is injected.
+func (c StructFieldConstMaxVersion) InjectOption(td *process.TargetDetails) (inject.Option, error) {
+	sf := c.StructField
+	ver, ok := td.Modules[sf.ID.ModPath]
+	if !ok {
+		return nil, fmt.Errorf("unknown module version: %s", sf.ID.ModPath)
+	}
+
+	if !ver.LessThan(c.MaxVersion) {
+		return nil, nil
+	}
+
+	return sf.InjectOption(td)
+}
+
 // StructFieldConstMinVersion is a [Const] for a struct field offset. These struct field
 // ID needs to be known offsets in the [inject] package. The offset is only
 // injected if the module version is greater than or equal to the MinVersion.
 type StructFieldConstMinVersion struct {
 	StructField StructFieldConst
-	MinVersion  *version.Version
+	MinVersion  *semver.Version
 }
 
 // InjectOption returns the appropriately configured [inject.WithOffset] if the
@@ -534,7 +563,7 @@ func (c StructFieldConstMinVersion) InjectOption(td *process.TargetDetails) (inj
 		return nil, fmt.Errorf("unknown module version: %s", sf.ID.ModPath)
 	}
 
-	if !ver.GreaterThanOrEqual(c.MinVersion) {
+	if !ver.GreaterThanEqual(c.MinVersion) {
 		return nil, nil
 	}
 

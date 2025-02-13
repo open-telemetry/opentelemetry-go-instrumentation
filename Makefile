@@ -54,8 +54,11 @@ $(TOOLS)/golangci-lint: PACKAGE=github.com/golangci/golangci-lint/cmd/golangci-l
 OFFSETGEN = $(TOOLS)/offsetgen
 $(TOOLS)/offsetgen: PACKAGE=go.opentelemetry.io/auto/$(TOOLS_MOD_DIR)/inspect/cmd/offsetgen
 
+SYNCLIBBPF = $(TOOLS)/synclibbpf
+$(TOOLS)/synclibbpf: PACKAGE=go.opentelemetry.io/auto/$(TOOLS_MOD_DIR)/synclibbpf
+
 .PHONY: tools
-tools: $(GOLICENSES) $(MULTIMOD) $(GOLANGCI_LINT) $(DBOTCONF) $(OFFSETGEN)
+tools: $(GOLICENSES) $(MULTIMOD) $(GOLANGCI_LINT) $(DBOTCONF) $(OFFSETGEN) $(SYNCLIBBPF)
 
 TEST_TARGETS := test-verbose test-ebpf test-race
 .PHONY: $(TEST_TARGETS) test
@@ -132,6 +135,12 @@ sample-app/%:
 	else \
 		cd internal/test/e2e/$(LIBRARY) && docker build -t sample-app . ;\
 	fi
+
+LIBBPF_VERSION ?= "< 1.5, >= 1.4.7"
+LIBBPF_DEST ?= "$(REPODIR)/internal/include/libbpf"
+.PHONY: synclibbpf
+synclibbpf: | $(SYNCLIBBPF)
+	$(SYNCLIBBPF) -version=$(LIBBPF_VERSION) -dest=$(LIBBPF_DEST)
 
 OFFSETS_OUTPUT_FILE="$(REPODIR)/internal/pkg/inject/offset_results.json"
 .PHONY: offsets

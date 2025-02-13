@@ -8,8 +8,8 @@ import (
 	"errors"
 	"log/slog"
 
+	"github.com/Masterminds/semver/v3"
 	"github.com/docker/docker/client"
-	"github.com/hashicorp/go-version"
 	"golang.org/x/sync/errgroup"
 
 	"go.opentelemetry.io/auto/internal/pkg/structfield"
@@ -120,7 +120,7 @@ func (i *Inspector) AddManifest(manifest Manifest) error {
 type job struct {
 	Renderer Renderer
 	Builder  *builder
-	AppVer   *version.Version
+	AppVer   *semver.Version
 	Fields   []structfield.ID
 }
 
@@ -181,7 +181,7 @@ func (i *Inspector) Do(ctx context.Context) (*structfield.Index, error) {
 
 type result struct {
 	StructField structfield.ID
-	Version     *version.Version
+	Version     *semver.Version
 	Offset      uint64
 	// Valid is true if the offset is valid for the struct field at the specified version.
 	Valid bool

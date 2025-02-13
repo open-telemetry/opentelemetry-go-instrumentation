@@ -6,7 +6,7 @@ package inject
 import (
 	"testing"
 
-	"github.com/hashicorp/go-version"
+	"github.com/Masterminds/semver/v3"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -54,10 +54,8 @@ func TestWithAllocationDetails(t *testing.T) {
 }
 
 func TestWithOffset(t *testing.T) {
-	v10, err := version.NewVersion("1.0")
-	require.NoError(t, err)
-	v18, err := version.NewVersion("1.8")
-	require.NoError(t, err)
+	v10 := semver.New(1, 0, 0, "", "")
+	v18 := semver.New(1, 8, 0, "", "")
 
 	const off uint64 = 1
 	id := structfield.NewID("std", "net/http", "Request", "Method")

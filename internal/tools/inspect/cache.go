@@ -8,7 +8,7 @@ import (
 	"log/slog"
 	"os"
 
-	"github.com/hashicorp/go-version"
+	"github.com/Masterminds/semver/v3"
 
 	"go.opentelemetry.io/auto/internal/pkg/structfield"
 )
@@ -42,7 +42,7 @@ func newCache(l *slog.Logger) *Cache {
 // GetOffset returns the cached offset key and true for the id at the specified
 // version is found in the cache. If the cache does not contain a valid offset for the provided
 // values, 0 and false are returned.
-func (c *Cache) GetOffset(ver *version.Version, id structfield.ID) (structfield.OffsetKey, bool) {
+func (c *Cache) GetOffset(ver *semver.Version, id structfield.ID) (structfield.OffsetKey, bool) {
 	if c.data == nil {
 		return structfield.OffsetKey{}, false
 	}

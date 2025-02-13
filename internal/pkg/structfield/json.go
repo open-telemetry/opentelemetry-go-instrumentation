@@ -3,11 +3,11 @@
 
 package structfield
 
-import "github.com/hashicorp/go-version"
+import "github.com/Masterminds/semver/v3"
 
 type jsonOffset struct {
-	Offset   *uint64            `json:"offset"`
-	Versions []*version.Version `json:"versions"`
+	Offset   *uint64           `json:"offset"`
+	Versions []*semver.Version `json:"versions"`
 }
 
 type jsonField struct {
@@ -31,7 +31,7 @@ func (jf *jsonField) addOffsets(off *Offsets) {
 			jOff.Offset = &offTmp.Offset
 		}
 
-		jOff.Versions = mergeSorted(jOff.Versions, vers, func(a, b *version.Version) int {
+		jOff.Versions = mergeSorted(jOff.Versions, vers, func(a, b *semver.Version) int {
 			return a.Compare(b)
 		})
 	}

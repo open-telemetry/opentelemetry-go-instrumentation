@@ -25,13 +25,13 @@ linters:
     - perfsprint
     - revive
     - staticcheck
-    - tenv
     - testifylint
     - typecheck
     - unconvert
     - unused
     - unparam
     - usestdlibvars
+    - usetesting
 
 issues:
   # Maximum issues count per one linter.
@@ -72,6 +72,10 @@ issues:
 linters-settings:
   depguard:
     rules:
+      go-version:
+        deny:
+          # Use "github.com/Masterminds/semver/v3" instead.
+          - pkg: github.com/hashicorp/go-version
       ioutil:
         deny:
           - pkg: "io/ioutil"
