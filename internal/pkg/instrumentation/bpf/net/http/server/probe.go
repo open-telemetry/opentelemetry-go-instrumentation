@@ -32,14 +32,18 @@ const (
 	minGoSwissMaps = "1.24.0"
 )
 
-var goWithSwissMaps = probe.PackageConstraints{
-	Package: "std",
-	Constraints: version.MustConstraints(
-		version.NewConstraint(">= " + minGoSwissMaps),
-	),
-	// Don't warn, we have a backup path.
-	FailureMode: probe.FailureModeIgnore,
-}
+var (
+	goWithSwissMaps = probe.PackageConstraints{
+		Package: "std",
+		Constraints: version.MustConstraints(
+			version.NewConstraint(">= " + minGoSwissMaps),
+		),
+		// Don't warn, we have a backup path.
+		FailureMode: probe.FailureModeIgnore,
+	}
+
+	goMapsVersion = version.Must(version.NewVersion(minGoSwissMaps))
+)
 
 // New returns a new [probe.Probe].
 func New(logger *slog.Logger, version string) probe.Probe {
@@ -81,9 +85,12 @@ func New(logger *slog.Logger, version string) probe.Probe {
 					Key: "status_code_pos",
 					ID:  structfield.NewID("std", "net/http", "response", "status"),
 				},
-				probe.StructFieldConst{
-					Key: "buckets_ptr_pos",
-					ID:  structfield.NewID("std", "runtime", "hmap", "buckets"),
+				probe.StructFieldConstMaxVersion{
+					StructField: probe.StructFieldConst{
+						Key: "buckets_ptr_pos",
+						ID:  structfield.NewID("std", "runtime", "hmap", "buckets"),
+					},
+					MaxVersion: goMapsVersion,
 				},
 				probe.StructFieldConst{
 					Key: "remote_addr_pos",
