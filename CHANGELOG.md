@@ -16,6 +16,10 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 - Support `golang.org/x/net` `0.35.0`. ([#1783](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1783))
 - Support Go `1.24.0`. ([#1795](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1795), [#1798](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1798))
 
+### Changed
+
+- Unused support for instrumentation of Go < 1.19 has been dropped. (#1815)
+
 ### Fixed
 
 - `database/sql` instrumentation for Go < `1.17`. (#1772)
