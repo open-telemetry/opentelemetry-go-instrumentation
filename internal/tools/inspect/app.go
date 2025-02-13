@@ -11,7 +11,7 @@ import (
 	"log/slog"
 	"os"
 
-	"github.com/hashicorp/go-version"
+	"github.com/Masterminds/semver/v3"
 
 	"go.opentelemetry.io/auto/internal/pkg/process"
 	"go.opentelemetry.io/auto/internal/pkg/structfield"
@@ -21,7 +21,7 @@ import (
 type app struct {
 	Renderer Renderer
 	Builder  *builder
-	AppVer   *version.Version
+	AppVer   *semver.Version
 	Fields   []structfield.ID
 
 	log    *slog.Logger

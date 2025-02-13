@@ -3,7 +3,9 @@
 
 package probe
 
-import "github.com/hashicorp/go-version"
+import (
+	"github.com/Masterminds/semver/v3"
+)
 
 // FailureMode defines the behavior that is performed when a failure occurs.
 type FailureMode int
@@ -26,7 +28,7 @@ type PackageConstraints struct {
 	// Constraints is the version constraint that is evaluated. If the
 	// constraint is not satisfied, the FailureMode defines the behavior of how
 	// the failure is handled.
-	Constraints version.Constraints
+	Constraints *semver.Constraints
 	// FailureMode defines the behavior that is performed when the Constraint
 	// is not satisfied.
 	FailureMode FailureMode

@@ -7,7 +7,7 @@ import (
 	"log/slog"
 	"strings"
 
-	"github.com/hashicorp/go-version"
+	"github.com/Masterminds/semver/v3"
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/ptrace"
 	"go.opentelemetry.io/otel/attribute"
@@ -26,23 +26,24 @@ import (
 
 //go:generate go run github.com/cilium/ebpf/cmd/bpf2go -target amd64,arm64 bpf ./bpf/probe.bpf.c
 
-const (
-	// pkg is the package being instrumented.
-	pkg            = "net/http"
-	minGoSwissMaps = "1.24.0"
-)
+// pkg is the package being instrumented.
+const pkg = "net/http"
 
 var (
+	goMapsVersion = semver.New(1, 24, 0, "", "")
+
 	goWithSwissMaps = probe.PackageConstraints{
 		Package: "std",
-		Constraints: version.MustConstraints(
-			version.NewConstraint(">= " + minGoSwissMaps),
-		),
+		Constraints: func() *semver.Constraints {
+			c, err := semver.NewConstraint(">= " + goMapsVersion.String())
+			if err != nil {
+				panic(err)
+			}
+			return c
+		}(),
 		// Don't warn, we have a backup path.
 		FailureMode: probe.FailureModeIgnore,
 	}
-
-	goMapsVersion = version.Must(version.NewVersion(minGoSwissMaps))
 )
 
 // New returns a new [probe.Probe].
@@ -147,20 +148,19 @@ func New(logger *slog.Logger, version string) probe.Probe {
 type patternPathSupportedConst struct{}
 
 var (
-	patternPathMinVersion  = version.Must(version.NewVersion("1.22.0"))
+	patternPathMinVersion  = semver.New(1, 22, 0, "", "")
 	isPatternPathSupported = false
 )
 
 func (c patternPathSupportedConst) InjectOption(td *process.TargetDetails) (inject.Option, error) {
-	isPatternPathSupported = td.GoVersion.GreaterThanOrEqual(patternPathMinVersion)
+	isPatternPathSupported = td.GoVersion.GreaterThanEqual(patternPathMinVersion)
 	return inject.WithKeyValue("pattern_path_supported", isPatternPathSupported), nil
 }
 
 type swissMapsUsedConst struct{}
 
 func (c swissMapsUsedConst) InjectOption(td *process.TargetDetails) (inject.Option, error) {
-	minGoSwissMapsVersion := version.Must(version.NewVersion(minGoSwissMaps))
-	isUsingGoSwissMaps := td.GoVersion.GreaterThanOrEqual(minGoSwissMapsVersion)
+	isUsingGoSwissMaps := td.GoVersion.GreaterThanEqual(goMapsVersion)
 	return inject.WithKeyValue("swiss_maps_used", isUsingGoSwissMaps), nil
 }
 

@@ -3,10 +3,10 @@ module go.opentelemetry.io/auto/internal/tools
 go 1.23.0
 
 require (
+	github.com/Masterminds/semver/v3 v3.3.1
 	github.com/docker/docker v27.5.1+incompatible
 	github.com/golangci/golangci-lint v1.64.4
 	github.com/google/go-licenses/v2 v2.0.0-alpha.1
-	github.com/hashicorp/go-version v1.7.0
 	go.opentelemetry.io/auto v0.20.0
 	go.opentelemetry.io/build-tools/dbotconf v0.18.0
 	go.opentelemetry.io/build-tools/multimod v0.18.0
@@ -26,7 +26,6 @@ require (
 	github.com/Crocmagnon/fatcontext v0.7.1 // indirect
 	github.com/Djarvur/go-err113 v0.1.0 // indirect
 	github.com/GaijinEntertainment/go-exhaustruct/v3 v3.3.0 // indirect
-	github.com/Masterminds/semver/v3 v3.3.1 // indirect
 	github.com/Microsoft/go-winio v0.6.2 // indirect
 	github.com/OpenPeeDeeP/depguard/v2 v2.2.0 // indirect
 	github.com/ProtonMail/go-crypto v1.1.5 // indirect
@@ -105,6 +104,7 @@ require (
 	github.com/gostaticanalysis/forcetypeassert v0.2.0 // indirect
 	github.com/gostaticanalysis/nilerr v0.1.1 // indirect
 	github.com/hashicorp/go-immutable-radix/v2 v2.1.0 // indirect
+	github.com/hashicorp/go-version v1.7.0 // indirect
 	github.com/hashicorp/golang-lru/v2 v2.0.7 // indirect
 	github.com/hashicorp/hcl v1.0.0 // indirect
 	github.com/hexops/gotextdiff v1.0.3 // indirect

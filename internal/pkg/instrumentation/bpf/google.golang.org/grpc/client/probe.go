@@ -10,8 +10,8 @@ import (
 	"net"
 	"strconv"
 
+	"github.com/Masterminds/semver/v3"
 	"github.com/cilium/ebpf"
-	"github.com/hashicorp/go-version"
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/ptrace"
 	"go.opentelemetry.io/otel/attribute"
@@ -36,7 +36,7 @@ const (
 
 var (
 	writeStatus           = false
-	writeStatusMinVersion = version.Must(version.NewVersion("1.40.0"))
+	writeStatusMinVersion = semver.New(1, 40, 0, "", "")
 )
 
 type writeStatusConst struct{}
@@ -46,7 +46,7 @@ func (w writeStatusConst) InjectOption(td *process.TargetDetails) (inject.Option
 	if !ok {
 		return nil, fmt.Errorf("unknown module version: %s", pkg)
 	}
-	if ver.GreaterThanOrEqual(writeStatusMinVersion) {
+	if ver.GreaterThanEqual(writeStatusMinVersion) {
 		writeStatus = true
 	}
 	return inject.WithKeyValue("write_status_supported", writeStatus), nil

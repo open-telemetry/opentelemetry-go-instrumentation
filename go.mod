@@ -18,9 +18,9 @@ retract (
 )
 
 require (
+	github.com/Masterminds/semver/v3 v3.3.1
 	github.com/cilium/ebpf v0.17.3
 	github.com/go-logr/stdr v1.2.2
-	github.com/hashicorp/go-version v1.7.0
 	github.com/pkg/errors v0.9.1
 	github.com/stretchr/testify v1.10.0
 	github.com/xwb1989/sqlparser v0.0.0-20180606152119-120387863bf2
