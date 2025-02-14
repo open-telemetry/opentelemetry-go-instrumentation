@@ -12,7 +12,7 @@ jobs:
   generate-and-test:
     strategy:
       matrix:
-        os: [ ubuntu-latest, otel-linux-arm64]
+        os: [ ubuntu-latest, ubuntu-22.04-arm]
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout Repo
