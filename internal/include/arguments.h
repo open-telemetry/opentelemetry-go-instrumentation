@@ -68,13 +68,4 @@ static __always_inline void *get_argument(struct pt_regs *ctx, int index)
     }
 }
 
-// Every span created by the auto instrumentation should contain end timestamp.
-// This end timestamp is recorded at the end of probed function by editing the struct that was created at the beginning.
-// Usually probes create an eBPF map to store the span struct and retrieve it at the end of the function.
-// Consistent key is used as a key for that map.
-static __always_inline void *get_consistent_key(struct pt_regs *ctx)
-{
-    return (void *)GOROUTINE(ctx);
-}
-
 #endif

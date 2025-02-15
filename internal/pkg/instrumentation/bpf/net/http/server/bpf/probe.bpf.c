@@ -219,7 +219,7 @@ int uprobe_serverHandler_ServeHTTP(struct pt_regs *ctx)
 {
     struct go_iface go_context = {0};
     get_Go_context(ctx, 4, ctx_ptr_pos, false, &go_context);
-    void *key = get_consistent_key(ctx);
+    void *key = (void *)GOROUTINE(ctx);
     void *httpReq_ptr = bpf_map_lookup_elem(&http_server_uprobes, &key);
     if (httpReq_ptr != NULL)
     {
@@ -275,7 +275,7 @@ int uprobe_serverHandler_ServeHTTP(struct pt_regs *ctx)
 SEC("uprobe/serverHandler_ServeHTTP")
 int uprobe_serverHandler_ServeHTTP_Returns(struct pt_regs *ctx) {
     u64 end_time = bpf_ktime_get_ns();
-    void *key = get_consistent_key(ctx);
+    void *key = (void *)GOROUTINE(ctx);
 
     struct uprobe_data_t *uprobe_data = bpf_map_lookup_elem(&http_server_uprobes, &key);
     if (uprobe_data == NULL) {
@@ -323,7 +323,7 @@ int uprobe_serverHandler_ServeHTTP_Returns(struct pt_regs *ctx) {
 // func (r *Reader) readContinuedLineSlice(lim int64, validateFirstLine func([]byte) error) ([]byte, error) {
 SEC("uprobe/textproto_Reader_readContinuedLineSlice")
 int uprobe_textproto_Reader_readContinuedLineSlice_Returns(struct pt_regs *ctx) {
-    void *key = get_consistent_key(ctx);
+    void *key = (void *)GOROUTINE(ctx);
 
     u64 len = (u64)GO_PARAM2(ctx);
     u8 *buf = (u8 *)GO_PARAM1(ctx);

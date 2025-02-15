@@ -135,7 +135,7 @@ int uprobe_WriteMessages(struct pt_regs *ctx) {
 
     struct go_iface go_context = {0};
     get_Go_context(ctx, 2, 0, true, &go_context);
-    void *key = get_consistent_key(ctx);
+    void *key = (void *)GOROUTINE(ctx);
 
     void *kafka_request_ptr = bpf_map_lookup_elem(&kafka_events, &key);
     if (kafka_request_ptr != NULL)
@@ -215,7 +215,7 @@ int uprobe_WriteMessages(struct pt_regs *ctx) {
 SEC("uprobe/WriteMessages")
 int uprobe_WriteMessages_Returns(struct pt_regs *ctx) {
     u64 end_time = bpf_ktime_get_ns();
-    void *key = get_consistent_key(ctx);
+    void *key = (void *)GOROUTINE(ctx);
 
     struct kafka_request_t *kafka_request = bpf_map_lookup_elem(&kafka_events, &key);
     if (kafka_request == NULL) {

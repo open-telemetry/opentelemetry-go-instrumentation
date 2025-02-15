@@ -61,7 +61,7 @@ int uprobe_queryDC(struct pt_regs *ctx) {
     start_span(&start_span_params);
 
     // Get key
-    void *key = get_consistent_key(ctx);
+    void *key = (void *)GOROUTINE(ctx);
 
     bpf_map_update_elem(&sql_events, &key, &sql_request, 0);
     return 0;
@@ -104,7 +104,7 @@ int uprobe_execDC(struct pt_regs *ctx) {
     start_span(&start_span_params);
 
     // Get key
-    void *key = get_consistent_key(ctx);
+    void *key = (void *)GOROUTINE(ctx);
 
     bpf_map_update_elem(&sql_events, &key, &sql_request, 0);
     return 0;

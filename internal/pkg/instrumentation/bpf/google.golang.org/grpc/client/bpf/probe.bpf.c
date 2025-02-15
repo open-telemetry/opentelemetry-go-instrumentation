@@ -72,7 +72,7 @@ int uprobe_ClientConn_Invoke(struct pt_regs *ctx)
     get_Go_context(ctx, 2, 0, true, &go_context);
 
     // Get key
-    void *key = get_consistent_key(ctx);
+    void *key = (void *)GOROUTINE(ctx);
     void *grpcReq_ptr = bpf_map_lookup_elem(&grpc_events, &key);
     if (grpcReq_ptr != NULL)
     {
@@ -118,7 +118,7 @@ int uprobe_ClientConn_Invoke(struct pt_regs *ctx)
 // func (cc *ClientConn) Invoke(ctx context.Context, method string, args, reply interface{}, opts ...CallOption) error
 SEC("uprobe/ClientConn_Invoke")
 int uprobe_ClientConn_Invoke_Returns(struct pt_regs *ctx) {
-    void *key = get_consistent_key(ctx);
+    void *key = (void *)GOROUTINE(ctx);
     struct grpc_request_t *grpc_span = bpf_map_lookup_elem(&grpc_events, &key);
     if (grpc_span == NULL) {
         bpf_printk("event is NULL in ret probe");

@@ -94,7 +94,7 @@ static __always_inline int handleStream(struct pt_regs *ctx, void *stream_ptr, s
         return -1;
     }
 
-    void *key = get_consistent_key(ctx);
+    void *key = (void *)GOROUTINE(ctx);
     void *grpcReq_event_ptr = bpf_map_lookup_elem(&grpc_events, &key);
     if (grpcReq_event_ptr != NULL) {
         bpf_printk("grpc:server:handleStream: event already tracked");
@@ -178,7 +178,7 @@ static __always_inline int writeStatus(struct pt_regs *ctx, void *status_ptr) {
         return -1;
     }
 
-    void *key = get_consistent_key(ctx);
+    void *key = (void *)GOROUTINE(ctx);
 
     struct grpc_request_t *req_ptr = bpf_map_lookup_elem(&grpc_events, &key);
     if (req_ptr == NULL) {
@@ -282,7 +282,7 @@ int uprobe_server_handleStream2_Returns(struct pt_regs *ctx) {
     }
 
 lookup:
-    key = get_consistent_key(ctx);
+    key = (void *)GOROUTINE(ctx);
     struct grpc_request_t *event = bpf_map_lookup_elem(&grpc_events, &key);
     if (event == NULL) {
         bpf_printk("grpc:server:uprobe/server_handleStream2Return: event is NULL");

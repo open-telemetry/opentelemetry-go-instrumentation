@@ -26,7 +26,7 @@
 #define UPROBE_RETURN(name, event_type, uprobe_context_map) \
 SEC("uprobe/##name##")                                                                                              \
 int uprobe_##name##_Returns(struct pt_regs *ctx) {                                                                  \
-    void *key = get_consistent_key(ctx);                                                           \
+    void *key = (void *)GOROUTINE(ctx);                                                                             \
     event_type *event = bpf_map_lookup_elem(&uprobe_context_map, &key);                                             \
     if (event == NULL) {                                                                                            \
         bpf_printk("event is NULL in ret probe");                                                                   \
