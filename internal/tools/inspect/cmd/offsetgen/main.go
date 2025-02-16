@@ -22,7 +22,7 @@ import (
 const (
 	defaultOutputFile = "offset_results.json"
 
-	minGoVersion = "1.12"
+	minGoVersion = "1.19"
 )
 
 var (

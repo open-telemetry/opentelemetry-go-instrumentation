@@ -93,7 +93,6 @@ type bpfMapSpecs struct {
 type bpfVariableSpecs struct {
 	EndAddr                  *ebpf.VariableSpec `ebpf:"end_addr"`
 	Hex                      *ebpf.VariableSpec `ebpf:"hex"`
-	IsRegistersAbi           *ebpf.VariableSpec `ebpf:"is_registers_abi"`
 	SpanContextSpanIdPos     *ebpf.VariableSpec `ebpf:"span_context_span_id_pos"`
 	SpanContextTraceFlagsPos *ebpf.VariableSpec `ebpf:"span_context_trace_flags_pos"`
 	SpanContextTraceIdPos    *ebpf.VariableSpec `ebpf:"span_context_trace_id_pos"`
@@ -152,7 +151,6 @@ func (m *bpfMaps) Close() error {
 type bpfVariables struct {
 	EndAddr                  *ebpf.Variable `ebpf:"end_addr"`
 	Hex                      *ebpf.Variable `ebpf:"hex"`
-	IsRegistersAbi           *ebpf.Variable `ebpf:"is_registers_abi"`
 	SpanContextSpanIdPos     *ebpf.Variable `ebpf:"span_context_span_id_pos"`
 	SpanContextTraceFlagsPos *ebpf.Variable `ebpf:"span_context_trace_flags_pos"`
 	SpanContextTraceIdPos    *ebpf.Variable `ebpf:"span_context_trace_id_pos"`

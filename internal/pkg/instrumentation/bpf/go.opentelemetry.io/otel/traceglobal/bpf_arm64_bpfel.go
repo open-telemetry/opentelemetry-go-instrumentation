@@ -142,7 +142,6 @@ type bpfVariableSpecs struct {
 	BucketsPtrPos                   *ebpf.VariableSpec `ebpf:"buckets_ptr_pos"`
 	EndAddr                         *ebpf.VariableSpec `ebpf:"end_addr"`
 	Hex                             *ebpf.VariableSpec `ebpf:"hex"`
-	IsRegistersAbi                  *ebpf.VariableSpec `ebpf:"is_registers_abi"`
 	StartAddr                       *ebpf.VariableSpec `ebpf:"start_addr"`
 	TotalCpus                       *ebpf.VariableSpec `ebpf:"total_cpus"`
 	TracerDelegatePos               *ebpf.VariableSpec `ebpf:"tracer_delegate_pos"`
@@ -225,7 +224,6 @@ type bpfVariables struct {
 	BucketsPtrPos                   *ebpf.Variable `ebpf:"buckets_ptr_pos"`
 	EndAddr                         *ebpf.Variable `ebpf:"end_addr"`
 	Hex                             *ebpf.Variable `ebpf:"hex"`
-	IsRegistersAbi                  *ebpf.Variable `ebpf:"is_registers_abi"`
 	StartAddr                       *ebpf.Variable `ebpf:"start_addr"`
 	TotalCpus                       *ebpf.Variable `ebpf:"total_cpus"`
 	TracerDelegatePos               *ebpf.Variable `ebpf:"tracer_delegate_pos"`

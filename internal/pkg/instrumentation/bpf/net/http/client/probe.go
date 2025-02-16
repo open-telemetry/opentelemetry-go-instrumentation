@@ -68,7 +68,6 @@ func New(logger *slog.Logger, version string) probe.Probe {
 			ID:     id,
 			Logger: logger,
 			Consts: []probe.Const{
-				probe.RegistersABIConst{},
 				probe.AllocationConst{},
 				probe.StructFieldConst{
 					Key: "method_ptr_pos",

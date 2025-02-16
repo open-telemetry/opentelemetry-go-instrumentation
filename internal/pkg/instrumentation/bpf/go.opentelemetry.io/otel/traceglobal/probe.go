@@ -93,7 +93,6 @@ func New(logger *slog.Logger) probe.Probe {
 			ID:     id,
 			Logger: logger,
 			Consts: []probe.Const{
-				probe.RegistersABIConst{},
 				probe.AllocationConst{},
 				probe.KeyValConst{
 					Key: "attr_type_invalid",

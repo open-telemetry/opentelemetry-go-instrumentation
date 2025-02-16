@@ -106,7 +106,6 @@ type bpfVariableSpecs struct {
 	HeaderFrameStreamidPos *ebpf.VariableSpec `ebpf:"headerFrame_streamid_pos"`
 	Hex                    *ebpf.VariableSpec `ebpf:"hex"`
 	HttpclientNextidPos    *ebpf.VariableSpec `ebpf:"httpclient_nextid_pos"`
-	IsRegistersAbi         *ebpf.VariableSpec `ebpf:"is_registers_abi"`
 	StartAddr              *ebpf.VariableSpec `ebpf:"start_addr"`
 	StatusCodePos          *ebpf.VariableSpec `ebpf:"status_code_pos"`
 	StatusMessagePos       *ebpf.VariableSpec `ebpf:"status_message_pos"`
@@ -171,7 +170,6 @@ type bpfVariables struct {
 	HeaderFrameStreamidPos *ebpf.Variable `ebpf:"headerFrame_streamid_pos"`
 	Hex                    *ebpf.Variable `ebpf:"hex"`
 	HttpclientNextidPos    *ebpf.Variable `ebpf:"httpclient_nextid_pos"`
-	IsRegistersAbi         *ebpf.Variable `ebpf:"is_registers_abi"`
 	StartAddr              *ebpf.Variable `ebpf:"start_addr"`
 	StatusCodePos          *ebpf.Variable `ebpf:"status_code_pos"`
 	StatusMessagePos       *ebpf.Variable `ebpf:"status_message_pos"`
