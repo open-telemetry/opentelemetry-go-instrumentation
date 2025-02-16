@@ -13,6 +13,8 @@
 
 #if defined(__KERNEL__) || defined(__VMLINUX_H__)
 
+// https://go.googlesource.com/go/+/refs/heads/dev.regabi/src/cmd/compile/internal-abi.md#amd64-architecture
+
 #define GO_PARAM1(x) ((x)->ax)
 #define GO_PARAM2(x) ((x)->bx)
 #define GO_PARAM3(x) ((x)->cx)
@@ -27,6 +29,8 @@
 #endif
 
 #elif defined(bpf_target_arm64)
+
+// https://github.com/golang/go/blob/45447b4bfff4227a8945951dd7d37f2873992e1b/src/cmd/compile/abi-internal.md#arm64-architecture
 
 #define GO_PARAM1(x) (__PT_REGS_CAST(x)->__PT_PARM1_REG)
 #define GO_PARAM2(x) (__PT_REGS_CAST(x)->__PT_PARM2_REG)
