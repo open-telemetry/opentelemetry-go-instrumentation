@@ -1,11 +1,13 @@
 module go.opentelemetry.io/auto/sdk/internal/telemetry/test
 
-go 1.22.0
+go 1.23.0
+
+toolchain go1.24.0
 
 require (
 	github.com/stretchr/testify v1.10.0
 	go.opentelemetry.io/auto/sdk v1.1.0
-	go.opentelemetry.io/collector/pdata v1.25.0
+	go.opentelemetry.io/collector/pdata v1.26.0
 )
 
 require (
