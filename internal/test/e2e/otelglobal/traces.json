@@ -36,7 +36,7 @@
           {
             "key": "telemetry.distro.version",
             "value": {
-              "stringValue": "v0.20.0"
+              "stringValue": "v0.21.0"
             }
           },
           {
