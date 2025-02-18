@@ -57,8 +57,11 @@ $(TOOLS)/offsetgen: PACKAGE=go.opentelemetry.io/auto/$(TOOLS_MOD_DIR)/inspect/cm
 SYNCLIBBPF = $(TOOLS)/synclibbpf
 $(TOOLS)/synclibbpf: PACKAGE=go.opentelemetry.io/auto/$(TOOLS_MOD_DIR)/synclibbpf
 
+CROSSLINK = $(TOOLS)/crosslink
+$(TOOLS)/crosslink: PACKAGE=go.opentelemetry.io/build-tools/crosslink
+
 .PHONY: tools
-tools: $(GOLICENSES) $(MULTIMOD) $(GOLANGCI_LINT) $(DBOTCONF) $(OFFSETGEN) $(SYNCLIBBPF)
+tools: $(GOLICENSES) $(MULTIMOD) $(GOLANGCI_LINT) $(DBOTCONF) $(OFFSETGEN) $(SYNCLIBBPF) $(CROSSLINK)
 
 TEST_TARGETS := test-verbose test-ebpf test-race
 .PHONY: $(TEST_TARGETS) test
