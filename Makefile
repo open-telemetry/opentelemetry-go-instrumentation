@@ -102,10 +102,14 @@ docker-test: docker-build-base
 docker-precommit: docker-build-base
 	docker run --rm -v $(shell pwd):/app $(IMG_NAME_BASE) /bin/sh -c "cd ../app && make precommit"
 
+.PHONY: crosslink
+crosslink: $(CROSSLINK)
+	@$(CROSSLINK) --root=$(REPODIR) --prune
+
 .PHONY: go-mod-tidy
 go-mod-tidy: $(ALL_GO_MOD_DIRS:%=go-mod-tidy/%)
 go-mod-tidy/%: DIR=$*
-go-mod-tidy/%:
+go-mod-tidy/%: crosslink
 	@cd $(DIR) && $(GOCMD) mod tidy -compat=1.20
 
 .PHONY: golangci-lint golangci-lint-fix
