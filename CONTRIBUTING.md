@@ -176,7 +176,7 @@ Any [Maintainer] can merge the PR once the above criteria have been met.
 ### Maintainers
 
 - [Eden Federman](https://github.com/edeNFed), Odigos
-- [Mike Dame](https://github.com/damemi), Google
+- [Mike Dame](https://github.com/damemi), Odigos
 - [Ron Federman](https://github.com/RonFed), Odigos
 - [Tyler Yahn](https://github.com/MrAlias), Splunk
 
