@@ -13,3 +13,5 @@ require (
 	go.opentelemetry.io/auto/sdk v1.1.0 // indirect
 	go.opentelemetry.io/otel/metric v1.34.0 // indirect
 )
+
+replace go.opentelemetry.io/auto/sdk => ../../../../sdk

@@ -250,3 +250,5 @@ require (
 )
 
 replace go.opentelemetry.io/auto => ../../
+
+replace go.opentelemetry.io/auto/sdk => ../../sdk
