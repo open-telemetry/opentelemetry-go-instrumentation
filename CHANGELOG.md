@@ -12,6 +12,11 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 
 - Cache offsets for `google.golang.org/grpc` `1.72.0-dev`. ([#1849](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1849))
 
+### Removed
+
+- Build support for Go 1.22 has been removed.
+  Use Go >= 1.23 to develop and build the project. ([#1841](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1841))
+
 ## [v0.21.0] - 2025-02-18
 
 > [!WARNING]  

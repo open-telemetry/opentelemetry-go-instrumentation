@@ -1,6 +1,6 @@
 module go.opentelemetry.io/auto/internal/test/e2e/kafka-go
 
-go 1.22.0
+go 1.23.0
 
 require github.com/segmentio/kafka-go v0.4.47
 
