@@ -8,6 +8,10 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 
 ## [Unreleased]
 
+### Added
+
+- Cache offsets for `google.golang.org/grpc` `1.72.0-dev`. ([#1849](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1849))
+
 ## [v0.21.0] - 2025-02-18
 
 > [!WARNING]  
