@@ -2,7 +2,9 @@ FROM  --platform=$BUILDPLATFORM golang:1.24.0-bookworm@sha256:b970e6d47c09fdd341
 
 RUN apt-get update && apt-get install -y curl clang gcc llvm make libbpf-dev
 
-WORKDIR /app
+WORKDIR /usr/src/go.opentelemetry.io/auto/
+
+COPY sdk/ /usr/src/go.opentelemetry.io/auto/sdk/
 
 # pre-copy/cache go.mod for pre-downloading dependencies and only redownloading
 # them in subsequent builds if they change
@@ -19,5 +21,5 @@ RUN --mount=type=cache,target=/root/.cache/go-build \
     GOARCH=$TARGETARCH make build
 
 FROM gcr.io/distroless/base-debian12@sha256:74ddbf52d93fafbdd21b399271b0b4aac1babf8fa98cab59e5692e01169a1348
-COPY --from=builder /app/otel-go-instrumentation /
+COPY --from=builder /usr/src/go.opentelemetry.io/auto/otel-go-instrumentation /
 CMD ["/otel-go-instrumentation"]
