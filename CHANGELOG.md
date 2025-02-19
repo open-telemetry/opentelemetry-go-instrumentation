@@ -8,21 +8,29 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 
 ## [Unreleased]
 
+## [v0.21.0] - 2025-02-18
+
+> [!WARNING]  
+> The `net/http` instrumentation support for versions `< 1.19` has been dropped.
+
+> [!WARNING]  
+> The `database/sql` instrumentation support for versions `< 1.19` has been dropped.
+
+> [!NOTE]  
+> This is the last release version that will support building the auto-instrumentation CLI using Go 1.22.
+> The next release will require development to be done using Go >= 1.23.
+
 ### Added
 
-- Preemptively update instrumentation for `net/http` to support Go `1.24` when swiss maps are going to be added. ([#1636](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1636))
-- Support Go `1.22.12`. ([#1743](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1743))
-- Support Go `1.23.6`. ([#1743](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1743))
-- Support `golang.org/x/net` `0.35.0`. ([#1783](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1783))
-- Support Go `1.24.0`. ([#1795](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1795), [#1798](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1798))
+- Update instrumentation for `net/http` to support Go `1.24` SwissMap. ([#1636](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1636))
+- Cache offsets for Go `1.22.12`. ([#1743](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1743))
+- Cache offsets for Go `1.23.6`. ([#1743](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1743))
+- Cache offsets for `golang.org/x/net` `0.35.0`. ([#1783](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1783))
+- Cache offsets for Go `1.24.0`. ([#1795](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1795), [#1798](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1798))
 
 ### Changed
 
-- Unused support for instrumentation of Go < 1.19 has been dropped. (#1815)
-
-### Fixed
-
-- `database/sql` instrumentation for Go < `1.17`. (#1772)
+- Unused support for instrumentation of Go < 1.19 has been dropped. ([#1815](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1815))
 
 ## [v0.20.0] - 2025-01-29
 
@@ -568,7 +576,8 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 
 This is the first release of OpenTelemetry Go Automatic Instrumentation.
 
-[Unreleased]: https://github.com/open-telemetry/opentelemetry-go-instrumentation/compare/v0.20.0...HEAD
+[Unreleased]: https://github.com/open-telemetry/opentelemetry-go-instrumentation/compare/v0.21.0...HEAD
+[v0.21.0]: https://github.com/open-telemetry/opentelemetry-go-instrumentation/releases/tag/v0.21.0
 [v0.20.0]: https://github.com/open-telemetry/opentelemetry-go-instrumentation/releases/tag/v0.20.0
 [v0.19.0-alpha]: https://github.com/open-telemetry/opentelemetry-go-instrumentation/releases/tag/v0.19.0-alpha
 [v0.18.0-alpha]: https://github.com/open-telemetry/opentelemetry-go-instrumentation/releases/tag/v0.18.0-alpha
