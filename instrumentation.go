@@ -11,18 +11,13 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
-	"path/filepath"
 	"strconv"
-	"strings"
 	"sync"
 
-	"go.opentelemetry.io/contrib/exporters/autoexport"
-	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp"
-	"go.opentelemetry.io/otel/sdk/resource"
-	"go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.30.0"
 
+	"go.opentelemetry.io/auto/export"
+	"go.opentelemetry.io/auto/export/otelsdk"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation"
 	dbSql "go.opentelemetry.io/auto/internal/pkg/instrumentation/bpf/database/sql"
 	kafkaConsumer "go.opentelemetry.io/auto/internal/pkg/instrumentation/bpf/github.com/segmentio/kafka-go/consumer"
@@ -34,16 +29,10 @@ import (
 	httpClient "go.opentelemetry.io/auto/internal/pkg/instrumentation/bpf/net/http/client"
 	httpServer "go.opentelemetry.io/auto/internal/pkg/instrumentation/bpf/net/http/server"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/probe"
-	"go.opentelemetry.io/auto/internal/pkg/opentelemetry"
 	"go.opentelemetry.io/auto/internal/pkg/process"
 )
 
 const (
-	// envServiceName is the key for the envoriment variable value containing the service name.
-	envServiceNameKey = "OTEL_SERVICE_NAME"
-	// envResourceAttrKey is the key for the environment variable value containing
-	// OpenTelemetry Resource attributes.
-	envResourceAttrKey = "OTEL_RESOURCE_ATTRIBUTES"
 	// envOtelGlobalImplKey is the key for the environment variable value enabling to opt-in for the
 	// OpenTelemetry global implementation. It should be a boolean value.
 	envOtelGlobalImplKey = "OTEL_GO_AUTO_GLOBAL"
@@ -75,7 +64,6 @@ func NewInstrumentation(ctx context.Context, opts ...InstrumentationOption) (*In
 		return nil, err
 	}
 
-	ctrl, err := opentelemetry.NewController(c.logger, c.tracerProvider())
 	if err != nil {
 		return nil, err
 	}
@@ -96,7 +84,7 @@ func NewInstrumentation(ctx context.Context, opts ...InstrumentationOption) (*In
 	}
 
 	cp := convertConfigProvider(c.cp)
-	mngr, err := instrumentation.NewManager(c.logger, ctrl, c.pid, cp, p...)
+	mngr, err := instrumentation.NewManager(c.logger, c.handler, c.pid, cp, p...)
 	if err != nil {
 		return nil, err
 	}
@@ -164,14 +152,12 @@ type InstrumentationOption interface {
 }
 
 type instConfig struct {
-	traceExp           trace.SpanExporter
-	pid                process.ID
-	serviceName        string
-	additionalResAttrs []attribute.KeyValue
-	globalImpl         bool
-	logger             *slog.Logger
-	sampler            Sampler
-	cp                 ConfigProvider
+	pid        process.ID
+	handler    export.Handler
+	globalImpl bool
+	logger     *slog.Logger
+	sampler    Sampler
+	cp         ConfigProvider
 }
 
 func newInstConfig(ctx context.Context, opts []InstrumentationOption) (instConfig, error) {
@@ -186,13 +172,11 @@ func newInstConfig(ctx context.Context, opts []InstrumentationOption) (instConfi
 	}
 
 	// Defaults.
-	if c.serviceName == "" {
-		c.serviceName = c.defaultServiceName()
-	}
-	if c.traceExp == nil {
+	if c.handler == nil {
+		v := semconv.TelemetryDistroVersionKey.String(Version())
+
 		var e error
-		// This is the OTel recommended default.
-		c.traceExp, e = otlptracehttp.New(ctx)
+		c.handler, e = otelsdk.New(ctx, otelsdk.WithEnv(), otelsdk.WithResourceAttributes(v))
 		err = errors.Join(err, e)
 	}
 
@@ -211,81 +195,8 @@ func newInstConfig(ctx context.Context, opts []InstrumentationOption) (instConfi
 	return c, err
 }
 
-func (c instConfig) defaultServiceName() string {
-	name := "unknown_service"
-	if exe, err := c.pid.ExeLink(); err == nil {
-		name = fmt.Sprintf("%s:%s", name, filepath.Base(exe))
-	}
-	return name
-}
-
 func (c instConfig) validate() error {
-	var err error
-	if e := c.pid.Validate(); e != nil {
-		err = errors.Join(err, e)
-	}
-	if c.traceExp == nil {
-		err = errors.Join(err, errors.New("undefined trace exporter"))
-	}
-	return err
-}
-
-func (c instConfig) tracerProvider() *trace.TracerProvider {
-	return trace.NewTracerProvider(
-		// the actual sampling is done in the eBPF probes.
-		// this is just to make sure that we export all spans we get from the probes
-		trace.WithSampler(trace.AlwaysSample()),
-		trace.WithResource(c.res()),
-		trace.WithBatcher(c.traceExp),
-		trace.WithIDGenerator(opentelemetry.NewEBPFSourceIDGenerator()),
-	)
-}
-
-func (c instConfig) res() (res *resource.Resource) {
-	attrs := []attribute.KeyValue{
-		semconv.ServiceNameKey.String(c.serviceName),
-		semconv.TelemetrySDKLanguageGo,
-		semconv.TelemetryDistroVersionKey.String(Version()),
-		semconv.TelemetryDistroNameKey.String("opentelemetry-go-instrumentation"),
-	}
-
-	defer func() {
-		if len(c.additionalResAttrs) > 0 {
-			attrs = append(attrs, c.additionalResAttrs...)
-		}
-
-		res = resource.NewWithAttributes(
-			semconv.SchemaURL,
-			attrs...,
-		)
-	}()
-
-	bi, err := c.pid.BuildInfo()
-	if err != nil {
-		c.logger.Error("omitting Go process info from resource", "error", err)
-		return
-	}
-
-	var compiler string
-	for _, setting := range bi.Settings {
-		if setting.Key == "-compiler" {
-			compiler = setting.Value
-			break
-		}
-	}
-
-	runName := compiler
-	if runName == "gc" {
-		runName = "go"
-	}
-
-	attrs = append(
-		attrs,
-		semconv.ProcessRuntimeName(runName),
-		semconv.ProcessRuntimeVersion(bi.GoVersion),
-	)
-
-	return res
+	return c.pid.Validate()
 }
 
 // newLogger is used for testing.
@@ -300,21 +211,6 @@ func newLoggerFunc(level slog.Leveler) *slog.Logger {
 type fnOpt func(context.Context, instConfig) (instConfig, error)
 
 func (o fnOpt) apply(ctx context.Context, c instConfig) (instConfig, error) { return o(ctx, c) }
-
-// WithServiceName returns an [InstrumentationOption] defining the name of the service running.
-//
-// If multiple of these options are provided to an [Instrumentation], the last
-// one will be used.
-//
-// If OTEL_SERVICE_NAME is defined or the service name is defined in
-// OTEL_RESOURCE_ATTRIBUTES, this option will conflict with [WithEnv]. If both
-// are used, the last one provided to an [Instrumentation] will be used.
-func WithServiceName(serviceName string) InstrumentationOption {
-	return fnOpt(func(_ context.Context, c instConfig) (instConfig, error) {
-		c.serviceName = serviceName
-		return c, nil
-	})
-}
 
 // WithPID returns an [InstrumentationOption] defining the target binary for
 // [Instrumentation] that is being run with the provided PID.
@@ -334,8 +230,6 @@ var lookupEnv = os.LookupEnv
 // [Instrumentation] using the values defined by the following environment
 // variables:
 //
-//   - OTEL_SERVICE_NAME (or OTEL_RESOURCE_ATTRIBUTES): sets the service name
-//   - OTEL_TRACES_EXPORTER: sets the trace exporter
 //   - OTEL_GO_AUTO_GLOBAL: enables the OpenTelemetry global implementation
 //   - OTEL_LOG_LEVEL: sets the default logger's minimum logging level
 //   - OTEL_TRACES_SAMPLER: sets the trace sampler
@@ -353,23 +247,9 @@ var lookupEnv = os.LookupEnv
 // If [WithLogger] is not used, OTEL_LOG_LEVEL will be parsed and the default
 // logger used by the configured [Instrumentation] will use that level as its
 // minimum logging level.
-//
-// The OTEL_TRACES_EXPORTER environment variable value is resolved using the
-// [autoexport] package. See that package's documentation for information on
-// supported values and registration of custom exporters.
 func WithEnv() InstrumentationOption {
 	return fnOpt(func(ctx context.Context, c instConfig) (instConfig, error) {
-		var err, e error
-		// NewSpanExporter will use an OTLP (HTTP/protobuf) exporter as the
-		// default, unless OTLP_TRACES_EXPORTER is set. This is the OTel
-		// recommended default.
-		c.traceExp, e = autoexport.NewSpanExporter(ctx)
-		err = errors.Join(err, e)
-
-		if name, attrs, ok := lookupResourceData(); ok {
-			c.serviceName = name
-			c.additionalResAttrs = append(c.additionalResAttrs, attrs...)
-		}
+		var err error
 		if val, ok := lookupEnv(envOtelGlobalImplKey); ok {
 			boolVal, err := strconv.ParseBool(val)
 			if err == nil {
@@ -391,53 +271,6 @@ func WithEnv() InstrumentationOption {
 			c.sampler = s
 		}
 		return c, err
-	})
-}
-
-func lookupResourceData() (string, []attribute.KeyValue, bool) {
-	// Prioritize OTEL_SERVICE_NAME over OTEL_RESOURCE_ATTRIBUTES value.
-	svcName := ""
-	if v, ok := lookupEnv(envServiceNameKey); ok {
-		svcName = v
-	}
-
-	v, ok := lookupEnv(envResourceAttrKey)
-	if !ok {
-		return svcName, nil, svcName != ""
-	}
-
-	var attrs []attribute.KeyValue
-	for _, keyval := range strings.Split(strings.TrimSpace(v), ",") {
-		key, val, found := strings.Cut(keyval, "=")
-		if !found {
-			continue
-		}
-		key = strings.TrimSpace(key)
-		if key == string(semconv.ServiceNameKey) {
-			svcName = strings.TrimSpace(val)
-		} else {
-			attrs = append(attrs, attribute.String(key, strings.TrimSpace(val)))
-		}
-	}
-
-	if svcName == "" {
-		return "", nil, false
-	}
-
-	return svcName, attrs, true
-}
-
-// WithTraceExporter returns an [InstrumentationOption] that will configure an
-// [Instrumentation] to use the provided exp to export OpenTelemetry tracing
-// telemetry.
-//
-// If OTEL_TRACES_EXPORTER is defined, this option will conflict with
-// [WithEnv]. If both are used, the last one provided to an [Instrumentation]
-// will be used.
-func WithTraceExporter(exp trace.SpanExporter) InstrumentationOption {
-	return fnOpt(func(_ context.Context, c instConfig) (instConfig, error) {
-		c.traceExp = exp
-		return c, nil
 	})
 }
 
@@ -480,15 +313,6 @@ func WithGlobal() InstrumentationOption {
 	})
 }
 
-// WithResourceAttributes returns an [InstrumentationOption] that will configure
-// an [Instrumentation] to add the provided attributes to the OpenTelemetry resource.
-func WithResourceAttributes(attrs ...attribute.KeyValue) InstrumentationOption {
-	return fnOpt(func(_ context.Context, c instConfig) (instConfig, error) {
-		c.additionalResAttrs = append(c.additionalResAttrs, attrs...)
-		return c, nil
-	})
-}
-
 // WithLogger returns an [InstrumentationOption] that will configure an
 // [Instrumentation] to use the provided logger.
 //
@@ -512,6 +336,21 @@ func WithLogger(logger *slog.Logger) InstrumentationOption {
 func WithConfigProvider(cp ConfigProvider) InstrumentationOption {
 	return fnOpt(func(_ context.Context, c instConfig) (instConfig, error) {
 		c.cp = cp
+		return c, nil
+	})
+}
+
+// WithHandler returns an [InstrumentationOption] that will configure an
+// [Instrumentation] to use h to handle generated telemetry.
+//
+// If this options is not used, the Handler returned from [otelsdk.New] with
+// environment configuration will be used.
+func WithHandler(h export.Handler) InstrumentationOption {
+	return fnOpt(func(_ context.Context, c instConfig) (instConfig, error) {
+		if h == nil {
+			return c, errors.New("nil handler")
+		}
+		c.handler = h
 		return c, nil
 	})
 }

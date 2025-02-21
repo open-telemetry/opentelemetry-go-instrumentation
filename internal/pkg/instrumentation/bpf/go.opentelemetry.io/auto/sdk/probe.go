@@ -14,6 +14,7 @@ import (
 	"go.opentelemetry.io/collector/pdata/ptrace"
 	"go.opentelemetry.io/otel/trace"
 
+	"go.opentelemetry.io/auto/export"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/probe"
 	"go.opentelemetry.io/auto/internal/pkg/structfield"
 )
@@ -108,25 +109,30 @@ func (c *converter) decodeEvent(record perf.Record) (*event, error) {
 	return &e, nil
 }
 
-func (c *converter) processFn(e *event) ptrace.ScopeSpans {
+func (c *converter) processFn(e *event) *export.Telemetry {
 	var m ptrace.JSONUnmarshaler
 	traces, err := m.UnmarshalTraces(e.SpanData[:e.Size])
 	if err != nil {
 		c.logger.Error("failed to unmarshal span data", "error", err)
-		return ptrace.NewScopeSpans()
+		return nil
 	}
 
 	rs := traces.ResourceSpans()
 	if rs.Len() == 0 {
 		c.logger.Error("empty ResourceSpans")
-		return ptrace.NewScopeSpans()
+		return nil
 	}
 
 	ss := rs.At(0).ScopeSpans()
 	if ss.Len() == 0 {
 		c.logger.Error("empty ScopeSpans")
-		return ptrace.NewScopeSpans()
+		return nil
 	}
+	s := ss.At(0)
 
-	return ss.At(0)
+	t := new(export.Telemetry)
+	s.Scope().MoveTo(t.Scope())
+	t.SetSchemaURL(s.SchemaUrl())
+	s.Spans().MoveAndAppendTo(t.Spans())
+	return t
 }

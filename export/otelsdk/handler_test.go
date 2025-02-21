@@ -171,7 +171,7 @@ func TestHandlerHandleTrace(t *testing.T) {
 			},
 		},
 	}
-	assert.Equal(t, len(want), len(got))
+	assert.Len(t, got, len(want))
 
 	for i, span := range got {
 		// Span contexts get modified by exporter, update expected with output.

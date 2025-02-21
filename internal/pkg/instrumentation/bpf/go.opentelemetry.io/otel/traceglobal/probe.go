@@ -15,6 +15,7 @@ import (
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/ptrace"
 
+	"go.opentelemetry.io/auto/export"
 	"go.opentelemetry.io/auto/internal/pkg/inject"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/probe"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/utils"
@@ -316,15 +317,15 @@ type event struct {
 	TracerID   tracerID
 }
 
-func processFn(e *event) ptrace.ScopeSpans {
-	ss := ptrace.NewScopeSpans()
+func processFn(e *event) *export.Telemetry {
+	t := new(export.Telemetry)
 
-	scope := ss.Scope()
+	scope := t.Scope()
 	scope.SetName(unix.ByteSliceToString(e.TracerID.Name[:]))
 	scope.SetVersion(unix.ByteSliceToString(e.TracerID.Version[:]))
-	ss.SetSchemaUrl(unix.ByteSliceToString(e.TracerID.SchemaURL[:]))
+	t.SetSchemaURL(unix.ByteSliceToString(e.TracerID.SchemaURL[:]))
 
-	span := ss.Spans().AppendEmpty()
+	span := t.Spans().AppendEmpty()
 	span.SetName(unix.ByteSliceToString(e.SpanName[:]))
 	span.SetKind(ptrace.SpanKindClient)
 	span.SetStartTimestamp(utils.BootOffsetToTimestamp(e.StartTime))
@@ -340,7 +341,7 @@ func processFn(e *event) ptrace.ScopeSpans {
 	setAttributes(span.Attributes(), e.Attributes)
 	setStatus(span.Status(), e.Status)
 
-	return ss
+	return t
 }
 
 func setStatus(dest ptrace.Status, stat status) {

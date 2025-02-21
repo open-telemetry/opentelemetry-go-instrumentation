@@ -22,6 +22,7 @@ import (
 
 	"go.opentelemetry.io/collector/pdata/ptrace"
 
+	"go.opentelemetry.io/auto/export"
 	"go.opentelemetry.io/auto/internal/pkg/inject"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/bpffs"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/probe/sampling"
@@ -44,7 +45,7 @@ type Probe interface {
 	Load(*link.Executable, *process.Info, *sampling.Config) error
 
 	// Run runs the events processing loop.
-	Run(func(ptrace.ScopeSpans))
+	Run(export.Handler)
 
 	// Close stops the Probe.
 	Close() error
@@ -315,7 +316,7 @@ type SpanProducer[BPFObj any, BPFEvent any] struct {
 }
 
 // Run runs the events processing loop.
-func (i *SpanProducer[BPFObj, BPFEvent]) Run(handle func(ptrace.ScopeSpans)) {
+func (i *SpanProducer[BPFObj, BPFEvent]) Run(h export.Handler) {
 	for {
 		event, err := i.read()
 		if err != nil {
@@ -328,26 +329,26 @@ func (i *SpanProducer[BPFObj, BPFEvent]) Run(handle func(ptrace.ScopeSpans)) {
 			continue
 		}
 
-		ss := ptrace.NewScopeSpans()
+		t := new(export.Telemetry)
 
-		ss.Scope().SetName("go.opentelemetry.io/auto/" + i.ID.InstrumentedPkg)
-		ss.Scope().SetVersion(i.Version)
-		ss.SetSchemaUrl(i.SchemaURL)
+		t.Scope().SetName("go.opentelemetry.io/auto/" + i.ID.InstrumentedPkg)
+		t.Scope().SetVersion(i.Version)
+		t.SetSchemaURL(i.SchemaURL)
 
-		i.ProcessFn(event).CopyTo(ss.Spans())
+		i.ProcessFn(event).CopyTo(t.Spans())
 
-		handle(ss)
+		h.Handle(t)
 	}
 }
 
 type TraceProducer[BPFObj any, BPFEvent any] struct {
 	Base[BPFObj, BPFEvent]
 
-	ProcessFn func(*BPFEvent) ptrace.ScopeSpans
+	ProcessFn func(*BPFEvent) *export.Telemetry
 }
 
 // Run runs the events processing loop.
-func (i *TraceProducer[BPFObj, BPFEvent]) Run(handle func(ptrace.ScopeSpans)) {
+func (i *TraceProducer[BPFObj, BPFEvent]) Run(h export.Handler) {
 	for {
 		event, err := i.read()
 		if err != nil {
@@ -360,7 +361,9 @@ func (i *TraceProducer[BPFObj, BPFEvent]) Run(handle func(ptrace.ScopeSpans)) {
 			continue
 		}
 
-		handle(i.ProcessFn(event))
+		if t := i.ProcessFn(event); t != nil {
+			h.Handle(t)
+		}
 	}
 }
 
