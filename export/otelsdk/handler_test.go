@@ -1,0 +1,290 @@
+// Copyright The OpenTelemetry Authors
+// SPDX-License-Identifier: Apache-2.0
+
+package otelsdk
+
+import (
+	"context"
+	"fmt"
+	"math"
+	"sort"
+	"strconv"
+	"sync"
+	"sync/atomic"
+	"testing"
+	"time"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
+	"go.opentelemetry.io/collector/pdata/pcommon"
+	"go.opentelemetry.io/collector/pdata/ptrace"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/sdk/instrumentation"
+	"go.opentelemetry.io/otel/sdk/resource"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	"go.opentelemetry.io/otel/sdk/trace/tracetest"
+	"go.opentelemetry.io/otel/trace"
+
+	"go.opentelemetry.io/auto/export"
+)
+
+const service = "handler_test"
+
+var (
+	pAttrs = func() pcommon.Map {
+		m := pcommon.NewMap()
+		m.PutBool("bool", true)
+		m.PutInt("int64", 43)
+		m.PutDouble("float64", -1.238)
+		m.PutStr("string.a", "a")
+		m.PutStr("string.b", "b")
+		_ = m.PutEmptySlice("bool.slice").FromRaw([]any{true, false, true})
+		_ = m.PutEmptySlice("int.slice").FromRaw([]any{-2, 2, 34})
+		_ = m.PutEmptySlice("float64.slice").FromRaw([]any{-2., .0832, 43e12})
+		_ = m.PutEmptySlice("string.slice").FromRaw([]any{"x", "y", "z"})
+		return m
+	}()
+
+	oAttrs = func() []attribute.KeyValue {
+		out := []attribute.KeyValue{
+			attribute.Bool("bool", true),
+			attribute.Int64("int64", 43),
+			attribute.Float64("float64", -1.238),
+			attribute.String("string.a", "a"),
+			attribute.String("string.b", "b"),
+			attribute.BoolSlice("bool.slice", []bool{true, false, true}),
+			attribute.IntSlice("int.slice", []int{-2, 2, 34}),
+			attribute.Float64Slice("float64.slice", []float64{-2., .0832, 43e12}),
+			attribute.StringSlice("string.slice", []string{"x", "y", "z"}),
+		}
+		sort.Slice(out, func(i, j int) bool {
+			return out[i].Key < out[j].Key
+		})
+		return out
+	}()
+)
+
+var defaultRes = func() *resource.Resource {
+	c, err := newConfig(context.Background(), []Option{
+		WithServiceName(service),
+	})
+	if err != nil {
+		panic(err)
+	}
+	r, err := resource.Merge(resource.Environment(), c.resource())
+	if err != nil {
+		panic(err)
+	}
+	return r
+}()
+
+func TestHandlerHandleTrace(t *testing.T) {
+	tel := new(export.Telemetry)
+
+	const schemaURL = "http://localhost/1.0.0"
+	tel.SetSchemaURL(schemaURL)
+
+	scope := tel.Scope()
+
+	const scopeName = "go.opentelemetry.io/auto/export/otelsdk/test"
+	scope.SetName(scopeName)
+	const scopeVer = "v0.0.1"
+	scope.SetVersion(scopeVer)
+	pAttrs.CopyTo(scope.Attributes())
+
+	span := tel.Spans().AppendEmpty()
+
+	const spanName = "test.span"
+	span.SetName(spanName)
+
+	tid := trace.TraceID{0x1}
+	span.SetTraceID(pcommon.TraceID(tid))
+	sid := trace.SpanID{0x1}
+	span.SetSpanID(pcommon.SpanID(sid))
+	const spanFlags = 1
+	span.SetFlags(spanFlags)
+
+	span.SetKind(ptrace.SpanKindClient)
+
+	startTime := time.Unix(0, 0).UTC()
+	span.SetStartTimestamp(pcommon.NewTimestampFromTime(startTime))
+	endTime := time.Unix(1, 0).UTC()
+	span.SetEndTimestamp(pcommon.NewTimestampFromTime(endTime))
+
+	pAttrs.CopyTo(span.Attributes())
+
+	ctx := context.Background()
+	exp := newExporter()
+	handler, err := New(ctx, WithTraceExporter(exp), WithServiceName(service))
+	require.NoError(t, err)
+
+	// Note: DroppedAttributesCount not supported.
+	link := span.Links().AppendEmpty()
+	link.SetTraceID(pcommon.TraceID(tid))
+	link.SetSpanID(pcommon.SpanID(sid))
+	link.SetFlags(1)
+	pAttrs.CopyTo(link.Attributes())
+
+	event := span.Events().AppendEmpty()
+	const eventName = "event"
+	event.SetName(eventName)
+	pAttrs.CopyTo(event.Attributes())
+	event.SetTimestamp(pcommon.NewTimestampFromTime(startTime))
+
+	handler.Handle(tel)
+	require.NoError(t, handler.Shutdown(ctx))
+	got := exp.GetSpans()
+
+	wantScope := instrumentation.Scope{
+		Name:       scopeName,
+		Version:    scopeVer,
+		SchemaURL:  schemaURL,
+		Attributes: attribute.NewSet(oAttrs...),
+	}
+	want := tracetest.SpanStubs{
+		{
+			Resource:               defaultRes,
+			InstrumentationLibrary: wantScope,
+			InstrumentationScope:   wantScope,
+			Name:                   spanName,
+			SpanKind:               trace.SpanKindClient,
+			StartTime:              startTime,
+			EndTime:                endTime,
+			Attributes:             oAttrs,
+			Links: []sdktrace.Link{
+				{
+					SpanContext: trace.NewSpanContext(trace.SpanContextConfig{
+						TraceID:    tid,
+						SpanID:     sid,
+						TraceFlags: 1,
+					}),
+					Attributes: oAttrs,
+				},
+			},
+			Events: []sdktrace.Event{
+				{
+					Name:       eventName,
+					Attributes: oAttrs,
+					Time:       startTime,
+				},
+			},
+		},
+	}
+	assert.Equal(t, len(want), len(got))
+
+	for i, span := range got {
+		// Span contexts get modified by exporter, update expected with output.
+		want[i].SpanContext = span.SpanContext
+
+		sort.Slice(span.Attributes, func(i, j int) bool {
+			return span.Attributes[i].Key < span.Attributes[j].Key
+		})
+
+		for _, link := range span.Links {
+			sort.Slice(link.Attributes, func(i, j int) bool {
+				return link.Attributes[i].Key < link.Attributes[j].Key
+			})
+		}
+
+		for _, e := range span.Events {
+			sort.Slice(e.Attributes, func(i, j int) bool {
+				return e.Attributes[i].Key < e.Attributes[j].Key
+			})
+		}
+	}
+	assert.Equal(t, want, got)
+}
+
+type exporter struct {
+	*tracetest.InMemoryExporter
+}
+
+func newExporter() *exporter {
+	return &exporter{
+		InMemoryExporter: tracetest.NewInMemoryExporter(),
+	}
+}
+
+func (exporter) Shutdown(context.Context) error {
+	// Override InMemoryExporter behavior.
+	return nil
+}
+
+type shutdownExporter struct {
+	sdktrace.SpanExporter
+
+	exported atomic.Uint32
+	called   bool
+}
+
+// ExportSpans handles export of spans by storing them in memory.
+func (e *shutdownExporter) ExportSpans(_ context.Context, spans []sdktrace.ReadOnlySpan) error {
+	n := len(spans)
+	if n < 0 || n > math.MaxUint32 {
+		return fmt.Errorf("invalid span length: %d", n)
+	}
+	e.exported.Add(uint32(n)) // nolint: gosec  // Bound checked
+	return nil
+}
+
+func (e *shutdownExporter) Shutdown(context.Context) error {
+	e.called = true
+	return nil
+}
+
+func TestHandlerShutdown(t *testing.T) {
+	const nSpan = 10
+
+	exp := new(shutdownExporter)
+
+	t.Setenv("OTEL_BSP_MAX_QUEUE_SIZE", strconv.Itoa(nSpan+1))
+	t.Setenv("OTEL_BSP_MAX_EXPORT_BATCH_SIZE", strconv.Itoa(nSpan+1))
+	// Ensure we are checking Shutdown flushes the queue.
+	t.Setenv("OTEL_BSP_SCHEDULE_DELAY", "36000")
+
+	ctx := context.Background()
+	handler, err := New(ctx, WithTraceExporter(exp))
+	require.NoError(t, err)
+
+	for i := 0; i < nSpan; i++ {
+		tel := new(export.Telemetry)
+		tel.Scope().SetName("test")
+		span := tel.Spans().AppendEmpty()
+		span.SetName("span" + strconv.Itoa(i))
+		span.SetTraceID(pcommon.TraceID{0x1})
+		span.SetSpanID(pcommon.SpanID{0x1})
+		handler.Handle(tel)
+	}
+
+	require.NoError(t, handler.Shutdown(ctx))
+	assert.True(t, exp.called, "Exporter not shutdown")
+	assert.Equal(t, uint32(nSpan), exp.exported.Load(), "Pending spans not flushed")
+}
+
+func TestControllerTraceConcurrentSafe(t *testing.T) {
+	handler, err := New(context.Background())
+	assert.NoError(t, err)
+
+	const goroutines = 10
+
+	var wg sync.WaitGroup
+	for n := 0; n < goroutines; n++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+
+			tel := new(export.Telemetry)
+			tel.Scope().SetName(fmt.Sprintf("tracer-%d", n%(goroutines/2)))
+			tel.Scope().SetVersion("v1")
+			tel.SetSchemaURL("url")
+			span := tel.Spans().AppendEmpty()
+			span.SetName("test")
+			span.SetTraceID(pcommon.TraceID{0x1})
+			span.SetSpanID(pcommon.SpanID{0x1})
+			handler.Handle(tel)
+		}()
+	}
+
+	wg.Wait()
+}
