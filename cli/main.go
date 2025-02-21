@@ -14,7 +14,10 @@ import (
 	"strconv"
 	"syscall"
 
+	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
+
 	"go.opentelemetry.io/auto"
+	"go.opentelemetry.io/auto/export/otelsdk"
 )
 
 const help = `Usage of %s:
@@ -123,9 +126,28 @@ func main() {
 		}
 	}()
 
+	logger.Info(
+		"building OpenTelemetry Go instrumentation ...",
+		"globalImpl", globalImpl,
+		"version", newVersion(),
+	)
+
+	v := semconv.TelemetryDistroVersionKey.String(auto.Version())
+	h, err := otelsdk.New(
+		ctx,
+		otelsdk.WithEnv(),
+		otelsdk.WithLogger(logger),
+		otelsdk.WithResourceAttributes(v),
+	)
+	if err != nil {
+		logger.Error("failed to create OTel SDK handler", "error", err)
+		return
+	}
+
 	instOptions := []auto.InstrumentationOption{
 		auto.WithEnv(),
 		auto.WithLogger(logger),
+		auto.WithHandler(h),
 	}
 	if globalImpl {
 		instOptions = append(instOptions, auto.WithGlobal())
@@ -160,6 +182,16 @@ func main() {
 
 	if err = inst.Run(ctx); err != nil {
 		logger.Error("instrumentation crashed", "error", err)
+	}
+
+	logger.Info("shutting down")
+
+	ctx, cancel = signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer cancel()
+
+	err = h.Shutdown(ctx)
+	if err != nil {
+		logger.Error("failed to flush handler", "error", err)
 	}
 }
 
