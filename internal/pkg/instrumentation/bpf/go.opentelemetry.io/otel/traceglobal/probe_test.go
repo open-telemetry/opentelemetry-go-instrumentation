@@ -16,6 +16,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
 
+	"go.opentelemetry.io/auto/export"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/context"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/utils"
 )
@@ -102,14 +103,14 @@ func TestProbeConvertEvent(t *testing.T) {
 		},
 	})
 
-	want := func() ptrace.ScopeSpans {
-		ss := ptrace.NewScopeSpans()
+	want := func() *export.Telemetry {
+		t := new(export.Telemetry)
 
-		ss.Scope().SetName("user-tracer")
-		ss.Scope().SetVersion("v1")
-		ss.SetSchemaUrl("user-schema")
+		t.Scope().SetName("user-tracer")
+		t.Scope().SetVersion("v1")
+		t.SetSchemaURL("user-schema")
 
-		span := ss.Spans().AppendEmpty()
+		span := t.Spans().AppendEmpty()
 		span.SetName("Foo")
 		span.SetKind(ptrace.SpanKindClient)
 		span.SetStartTimestamp(utils.BootOffsetToTimestamp(startOffset))
@@ -126,7 +127,7 @@ func TestProbeConvertEvent(t *testing.T) {
 			attribute.String("string_key2", "string value 2"),
 		)
 
-		return ss
+		return t
 	}()
 	assert.Equal(t, want, got)
 }
