@@ -4,6 +4,7 @@ RUN apt-get update && apt-get install -y curl clang gcc llvm make libbpf-dev
 
 WORKDIR /usr/src/go.opentelemetry.io/auto/
 
+# Copy auto/sdk so `go mod` finds the replaced module.
 COPY sdk/ /usr/src/go.opentelemetry.io/auto/sdk/
 
 # pre-copy/cache go.mod for pre-downloading dependencies and only redownloading
