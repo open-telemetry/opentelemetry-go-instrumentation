@@ -11,6 +11,33 @@ for a summary description of past meetings. To request edit access,
 join the meeting or get in touch on
 [Slack](https://cloud-native.slack.com/archives/C03S01YSAS0).
 
+## Scope
+
+It is important to note what this project is and is not intended to achieve.
+This helps focus development to these intended areas and defines clear
+functional boundaries for the project.
+
+### What this project is
+
+This project aims to provide auto-instrumentation functionality for Go
+applications using eBPF and other process-external technologies. It conforms to
+OpenTelemetry standards and strives to be compatible with that ecosystem.
+
+This project is expected to be wrapped into some runnable executable that will
+further extend the functionality and ergonomics of the project. The `auto/cli`
+package is an example of a wrapping executable and is not apart of this scope.
+
+### What this project is not
+
+* **Process discovery**: This project does not discover nor manage process
+  auto-instrumentation life-cycles. It is expected that this is done external
+  to the `auto` package and the results are passed to any created
+  `Instrumentation`.
+* **Multi-language auto-instrumentation**: This project is focused on
+  instrumentation for the Golang programming language.
+* **Host instrumentation**: This project does not focus on instrumentation for
+  the host or platform running processes.
+
 ## Development
 
 ### Update `internal/include/libbpf`
