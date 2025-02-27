@@ -220,7 +220,7 @@ type noopHandler struct{}
 var _ export.Handler = noopHandler{}
 
 // Handle drops the passed telemetry.
-func (noopHandler) Handle(*export.Telemetry) error { return nil }
+func (noopHandler) Handle(*export.Telemetry) {}
 
 func TestRunStoppingByContext(t *testing.T) {
 	probeStop := make(chan struct{})
@@ -521,7 +521,7 @@ func (p *hangingProbe) Run(h export.Handler) {
 	<-p.closeReturned
 	// Write after Close has returned.
 	t := new(export.Telemetry)
-	_ = h.Handle(t)
+	h.Handle(t)
 }
 
 func (p *hangingProbe) Close() error {
