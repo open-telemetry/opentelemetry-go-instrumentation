@@ -5,33 +5,44 @@ package main
 
 import (
 	"context"
-	"errors"
 	"flag"
 	"fmt"
 	"log/slog"
 	"os"
 	"os/signal"
 	"path/filepath"
+	"strconv"
 	"syscall"
 
 	"go.opentelemetry.io/auto"
-	"go.opentelemetry.io/auto/internal/pkg/process"
 )
 
 const help = `Usage of %s:
   -global-impl
     	Record telemetry from the OpenTelemetry default global implementation
+  -target-pid int
+    	PID of target process
+  -target-exe string
+    	Executable path run by the target process
   -log-level string
-    	logging level ("debug", "info", "warn", "error")
+    	Logging level ("debug", "info", "warn", "error")
 
 Runs the OpenTelemetry auto-instrumentation for Go applications using eBPF.
 
+If both -target-pid and -target-exe are provided -target-exe will be ignored
+and -target-pid used.
+
 Environment variable configuration:
 
-	- OTEL_GO_AUTO_TARGET_EXE: sets the target binary
-	- OTEL_LOG_LEVEL: sets the log level (flag takes precedence)
-	- OTEL_SERVICE_NAME (or OTEL_RESOURCE_ATTRIBUTES): sets the service name
-	- OTEL_TRACES_EXPORTER: sets the trace exporter
+	- OTEL_GO_AUTO_TARGET_PID: PID of the target process
+	- OTEL_GO_AUTO_TARGET_EXE: executable path run by the target process
+	- OTEL_LOG_LEVEL: log level (flag takes precedence)
+	- OTEL_SERVICE_NAME (or OTEL_RESOURCE_ATTRIBUTES): service name
+	- OTEL_TRACES_EXPORTER: trace exporter identifier
+
+If the OTEL_GO_AUTO_TARGET_PID is only resolved if -target-exe or -target-pid
+is not provided. If none of these are set, OTEL_GO_AUTO_TARGET_EXE will be
+resolved.
 
 The OTEL_TRACES_EXPORTER environment variable value is resolved using the
 autoexport (go.opentelemetry.io/contrib/exporters/autoexport) package. See that
@@ -39,9 +50,17 @@ package's documentation for information on supported values and registration of
 custom exporters.
 `
 
-// envLogLevelKey is the key for the environment variable value containing the
-// log level.
-const envLogLevelKey = "OTEL_LOG_LEVEL"
+const (
+	// envLogLevelKey is the key for the environment variable value containing the
+	// log level.
+	envLogLevelKey = "OTEL_LOG_LEVEL"
+	// envTargetPIDKey is the environment variable key containing the target
+	// process ID to instrument.
+	envTargetPIDKey = "OTEL_GO_AUTO_TARGET_PID"
+	// envTargetExeKey is the environment variable key containing the path to
+	// target binary to instrument.
+	envTargetExeKey = "OTEL_GO_AUTO_TARGET_EXE"
+)
 
 func usage() {
 	program := filepath.Base(os.Args[0])
@@ -75,9 +94,13 @@ func newLogger(lvlStr string) *slog.Logger {
 func main() {
 	var globalImpl bool
 	var logLevel string
+	var targetPID int
+	var targetExe string
 
 	flag.BoolVar(&globalImpl, "global-impl", false, "Record telemetry from the OpenTelemetry default global implementation")
-	flag.StringVar(&logLevel, "log-level", "", `logging level ("debug", "info", "warn", "error")`)
+	flag.StringVar(&logLevel, "log-level", "", `Logging level ("debug", "info", "warn", "error")`)
+	flag.IntVar(&targetPID, "target-pid", -1, `PID of target process`)
+	flag.StringVar(&targetExe, "target-exe", "", `Executable path run by the target process`)
 
 	flag.Usage = usage
 	flag.Parse()
@@ -100,12 +123,6 @@ func main() {
 		}
 	}()
 
-	logger.Info(
-		"building OpenTelemetry Go instrumentation ...",
-		"globalImpl", globalImpl,
-		"version", newVersion(),
-	)
-
 	instOptions := []auto.InstrumentationOption{
 		auto.WithEnv(),
 		auto.WithLogger(logger),
@@ -113,6 +130,19 @@ func main() {
 	if globalImpl {
 		instOptions = append(instOptions, auto.WithGlobal())
 	}
+	pid, err := findPID(ctx, logger, targetPID, targetExe)
+	if err != nil {
+		logger.Error("failed to find target", "error", err)
+		return
+	}
+	instOptions = append(instOptions, auto.WithPID(pid))
+
+	logger.Info(
+		"building OpenTelemetry Go instrumentation ...",
+		"globalImpl", globalImpl,
+		"PID", pid,
+		"version", newVersion(),
+	)
 
 	inst, err := auto.NewInstrumentation(ctx, instOptions...)
 	if err != nil {
@@ -128,7 +158,50 @@ func main() {
 
 	logger.Info("instrumentation loaded successfully, starting...")
 
-	if err = inst.Run(ctx); err != nil && !errors.Is(err, process.ErrInterrupted) {
+	if err = inst.Run(ctx); err != nil {
 		logger.Error("instrumentation crashed", "error", err)
 	}
+}
+
+func findPID(ctx context.Context, l *slog.Logger, pid int, binPath string) (int, error) {
+	// Priority:
+	//  1. pid
+	//  2. binPath
+	//  3. OTEL_GO_AUTO_TARGET_PID
+	//  4. OTEL_GO_AUTO_TARGET_EXE
+
+	l.Debug(
+		"finding target PID",
+		"PID", pid,
+		"executable", binPath,
+		envTargetPIDKey, os.Getenv(envTargetPIDKey),
+		envTargetExeKey, os.Getenv(envTargetExeKey),
+	)
+
+	if pid >= 0 {
+		return pid, nil
+	}
+
+	if binPath != "" {
+		pp := ProcessPoller{Logger: l, BinPath: binPath}
+		return pp.Poll(ctx)
+	}
+
+	pidStr := os.Getenv(envTargetPIDKey)
+	if pidStr != "" {
+		pid, err := strconv.Atoi(pidStr)
+		if err != nil {
+			return 0, fmt.Errorf("invalid OTEL_GO_AUTO_TARGET_PID value: %s: %w", pidStr, err)
+		}
+		return pid, nil
+	}
+
+	binPath = os.Getenv(envTargetExeKey)
+	if binPath != "" {
+		pp := ProcessPoller{Logger: l, BinPath: binPath}
+		return pp.Poll(ctx)
+	}
+
+	const msg = "undefined target: -target-pid or -target-exe not provided and the env vars %s and %s are unset"
+	return -1, fmt.Errorf(msg, envTargetPIDKey, envTargetExeKey)
 }
