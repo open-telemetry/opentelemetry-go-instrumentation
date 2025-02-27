@@ -132,7 +132,7 @@ func TestHandlerHandleTrace(t *testing.T) {
 	pAttrs.CopyTo(event.Attributes())
 	event.SetTimestamp(pcommon.NewTimestampFromTime(startTime))
 
-	require.NoError(t, handler.Handle(tel))
+	handler.Handle(tel)
 	require.NoError(t, handler.Shutdown(ctx))
 	got := exp.GetSpans()
 
@@ -254,7 +254,7 @@ func TestHandlerShutdown(t *testing.T) {
 		span.SetName("span" + strconv.Itoa(i))
 		span.SetTraceID(pcommon.TraceID{0x1})
 		span.SetSpanID(pcommon.SpanID{0x1})
-		require.NoError(t, handler.Handle(tel))
+		handler.Handle(tel)
 	}
 
 	require.NoError(t, handler.Shutdown(ctx))
@@ -282,7 +282,7 @@ func TestControllerTraceConcurrentSafe(t *testing.T) {
 			span.SetName("test")
 			span.SetTraceID(pcommon.TraceID{0x1})
 			span.SetSpanID(pcommon.SpanID{0x1})
-			require.NoError(t, handler.Handle(tel))
+			handler.Handle(tel)
 		}()
 	}
 

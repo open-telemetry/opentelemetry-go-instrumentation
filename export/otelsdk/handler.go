@@ -52,9 +52,9 @@ func New(ctx context.Context, options ...Option) (*Handler, error) {
 }
 
 // Handles the passed telemetry using the default OpenTelemetry Go SDK.
-func (h *Handler) Handle(telemetry *export.Telemetry) error {
+func (h *Handler) Handle(telemetry *export.Telemetry) {
 	if telemetry == nil || h.stopped.Load() {
-		return nil
+		return
 	}
 
 	if telemetry.HasMetrics() {
@@ -66,8 +66,6 @@ func (h *Handler) Handle(telemetry *export.Telemetry) error {
 	}
 
 	h.handleTrace(telemetry.Scope(), telemetry.SchemaURL(), telemetry.Spans())
-
-	return nil
 }
 
 func (h *Handler) handleTrace(scope pcommon.InstrumentationScope, url string, spans ptrace.SpanSlice) {
