@@ -11,11 +11,21 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 ### Added
 
 - Cache offsets for `google.golang.org/grpc` `1.72.0-dev`. ([#1849](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1849))
+- The auto binary (built from `auto/cli`) can now be passed the target process PID directly using the `-target-pid` CLI option. ([#1890](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1890))
+- The auto binary (built from `auto/cli`) can now be passed the path of the target process executable directly using the `-target-exe` CLI option. ([#1890](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1890))
+- The auto binary (built from `auto/cli`) now resolves the target PID from the environment variable `"OTEL_GO_AUTO_TARGET_PID"` if no target options are passed. ([#1890](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1890))
+- The auto binary (built from `auto/cli`) will now only resolve the target process executable from the environment variable `"OTEL_GO_AUTO_TARGET_EXE"` if no target options are passed and `"OTEL_GO_AUTO_TARGET_PID"` is not set. ([#1890](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1890))
 
 ### Removed
 
 - Build support for Go 1.22 has been removed.
   Use Go >= 1.23 to develop and build the project. ([#1841](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1841))
+- Resolution of the environment variable `"OTEL_GO_AUTO_TARGET_EXE"` has been removed from `WithEnv`.
+  Note, the built binary (`auto/cli`) still supports resolution and use of this value.
+  If using the `auto` package directly, you will need to resolve this value yourself and pass the discovered process PID using `WithPID`. ([#1890](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1890))
+- The `WithTarget` function is removed.
+  The `auto` package no longer supports process discovery (note: the built binary (`auto/cli`) still supports process discovery).
+  Once a target process has been identified, use `WithPID` to configure `Instrumentation` instead. ([#1890](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1890))
 
 ## [v0.21.0] - 2025-02-18
 
