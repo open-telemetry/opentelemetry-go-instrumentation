@@ -163,6 +163,11 @@ func main() {
 	}
 }
 
+var errNoPID = fmt.Errorf(
+	"no target: -target-pid or -target-exe not provided and the env vars %s and %s are unset",
+	envTargetPIDKey, envTargetExeKey,
+)
+
 func findPID(ctx context.Context, l *slog.Logger, pid int, binPath string) (int, error) {
 	// Priority:
 	//  1. pid
@@ -183,8 +188,7 @@ func findPID(ctx context.Context, l *slog.Logger, pid int, binPath string) (int,
 	}
 
 	if binPath != "" {
-		pp := ProcessPoller{Logger: l, BinPath: binPath}
-		return pp.Poll(ctx)
+		return findExeFn(ctx, l, binPath)
 	}
 
 	pidStr := os.Getenv(envTargetPIDKey)
@@ -198,10 +202,16 @@ func findPID(ctx context.Context, l *slog.Logger, pid int, binPath string) (int,
 
 	binPath = os.Getenv(envTargetExeKey)
 	if binPath != "" {
-		pp := ProcessPoller{Logger: l, BinPath: binPath}
-		return pp.Poll(ctx)
+		return findExeFn(ctx, l, binPath)
 	}
 
-	const msg = "undefined target: -target-pid or -target-exe not provided and the env vars %s and %s are unset"
-	return -1, fmt.Errorf(msg, envTargetPIDKey, envTargetExeKey)
+	return -1, errNoPID
+}
+
+// Used for testing.
+var findExeFn = findExe
+
+func findExe(ctx context.Context, l *slog.Logger, exe string) (int, error) {
+	pp := ProcessPoller{Logger: l, BinPath: exe}
+	return pp.Poll(ctx)
 }
