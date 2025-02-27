@@ -95,8 +95,15 @@ func (pp *ProcessPoller) Poll(ctx context.Context) (int, error) {
 	}
 }
 
+// Overwritten in testing.
+var (
+	osReadDir  = os.ReadDir
+	osReadlink = os.Readlink
+	osReadFile = os.ReadFile
+)
+
 func (pp *ProcessPoller) find(path string) (int, error) {
-	entries, err := os.ReadDir(procDir)
+	entries, err := osReadDir(procDir)
 	if err != nil {
 		return 0, fmt.Errorf("failed to read %s: %w", procDir, err)
 	}
@@ -110,10 +117,10 @@ func (pp *ProcessPoller) find(path string) (int, error) {
 		if err != nil {
 			continue
 		}
-		exe, err := os.Readlink(procDir + "/" + name + "/exe")
+		exe, err := osReadlink(procDir + "/" + name + "/exe")
 		if err != nil {
 			// Readlink may fail if the target process is not run as root.
-			cmdLine, err := os.ReadFile(procDir + "/" + name + "/cmdline")
+			cmdLine, err := osReadFile(procDir + "/" + name + "/cmdline")
 			if err != nil {
 				return 0, err
 			}
