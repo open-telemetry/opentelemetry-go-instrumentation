@@ -337,7 +337,7 @@ func (i *SpanProducer[BPFObj, BPFEvent]) Run(h export.Handler) {
 
 		i.ProcessFn(event).CopyTo(t.Spans())
 
-		h.Handle(t)
+		_ = h.Handle(t)
 	}
 }
 
@@ -362,7 +362,7 @@ func (i *TraceProducer[BPFObj, BPFEvent]) Run(h export.Handler) {
 		}
 
 		if t := i.ProcessFn(event); t != nil {
-			h.Handle(t)
+			_ = h.Handle(t)
 		}
 	}
 }
