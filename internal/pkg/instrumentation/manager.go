@@ -385,8 +385,8 @@ func (m *Manager) loadProbes(target *process.Info) error {
 }
 
 func (m *Manager) mount(target *process.Info) error {
-	if target.AllocationDetails != nil {
-		m.logger.Debug("Mounting bpffs", "allocations_details", target.AllocationDetails)
+	if target.Allocation != nil {
+		m.logger.Debug("Mounting bpffs", "allocation", target.Allocation)
 	} else {
 		m.logger.Debug("Mounting bpffs")
 	}

@@ -107,13 +107,13 @@ func (o errOpt) apply(map[string]interface{}) error {
 	return o.err
 }
 
-// WithAllocationDetails returns an option that will set "total_cpus",
-// "start_addr", and "end_addr".
-func WithAllocationDetails(details process.AllocationDetails) Option {
+// WithAllocation returns an option that will set "total_cpus", "start_addr",
+// and "end_addr".
+func WithAllocation(alloc process.Allocation) Option {
 	return option{
-		keyTotalCPUs: details.NumCPU,
-		keyStartAddr: details.StartAddr,
-		keyEndAddr:   details.EndAddr,
+		keyTotalCPUs: alloc.NumCPU,
+		keyStartAddr: alloc.StartAddr,
+		keyEndAddr:   alloc.EndAddr,
 	}
 }
 
