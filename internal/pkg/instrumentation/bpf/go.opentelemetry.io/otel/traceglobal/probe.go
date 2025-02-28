@@ -257,8 +257,8 @@ type tracerIDContainsSchemaURL struct{}
 // https://github.com/open-telemetry/opentelemetry-go/pull/5426/files
 var schemaAddedToTracerKeyVer = semver.New(1, 28, 0, "", "")
 
-func (c tracerIDContainsSchemaURL) InjectOption(td *process.TargetDetails) (inject.Option, error) {
-	ver, ok := td.Modules["go.opentelemetry.io/otel"]
+func (c tracerIDContainsSchemaURL) InjectOption(info *process.Info) (inject.Option, error) {
+	ver, ok := info.Modules["go.opentelemetry.io/otel"]
 	if !ok {
 		return nil, fmt.Errorf("unknown module version: %s", pkg)
 	}
@@ -273,8 +273,8 @@ var scopeAttributesAddedToTracerKeyVer = semver.New(1, 32, 0, "", "")
 // tracerIDContainsScopeAttributes is a Probe Const defining whether the tracer key contains scope attributes.
 type tracerIDContainsScopeAttributes struct{}
 
-func (c tracerIDContainsScopeAttributes) InjectOption(td *process.TargetDetails) (inject.Option, error) {
-	ver, ok := td.Modules["go.opentelemetry.io/otel"]
+func (c tracerIDContainsScopeAttributes) InjectOption(info *process.Info) (inject.Option, error) {
+	ver, ok := info.Modules["go.opentelemetry.io/otel"]
 	if !ok {
 		return nil, fmt.Errorf("unknown module version: %s", pkg)
 	}

@@ -16,8 +16,8 @@ import (
 	"go.opentelemetry.io/auto/internal/pkg/process/binary"
 )
 
-// TargetDetails are the details about a target function.
-type TargetDetails struct {
+// Info are the details about a target process.
+type Info struct {
 	PID               int
 	Functions         []*binary.Func
 	GoVersion         *semver.Version
@@ -26,8 +26,8 @@ type TargetDetails struct {
 }
 
 // GetFunctionOffset returns the offset for of the function with name.
-func (t *TargetDetails) GetFunctionOffset(name string) (uint64, error) {
-	for _, f := range t.Functions {
+func (i *Info) GetFunctionOffset(name string) (uint64, error) {
+	for _, f := range i.Functions {
 		if f.Name == name {
 			return f.Offset, nil
 		}
@@ -38,8 +38,8 @@ func (t *TargetDetails) GetFunctionOffset(name string) (uint64, error) {
 
 // GetFunctionReturns returns the return value of the call for the function
 // with name.
-func (t *TargetDetails) GetFunctionReturns(name string) ([]uint64, error) {
-	for _, f := range t.Functions {
+func (i *Info) GetFunctionReturns(name string) ([]uint64, error) {
+	for _, f := range i.Functions {
 		if f.Name == name {
 			return f.ReturnOffsets, nil
 		}
@@ -49,14 +49,14 @@ func (t *TargetDetails) GetFunctionReturns(name string) ([]uint64, error) {
 }
 
 // OpenExe opens the executable of the target process for reading.
-func (t *TargetDetails) OpenExe() (*os.File, error) {
-	path := fmt.Sprintf("/proc/%d/exe", t.PID)
+func (i *Info) OpenExe() (*os.File, error) {
+	path := fmt.Sprintf("/proc/%d/exe", i.PID)
 	return os.Open(path)
 }
 
 // Analyze returns the target details for an actively running process.
-func (a *Analyzer) Analyze(pid int, relevantFuncs map[string]interface{}) (*TargetDetails, error) {
-	result := &TargetDetails{PID: pid}
+func (a *Analyzer) Analyze(pid int, relevantFuncs map[string]interface{}) (*Info, error) {
+	result := &Info{PID: pid}
 
 	f, err := result.OpenExe()
 	if err != nil {

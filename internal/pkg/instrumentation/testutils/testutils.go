@@ -21,7 +21,7 @@ var testGoVersion = semver.New(1, 22, 1, "", "")
 
 type TestProbe interface {
 	Spec() (*ebpf.CollectionSpec, error)
-	InjectConsts(td *process.TargetDetails, spec *ebpf.CollectionSpec) error
+	InjectConsts(*process.Info, *ebpf.CollectionSpec) error
 }
 
 func ProbesLoad(t *testing.T, p TestProbe, libs map[string]*semver.Version) {
@@ -30,7 +30,7 @@ func ProbesLoad(t *testing.T, p TestProbe, libs map[string]*semver.Version) {
 		return
 	}
 
-	td := &process.TargetDetails{
+	info := &process.Info{
 		PID: 1,
 		AllocationDetails: &process.AllocationDetails{
 			StartAddr: 140434497441792,
@@ -42,15 +42,15 @@ func ProbesLoad(t *testing.T, p TestProbe, libs map[string]*semver.Version) {
 		GoVersion: testGoVersion,
 	}
 	for k, v := range libs {
-		td.Modules[k] = v
+		info.Modules[k] = v
 	}
 
-	err = bpffs.Mount(td)
+	err = bpffs.Mount(info)
 	if !assert.NoError(t, err) {
 		return
 	}
 	defer func() {
-		_ = bpffs.Cleanup(td)
+		_ = bpffs.Cleanup(info)
 	}()
 
 	spec, err := p.Spec()
@@ -61,14 +61,14 @@ func ProbesLoad(t *testing.T, p TestProbe, libs map[string]*semver.Version) {
 	// Inject the same constants as the BPF program.
 	// It is important to inject the same constants as those that will be used in the actual run,
 	// since From Linux 5.5 the verifier will use constants to eliminate dead code.
-	err = p.InjectConsts(td, spec)
+	err = p.InjectConsts(info, spec)
 	if !assert.NoError(t, err) {
 		return
 	}
 
 	opts := ebpf.CollectionOptions{
 		Maps: ebpf.MapOptions{
-			PinPath: bpffs.PathForTargetApplication(td),
+			PinPath: bpffs.PathForTargetApplication(info),
 		},
 	}
 

@@ -148,8 +148,8 @@ func WithOffset(key string, id structfield.ID, ver *semver.Version) Option {
 	return WithKeyValue(key, off.Offset)
 }
 
-func FindOffset(id structfield.ID, td *process.TargetDetails) (structfield.OffsetKey, error) {
-	fd, err := td.OpenExe()
+func FindOffset(id structfield.ID, info *process.Info) (structfield.OffsetKey, error) {
+	fd, err := info.OpenExe()
 	if err != nil {
 		return structfield.OffsetKey{}, err
 	}

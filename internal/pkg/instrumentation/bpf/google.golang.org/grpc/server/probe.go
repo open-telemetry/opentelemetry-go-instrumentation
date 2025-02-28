@@ -198,8 +198,8 @@ type framePosConst struct{}
 // https://github.com/grpc/grpc-go/pull/6716/files#diff-4058722211b8d52e2d5b0c0b7542059ed447a04017b69520d767e94a9493409eR334
 var paramChangeVer = semver.New(1, 60, 0, "", "")
 
-func (c framePosConst) InjectOption(td *process.TargetDetails) (inject.Option, error) {
-	ver, ok := td.Modules[pkg]
+func (c framePosConst) InjectOption(info *process.Info) (inject.Option, error) {
+	ver, ok := info.Modules[pkg]
 	if !ok {
 		return nil, fmt.Errorf("unknown module version: %s", pkg)
 	}
@@ -214,8 +214,8 @@ var (
 	serverAddr           = false
 )
 
-func (w serverAddrConst) InjectOption(td *process.TargetDetails) (inject.Option, error) {
-	ver, ok := td.Modules[pkg]
+func (w serverAddrConst) InjectOption(info *process.Info) (inject.Option, error) {
+	ver, ok := info.Modules[pkg]
 	if !ok {
 		return nil, fmt.Errorf("unknown module version: %s", pkg)
 	}
