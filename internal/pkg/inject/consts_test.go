@@ -16,13 +16,13 @@ import (
 
 func TestWithAllocationDetails(t *testing.T) {
 	const start, end, nCPU uint64 = 1, 2, 3
-	details := process.AllocationDetails{
+	alloc := process.Allocation{
 		StartAddr: start,
 		EndAddr:   end,
 		NumCPU:    nCPU,
 	}
 
-	opts := []Option{WithAllocationDetails(details)}
+	opts := []Option{WithAllocation(alloc)}
 	got, err := newConsts(opts)
 	require.NoError(t, err)
 	require.Contains(t, got, keyTotalCPUs)

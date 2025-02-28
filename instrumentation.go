@@ -101,11 +101,11 @@ func NewInstrumentation(ctx context.Context, opts ...InstrumentationOption) (*In
 		return nil, err
 	}
 
-	allocDetails, err := process.Allocate(c.logger, pid)
+	alloc, err := process.Allocate(c.logger, pid)
 	if err != nil {
 		return nil, err
 	}
-	td.AllocationDetails = allocDetails
+	td.Allocation = alloc
 
 	c.logger.Info(
 		"target process analysis completed",

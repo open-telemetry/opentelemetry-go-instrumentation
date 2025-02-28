@@ -36,11 +36,10 @@ func TestProbeFiltering(t *testing.T) {
 		m := fakeManager(t)
 
 		info := process.Info{
-			PID:               1,
-			Functions:         []*binary.Func{},
-			GoVersion:         ver,
-			Modules:           map[string]*semver.Version{},
-			AllocationDetails: nil,
+			PID:       1,
+			Functions: []*binary.Func{},
+			GoVersion: ver,
+			Modules:   map[string]*semver.Version{},
 		}
 		m.FilterUnusedProbes(&info)
 		assert.Empty(t, m.probes)
@@ -54,11 +53,10 @@ func TestProbeFiltering(t *testing.T) {
 		}
 
 		info := process.Info{
-			PID:               1,
-			Functions:         httpFuncs,
-			GoVersion:         ver,
-			Modules:           map[string]*semver.Version{},
-			AllocationDetails: nil,
+			PID:       1,
+			Functions: httpFuncs,
+			GoVersion: ver,
+			Modules:   map[string]*semver.Version{},
 		}
 		m.FilterUnusedProbes(&info)
 		assert.Len(t, m.probes, 1) // one function, single probe
@@ -73,11 +71,10 @@ func TestProbeFiltering(t *testing.T) {
 		}
 
 		info := process.Info{
-			PID:               1,
-			Functions:         httpFuncs,
-			GoVersion:         ver,
-			Modules:           map[string]*semver.Version{},
-			AllocationDetails: nil,
+			PID:       1,
+			Functions: httpFuncs,
+			GoVersion: ver,
+			Modules:   map[string]*semver.Version{},
 		}
 		m.FilterUnusedProbes(&info)
 		assert.Len(t, m.probes, 2)
@@ -93,11 +90,10 @@ func TestProbeFiltering(t *testing.T) {
 		}
 
 		info := process.Info{
-			PID:               1,
-			Functions:         httpFuncs,
-			GoVersion:         ver,
-			Modules:           map[string]*semver.Version{},
-			AllocationDetails: nil,
+			PID:       1,
+			Functions: httpFuncs,
+			GoVersion: ver,
+			Modules:   map[string]*semver.Version{},
 		}
 		m.FilterUnusedProbes(&info)
 		assert.Len(t, m.probes, 1)

@@ -18,11 +18,11 @@ import (
 
 // Info are the details about a target process.
 type Info struct {
-	PID               int
-	Functions         []*binary.Func
-	GoVersion         *semver.Version
-	Modules           map[string]*semver.Version
-	AllocationDetails *AllocationDetails
+	PID        int
+	Functions  []*binary.Func
+	GoVersion  *semver.Version
+	Modules    map[string]*semver.Version
+	Allocation *Allocation
 }
 
 // GetFunctionOffset returns the offset for of the function with name.

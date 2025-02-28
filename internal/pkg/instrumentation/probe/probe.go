@@ -575,13 +575,13 @@ func (c StructFieldConstMinVersion) InjectOption(info *process.Info) (inject.Opt
 type AllocationConst struct{}
 
 // InjectOption returns the appropriately configured
-// [inject.WithAllocationDetails] if the [process.AllocationDetails] within td
-// are not nil. An error is returned if [process.AllocationDetails] is nil.
+// [inject.WithAllocation] if the [process.Allocation] within td
+// are not nil. An error is returned if [process.Allocation] is nil.
 func (c AllocationConst) InjectOption(info *process.Info) (inject.Option, error) {
-	if info.AllocationDetails == nil {
+	if info.Allocation == nil {
 		return nil, errors.New("no allocation details")
 	}
-	return inject.WithAllocationDetails(*info.AllocationDetails), nil
+	return inject.WithAllocation(*info.Allocation), nil
 }
 
 // KeyValConst is a [Const] for a generic key-value pair.
