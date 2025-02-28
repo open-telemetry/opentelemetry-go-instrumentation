@@ -47,7 +47,7 @@ const (
 // Instrumentation manages and controls all OpenTelemetry Go
 // auto-instrumentation.
 type Instrumentation struct {
-	target   *process.TargetDetails
+	target   *process.Info
 	analyzer *process.Analyzer
 	manager  *instrumentation.Manager
 

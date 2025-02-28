@@ -56,7 +56,7 @@ type Manager struct {
 	globalImpl      bool
 	cp              ConfigProvider
 	exe             *link.Executable
-	td              *process.TargetDetails
+	proc            *process.Info
 	stop            context.CancelCauseFunc
 	runningProbesWG sync.WaitGroup
 	currentConfig   Config
@@ -130,7 +130,7 @@ func (m *Manager) GetRelevantFuncs() map[string]interface{} {
 
 // FilterUnusedProbes filterers probes whose functions are already instrumented
 // out of the Manager.
-func (m *Manager) FilterUnusedProbes(target *process.TargetDetails) {
+func (m *Manager) FilterUnusedProbes(target *process.Info) {
 	existingFuncMap := make(map[string]interface{})
 	for _, f := range target.Functions {
 		existingFuncMap[f.Name] = nil
@@ -184,7 +184,7 @@ func isProbeEnabled(id probe.ID, c Config) bool {
 }
 
 func (m *Manager) applyConfig(c Config) error {
-	if m.td == nil {
+	if m.proc == nil {
 		return errors.New("failed to apply config: target details not set")
 	}
 	if m.exe == nil {
@@ -211,7 +211,7 @@ func (m *Manager) applyConfig(c Config) error {
 
 		if !currentlyEnabled && newEnabled {
 			m.logger.Info("Enabling probe", "id", id)
-			err = errors.Join(err, p.Load(m.exe, m.td, c.SamplingConfig))
+			err = errors.Join(err, p.Load(m.exe, m.proc, c.SamplingConfig))
 			if err == nil {
 				m.runProbe(p)
 			}
@@ -250,7 +250,7 @@ func (m *Manager) ConfigLoop(ctx context.Context) {
 	}
 }
 
-func (m *Manager) Load(ctx context.Context, target *process.TargetDetails) error {
+func (m *Manager) Load(ctx context.Context, target *process.Info) error {
 	if len(m.probes) == 0 {
 		return errors.New("no instrumentation for target process")
 	}
@@ -273,7 +273,7 @@ func (m *Manager) Load(ctx context.Context, target *process.TargetDetails) error
 		return err
 	}
 
-	m.td = target
+	m.proc = target
 	m.state = managerStateLoaded
 
 	return nil
@@ -343,7 +343,7 @@ func (m *Manager) Stop() error {
 	defer m.probeMu.Unlock()
 
 	m.logger.Debug("Shutting down all probes")
-	err := m.cleanup(m.td)
+	err := m.cleanup(m.proc)
 
 	// Wait for all probes to stop.
 	m.runningProbesWG.Wait()
@@ -352,7 +352,7 @@ func (m *Manager) Stop() error {
 	return err
 }
 
-func (m *Manager) loadProbes(target *process.TargetDetails) error {
+func (m *Manager) loadProbes(target *process.Info) error {
 	// Remove resource limits for kernels <5.11.
 	if err := rlimitRemoveMemlock(); err != nil {
 		return err
@@ -384,7 +384,7 @@ func (m *Manager) loadProbes(target *process.TargetDetails) error {
 	return nil
 }
 
-func (m *Manager) mount(target *process.TargetDetails) error {
+func (m *Manager) mount(target *process.Info) error {
 	if target.AllocationDetails != nil {
 		m.logger.Debug("Mounting bpffs", "allocations_details", target.AllocationDetails)
 	} else {
@@ -393,7 +393,7 @@ func (m *Manager) mount(target *process.TargetDetails) error {
 	return bpffsMount(target)
 }
 
-func (m *Manager) cleanup(target *process.TargetDetails) error {
+func (m *Manager) cleanup(target *process.Info) error {
 	ctx := context.Background()
 	err := m.cp.Shutdown(context.Background())
 	for _, i := range m.probes {

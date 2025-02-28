@@ -35,14 +35,14 @@ func TestProbeFiltering(t *testing.T) {
 	t.Run("empty target details", func(t *testing.T) {
 		m := fakeManager(t)
 
-		td := process.TargetDetails{
+		info := process.Info{
 			PID:               1,
 			Functions:         []*binary.Func{},
 			GoVersion:         ver,
 			Modules:           map[string]*semver.Version{},
 			AllocationDetails: nil,
 		}
-		m.FilterUnusedProbes(&td)
+		m.FilterUnusedProbes(&info)
 		assert.Empty(t, m.probes)
 	})
 
@@ -53,14 +53,14 @@ func TestProbeFiltering(t *testing.T) {
 			{Name: "net/http.(*Transport).roundTrip"},
 		}
 
-		td := process.TargetDetails{
+		info := process.Info{
 			PID:               1,
 			Functions:         httpFuncs,
 			GoVersion:         ver,
 			Modules:           map[string]*semver.Version{},
 			AllocationDetails: nil,
 		}
-		m.FilterUnusedProbes(&td)
+		m.FilterUnusedProbes(&info)
 		assert.Len(t, m.probes, 1) // one function, single probe
 	})
 
@@ -72,14 +72,14 @@ func TestProbeFiltering(t *testing.T) {
 			{Name: "net/http.serverHandler.ServeHTTP"},
 		}
 
-		td := process.TargetDetails{
+		info := process.Info{
 			PID:               1,
 			Functions:         httpFuncs,
 			GoVersion:         ver,
 			Modules:           map[string]*semver.Version{},
 			AllocationDetails: nil,
 		}
-		m.FilterUnusedProbes(&td)
+		m.FilterUnusedProbes(&info)
 		assert.Len(t, m.probes, 2)
 	})
 
@@ -92,14 +92,14 @@ func TestProbeFiltering(t *testing.T) {
 			{Name: "net/http.serverHandler.ServeHTTP"},
 		}
 
-		td := process.TargetDetails{
+		info := process.Info{
 			PID:               1,
 			Functions:         httpFuncs,
 			GoVersion:         ver,
 			Modules:           map[string]*semver.Version{},
 			AllocationDetails: nil,
 		}
-		m.FilterUnusedProbes(&td)
+		m.FilterUnusedProbes(&info)
 		assert.Len(t, m.probes, 1)
 	})
 }
@@ -205,8 +205,8 @@ func mockExeAndBpffs(t *testing.T) {
 	t.Cleanup(func() { rlimitRemoveMemlock = origRlimitRemoveMemlock })
 
 	origBpffsMount := bpffsMount
-	bpffsMount = func(td *process.TargetDetails) error {
-		if td == nil {
+	bpffsMount = func(info *process.Info) error {
+		if info == nil {
 			return errors.New("target is nil in Mount")
 		}
 		return nil
@@ -214,8 +214,8 @@ func mockExeAndBpffs(t *testing.T) {
 	t.Cleanup(func() { bpffsMount = origBpffsMount })
 
 	origBpffsCleanup := bpffsCleanup
-	bpffsCleanup = func(td *process.TargetDetails) error {
-		if td == nil {
+	bpffsCleanup = func(info *process.Info) error {
+		if info == nil {
 			return errors.New("target is nil in Cleanup")
 		}
 		return nil
@@ -254,7 +254,7 @@ func TestRunStoppingByContext(t *testing.T) {
 	ctx, stopCtx := context.WithCancel(context.Background())
 	errCh := make(chan error, 1)
 
-	err = m.Load(ctx, &process.TargetDetails{PID: 1000})
+	err = m.Load(ctx, &process.Info{PID: 1000})
 	require.NoError(t, err)
 
 	go func() { errCh <- m.Run(ctx) }()
@@ -303,7 +303,7 @@ func TestRunStoppingByStop(t *testing.T) {
 	ctx := context.Background()
 	errCh := make(chan error, 1)
 
-	err = m.Load(ctx, &process.TargetDetails{PID: 1000})
+	err = m.Load(ctx, &process.Info{PID: 1000})
 	require.NoError(t, err)
 
 	time.AfterFunc(100*time.Millisecond, func() {
@@ -339,7 +339,7 @@ func newSlowProbe(stop chan struct{}) slowProbe {
 	}
 }
 
-func (p slowProbe) Load(*link.Executable, *process.TargetDetails, *sampling.Config) error {
+func (p slowProbe) Load(*link.Executable, *process.Info, *sampling.Config) error {
 	return nil
 }
 
@@ -358,7 +358,7 @@ type noopProbe struct {
 
 var _ probe.Probe = (*noopProbe)(nil)
 
-func (p *noopProbe) Load(*link.Executable, *process.TargetDetails, *sampling.Config) error {
+func (p *noopProbe) Load(*link.Executable, *process.Info, *sampling.Config) error {
 	p.loaded.Store(true)
 	return nil
 }
@@ -433,7 +433,7 @@ func TestConfigProvider(t *testing.T) {
 	mockExeAndBpffs(t)
 	runCtx, cancel := context.WithCancel(context.Background())
 
-	err := m.Load(runCtx, &process.TargetDetails{PID: 1000})
+	err := m.Load(runCtx, &process.Info{PID: 1000})
 	require.NoError(t, err)
 
 	runErr := make(chan error, 1)
@@ -532,7 +532,7 @@ func newHangingProbe() *hangingProbe {
 	return &hangingProbe{closeReturned: make(chan struct{})}
 }
 
-func (p *hangingProbe) Load(*link.Executable, *process.TargetDetails, *sampling.Config) error {
+func (p *hangingProbe) Load(*link.Executable, *process.Info, *sampling.Config) error {
 	return nil
 }
 
@@ -567,7 +567,7 @@ func TestRunStopDeadlock(t *testing.T) {
 	ctx, stopCtx := context.WithCancel(context.Background())
 	errCh := make(chan error, 1)
 
-	err = m.Load(ctx, &process.TargetDetails{PID: 1000})
+	err = m.Load(ctx, &process.Info{PID: 1000})
 	require.NoError(t, err)
 
 	go func() { errCh <- m.Run(ctx) }()
@@ -632,7 +632,7 @@ func TestStopBeforeRun(t *testing.T) {
 
 	mockExeAndBpffs(t)
 
-	err = m.Load(context.Background(), &process.TargetDetails{PID: 1000})
+	err = m.Load(context.Background(), &process.Info{PID: 1000})
 	require.NoError(t, err)
 	require.True(t, p.loaded.Load())
 

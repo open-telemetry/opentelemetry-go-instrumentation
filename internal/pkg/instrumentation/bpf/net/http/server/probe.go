@@ -151,15 +151,15 @@ var (
 	isPatternPathSupported = false
 )
 
-func (c patternPathSupportedConst) InjectOption(td *process.TargetDetails) (inject.Option, error) {
-	isPatternPathSupported = td.GoVersion.GreaterThanEqual(patternPathMinVersion)
+func (c patternPathSupportedConst) InjectOption(info *process.Info) (inject.Option, error) {
+	isPatternPathSupported = info.GoVersion.GreaterThanEqual(patternPathMinVersion)
 	return inject.WithKeyValue("pattern_path_supported", isPatternPathSupported), nil
 }
 
 type swissMapsUsedConst struct{}
 
-func (c swissMapsUsedConst) InjectOption(td *process.TargetDetails) (inject.Option, error) {
-	isUsingGoSwissMaps := td.GoVersion.GreaterThanEqual(goMapsVersion)
+func (c swissMapsUsedConst) InjectOption(info *process.Info) (inject.Option, error) {
+	isUsingGoSwissMaps := info.GoVersion.GreaterThanEqual(goMapsVersion)
 	return inject.WithKeyValue("swiss_maps_used", isUsingGoSwissMaps), nil
 }
 
