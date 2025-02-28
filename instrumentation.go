@@ -24,6 +24,16 @@ import (
 	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
 
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation"
+	dbSql "go.opentelemetry.io/auto/internal/pkg/instrumentation/bpf/database/sql"
+	kafkaConsumer "go.opentelemetry.io/auto/internal/pkg/instrumentation/bpf/github.com/segmentio/kafka-go/consumer"
+	kafkaProducer "go.opentelemetry.io/auto/internal/pkg/instrumentation/bpf/github.com/segmentio/kafka-go/producer"
+	autosdk "go.opentelemetry.io/auto/internal/pkg/instrumentation/bpf/go.opentelemetry.io/auto/sdk"
+	otelTraceGlobal "go.opentelemetry.io/auto/internal/pkg/instrumentation/bpf/go.opentelemetry.io/otel/traceglobal"
+	grpcClient "go.opentelemetry.io/auto/internal/pkg/instrumentation/bpf/google.golang.org/grpc/client"
+	grpcServer "go.opentelemetry.io/auto/internal/pkg/instrumentation/bpf/google.golang.org/grpc/server"
+	httpClient "go.opentelemetry.io/auto/internal/pkg/instrumentation/bpf/net/http/client"
+	httpServer "go.opentelemetry.io/auto/internal/pkg/instrumentation/bpf/net/http/server"
+	"go.opentelemetry.io/auto/internal/pkg/instrumentation/probe"
 	"go.opentelemetry.io/auto/internal/pkg/opentelemetry"
 	"go.opentelemetry.io/auto/internal/pkg/process"
 )
@@ -90,8 +100,23 @@ func NewInstrumentation(ctx context.Context, opts ...InstrumentationOption) (*In
 		return nil, err
 	}
 
+	p := []probe.Probe{
+		grpcClient.New(c.logger, Version()),
+		grpcServer.New(c.logger, Version()),
+		httpServer.New(c.logger, Version()),
+		httpClient.New(c.logger, Version()),
+		dbSql.New(c.logger, Version()),
+		kafkaProducer.New(c.logger, Version()),
+		kafkaConsumer.New(c.logger, Version()),
+		autosdk.New(c.logger),
+	}
+
+	if c.globalImpl {
+		p = append(p, otelTraceGlobal.New(c.logger))
+	}
+
 	cp := convertConfigProvider(c.cp)
-	mngr, err := instrumentation.NewManager(c.logger, ctrl, c.globalImpl, cp, Version())
+	mngr, err := instrumentation.NewManager(c.logger, ctrl, cp, p...)
 	if err != nil {
 		return nil, err
 	}
