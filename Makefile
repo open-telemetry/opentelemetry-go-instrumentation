@@ -57,8 +57,11 @@ $(TOOLS)/offsetgen: PACKAGE=go.opentelemetry.io/auto/$(TOOLS_MOD_DIR)/inspect/cm
 SYNCLIBBPF = $(TOOLS)/synclibbpf
 $(TOOLS)/synclibbpf: PACKAGE=go.opentelemetry.io/auto/$(TOOLS_MOD_DIR)/synclibbpf
 
+CROSSLINK = $(TOOLS)/crosslink
+$(TOOLS)/crosslink: PACKAGE=go.opentelemetry.io/build-tools/crosslink
+
 .PHONY: tools
-tools: $(GOLICENSES) $(MULTIMOD) $(GOLANGCI_LINT) $(DBOTCONF) $(OFFSETGEN) $(SYNCLIBBPF)
+tools: $(GOLICENSES) $(MULTIMOD) $(GOLANGCI_LINT) $(DBOTCONF) $(OFFSETGEN) $(SYNCLIBBPF) $(CROSSLINK)
 
 TEST_TARGETS := test-verbose test-ebpf test-race
 .PHONY: $(TEST_TARGETS) test
@@ -89,20 +92,24 @@ generate/all:
 
 .PHONY: docker-generate
 docker-generate: docker-build-base
-	docker run --rm -v $(shell pwd):/app $(IMG_NAME_BASE) /bin/sh -c "cd ../app && make generate"
+	docker run --rm -v $(shell pwd):/app $(IMG_NAME_BASE) /bin/sh -c "cd /app && make generate"
 
 .PHONY: docker-test
 docker-test: docker-build-base
-	docker run --rm -v $(shell pwd):/app $(IMG_NAME_BASE) /bin/sh -c "cd ../app && make test"
+	docker run --rm -v $(shell pwd):/app $(IMG_NAME_BASE) /bin/sh -c "cd /app && make test"
 
 .PHONY: docker-precommit
 docker-precommit: docker-build-base
-	docker run --rm -v $(shell pwd):/app $(IMG_NAME_BASE) /bin/sh -c "cd ../app && make precommit"
+	docker run --rm -v $(shell pwd):/app $(IMG_NAME_BASE) /bin/sh -c "cd /app && make precommit"
+
+.PHONY: crosslink
+crosslink: $(CROSSLINK)
+	@$(CROSSLINK) --root=$(REPODIR) --prune
 
 .PHONY: go-mod-tidy
 go-mod-tidy: $(ALL_GO_MOD_DIRS:%=go-mod-tidy/%)
 go-mod-tidy/%: DIR=$*
-go-mod-tidy/%:
+go-mod-tidy/%: crosslink
 	@cd $(DIR) && $(GOCMD) mod tidy -compat=1.20
 
 .PHONY: golangci-lint golangci-lint-fix
