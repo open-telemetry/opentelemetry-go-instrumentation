@@ -239,7 +239,7 @@ func newInstConfig(ctx context.Context, opts []InstrumentationOption) (instConfi
 
 func (c instConfig) defaultServiceName() string {
 	name := "unknown_service"
-	if exe, err := c.pid.ExePath(); err == nil {
+	if exe, err := c.pid.ExeLink(); err == nil {
 		name = fmt.Sprintf("%s:%s", name, filepath.Base(exe))
 	}
 	return name

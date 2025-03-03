@@ -214,7 +214,7 @@ func fakeManager(t *testing.T) *Manager {
 
 func mockExeAndBpffs(t *testing.T) {
 	origOpenExecutable := openExecutable
-	openExecutable = func(int) (*link.Executable, error) { return &link.Executable{}, nil }
+	openExecutable = func(string) (*link.Executable, error) { return &link.Executable{}, nil }
 	t.Cleanup(func() { openExecutable = origOpenExecutable })
 
 	origRlimitRemoveMemlock := rlimitRemoveMemlock
