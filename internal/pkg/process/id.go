@@ -56,16 +56,16 @@ var procDir = procDirFn
 
 func procDirFn(id ID) string { return "/proc/" + strconv.Itoa(int(id)) }
 
-// exePath returns the file path for executable link of the process ID.
-func (id ID) exePath() string { return id.dir() + "/exe" }
+// ExePath returns the file path for the executable link of the process ID.
+func (id ID) ExePath() string { return id.dir() + "/exe" }
 
 // taskPath returns the file path for the tasks directory of the process ID.
 func (id ID) taskPath() string { return id.dir() + "/task" }
 
-// ExePath returns the resolved absolute path to the executable being run by
-// the process.
-func (id ID) ExePath() (string, error) {
-	p, err := os.Readlink(id.exePath())
+// ExeLink returns the resolved absolute path to the linked executable being
+// run by the process.
+func (id ID) ExeLink() (string, error) {
+	p, err := os.Readlink(id.ExePath())
 	if err != nil {
 		return "", err
 	}
@@ -83,11 +83,7 @@ func (id ID) Tasks() ([]fs.DirEntry, error) {
 
 // BuildInfo returns the Go build info of the process ID executable.
 func (id ID) BuildInfo() (*buildinfo.BuildInfo, error) {
-	path, err := id.ExePath()
-	if err != nil {
-		return nil, err
-	}
-	bi, err := buildinfoReadFile(path)
+	bi, err := buildinfoReadFile(id.ExePath())
 	if err != nil {
 		return nil, err
 	}

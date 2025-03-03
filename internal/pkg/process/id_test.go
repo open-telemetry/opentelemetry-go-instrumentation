@@ -119,7 +119,7 @@ func TestIDValidate(t *testing.T) {
 	})
 }
 
-func TestIDExePath(t *testing.T) {
+func TestIDExeLink(t *testing.T) {
 	const pid = 100
 	app := setup(t, pid)
 
@@ -129,7 +129,7 @@ func TestIDExePath(t *testing.T) {
 		require.NoError(t, os.Symlink(app.Name(), ln))
 		t.Cleanup(func() { require.NoError(t, os.Remove(ln)) })
 
-		got, err := ID(pid).ExePath()
+		got, err := ID(pid).ExeLink()
 		require.NoError(t, err)
 		assert.Equal(t, app.Name(), got)
 	})
@@ -138,7 +138,7 @@ func TestIDExePath(t *testing.T) {
 		require.NoError(t, os.Symlink("../app", ln))
 		t.Cleanup(func() { require.NoError(t, os.Remove(ln)) })
 
-		got, err := ID(pid).ExePath()
+		got, err := ID(pid).ExeLink()
 		require.NoError(t, err)
 		assert.Equal(t, app.Name(), got)
 	})
@@ -170,7 +170,7 @@ func TestIDBuildInfo(t *testing.T) {
 	t.Cleanup(func() { buildinfoReadFile = orig })
 
 	buildinfoReadFile = func(name string) (*buildinfo.BuildInfo, error) {
-		assert.Equal(t, app.Name(), name, "wrong exe path")
+		assert.Equal(t, ID(pid).ExePath(), name, "wrong exe path")
 		return &debug.BuildInfo{
 			Path:      app.Name(),
 			GoVersion: "go1.22.0 X:testing",
