@@ -15,15 +15,6 @@ import (
 
 	"go.opentelemetry.io/otel/trace"
 
-	dbSql "go.opentelemetry.io/auto/internal/pkg/instrumentation/bpf/database/sql"
-	kafkaConsumer "go.opentelemetry.io/auto/internal/pkg/instrumentation/bpf/github.com/segmentio/kafka-go/consumer"
-	kafkaProducer "go.opentelemetry.io/auto/internal/pkg/instrumentation/bpf/github.com/segmentio/kafka-go/producer"
-	autosdk "go.opentelemetry.io/auto/internal/pkg/instrumentation/bpf/go.opentelemetry.io/auto/sdk"
-	otelTraceGlobal "go.opentelemetry.io/auto/internal/pkg/instrumentation/bpf/go.opentelemetry.io/otel/traceglobal"
-	grpcClient "go.opentelemetry.io/auto/internal/pkg/instrumentation/bpf/google.golang.org/grpc/client"
-	grpcServer "go.opentelemetry.io/auto/internal/pkg/instrumentation/bpf/google.golang.org/grpc/server"
-	httpClient "go.opentelemetry.io/auto/internal/pkg/instrumentation/bpf/net/http/client"
-	httpServer "go.opentelemetry.io/auto/internal/pkg/instrumentation/bpf/net/http/server"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/bpffs"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/probe"
 	"go.opentelemetry.io/auto/internal/pkg/opentelemetry"
@@ -50,10 +41,8 @@ const (
 // Manager handles the management of [probe.Probe] instances.
 type Manager struct {
 	logger          *slog.Logger
-	version         string
 	probes          map[probe.ID]probe.Probe
 	otelController  *opentelemetry.Controller
-	globalImpl      bool
 	cp              ConfigProvider
 	exe             *link.Executable
 	proc            *process.Info
@@ -66,17 +55,15 @@ type Manager struct {
 }
 
 // NewManager returns a new [Manager].
-func NewManager(logger *slog.Logger, otelController *opentelemetry.Controller, globalImpl bool, cp ConfigProvider, version string) (*Manager, error) {
+func NewManager(logger *slog.Logger, otelController *opentelemetry.Controller, cp ConfigProvider, probes ...probe.Probe) (*Manager, error) {
 	m := &Manager{
 		logger:         logger,
-		version:        version,
 		probes:         make(map[probe.ID]probe.Probe),
 		otelController: otelController,
-		globalImpl:     globalImpl,
 		cp:             cp,
 	}
 
-	err := m.registerProbes()
+	err := m.registerProbes(probes)
 	if err != nil {
 		return nil, err
 	}
@@ -410,27 +397,8 @@ func (m *Manager) cleanup(target *process.Info) error {
 	return errors.Join(err, bpffsCleanup(target))
 }
 
-func (m *Manager) availableProbes() []probe.Probe {
-	p := []probe.Probe{
-		grpcClient.New(m.logger, m.version),
-		grpcServer.New(m.logger, m.version),
-		httpServer.New(m.logger, m.version),
-		httpClient.New(m.logger, m.version),
-		dbSql.New(m.logger, m.version),
-		kafkaProducer.New(m.logger, m.version),
-		kafkaConsumer.New(m.logger, m.version),
-		autosdk.New(m.logger),
-	}
-
-	if m.globalImpl {
-		p = append(p, otelTraceGlobal.New(m.logger))
-	}
-
-	return p
-}
-
-func (m *Manager) registerProbes() error {
-	for _, p := range m.availableProbes() {
+func (m *Manager) registerProbes(probes []probe.Probe) error {
+	for _, p := range probes {
 		if err := m.registerProbe(p); err != nil {
 			return err
 		}
