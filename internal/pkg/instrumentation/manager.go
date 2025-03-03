@@ -23,7 +23,13 @@ import (
 
 // Function variables overridden in testing.
 var (
-	openExecutable      = link.OpenExecutable
+	openExecutable = func(id int) (*link.Executable, error) {
+		path, err := process.ID(id).ExePath()
+		if err != nil {
+			return nil, err
+		}
+		return link.OpenExecutable(path)
+	}
 	rlimitRemoveMemlock = rlimit.RemoveMemlock
 	bpffsMount          = bpffs.Mount
 	bpffsCleanup        = bpffs.Cleanup
@@ -345,7 +351,7 @@ func (m *Manager) loadProbes(target *process.Info) error {
 		return err
 	}
 
-	exe, err := openExecutable(fmt.Sprintf("/proc/%d/exe", target.PID))
+	exe, err := openExecutable(target.PID)
 	if err != nil {
 		return err
 	}

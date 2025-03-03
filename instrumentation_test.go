@@ -22,6 +22,7 @@ import (
 	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
 
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/probe/sampling"
+	"go.opentelemetry.io/auto/internal/pkg/process"
 )
 
 func TestWithServiceName(t *testing.T) {
@@ -42,7 +43,7 @@ func TestWithServiceName(t *testing.T) {
 func TestWithPID(t *testing.T) {
 	c, err := newInstConfig(context.Background(), []InstrumentationOption{WithPID(1)})
 	require.NoError(t, err)
-	assert.Equal(t, 1, c.targetPID)
+	assert.Equal(t, process.ID(1), c.pid)
 }
 
 func TestWithEnv(t *testing.T) {
