@@ -40,30 +40,12 @@ func TestWithServiceName(t *testing.T) {
 }
 
 func TestWithPID(t *testing.T) {
-	ctx := context.Background()
-
-	c, err := newInstConfig(ctx, []InstrumentationOption{WithPID(1)})
+	c, err := newInstConfig(context.Background(), []InstrumentationOption{WithPID(1)})
 	require.NoError(t, err)
-	assert.Equal(t, 1, c.target.Pid)
-
-	const exe = "./test/path/program/run.go"
-	// PID should override valid target exe
-	c, err = newInstConfig(ctx, []InstrumentationOption{WithTarget(exe), WithPID(1)})
-	require.NoError(t, err)
-	assert.Equal(t, 1, c.target.Pid)
-	assert.Equal(t, "", c.target.ExePath)
+	assert.Equal(t, 1, c.targetPID)
 }
 
 func TestWithEnv(t *testing.T) {
-	t.Run("OTEL_GO_AUTO_TARGET_EXE", func(t *testing.T) {
-		const path = "./test/path/program/run.go"
-		mockEnv(t, map[string]string{"OTEL_GO_AUTO_TARGET_EXE": path})
-		c, err := newInstConfig(context.Background(), []InstrumentationOption{WithEnv()})
-		require.NoError(t, err)
-		assert.Equal(t, path, c.target.ExePath)
-		assert.Equal(t, 0, c.target.Pid)
-	})
-
 	t.Run("OTEL_SERVICE_NAME", func(t *testing.T) {
 		const name = "test_service"
 		mockEnv(t, map[string]string{"OTEL_SERVICE_NAME": name})
@@ -130,39 +112,31 @@ func TestOptionPrecedence(t *testing.T) {
 
 	t.Run("Env", func(t *testing.T) {
 		mockEnv(t, map[string]string{
-			"OTEL_GO_AUTO_TARGET_EXE": path,
-			"OTEL_SERVICE_NAME":       name,
+			"OTEL_SERVICE_NAME": name,
 		})
 
 		// WithEnv passed last, it should have precedence.
 		opts := []InstrumentationOption{
-			WithPID(1),
 			WithServiceName("wrong"),
 			WithEnv(),
 		}
 		c, err := newInstConfig(context.Background(), opts)
 		require.NoError(t, err)
-		assert.Equal(t, path, c.target.ExePath)
-		assert.Equal(t, 0, c.target.Pid)
 		assert.Equal(t, name, c.serviceName)
 	})
 
 	t.Run("Options", func(t *testing.T) {
 		mockEnv(t, map[string]string{
-			"OTEL_GO_AUTO_TARGET_EXE": path,
-			"OTEL_SERVICE_NAME":       "wrong",
+			"OTEL_SERVICE_NAME": "wrong",
 		})
 
 		// WithEnv passed first, it should be overridden.
 		opts := []InstrumentationOption{
 			WithEnv(),
-			WithPID(1),
 			WithServiceName(name),
 		}
 		c, err := newInstConfig(context.Background(), opts)
 		require.NoError(t, err)
-		assert.Equal(t, "", c.target.ExePath)
-		assert.Equal(t, 1, c.target.Pid)
 		assert.Equal(t, name, c.serviceName)
 	})
 }
