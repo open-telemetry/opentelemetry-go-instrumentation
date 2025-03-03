@@ -355,15 +355,8 @@ func WithServiceName(serviceName string) InstrumentationOption {
 // WithPID returns an [InstrumentationOption] defining the target binary for
 // [Instrumentation] that is being run with the provided PID.
 //
-// This option conflicts with [WithTarget]. If both are used, the last one
-// provided to an [Instrumentation] will be used.
-//
 // If multiple of these options are provided to an [Instrumentation], the last
 // one will be used.
-//
-// If OTEL_GO_AUTO_TARGET_EXE is defined, this option will conflict with
-// [WithEnv]. If both are used, the last one provided to an [Instrumentation]
-// will be used.
 func WithPID(pid int) InstrumentationOption {
 	return fnOpt(func(_ context.Context, c instConfig) (instConfig, error) {
 		c.targetPID = pid
@@ -377,7 +370,6 @@ var lookupEnv = os.LookupEnv
 // [Instrumentation] using the values defined by the following environment
 // variables:
 //
-//   - OTEL_GO_AUTO_TARGET_EXE: sets the target binary
 //   - OTEL_SERVICE_NAME (or OTEL_RESOURCE_ATTRIBUTES): sets the service name
 //   - OTEL_TRACES_EXPORTER: sets the trace exporter
 //   - OTEL_GO_AUTO_GLOBAL: enables the OpenTelemetry global implementation
@@ -385,10 +377,10 @@ var lookupEnv = os.LookupEnv
 //   - OTEL_TRACES_SAMPLER: sets the trace sampler
 //   - OTEL_TRACES_SAMPLER_ARG: optionally sets the trace sampler argument
 //
-// This option may conflict with [WithTarget], [WithPID], [WithTraceExporter],
-// [WithServiceName], [WithGlobal], and [WithSampler] if their respective environment variable is defined.
-// If more than one of these options are used, the last one provided to an
-// [Instrumentation] will be used.
+// This option may conflict with [WithTraceExporter], [WithServiceName],
+// [WithGlobal], and [WithSampler] if their respective environment variable is
+// defined. If more than one of these options are used, the last one provided
+// to an [Instrumentation] will be used.
 //
 // If [WithLogger] is used, OTEL_LOG_LEVEL will not be used for the
 // [Instrumentation] logger. Instead, the [slog.Logger] passed to that option
