@@ -15,6 +15,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"syscall"
 
 	"go.opentelemetry.io/contrib/exporters/autoexport"
 	"go.opentelemetry.io/otel/attribute"
@@ -39,9 +40,6 @@ import (
 )
 
 const (
-	// envTargetExeKey is the key for the environment variable value pointing to the
-	// target binary to instrument.
-	envTargetExeKey = "OTEL_GO_AUTO_TARGET_EXE"
 	// envServiceName is the key for the envoriment variable value containing the service name.
 	envServiceNameKey = "OTEL_SERVICE_NAME"
 	// envResourceAttrKey is the key for the environment variable value containing
@@ -66,10 +64,6 @@ type Instrumentation struct {
 	stopped chan struct{}
 }
 
-// Error message returned when instrumentation is launched without a valid target
-// binary or pid.
-var errUndefinedTarget = fmt.Errorf("undefined target Go binary, consider setting the %s environment variable pointing to the target binary to instrument", envTargetExeKey)
-
 // NewInstrumentation returns a new [Instrumentation] configured with the
 // provided opts.
 //
@@ -85,12 +79,7 @@ func NewInstrumentation(ctx context.Context, opts ...InstrumentationOption) (*In
 	}
 
 	pa := process.NewAnalyzer(c.logger)
-	pid, err := pa.DiscoverProcessID(ctx, &c.target)
-	if err != nil {
-		return nil, err
-	}
-
-	err = pa.SetBuildInfo(pid)
+	err = pa.SetBuildInfo(c.targetPID)
 	if err != nil {
 		return nil, err
 	}
@@ -121,12 +110,12 @@ func NewInstrumentation(ctx context.Context, opts ...InstrumentationOption) (*In
 		return nil, err
 	}
 
-	td, err := pa.Analyze(pid, mngr.GetRelevantFuncs())
+	td, err := pa.Analyze(c.targetPID, mngr.GetRelevantFuncs())
 	if err != nil {
 		return nil, err
 	}
 
-	alloc, err := process.Allocate(c.logger, pid)
+	alloc, err := process.Allocate(c.logger, c.targetPID)
 	if err != nil {
 		return nil, err
 	}
@@ -209,7 +198,7 @@ type InstrumentationOption interface {
 
 type instConfig struct {
 	traceExp           trace.SpanExporter
-	target             process.TargetArgs
+	targetPID          int
 	serviceName        string
 	additionalResAttrs []attribute.KeyValue
 	globalImpl         bool
@@ -219,10 +208,8 @@ type instConfig struct {
 }
 
 func newInstConfig(ctx context.Context, opts []InstrumentationOption) (instConfig, error) {
-	var (
-		c   instConfig
-		err error
-	)
+	c := instConfig{targetPID: -1}
+	var err error
 	for _, opt := range opts {
 		if opt != nil {
 			var e error
@@ -259,21 +246,30 @@ func newInstConfig(ctx context.Context, opts []InstrumentationOption) (instConfi
 
 func (c instConfig) defaultServiceName() string {
 	name := "unknown_service"
-	if c.target.ExePath != "" {
-		name = fmt.Sprintf("%s:%s", name, filepath.Base(c.target.ExePath))
+	if exe, err := os.Readlink(fmt.Sprintf("/proc/%d/exe", c.targetPID)); err == nil {
+		name = fmt.Sprintf("%s:%s", name, filepath.Base(exe))
 	}
 	return name
 }
 
 func (c instConfig) validate() error {
-	var zero process.TargetArgs
-	if c.target == zero {
-		return errUndefinedTarget
+	if c.targetPID <= 0 {
+		return errors.New("target PID not provided")
 	}
+	p, err := os.FindProcess(c.targetPID)
+	if err != nil {
+		return fmt.Errorf("invalid PID: no process was found with PID %d: %w", c.targetPID, err)
+	}
+	err = p.Signal(syscall.Signal(0))
+	if err != nil {
+		return fmt.Errorf("non-existent PID: %d: %w", c.targetPID, err)
+	}
+
 	if c.traceExp == nil {
 		return errors.New("undefined trace exporter")
 	}
-	return c.target.Validate()
+
+	return nil
 }
 
 func (c instConfig) tracerProvider(bi *buildinfo.BuildInfo) *trace.TracerProvider {
@@ -341,25 +337,6 @@ type fnOpt func(context.Context, instConfig) (instConfig, error)
 
 func (o fnOpt) apply(ctx context.Context, c instConfig) (instConfig, error) { return o(ctx, c) }
 
-// WithTarget returns an [InstrumentationOption] defining the target binary for
-// [Instrumentation] that is being executed at the provided path.
-//
-// This option conflicts with [WithPID]. If both are used, the last one
-// provided to an [Instrumentation] will be used.
-//
-// If multiple of these options are provided to an [Instrumentation], the last
-// one will be used.
-//
-// If OTEL_GO_AUTO_TARGET_EXE is defined, this option will conflict with
-// [WithEnv]. If both are used, the last one provided to an [Instrumentation]
-// will be used.
-func WithTarget(path string) InstrumentationOption {
-	return fnOpt(func(_ context.Context, c instConfig) (instConfig, error) {
-		c.target = process.TargetArgs{ExePath: path}
-		return c, nil
-	})
-}
-
 // WithServiceName returns an [InstrumentationOption] defining the name of the service running.
 //
 // If multiple of these options are provided to an [Instrumentation], the last
@@ -389,7 +366,7 @@ func WithServiceName(serviceName string) InstrumentationOption {
 // will be used.
 func WithPID(pid int) InstrumentationOption {
 	return fnOpt(func(_ context.Context, c instConfig) (instConfig, error) {
-		c.target = process.TargetArgs{Pid: pid}
+		c.targetPID = pid
 		return c, nil
 	})
 }
@@ -426,12 +403,7 @@ var lookupEnv = os.LookupEnv
 // supported values and registration of custom exporters.
 func WithEnv() InstrumentationOption {
 	return fnOpt(func(ctx context.Context, c instConfig) (instConfig, error) {
-		var err error
-		if v, ok := lookupEnv(envTargetExeKey); ok {
-			c.target = process.TargetArgs{ExePath: v}
-		}
-
-		var e error
+		var err, e error
 		// NewSpanExporter will use an OTLP (HTTP/protobuf) exporter as the
 		// default, unless OTLP_TRACES_EXPORTER is set. This is the OTel
 		// recommended default.
