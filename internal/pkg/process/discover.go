@@ -4,17 +4,16 @@
 package process
 
 import (
-	"debug/buildinfo"
 	"log/slog"
 )
 
 // Analyzer is used to find actively running processes.
 type Analyzer struct {
-	logger    *slog.Logger
-	BuildInfo *buildinfo.BuildInfo
+	id     ID
+	logger *slog.Logger
 }
 
 // NewAnalyzer returns a new [ProcessAnalyzer].
-func NewAnalyzer(logger *slog.Logger) *Analyzer {
-	return &Analyzer{logger: logger}
+func NewAnalyzer(logger *slog.Logger, id ID) *Analyzer {
+	return &Analyzer{id: id, logger: logger}
 }

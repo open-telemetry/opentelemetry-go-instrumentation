@@ -11,7 +11,7 @@ import "log/slog"
 
 type tracedProgram struct{}
 
-func newTracedProgram(pid int, logger *slog.Logger) (*tracedProgram, error) {
+func newTracedProgram(pid ID, logger *slog.Logger) (*tracedProgram, error) {
 	return nil, nil
 }
 

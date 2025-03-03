@@ -4,12 +4,9 @@
 package process
 
 import (
-	"debug/buildinfo"
 	"debug/elf"
 	"errors"
 	"fmt"
-	"os"
-	"strings"
 
 	"github.com/Masterminds/semver/v3"
 
@@ -48,34 +45,28 @@ func (i *Info) GetFunctionReturns(name string) ([]uint64, error) {
 	return nil, fmt.Errorf("could not find returns for function %s", name)
 }
 
-// OpenExe opens the executable of the target process for reading.
-func (i *Info) OpenExe() (*os.File, error) {
-	path := fmt.Sprintf("/proc/%d/exe", i.PID)
-	return os.Open(path)
-}
-
 // Analyze returns the target details for an actively running process.
-func (a *Analyzer) Analyze(pid int, relevantFuncs map[string]interface{}) (*Info, error) {
-	result := &Info{PID: pid}
+func (a *Analyzer) Analyze(relevantFuncs map[string]interface{}) (*Info, error) {
+	result := &Info{PID: int(a.id)}
 
-	f, err := result.OpenExe()
+	elfF, err := elf.Open(a.id.ExePath())
 	if err != nil {
 		return nil, err
 	}
-	defer f.Close()
+	defer elfF.Close()
 
-	elfF, err := elf.NewFile(f)
+	bi, err := a.id.BuildInfo()
 	if err != nil {
 		return nil, err
 	}
 
-	goVersion, err := semver.NewVersion(a.BuildInfo.GoVersion)
+	goVersion, err := semver.NewVersion(bi.GoVersion)
 	if err != nil {
 		return nil, err
 	}
 	result.GoVersion = goVersion
-	result.Modules = make(map[string]*semver.Version, len(a.BuildInfo.Deps)+1)
-	for _, dep := range a.BuildInfo.Deps {
+	result.Modules = make(map[string]*semver.Version, len(bi.Deps)+1)
+	for _, dep := range bi.Deps {
 		depVersion, err := semver.NewVersion(dep.Version)
 		if err != nil {
 			a.logger.Error("parsing dependency version", "error", err, "dependency", dep)
@@ -99,33 +90,6 @@ func (a *Analyzer) Analyze(pid int, relevantFuncs map[string]interface{}) (*Info
 	}
 
 	return result, nil
-}
-
-func (a *Analyzer) SetBuildInfo(pid int) error {
-	f, err := os.Open(fmt.Sprintf("/proc/%d/exe", pid))
-	if err != nil {
-		return err
-	}
-
-	defer f.Close()
-	bi, err := buildinfo.Read(f)
-	if err != nil {
-		return err
-	}
-
-	bi.GoVersion = parseGoVersion(bi.GoVersion)
-
-	a.BuildInfo = bi
-	return nil
-}
-
-func parseGoVersion(vers string) string {
-	vers = strings.ReplaceAll(vers, "go", "")
-	// Trims GOEXPERIMENT version suffix if present.
-	if idx := strings.Index(vers, " X:"); idx > 0 {
-		vers = vers[:idx]
-	}
-	return vers
 }
 
 func (a *Analyzer) findFunctions(elfF *elf.File, relevantFuncs map[string]interface{}) ([]*binary.Func, error) {
