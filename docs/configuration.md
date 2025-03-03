@@ -15,7 +15,7 @@ Alternatively, you can add support for additional or different configurations by
 | `OTEL_GO_AUTO_GLOBAL`       | Records telemetry from the OpenTelemetry default global implementation. As an alternative to using the environment variable, you can use the `-global-impl` CLI flag.    | `false`       |
 | `OTEL_LOG_LEVEL`            | Sets the log level. Supported values: `none`, `error`, `warn`, `info`, `debug`. As an alternative to using the environment variable, you can use the `-logLevel` CLI flag. | `info`        |
 
-[^1]: One of `OTEL_GO_AUTO_TARGET_EXE` or `OTEL_GO_AUTO_TARGET_PID` are requried to be set, unless this information is passed directly as CLI arguments.
+[^1]: One of `OTEL_GO_AUTO_TARGET_EXE` or `OTEL_GO_AUTO_TARGET_PID` are required to be set, unless this information is passed directly as CLI arguments.
 
 
 ## Resources
