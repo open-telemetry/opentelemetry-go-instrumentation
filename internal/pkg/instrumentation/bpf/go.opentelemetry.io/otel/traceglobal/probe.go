@@ -315,15 +315,15 @@ type event struct {
 	TracerID   tracerID
 }
 
-func processFn(e *event) ptrace.ScopeSpans {
-	ss := ptrace.NewScopeSpans()
-
-	scope := ss.Scope()
+func processFn(e *event) (pcommon.InstrumentationScope, string, ptrace.SpanSlice) {
+	scope := pcommon.NewInstrumentationScope()
 	scope.SetName(unix.ByteSliceToString(e.TracerID.Name[:]))
 	scope.SetVersion(unix.ByteSliceToString(e.TracerID.Version[:]))
-	ss.SetSchemaUrl(unix.ByteSliceToString(e.TracerID.SchemaURL[:]))
 
-	span := ss.Spans().AppendEmpty()
+	schemaURL := unix.ByteSliceToString(e.TracerID.SchemaURL[:])
+
+	spans := ptrace.NewSpanSlice()
+	span := spans.AppendEmpty()
 	span.SetName(unix.ByteSliceToString(e.SpanName[:]))
 	span.SetKind(ptrace.SpanKindClient)
 	span.SetStartTimestamp(utils.BootOffsetToTimestamp(e.StartTime))
@@ -339,7 +339,7 @@ func processFn(e *event) ptrace.ScopeSpans {
 	setAttributes(span.Attributes(), e.Attributes)
 	setStatus(span.Status(), e.Status)
 
-	return ss
+	return scope, schemaURL, spans
 }
 
 func setStatus(dest ptrace.Status, stat status) {
