@@ -103,7 +103,7 @@ func NewInstrumentation(ctx context.Context, opts ...InstrumentationOption) (*In
 	}
 
 	pa := process.NewAnalyzer(c.logger, c.pid)
-	td, err := pa.Analyze(mngr.GetRelevantFuncs())
+	pi, err := pa.Analyze(mngr.GetRelevantFuncs())
 	if err != nil {
 		return nil, err
 	}
@@ -112,19 +112,19 @@ func NewInstrumentation(ctx context.Context, opts ...InstrumentationOption) (*In
 	if err != nil {
 		return nil, err
 	}
-	td.Allocation = alloc
+	pi.Allocation = alloc
 
 	c.logger.Info(
 		"target process analysis completed",
-		"pid", td.ID,
-		"go_version", td.GoVersion,
-		"dependencies", td.Modules,
-		"total_functions_found", len(td.Functions),
+		"pid", pi.ID,
+		"go_version", pi.GoVersion,
+		"dependencies", pi.Modules,
+		"total_functions_found", len(pi.Functions),
 	)
-	mngr.FilterUnusedProbes(td)
+	mngr.FilterUnusedProbes(pi)
 
 	return &Instrumentation{
-		target:   td,
+		target:   pi,
 		analyzer: pa,
 		manager:  mngr,
 	}, nil
