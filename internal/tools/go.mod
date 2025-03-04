@@ -8,9 +8,9 @@ require (
 	github.com/golangci/golangci-lint v1.64.6
 	github.com/google/go-licenses/v2 v2.0.0-alpha.1
 	go.opentelemetry.io/auto v0.21.0
-	go.opentelemetry.io/build-tools/crosslink v0.19.0
-	go.opentelemetry.io/build-tools/dbotconf v0.19.0
-	go.opentelemetry.io/build-tools/multimod v0.19.0
+	go.opentelemetry.io/build-tools/crosslink v0.20.0
+	go.opentelemetry.io/build-tools/dbotconf v0.20.0
+	go.opentelemetry.io/build-tools/multimod v0.20.0
 	golang.org/x/sync v0.11.0
 )
 
@@ -217,7 +217,7 @@ require (
 	go-simpler.org/sloglint v0.9.0 // indirect
 	go.opencensus.io v0.24.0 // indirect
 	go.opentelemetry.io/auto/sdk v1.1.0 // indirect
-	go.opentelemetry.io/build-tools v0.19.0 // indirect
+	go.opentelemetry.io/build-tools v0.20.0 // indirect
 	go.opentelemetry.io/collector/pdata v1.25.0 // indirect
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.59.0 // indirect
 	go.opentelemetry.io/otel v1.34.0 // indirect
