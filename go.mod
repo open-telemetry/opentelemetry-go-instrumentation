@@ -1,6 +1,8 @@
 module go.opentelemetry.io/auto
 
-go 1.23.0
+go 1.24
+
+toolchain go1.24.0
 
 retract (
 	v0.6.5 // Contains retractions only.
@@ -45,7 +47,7 @@ require (
 	github.com/go-logr/logr v1.4.2 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/google/uuid v1.6.0 // indirect
-	github.com/grpc-ecosystem/grpc-gateway/v2 v2.26.1 // indirect
+	github.com/grpc-ecosystem/grpc-gateway/v2 v2.26.2 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/klauspost/compress v1.18.0 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
