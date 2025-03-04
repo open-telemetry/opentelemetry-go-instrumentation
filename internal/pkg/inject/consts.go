@@ -149,7 +149,7 @@ func WithOffset(key string, id structfield.ID, ver *semver.Version) Option {
 }
 
 func FindOffset(id structfield.ID, info *process.Info) (structfield.OffsetKey, error) {
-	elfF, err := elf.Open(process.ID(info.PID).ExePath())
+	elfF, err := elf.Open(info.ID.ExePath())
 	if err != nil {
 		return structfield.OffsetKey{}, err
 	}

@@ -116,7 +116,7 @@ func NewInstrumentation(ctx context.Context, opts ...InstrumentationOption) (*In
 
 	c.logger.Info(
 		"target process analysis completed",
-		"pid", td.PID,
+		"pid", td.ID,
 		"go_version", td.GoVersion,
 		"dependencies", td.Modules,
 		"total_functions_found", len(td.Functions),

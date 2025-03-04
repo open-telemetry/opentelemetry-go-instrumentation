@@ -396,7 +396,7 @@ func (u *Uprobe) load(exec *link.Executable, info *process.Info, c *ebpf.Collect
 		if !ok {
 			return fmt.Errorf("entry probe %s not found", u.EntryProbe)
 		}
-		opts := &link.UprobeOptions{Address: offset, PID: info.PID}
+		opts := &link.UprobeOptions{Address: offset, PID: int(info.ID)}
 		l, err := exec.Uprobe("", entryProg, opts)
 		if err != nil {
 			return err
@@ -415,7 +415,7 @@ func (u *Uprobe) load(exec *link.Executable, info *process.Info, c *ebpf.Collect
 		}
 
 		for _, ret := range retOffsets {
-			opts := &link.UprobeOptions{Address: ret, PID: info.PID}
+			opts := &link.UprobeOptions{Address: ret, PID: int(info.ID)}
 			l, err := exec.Uprobe("", retProg, opts)
 			if err != nil {
 				return err
