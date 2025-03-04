@@ -11,6 +11,8 @@ TOOLS = $(CURDIR)/.tools
 ALL_GO_MOD_DIRS := $(shell find . -type f -name 'go.mod' ! -path './LICENSES/*' -exec dirname {} \; | sort)
 ALL_GO_MODS := $(shell find . -type f -name 'go.mod' ! -path '$(TOOLS_MOD_DIR)/*' ! -path './LICENSES/*' | sort)
 
+EXAMPLE_MODS := $(filter ./examples/%,$(ALL_GO_MODS))
+
 # BPF compile time dependencies.
 BPF2GO_CFLAGS += -I${REPODIR}/internal/include/libbpf
 BPF2GO_CFLAGS += -I${REPODIR}/internal/include
@@ -102,9 +104,13 @@ docker-test: docker-build-base
 docker-precommit: docker-build-base
 	docker run --rm -v $(shell pwd):/app $(IMG_NAME_BASE) /bin/sh -c "cd /app && make precommit"
 
+null  :=
+space := $(null) #
+comma := ,
+
 .PHONY: crosslink
 crosslink: $(CROSSLINK)
-	@$(CROSSLINK) --root=$(REPODIR) --prune
+	@$(CROSSLINK) --root=$(REPODIR) --skip=$(subst $(space),$(comma),$(strip $(EXAMPLE_MODS:./%=%))) --prune
 
 .PHONY: go-mod-tidy
 go-mod-tidy: $(ALL_GO_MOD_DIRS:%=go-mod-tidy/%)
