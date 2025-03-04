@@ -17,6 +17,7 @@ import (
 	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
 
 	"go.opentelemetry.io/auto"
+	"go.opentelemetry.io/auto/export"
 	"go.opentelemetry.io/auto/export/otelsdk"
 )
 
@@ -133,7 +134,7 @@ func main() {
 	)
 
 	v := semconv.TelemetryDistroVersionKey.String(auto.Version())
-	h, err := otelsdk.New(
+	h, err := otelsdk.NewTraceHandler(
 		ctx,
 		otelsdk.WithEnv(),
 		otelsdk.WithLogger(logger),
@@ -147,7 +148,7 @@ func main() {
 	instOptions := []auto.InstrumentationOption{
 		auto.WithEnv(),
 		auto.WithLogger(logger),
-		auto.WithHandler(h),
+		auto.WithHandler(&export.Handler{TraceHandler: h}),
 	}
 	if globalImpl {
 		instOptions = append(instOptions, auto.WithGlobal())
