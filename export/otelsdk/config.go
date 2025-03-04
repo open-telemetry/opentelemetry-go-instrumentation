@@ -37,7 +37,7 @@ const (
 	envLogLevelKey = "OTEL_LOG_LEVEL"
 )
 
-// Option configures a [Handler] via [New].
+// Option configures a [traceHandler] via [NewHandler].
 type Option interface {
 	apply(context.Context, config) (config, error)
 }

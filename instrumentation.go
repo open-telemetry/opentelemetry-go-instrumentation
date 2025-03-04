@@ -180,7 +180,7 @@ type InstrumentationOption interface {
 
 type instConfig struct {
 	targetPID  int
-	handler    export.Handler
+	handler    *export.Handler
 	globalImpl bool
 	logger     *slog.Logger
 	sampler    Sampler
@@ -203,7 +203,7 @@ func newInstConfig(ctx context.Context, opts []InstrumentationOption) (instConfi
 		v := semconv.TelemetryDistroVersionKey.String(Version())
 
 		var e error
-		c.handler, e = otelsdk.New(ctx, otelsdk.WithEnv(), otelsdk.WithResourceAttributes(v))
+		c.handler, e = otelsdk.NewHandler(ctx, otelsdk.WithEnv(), otelsdk.WithResourceAttributes(v))
 		err = errors.Join(err, e)
 	}
 
@@ -386,9 +386,9 @@ func WithConfigProvider(cp ConfigProvider) InstrumentationOption {
 // WithHandler returns an [InstrumentationOption] that will configure an
 // [Instrumentation] to use h to handle generated telemetry.
 //
-// If this options is not used, the Handler returned from [otelsdk.New] with
+// If this options is not used, the Handler returned from [otelsdk.NewHandler] with
 // environment configuration will be used.
-func WithHandler(h export.Handler) InstrumentationOption {
+func WithHandler(h *export.Handler) InstrumentationOption {
 	return fnOpt(func(_ context.Context, c instConfig) (instConfig, error) {
 		if h == nil {
 			return c, errors.New("nil handler")
