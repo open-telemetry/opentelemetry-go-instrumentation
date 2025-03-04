@@ -18,6 +18,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"go.opentelemetry.io/collector/pdata/pcommon"
+	"go.opentelemetry.io/collector/pdata/ptrace"
 	"go.opentelemetry.io/otel/trace"
 
 	"go.opentelemetry.io/auto/export"
@@ -213,21 +215,25 @@ func mockExeAndBpffs(t *testing.T) {
 	t.Cleanup(func() { bpffsCleanup = origBpffsCleanup })
 }
 
-// noopHandler is a no-op implementation of the [export.Handler]. It is used
+// noopTraceHandler is a no-op implementation of the [export.Handler]. It is used
 // for testing when no telemetry is meant to be recorded.
-type noopHandler struct{}
+type noopTraceHandler struct{}
 
-var _ export.Handler = noopHandler{}
+var _ export.TraceHandler = noopTraceHandler{}
 
 // Handle drops the passed telemetry.
-func (noopHandler) Handle(*export.Telemetry) {}
+func (noopTraceHandler) HandleTrace(pcommon.InstrumentationScope, string, ptrace.SpanSlice) {}
+
+func newNoopHandler() *export.Handler {
+	return &export.Handler{TraceHandler: noopTraceHandler{}}
+}
 
 func TestRunStoppingByContext(t *testing.T) {
 	probeStop := make(chan struct{})
 	p := newSlowProbe(probeStop)
 
 	m := &Manager{
-		handler: noopHandler{},
+		handler: newNoopHandler(),
 		logger:  slog.Default(),
 		probes:  map[probe.ID]probe.Probe{{}: p},
 		cp:      NewNoopConfigProvider(nil),
@@ -272,7 +278,7 @@ func TestRunStoppingByStop(t *testing.T) {
 	p := noopProbe{}
 
 	m := &Manager{
-		handler: noopHandler{},
+		handler: newNoopHandler(),
 		logger:  slog.Default(),
 		probes:  map[probe.ID]probe.Probe{{}: &p},
 		cp:      NewNoopConfigProvider(nil),
@@ -323,8 +329,7 @@ func (p slowProbe) Load(*link.Executable, *process.Info, *sampling.Config) error
 	return nil
 }
 
-func (p slowProbe) Run(export.Handler) {
-}
+func (p slowProbe) Run(*export.Handler) {}
 
 func (p slowProbe) Close() error {
 	p.closeSignal <- struct{}{}
@@ -343,7 +348,7 @@ func (p *noopProbe) Load(*link.Executable, *process.Info, *sampling.Config) erro
 	return nil
 }
 
-func (p *noopProbe) Run(export.Handler) {
+func (p *noopProbe) Run(*export.Handler) {
 	p.running.Store(true)
 }
 
@@ -517,11 +522,10 @@ func (p *hangingProbe) Load(*link.Executable, *process.Info, *sampling.Config) e
 	return nil
 }
 
-func (p *hangingProbe) Run(h export.Handler) {
+func (p *hangingProbe) Run(h *export.Handler) {
 	<-p.closeReturned
 	// Write after Close has returned.
-	t := new(export.Telemetry)
-	h.Handle(t)
+	h.Trace(ptrace.NewSpanSlice())
 }
 
 func (p *hangingProbe) Close() error {
@@ -534,7 +538,7 @@ func TestRunStopDeadlock(t *testing.T) {
 	p := newHangingProbe()
 
 	m := &Manager{
-		handler: noopHandler{},
+		handler: newNoopHandler(),
 		logger:  slog.Default(),
 		probes:  map[probe.ID]probe.Probe{{}: p},
 		cp:      NewNoopConfigProvider(nil),
@@ -578,7 +582,7 @@ func TestStopBeforeLoad(t *testing.T) {
 	p := noopProbe{}
 
 	m := &Manager{
-		handler: noopHandler{},
+		handler: newNoopHandler(),
 		logger:  slog.Default(),
 		probes:  map[probe.ID]probe.Probe{{}: &p},
 		cp:      NewNoopConfigProvider(nil),
@@ -593,7 +597,7 @@ func TestStopBeforeRun(t *testing.T) {
 	p := noopProbe{}
 
 	m := &Manager{
-		handler: noopHandler{},
+		handler: newNoopHandler(),
 		logger:  slog.Default(),
 		probes:  map[probe.ID]probe.Probe{{}: &p},
 		cp:      NewNoopConfigProvider(nil),
