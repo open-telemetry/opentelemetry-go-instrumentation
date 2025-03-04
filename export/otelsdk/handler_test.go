@@ -25,8 +25,6 @@ import (
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
 	"go.opentelemetry.io/otel/trace"
-
-	"go.opentelemetry.io/auto/export"
 )
 
 const service = "handler_test"
@@ -79,13 +77,10 @@ var defaultRes = func() *resource.Resource {
 	return r
 }()
 
-func TestHandlerHandleTrace(t *testing.T) {
-	tel := new(export.Telemetry)
-
+func TestTraceHandlerHandleTrace(t *testing.T) {
 	const schemaURL = "http://localhost/1.0.0"
-	tel.SetSchemaURL(schemaURL)
 
-	scope := tel.Scope()
+	scope := pcommon.NewInstrumentationScope()
 
 	const scopeName = "go.opentelemetry.io/auto/export/otelsdk/test"
 	scope.SetName(scopeName)
@@ -93,7 +88,8 @@ func TestHandlerHandleTrace(t *testing.T) {
 	scope.SetVersion(scopeVer)
 	pAttrs.CopyTo(scope.Attributes())
 
-	span := tel.Spans().AppendEmpty()
+	spans := ptrace.NewSpanSlice()
+	span := spans.AppendEmpty()
 
 	const spanName = "test.span"
 	span.SetName(spanName)
@@ -116,7 +112,7 @@ func TestHandlerHandleTrace(t *testing.T) {
 
 	ctx := context.Background()
 	exp := newExporter()
-	handler, err := New(ctx, WithTraceExporter(exp), WithServiceName(service))
+	handler, err := NewTraceHandler(ctx, WithTraceExporter(exp), WithServiceName(service))
 	require.NoError(t, err)
 
 	// Note: DroppedAttributesCount not supported.
@@ -132,7 +128,7 @@ func TestHandlerHandleTrace(t *testing.T) {
 	pAttrs.CopyTo(event.Attributes())
 	event.SetTimestamp(pcommon.NewTimestampFromTime(startTime))
 
-	handler.Handle(tel)
+	handler.HandleTrace(scope, schemaURL, spans)
 	require.NoError(t, handler.Shutdown(ctx))
 	got := exp.GetSpans()
 
@@ -233,7 +229,7 @@ func (e *shutdownExporter) Shutdown(context.Context) error {
 	return nil
 }
 
-func TestHandlerShutdown(t *testing.T) {
+func TestTraceHandlerShutdown(t *testing.T) {
 	const nSpan = 10
 
 	exp := new(shutdownExporter)
@@ -244,17 +240,19 @@ func TestHandlerShutdown(t *testing.T) {
 	t.Setenv("OTEL_BSP_SCHEDULE_DELAY", "36000")
 
 	ctx := context.Background()
-	handler, err := New(ctx, WithTraceExporter(exp))
+	handler, err := NewTraceHandler(ctx, WithTraceExporter(exp))
 	require.NoError(t, err)
 
 	for i := 0; i < nSpan; i++ {
-		tel := new(export.Telemetry)
-		tel.Scope().SetName("test")
-		span := tel.Spans().AppendEmpty()
+		scope := pcommon.NewInstrumentationScope()
+		scope.SetName("test")
+
+		spans := ptrace.NewSpanSlice()
+		span := spans.AppendEmpty()
 		span.SetName("span" + strconv.Itoa(i))
 		span.SetTraceID(pcommon.TraceID{0x1})
 		span.SetSpanID(pcommon.SpanID{0x1})
-		handler.Handle(tel)
+		handler.HandleTrace(scope, "", spans)
 	}
 
 	require.NoError(t, handler.Shutdown(ctx))
@@ -263,7 +261,7 @@ func TestHandlerShutdown(t *testing.T) {
 }
 
 func TestControllerTraceConcurrentSafe(t *testing.T) {
-	handler, err := New(context.Background())
+	handler, err := NewTraceHandler(context.Background())
 	assert.NoError(t, err)
 
 	const goroutines = 10
@@ -274,15 +272,15 @@ func TestControllerTraceConcurrentSafe(t *testing.T) {
 		go func() {
 			defer wg.Done()
 
-			tel := new(export.Telemetry)
-			tel.Scope().SetName(fmt.Sprintf("tracer-%d", n%(goroutines/2)))
-			tel.Scope().SetVersion("v1")
-			tel.SetSchemaURL("url")
-			span := tel.Spans().AppendEmpty()
+			scope := pcommon.NewInstrumentationScope()
+			scope.SetName(fmt.Sprintf("tracer-%d", n%(goroutines/2)))
+			scope.SetVersion("v1")
+			spans := ptrace.NewSpanSlice()
+			span := spans.AppendEmpty()
 			span.SetName("test")
 			span.SetTraceID(pcommon.TraceID{0x1})
 			span.SetSpanID(pcommon.SpanID{0x1})
-			handler.Handle(tel)
+			handler.HandleTrace(scope, "url", spans)
 		}()
 	}
 

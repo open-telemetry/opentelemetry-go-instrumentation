@@ -44,7 +44,7 @@ const (
 type Manager struct {
 	logger          *slog.Logger
 	probes          map[probe.ID]probe.Probe
-	handler         export.Handler
+	handler         *export.Handler
 	cp              ConfigProvider
 	exe             *link.Executable
 	proc            *process.Info
@@ -57,7 +57,7 @@ type Manager struct {
 }
 
 // NewManager returns a new [Manager].
-func NewManager(logger *slog.Logger, h export.Handler, pid process.ID, cp ConfigProvider, probes ...probe.Probe) (*Manager, error) {
+func NewManager(logger *slog.Logger, h *export.Handler, pid process.ID, cp ConfigProvider, probes ...probe.Probe) (*Manager, error) {
 	m := &Manager{
 		logger:  logger,
 		probes:  make(map[probe.ID]probe.Probe),
