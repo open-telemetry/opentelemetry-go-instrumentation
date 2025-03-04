@@ -15,7 +15,7 @@ import (
 
 // Info are the details about a target process.
 type Info struct {
-	PID        int
+	ID         ID
 	Functions  []*binary.Func
 	GoVersion  *semver.Version
 	Modules    map[string]*semver.Version
@@ -47,7 +47,7 @@ func (i *Info) GetFunctionReturns(name string) ([]uint64, error) {
 
 // Analyze returns the target details for an actively running process.
 func (a *Analyzer) Analyze(relevantFuncs map[string]interface{}) (*Info, error) {
-	result := &Info{PID: int(a.id)}
+	result := &Info{ID: a.id}
 
 	elfF, err := elf.Open(a.id.ExePath())
 	if err != nil {

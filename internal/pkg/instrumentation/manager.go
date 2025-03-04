@@ -345,7 +345,7 @@ func (m *Manager) loadProbes(target *process.Info) error {
 		return err
 	}
 
-	exe, err := openExecutable(process.ID(target.PID).ExePath())
+	exe, err := openExecutable(target.ID.ExePath())
 	if err != nil {
 		return err
 	}

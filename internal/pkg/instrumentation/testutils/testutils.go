@@ -31,7 +31,7 @@ func ProbesLoad(t *testing.T, p TestProbe, libs map[string]*semver.Version) {
 	}
 
 	info := &process.Info{
-		PID: 1,
+		ID: 1,
 		Allocation: &process.Allocation{
 			StartAddr: 140434497441792,
 			EndAddr:   140434497507328,
