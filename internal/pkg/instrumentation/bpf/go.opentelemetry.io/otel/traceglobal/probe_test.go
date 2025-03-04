@@ -16,7 +16,6 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
 
-	"go.opentelemetry.io/auto/export"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/context"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/utils"
 )
@@ -34,7 +33,7 @@ func TestProbeConvertEvent(t *testing.T) {
 	var floatBuf [128]byte
 	binary.LittleEndian.PutUint64(floatBuf[:], math.Float64bits(math.Pi))
 
-	got := processFn(&event{
+	scope, url, spans := processFn(&event{
 		BaseSpanProperties: context.BaseSpanProperties{
 			StartTime:   startOffset,
 			EndTime:     endOffset,
@@ -103,31 +102,29 @@ func TestProbeConvertEvent(t *testing.T) {
 		},
 	})
 
-	want := func() *export.Telemetry {
-		t := new(export.Telemetry)
+	wantScope := pcommon.NewInstrumentationScope()
+	wantScope.SetName("user-tracer")
+	wantScope.SetVersion("v1")
+	assert.Equal(t, wantScope, scope)
 
-		t.Scope().SetName("user-tracer")
-		t.Scope().SetVersion("v1")
-		t.SetSchemaURL("user-schema")
+	assert.Equal(t, "user-schema", url)
 
-		span := t.Spans().AppendEmpty()
-		span.SetName("Foo")
-		span.SetKind(ptrace.SpanKindClient)
-		span.SetStartTimestamp(utils.BootOffsetToTimestamp(startOffset))
-		span.SetEndTimestamp(utils.BootOffsetToTimestamp(endOffset))
-		span.SetTraceID(pcommon.TraceID(traceID))
-		span.SetSpanID(pcommon.SpanID(spanID))
-		span.SetFlags(uint32(trace.FlagsSampled))
-		utils.Attributes(
-			span.Attributes(),
-			attribute.Bool("bool_key", true),
-			attribute.String("string_key1", "string value 1"),
-			attribute.Float64("float_key", math.Pi),
-			attribute.Int64("int_key", 42),
-			attribute.String("string_key2", "string value 2"),
-		)
-
-		return t
-	}()
-	assert.Equal(t, want, got)
+	wantSpans := ptrace.NewSpanSlice()
+	span := wantSpans.AppendEmpty()
+	span.SetName("Foo")
+	span.SetKind(ptrace.SpanKindClient)
+	span.SetStartTimestamp(utils.BootOffsetToTimestamp(startOffset))
+	span.SetEndTimestamp(utils.BootOffsetToTimestamp(endOffset))
+	span.SetTraceID(pcommon.TraceID(traceID))
+	span.SetSpanID(pcommon.SpanID(spanID))
+	span.SetFlags(uint32(trace.FlagsSampled))
+	utils.Attributes(
+		span.Attributes(),
+		attribute.Bool("bool_key", true),
+		attribute.String("string_key1", "string value 1"),
+		attribute.Float64("float_key", math.Pi),
+		attribute.Int64("int_key", 42),
+		attribute.String("string_key2", "string value 2"),
+	)
+	assert.Equal(t, wantSpans, spans)
 }
