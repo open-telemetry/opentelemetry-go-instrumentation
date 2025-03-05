@@ -37,7 +37,7 @@ func New(logger *slog.Logger, version string) probe.Probe {
 			ID:     id,
 			Logger: logger,
 			Consts: []probe.Const{
-				probe.AllocationConst{},
+				probe.AllocationConst{Logger: logger},
 				probe.StructFieldConst{
 					Key: "message_headers_pos",
 					ID:  structfield.NewID("github.com/segmentio/kafka-go", "github.com/segmentio/kafka-go", "Message", "Headers"),

@@ -68,7 +68,7 @@ func New(logger *slog.Logger, version string) probe.Probe {
 			ID:     id,
 			Logger: logger,
 			Consts: []probe.Const{
-				probe.AllocationConst{},
+				probe.AllocationConst{Logger: logger},
 				probe.StructFieldConst{
 					Key: "method_ptr_pos",
 					ID:  structfield.NewID("std", "net/http", "Request", "Method"),

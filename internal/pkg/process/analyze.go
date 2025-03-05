@@ -7,6 +7,9 @@ import (
 	"debug/elf"
 	"errors"
 	"fmt"
+	"log/slog"
+	"sync"
+	"sync/atomic"
 
 	"github.com/Masterminds/semver/v3"
 
@@ -15,11 +18,26 @@ import (
 
 // Info are the details about a target process.
 type Info struct {
-	ID         ID
-	Functions  []*binary.Func
-	GoVersion  *semver.Version
-	Modules    map[string]*semver.Version
-	Allocation *Allocation
+	ID        ID
+	Functions []*binary.Func
+	GoVersion *semver.Version
+	Modules   map[string]*semver.Version
+
+	allocOnce onceResult[*Allocation]
+}
+
+// Alloc allocates memory for the process described by Info i.
+//
+// The underlying memory allocation is only successfully performed once for the
+// instance i. Meaning, it is safe to call this multiple times. The first
+// successful result will be returned to all subsequent calls. If an error is
+// returned, subsequent calls will re-attempt to perform the allocation.
+//
+// It is safe to call this method concurrently.
+func (i *Info) Alloc(logger *slog.Logger) (*Allocation, error) {
+	return i.allocOnce.Do(func() (*Allocation, error) {
+		return allocate(logger, i.ID)
+	})
 }
 
 // GetFunctionOffset returns the offset for of the function with name.
@@ -103,4 +121,37 @@ func (a *Analyzer) findFunctions(elfF *elf.File, relevantFuncs map[string]interf
 	}
 
 	return result, nil
+}
+
+// onceResult is an object that will perform exactly one action if that action
+// does not error. For errors, no state is stored and subsequent attempts will
+// be tried.
+type onceResult[T any] struct {
+	done  atomic.Bool
+	mutex sync.Mutex
+	val   T
+}
+
+// Do runs f only once, and only stores the result if f returns a nil error.
+// Subsequent calls to Do will return the stored value or they will re-attempt
+// to run f and store the result if an error had been returned.
+func (o *onceResult[T]) Do(f func() (T, error)) (T, error) {
+	if o.done.Load() {
+		o.mutex.Lock()
+		defer o.mutex.Unlock()
+		return o.val, nil
+	}
+
+	o.mutex.Lock()
+	defer o.mutex.Unlock()
+	if o.done.Load() {
+		return o.val, nil
+	}
+
+	var err error
+	o.val, err = f()
+	if err == nil {
+		o.done.Store(true)
+	}
+	return o.val, err
 }

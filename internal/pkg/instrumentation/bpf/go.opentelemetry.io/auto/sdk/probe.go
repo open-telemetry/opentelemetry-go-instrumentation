@@ -30,7 +30,7 @@ func New(logger *slog.Logger) probe.Probe {
 			ID:     id,
 			Logger: logger,
 			Consts: []probe.Const{
-				probe.AllocationConst{},
+				probe.AllocationConst{Logger: logger},
 				probe.StructFieldConst{
 					Key: "span_context_trace_id_pos",
 					ID: structfield.NewID(

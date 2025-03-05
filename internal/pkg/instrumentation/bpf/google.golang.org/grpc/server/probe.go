@@ -52,7 +52,7 @@ func New(logger *slog.Logger, ver string) probe.Probe {
 			ID:     id,
 			Logger: logger,
 			Consts: []probe.Const{
-				probe.AllocationConst{},
+				probe.AllocationConst{Logger: logger},
 				serverAddrConst{},
 				probe.StructFieldConst{
 					Key: "stream_method_ptr_pos",
