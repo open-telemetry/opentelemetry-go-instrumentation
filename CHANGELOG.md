@@ -15,6 +15,10 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 - The auto binary (built from `auto/cli`) can now be passed the path of the target process executable directly using the `-target-exe` CLI option. ([#1890](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1890))
 - The auto binary (built from `auto/cli`) now resolves the target PID from the environment variable `"OTEL_GO_AUTO_TARGET_PID"` if no target options are passed. ([#1890](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1890))
 - The auto binary (built from `auto/cli`) will now only resolve the target process executable from the environment variable `"OTEL_GO_AUTO_TARGET_EXE"` if no target options are passed and `"OTEL_GO_AUTO_TARGET_PID"` is not set. ([#1890](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1890))
+- Cache offsets for `golang.org/x/net` `0.36.0`. ([#1940](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1940))
+- Cache offsets for `google.golang.org/grpc` `1.71.0`. ([#1940](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1940))
+- Cache offsets for Go `1.23.7`. ([#1940](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1940))
+- Cache offsets for Go `1.24.1`. ([#1940](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1940))
 
 ### Removed
 
