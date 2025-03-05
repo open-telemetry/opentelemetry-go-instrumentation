@@ -14,6 +14,7 @@ import (
 	"strconv"
 	"sync"
 
+	"go.opentelemetry.io/otel/attribute"
 	semconv "go.opentelemetry.io/otel/semconv/v1.30.0"
 
 	"go.opentelemetry.io/auto/export"
@@ -173,10 +174,38 @@ func newInstConfig(ctx context.Context, opts []InstrumentationOption) (instConfi
 
 	// Defaults.
 	if c.handler == nil {
-		v := semconv.TelemetryDistroVersionKey.String(Version())
+		attrs := []attribute.KeyValue{
+			semconv.TelemetryDistroVersionKey.String(Version()),
+		}
 
+		// Add additional process information for the target.
 		var e error
-		c.handler, e = otelsdk.NewHandler(ctx, otelsdk.WithEnv(), otelsdk.WithResourceAttributes(v))
+		bi, e := c.pid.BuildInfo()
+		if e == nil {
+			attrs = append(attrs, semconv.ProcessRuntimeVersion(bi.GoVersion))
+
+			var compiler string
+			for _, setting := range bi.Settings {
+				if setting.Key == "-compiler" {
+					compiler = setting.Value
+					break
+				}
+			}
+			switch compiler {
+			case "":
+				// Ignore empty.
+			case "gc":
+				attrs = append(attrs, semconv.ProcessRuntimeName("go"))
+			default:
+				attrs = append(attrs, semconv.ProcessRuntimeName(compiler))
+			}
+		}
+
+		c.handler, e = otelsdk.NewHandler(
+			ctx,
+			otelsdk.WithEnv(),
+			otelsdk.WithResourceAttributes(attrs...),
+		)
 		err = errors.Join(err, e)
 	}
 
