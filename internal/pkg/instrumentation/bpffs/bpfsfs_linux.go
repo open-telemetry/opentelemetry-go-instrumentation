@@ -16,8 +16,8 @@ import (
 const bpfFsPath = "/sys/fs/bpf"
 
 // PathForTargetApplication returns the path to the BPF file-system for the given target.
-func PathForTargetApplication(target *process.Info) string {
-	return fmt.Sprintf("%s/%d", bpfFsPath, target.PID)
+func PathForTargetApplication(pi *process.Info) string {
+	return fmt.Sprintf("%s/%d", bpfFsPath, pi.ID)
 }
 
 // Mount mounts the BPF file-system for the given target.
