@@ -10,8 +10,6 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
-	"runtime"
-	"runtime/debug"
 	"strings"
 
 	"go.opentelemetry.io/contrib/exporters/autoexport"
@@ -230,7 +228,7 @@ func (c config) TracerProvider(ctx context.Context) (*sdk.TracerProvider, error)
 	}
 
 	return sdk.NewTracerProvider(
-		// Sample evertying. The actual sampling is done in the eBPF probes
+		// Sample everything. The actual sampling is done in the eBPF probes
 		// before it reaches this tracerProvider.
 		sdk.WithSampler(sdk.AlwaysSample()),
 		sdk.WithResource(c.resource()),
@@ -240,51 +238,14 @@ func (c config) TracerProvider(ctx context.Context) (*sdk.TracerProvider, error)
 }
 
 func (c config) resource() *resource.Resource {
-	attrs := []attribute.KeyValue{
-		semconv.TelemetrySDKLanguageGo,
-		semconv.TelemetryDistroNameKey.String("opentelemetry-go-instrumentation"),
-	}
-
-	bi, ok := debug.ReadBuildInfo()
-	if ok {
-		var compiler string
-		for _, setting := range bi.Settings {
-			if setting.Key == "-compiler" {
-				compiler = setting.Value
-				break
-			}
-		}
-
-		runName := compiler
-		if runName == "gc" {
-			runName = "go"
-		}
-		if runName != "" {
-			attrs = append(attrs, semconv.ProcessRuntimeName(runName))
-		}
-
-		goVer := parseGoVersion(bi.GoVersion)
-		attrs = append(
-			attrs,
-			semconv.ProcessRuntimeVersion(goVer),
-			semconv.ProcessRuntimeDescription(fmt.Sprintf(
-				"go version %s %s/%s",
-				goVer, runtime.GOOS, runtime.GOARCH,
-			)),
-			semconv.TelemetryDistroVersionKey.String(bi.Main.Version),
-		)
-	}
-
-	attrs = append(attrs, c.resAttrs...)
-
-	return resource.NewWithAttributes(semconv.SchemaURL, attrs...)
-}
-
-func parseGoVersion(vers string) string {
-	vers = strings.ReplaceAll(vers, "go", "")
-	// Trims GOEXPERIMENT version suffix if present.
-	if idx := strings.Index(vers, " X:"); idx > 0 {
-		vers = vers[:idx]
-	}
-	return vers
+	return resource.NewWithAttributes(
+		semconv.SchemaURL,
+		append(
+			[]attribute.KeyValue{
+				semconv.TelemetrySDKLanguageGo,
+				semconv.TelemetryDistroNameKey.String("opentelemetry-go-instrumentation"),
+			},
+			c.resAttrs...,
+		)...,
+	)
 }
