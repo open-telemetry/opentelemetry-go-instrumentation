@@ -4,36 +4,27 @@
 package process
 
 import (
-	"debug/buildinfo"
 	"debug/elf"
 	"errors"
 	"fmt"
-	"os"
-	"strings"
 
-	"github.com/hashicorp/go-version"
+	"github.com/Masterminds/semver/v3"
 
 	"go.opentelemetry.io/auto/internal/pkg/process/binary"
 )
 
-// TargetDetails are the details about a target function.
-type TargetDetails struct {
-	PID               int
-	Functions         []*binary.Func
-	GoVersion         *version.Version
-	Libraries         map[string]*version.Version
-	AllocationDetails *AllocationDetails
-}
-
-// IsRegistersABI returns if t is supported.
-func (t *TargetDetails) IsRegistersABI() bool {
-	regAbiMinVersion, _ := version.NewVersion("1.17")
-	return t.GoVersion.GreaterThanOrEqual(regAbiMinVersion)
+// Info are the details about a target process.
+type Info struct {
+	ID         ID
+	Functions  []*binary.Func
+	GoVersion  *semver.Version
+	Modules    map[string]*semver.Version
+	Allocation *Allocation
 }
 
 // GetFunctionOffset returns the offset for of the function with name.
-func (t *TargetDetails) GetFunctionOffset(name string) (uint64, error) {
-	for _, f := range t.Functions {
+func (i *Info) GetFunctionOffset(name string) (uint64, error) {
+	for _, f := range i.Functions {
 		if f.Name == name {
 			return f.Offset, nil
 		}
@@ -44,8 +35,8 @@ func (t *TargetDetails) GetFunctionOffset(name string) (uint64, error) {
 
 // GetFunctionReturns returns the return value of the call for the function
 // with name.
-func (t *TargetDetails) GetFunctionReturns(name string) ([]uint64, error) {
-	for _, f := range t.Functions {
+func (i *Info) GetFunctionReturns(name string) ([]uint64, error) {
+	for _, f := range i.Functions {
 		if f.Name == name {
 			return f.ReturnOffsets, nil
 		}
@@ -55,37 +46,35 @@ func (t *TargetDetails) GetFunctionReturns(name string) ([]uint64, error) {
 }
 
 // Analyze returns the target details for an actively running process.
-func (a *Analyzer) Analyze(pid int, relevantFuncs map[string]interface{}) (*TargetDetails, error) {
-	result := &TargetDetails{
-		PID: pid,
-	}
+func (a *Analyzer) Analyze(relevantFuncs map[string]interface{}) (*Info, error) {
+	result := &Info{ID: a.id}
 
-	f, err := os.Open(fmt.Sprintf("/proc/%d/exe", pid))
+	elfF, err := elf.Open(a.id.ExePath())
+	if err != nil {
+		return nil, err
+	}
+	defer elfF.Close()
+
+	bi, err := a.id.BuildInfo()
 	if err != nil {
 		return nil, err
 	}
 
-	defer f.Close()
-	elfF, err := elf.NewFile(f)
-	if err != nil {
-		return nil, err
-	}
-
-	goVersion, err := version.NewVersion(a.BuildInfo.GoVersion)
+	goVersion, err := semver.NewVersion(bi.GoVersion)
 	if err != nil {
 		return nil, err
 	}
 	result.GoVersion = goVersion
-	result.Libraries = make(map[string]*version.Version, len(a.BuildInfo.Deps)+1)
-	for _, dep := range a.BuildInfo.Deps {
-		depVersion, err := version.NewVersion(dep.Version)
+	result.Modules = make(map[string]*semver.Version, len(bi.Deps)+1)
+	for _, dep := range bi.Deps {
+		depVersion, err := semver.NewVersion(dep.Version)
 		if err != nil {
 			a.logger.Error("parsing dependency version", "error", err, "dependency", dep)
 			continue
 		}
-		result.Libraries[dep.Path] = depVersion
+		result.Modules[dep.Path] = depVersion
 	}
-	result.Libraries["std"] = goVersion
+	result.Modules["std"] = goVersion
 
 	funcs, err := a.findFunctions(elfF, relevantFuncs)
 	if err != nil {
@@ -101,33 +90,6 @@ func (a *Analyzer) Analyze(pid int, relevantFuncs map[string]interface{}) (*Targ
 	}
 
 	return result, nil
-}
-
-func (a *Analyzer) SetBuildInfo(pid int) error {
-	f, err := os.Open(fmt.Sprintf("/proc/%d/exe", pid))
-	if err != nil {
-		return err
-	}
-
-	defer f.Close()
-	bi, err := buildinfo.Read(f)
-	if err != nil {
-		return err
-	}
-
-	bi.GoVersion = parseGoVersion(bi.GoVersion)
-
-	a.BuildInfo = bi
-	return nil
-}
-
-func parseGoVersion(vers string) string {
-	vers = strings.ReplaceAll(vers, "go", "")
-	// Trims GOEXPERIMENT version suffix if present.
-	if idx := strings.Index(vers, " X:"); idx > 0 {
-		vers = vers[:idx]
-	}
-	return vers
 }
 
 func (a *Analyzer) findFunctions(elfF *elf.File, relevantFuncs map[string]interface{}) ([]*binary.Func, error) {

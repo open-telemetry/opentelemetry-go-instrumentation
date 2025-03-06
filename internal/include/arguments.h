@@ -13,6 +13,8 @@
 
 #if defined(__KERNEL__) || defined(__VMLINUX_H__)
 
+// https://go.googlesource.com/go/+/refs/heads/dev.regabi/src/cmd/compile/internal-abi.md#amd64-architecture
+
 #define GO_PARAM1(x) ((x)->ax)
 #define GO_PARAM2(x) ((x)->bx)
 #define GO_PARAM3(x) ((x)->cx)
@@ -28,6 +30,8 @@
 
 #elif defined(bpf_target_arm64)
 
+// https://github.com/golang/go/blob/45447b4bfff4227a8945951dd7d37f2873992e1b/src/cmd/compile/abi-internal.md#arm64-architecture
+
 #define GO_PARAM1(x) (__PT_REGS_CAST(x)->__PT_PARM1_REG)
 #define GO_PARAM2(x) (__PT_REGS_CAST(x)->__PT_PARM2_REG)
 #define GO_PARAM3(x) (__PT_REGS_CAST(x)->__PT_PARM3_REG)
@@ -41,10 +45,7 @@
 
 #endif
 
-// Injected in init
-volatile const bool is_registers_abi;
-
-static __always_inline void *get_argument_by_reg(struct pt_regs *ctx, int index)
+static __always_inline void *get_argument(struct pt_regs *ctx, int index)
 {
     switch (index)
     {
@@ -69,44 +70,6 @@ static __always_inline void *get_argument_by_reg(struct pt_regs *ctx, int index)
     default:
         return NULL;
     }
-}
-
-static __always_inline void *get_argument_by_stack(struct pt_regs *ctx, int index)
-{
-    void *ptr = 0;
-    bpf_probe_read(&ptr, sizeof(ptr), (void *)(PT_REGS_SP(ctx) + (index * 8)));
-    return ptr;
-}
-
-static __always_inline void *get_argument(struct pt_regs *ctx, int index)
-{
-    if (is_registers_abi)
-    {
-        return get_argument_by_reg(ctx, index);
-    }
-
-    return get_argument_by_stack(ctx, index);
-}
-
-// Every span created by the auto instrumentation should contain end timestamp.
-// This end timestamp is recorded at the end of probed function by editing the struct that was created at the beginning.
-// Usually probes create an eBPF map to store the span struct and retrieve it at the end of the function.
-// Consistent key is used as a key for that map.
-// For Go < 1.17: consistent key is the address of context.Context.
-// For Go >= 1.17: consistent key is the goroutine address.
-static __always_inline void *get_consistent_key(struct pt_regs *ctx, void *contextContext)
-{
-    if (is_registers_abi)
-    {
-        return (void *)GOROUTINE(ctx);
-    }
-
-    return contextContext;
-}
-
-static __always_inline bool is_register_abi()
-{
-    return is_registers_abi;
 }
 
 #endif

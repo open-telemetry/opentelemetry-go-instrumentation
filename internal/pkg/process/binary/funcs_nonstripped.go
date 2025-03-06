@@ -7,6 +7,7 @@ import (
 	"debug/elf"
 	"errors"
 	"fmt"
+	"math"
 )
 
 func FindFunctionsUnStripped(elfF *elf.File, relevantFuncs map[string]interface{}) ([]*Func, error) {
@@ -51,7 +52,7 @@ func getFuncOffsetUnstripped(f *elf.File, symbol elf.Symbol) (uint64, error) {
 	}
 
 	if len(sections) == 0 {
-		return 0, fmt.Errorf("function %q not found in file", symbol)
+		return 0, fmt.Errorf("function %q not found in file", symbol.Name)
 	}
 
 	var execSection *elf.Section
@@ -68,7 +69,7 @@ func getFuncOffsetUnstripped(f *elf.File, symbol elf.Symbol) (uint64, error) {
 		return 0, errors.New("could not find symbol in executable sections of binary")
 	}
 
-	return uint64(symbol.Value - execSection.Addr + execSection.Offset), nil
+	return symbol.Value - execSection.Addr + execSection.Offset, nil
 }
 
 func findFuncReturnsUnstripped(elfFile *elf.File, sym elf.Symbol, functionOffset uint64) ([]uint64, error) {
@@ -78,11 +79,18 @@ func findFuncReturnsUnstripped(elfFile *elf.File, sym elf.Symbol, functionOffset
 	}
 
 	lowPC := sym.Value
-	highPC := lowPC + sym.Size
+	if textSection.Addr > lowPC {
+		return nil, fmt.Errorf("invalid .text section address: %d (symbol value %d)", textSection.Addr, lowPC)
+	}
 	offset := lowPC - textSection.Addr
-	buf := make([]byte, int(highPC-lowPC))
+	if offset > math.MaxInt64 {
+		return nil, fmt.Errorf("invalid offset: %d", offset)
+	}
 
-	readBytes, err := textSection.ReadAt(buf, int64(offset))
+	highPC := lowPC + sym.Size
+	buf := make([]byte, highPC-lowPC)
+
+	readBytes, err := textSection.ReadAt(buf, int64(offset)) // nolint: gosec  // Bounds checked.
 	if err != nil {
 		return nil, fmt.Errorf("could not read text section: %w", err)
 	}

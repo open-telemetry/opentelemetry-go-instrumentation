@@ -11,7 +11,48 @@ for a summary description of past meetings. To request edit access,
 join the meeting or get in touch on
 [Slack](https://cloud-native.slack.com/archives/C03S01YSAS0).
 
+## Scope
+
+It is important to note what this project is and is not intended to achieve.
+This helps focus development to these intended areas and defines clear
+functional boundaries for the project.
+
+### What this project is
+
+This project aims to provide auto-instrumentation functionality for Go
+applications using eBPF and other process-external technologies. It conforms to
+OpenTelemetry standards and strives to be compatible with that ecosystem.
+
+This project is expected to be wrapped into some runnable executable that will
+further extend the functionality and ergonomics of the project. The `auto/cli`
+package is an example of a wrapping executable and is not apart of this scope.
+
+### What this project is not
+
+* **Process discovery**: This project does not discover nor manage process
+  auto-instrumentation life-cycles. It is expected that this is done external
+  to the `auto` package and the results are passed to any created
+  `Instrumentation`.
+* **Multi-language auto-instrumentation**: This project is focused on
+  instrumentation for the Golang programming language.
+* **Host instrumentation**: This project does not focus on instrumentation for
+  the host or platform running processes.
+
 ## Development
+
+### Update `internal/include/libbpf`
+
+Update using either `make` or the GitHub workflow[^1].
+
+[^1]: TODO: link GitHub workflow.
+
+#### Using `make`
+
+```terminal
+# Optionally, export a version constraint to use.
+$ export LIBBPF_VERSION="< 1.5, >= 1.4.7"
+$ make synclibbpf
+```
 
 ### Compiling the project
 
@@ -36,6 +77,18 @@ Alternatively, you can create a Linux Docker container:
 Questions, bug reports, and feature requests can all be submitted as [issues](https://github.com/open-telemetry/opentelemetry-go-instrumentation/issues/new) to this repository.
 
 ## Pull Requests
+
+> [!NOTE]
+> We are currently **not** accepting PRs to add new instrumentation probes. A
+> new [instrumentation probe API] is being designed. To avoid excessive churn
+> and development burden, we will not be accepting new instrumentation probes
+> until that API is completed.
+> 
+> Please **do** [open an issue] to track your request for new instrumentation.
+> We would like to know what we are missing and how you plan to use it.
+
+[open an issue]: https://github.com/open-telemetry/opentelemetry-go-instrumentation/issues/new?template=new_instrumentation.yaml
+[instrumentation API]: https://github.com/open-telemetry/opentelemetry-go-instrumentation/issues/1105 
 
 ### How to Send Pull Requests
 
@@ -144,22 +197,21 @@ Any [Maintainer] can merge the PR once the above criteria have been met.
 
 ### Approvers
 
-- [Aaron Clawson](https://github.com/MadVikingGod), LightStep
-- [Dinesh Gurumurthy](https://github.com/dineshg13), DataDog
 - [Nikola Grcevski](https://github.com/grcevski), Grafana Labs
 - [Robert Pająk](https://github.com/pellared), Splunk
 
 ### Maintainers
 
 - [Eden Federman](https://github.com/edeNFed), Odigos
-- [Mike Dame](https://github.com/damemi), Google
-- [Przemyslaw Delewski](https://github.com/pdelewski), SumoLogic
+- [Mike Dame](https://github.com/damemi), Odigos
 - [Ron Federman](https://github.com/RonFed), Odigos
 - [Tyler Yahn](https://github.com/MrAlias), Splunk
 
 ### Emeritus
 
+- [Dinesh Gurumurthy](https://github.com/dineshg13), DataDog
 - [Mike Goldsmith](https://github.com/MikeGoldsmith), Honeycomb
+- [Przemyslaw Delewski](https://github.com/pdelewski), Quesma
 
 ### Become an Approver or a Maintainer
 

@@ -6,6 +6,7 @@ package sampling
 import (
 	"bytes"
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"math"
 
@@ -220,7 +221,7 @@ func NewSamplingManager(c *ebpf.Collection, conf *Config) (*Manager, error) {
 
 func (m *Manager) applyConfig(conf *Config) error {
 	if conf == nil {
-		return fmt.Errorf("cannot apply nil config")
+		return errors.New("cannot apply nil config")
 	}
 
 	samplerIDs := make([]SamplerID, 0, len(conf.Samplers))
@@ -242,12 +243,19 @@ func (m *Manager) applyConfig(conf *Config) error {
 		copy(configsBytes[i][:], b)
 	}
 
-	n, err := m.samplersConfigMap.BatchUpdate(samplerIDs, configsBytes, &ebpf.BatchOptions{})
+	_, err := m.samplersConfigMap.BatchUpdate(samplerIDs, configsBytes, &ebpf.BatchOptions{})
 	if err != nil {
-		return err
-	}
-	if n != len(samplerIDs) {
-		return fmt.Errorf("failed to update samplers, expected %d, updated %d", len(samplerIDs), n)
+		if !errors.Is(err, ebpf.ErrNotSupported) {
+			return fmt.Errorf("failed to update samplers config map: %w", err)
+		}
+		// batch update is supported for kernels >= 5.6
+		// fallback to single updates
+		for i := range samplerIDs {
+			err = m.samplersConfigMap.Put(uint32(samplerIDs[i]), configsBytes[i])
+			if err != nil {
+				return err
+			}
+		}
 	}
 
 	err = m.setActiveSampler(conf.ActiveSampler)

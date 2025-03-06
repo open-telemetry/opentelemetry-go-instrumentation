@@ -6,7 +6,10 @@ package binary
 import (
 	"debug/elf"
 	"debug/gosym"
+	"encoding/binary"
+	"errors"
 	"fmt"
+	"math"
 )
 
 func FindFunctionsStripped(elfF *elf.File, relevantFuncs map[string]interface{}) ([]*Func, error) {
@@ -18,16 +21,31 @@ func FindFunctionsStripped(elfF *elf.File, relevantFuncs map[string]interface{})
 	if err != nil {
 		return nil, err
 	}
-	sec = elfF.Section(".gosymtab")
-	if sec == nil {
-		return nil, fmt.Errorf("%s section not found in target binary, make sure this is a Go application", ".gosymtab")
+
+	// We need to read the Go pcln data at offset 8 + 2 * the pointer size.
+	// The pointer size can be found at offset 7, which should be either 4 or 8.
+	// We assume that we shouldn't have a gopclntab section smaller than the
+	// 8 + 2 * the largest possible pointer size, which is 8 + 2 * 8.
+	if len(pclndat) <= 8*2*8 {
+		return nil, errors.New(".gopclntab section too small")
 	}
-	symTabRaw, err := sec.Data()
-	if err != nil {
-		return nil, err
+
+	// we extract the `textStart` value based on the header of the pclntab,
+	// this is used to parse the line number table, and is not necessarily the start of the `.text` section.
+	// when a binary is build with C code, the value of `textStart` is not the same as the start of the `.text` section.
+	// https://github.com/golang/go/blob/master/src/runtime/symtab.go#L374
+	var runtimeText uint64
+	ptrSize := uint32(pclndat[7])
+	if ptrSize == 4 {
+		runtimeText = uint64(binary.LittleEndian.Uint32(pclndat[8+2*ptrSize:]))
+	} else if ptrSize == 8 {
+		runtimeText = binary.LittleEndian.Uint64(pclndat[8+2*ptrSize:])
+	} else {
+		return nil, errors.New("invalid pointer size of text section of .gopclntab")
 	}
-	pcln := gosym.NewLineTable(pclndat, elfF.Section(".text").Addr)
-	symTab, err := gosym.NewTable(symTabRaw, pcln)
+
+	pcln := gosym.NewLineTable(pclndat, runtimeText)
+	symTab, err := gosym.NewTable(nil, pcln)
 	if err != nil {
 		return nil, err
 	}
@@ -54,6 +72,30 @@ func FindFunctionsStripped(elfF *elf.File, relevantFuncs map[string]interface{})
 }
 
 func findFuncOffsetStripped(f *gosym.Func, elfF *elf.File) (uint64, []uint64, error) {
+	text := elfF.Section(".text")
+	if text == nil {
+		return 0, nil, errors.New(".text section not found in target binary")
+	}
+
+	var off uint64
+	funcLen := max(f.End-f.Entry, 0)
+	data := make([]byte, funcLen)
+	offInText := f.Entry - text.Addr
+
+	if offInText > math.MaxInt64 {
+		return 0, nil, fmt.Errorf("overflow in offset to read in the text section: %d", offInText)
+	}
+
+	_, err := text.ReadAt(data, int64(offInText)) // nolint: gosec // Overflow handled.
+	if err != nil {
+		return 0, nil, err
+	}
+
+	retInstructionOffsets, err := findRetInstructions(data)
+	if err != nil {
+		return 0, nil, err
+	}
+
 	for _, prog := range elfF.Progs {
 		if prog.Type != elf.PT_LOAD || (prog.Flags&elf.PF_X) == 0 {
 			continue
@@ -61,27 +103,19 @@ func findFuncOffsetStripped(f *gosym.Func, elfF *elf.File) (uint64, []uint64, er
 
 		// For more info on this calculation: stackoverflow.com/a/40249502
 		if prog.Vaddr <= f.Value && f.Value < (prog.Vaddr+prog.Memsz) {
-			off := f.Value - prog.Vaddr + prog.Off
-
-			funcLen := f.End - f.Entry
-			data := make([]byte, funcLen)
-			_, err := prog.ReadAt(data, int64(f.Value-prog.Vaddr))
-			if err != nil {
-				return 0, nil, err
-			}
-
-			instructionIndices, err := findRetInstructions(data)
-			if err != nil {
-				return 0, nil, err
-			}
-
-			newLocations := make([]uint64, len(instructionIndices))
-			for i, instructionIndex := range instructionIndices {
-				newLocations[i] = instructionIndex + off
-			}
-
-			return off, newLocations, nil
+			off = f.Value - prog.Vaddr + prog.Off
+			break
 		}
 	}
-	return 0, nil, fmt.Errorf("prog not found")
+
+	if off == 0 {
+		return 0, nil, errors.New("could not find function offset")
+	}
+
+	retOffsets := make([]uint64, len(retInstructionOffsets))
+	for i, instructionOffset := range retInstructionOffsets {
+		retOffsets[i] = instructionOffset + off
+	}
+
+	return off, retOffsets, nil
 }

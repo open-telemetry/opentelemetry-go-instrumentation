@@ -4,18 +4,25 @@
 package auto
 
 import (
+	"bytes"
 	"context"
 	"fmt"
+	"io"
+	"log"
 	"log/slog"
+	"os"
 	"testing"
 
+	"github.com/go-logr/stdr"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/exporters/otlp/otlptrace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
 
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/probe/sampling"
+	"go.opentelemetry.io/auto/internal/pkg/process"
 )
 
 func TestWithServiceName(t *testing.T) {
@@ -34,30 +41,12 @@ func TestWithServiceName(t *testing.T) {
 }
 
 func TestWithPID(t *testing.T) {
-	ctx := context.Background()
-
-	c, err := newInstConfig(ctx, []InstrumentationOption{WithPID(1)})
+	c, err := newInstConfig(context.Background(), []InstrumentationOption{WithPID(1)})
 	require.NoError(t, err)
-	assert.Equal(t, 1, c.target.Pid)
-
-	const exe = "./test/path/program/run.go"
-	// PID should override valid target exe
-	c, err = newInstConfig(ctx, []InstrumentationOption{WithTarget(exe), WithPID(1)})
-	require.NoError(t, err)
-	assert.Equal(t, 1, c.target.Pid)
-	assert.Equal(t, "", c.target.ExePath)
+	assert.Equal(t, process.ID(1), c.pid)
 }
 
 func TestWithEnv(t *testing.T) {
-	t.Run("OTEL_GO_AUTO_TARGET_EXE", func(t *testing.T) {
-		const path = "./test/path/program/run.go"
-		mockEnv(t, map[string]string{"OTEL_GO_AUTO_TARGET_EXE": path})
-		c, err := newInstConfig(context.Background(), []InstrumentationOption{WithEnv()})
-		require.NoError(t, err)
-		assert.Equal(t, path, c.target.ExePath)
-		assert.Equal(t, 0, c.target.Pid)
-	})
-
 	t.Run("OTEL_SERVICE_NAME", func(t *testing.T) {
 		const name = "test_service"
 		mockEnv(t, map[string]string{"OTEL_SERVICE_NAME": name})
@@ -95,6 +84,25 @@ func TestWithEnv(t *testing.T) {
 		_, err = newInstConfig(ctx, opts)
 		require.ErrorContains(t, err, `parse log level "invalid"`)
 	})
+
+	// Test that autoexport.NewSpanExporter works when OTEL_TRACES_EXPORTER is
+	// not set and OTEL_EXPORTER_OTLP_PROTOCOL is set to 'grpc'
+	t.Run("With OTEL_TRACES_EXPORTER not set", func(t *testing.T) {
+		os.Unsetenv("OTEL_TRACES_EXPORTER")
+		t.Setenv("OTEL_EXPORTER_OTLP_PROTOCOL", "grpc")
+		c, err := newInstConfig(context.Background(), []InstrumentationOption{WithEnv()})
+
+		require.NoError(t, err)
+		require.NotNil(t, c.traceExp)
+		require.IsType(t, &otlptrace.Exporter{}, c.traceExp)
+		exp := c.traceExp.(*otlptrace.Exporter)
+		var buf bytes.Buffer
+		logger := stdr.New(log.New(&buf, "", log.LstdFlags))
+		logger.Info("", "exporter", exp)
+		got, err := io.ReadAll(&buf)
+		require.NoError(t, err)
+		assert.Contains(t, string(got), "otlptracegrpc")
+	})
 }
 
 func TestOptionPrecedence(t *testing.T) {
@@ -105,39 +113,31 @@ func TestOptionPrecedence(t *testing.T) {
 
 	t.Run("Env", func(t *testing.T) {
 		mockEnv(t, map[string]string{
-			"OTEL_GO_AUTO_TARGET_EXE": path,
-			"OTEL_SERVICE_NAME":       name,
+			"OTEL_SERVICE_NAME": name,
 		})
 
 		// WithEnv passed last, it should have precedence.
 		opts := []InstrumentationOption{
-			WithPID(1),
 			WithServiceName("wrong"),
 			WithEnv(),
 		}
 		c, err := newInstConfig(context.Background(), opts)
 		require.NoError(t, err)
-		assert.Equal(t, path, c.target.ExePath)
-		assert.Equal(t, 0, c.target.Pid)
 		assert.Equal(t, name, c.serviceName)
 	})
 
 	t.Run("Options", func(t *testing.T) {
 		mockEnv(t, map[string]string{
-			"OTEL_GO_AUTO_TARGET_EXE": path,
-			"OTEL_SERVICE_NAME":       "wrong",
+			"OTEL_SERVICE_NAME": "wrong",
 		})
 
 		// WithEnv passed first, it should be overridden.
 		opts := []InstrumentationOption{
 			WithEnv(),
-			WithPID(1),
 			WithServiceName(name),
 		}
 		c, err := newInstConfig(context.Background(), opts)
 		require.NoError(t, err)
-		assert.Equal(t, "", c.target.ExePath)
-		assert.Equal(t, 1, c.target.Pid)
 		assert.Equal(t, name, c.serviceName)
 	})
 }
@@ -200,14 +200,14 @@ func TestWithSampler(t *testing.T) {
 		require.NoError(t, err)
 		sc, err := convertSamplerToConfig(c.sampler)
 		assert.NoError(t, err)
-		assert.Equal(t, sc.Samplers, sampling.DefaultConfig().Samplers)
-		assert.Equal(t, sc.ActiveSampler, sampling.ParentBasedID)
+		assert.Equal(t, sampling.DefaultConfig().Samplers, sc.Samplers)
+		assert.Equal(t, sampling.ParentBasedID, sc.ActiveSampler)
 		conf, ok := sc.Samplers[sampling.ParentBasedID]
 		assert.True(t, ok)
-		assert.Equal(t, conf.SamplerType, sampling.SamplerParentBased)
+		assert.Equal(t, sampling.SamplerParentBased, conf.SamplerType)
 		pbConfig, ok := conf.Config.(sampling.ParentBasedConfig)
 		assert.True(t, ok)
-		assert.Equal(t, pbConfig, sampling.DefaultParentBasedSampler())
+		assert.Equal(t, sampling.DefaultParentBasedSampler(), pbConfig)
 	})
 
 	t.Run("Env config", func(t *testing.T) {
@@ -220,16 +220,16 @@ func TestWithSampler(t *testing.T) {
 		require.NoError(t, err)
 		sc, err := convertSamplerToConfig(c.sampler)
 		assert.NoError(t, err)
-		assert.Equal(t, sc.ActiveSampler, sampling.ParentBasedID)
+		assert.Equal(t, sampling.ParentBasedID, sc.ActiveSampler)
 		parentBasedConfig, ok := sc.Samplers[sampling.ParentBasedID]
 		assert.True(t, ok)
-		assert.Equal(t, parentBasedConfig.SamplerType, sampling.SamplerParentBased)
+		assert.Equal(t, sampling.SamplerParentBased, parentBasedConfig.SamplerType)
 		pbConfig, ok := parentBasedConfig.Config.(sampling.ParentBasedConfig)
 		assert.True(t, ok)
-		assert.Equal(t, pbConfig.Root, sampling.TraceIDRatioID)
+		assert.Equal(t, sampling.TraceIDRatioID, pbConfig.Root)
 		tidRatio, ok := sc.Samplers[sampling.TraceIDRatioID]
 		assert.True(t, ok)
-		assert.Equal(t, tidRatio.SamplerType, sampling.SamplerTraceIDRatio)
+		assert.Equal(t, sampling.SamplerTraceIDRatio, tidRatio.SamplerType)
 		config, ok := tidRatio.Config.(sampling.TraceIDRatioConfig)
 		assert.True(t, ok)
 		expected, _ := sampling.NewTraceIDRatioConfig(0.42)
@@ -256,21 +256,21 @@ func TestWithSampler(t *testing.T) {
 		require.NoError(t, err)
 		sc, err := convertSamplerToConfig(c.sampler)
 		assert.NoError(t, err)
-		assert.Equal(t, sc.ActiveSampler, sampling.ParentBasedID)
+		assert.Equal(t, sampling.ParentBasedID, sc.ActiveSampler)
 		parentBasedConfig, ok := sc.Samplers[sampling.ParentBasedID]
 		assert.True(t, ok)
-		assert.Equal(t, parentBasedConfig.SamplerType, sampling.SamplerParentBased)
+		assert.Equal(t, sampling.SamplerParentBased, parentBasedConfig.SamplerType)
 		pbConfig, ok := parentBasedConfig.Config.(sampling.ParentBasedConfig)
 		assert.True(t, ok)
-		assert.Equal(t, pbConfig.Root, sampling.TraceIDRatioID)
-		assert.Equal(t, pbConfig.RemoteSampled, sampling.AlwaysOnID)
-		assert.Equal(t, pbConfig.RemoteNotSampled, sampling.AlwaysOffID)
-		assert.Equal(t, pbConfig.LocalSampled, sampling.AlwaysOnID)
-		assert.Equal(t, pbConfig.LocalNotSampled, sampling.AlwaysOffID)
+		assert.Equal(t, sampling.TraceIDRatioID, pbConfig.Root)
+		assert.Equal(t, sampling.AlwaysOnID, pbConfig.RemoteSampled)
+		assert.Equal(t, sampling.AlwaysOffID, pbConfig.RemoteNotSampled)
+		assert.Equal(t, sampling.AlwaysOnID, pbConfig.LocalSampled)
+		assert.Equal(t, sampling.AlwaysOffID, pbConfig.LocalNotSampled)
 
 		tidRatio, ok := sc.Samplers[sampling.TraceIDRatioID]
 		assert.True(t, ok)
-		assert.Equal(t, tidRatio.SamplerType, sampling.SamplerTraceIDRatio)
+		assert.Equal(t, sampling.SamplerTraceIDRatio, tidRatio.SamplerType)
 		config, ok := tidRatio.Config.(sampling.TraceIDRatioConfig)
 		assert.True(t, ok)
 		expected, _ := sampling.NewTraceIDRatioConfig(0.42)

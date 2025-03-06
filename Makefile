@@ -11,6 +11,8 @@ TOOLS = $(CURDIR)/.tools
 ALL_GO_MOD_DIRS := $(shell find . -type f -name 'go.mod' ! -path './LICENSES/*' -exec dirname {} \; | sort)
 ALL_GO_MODS := $(shell find . -type f -name 'go.mod' ! -path '$(TOOLS_MOD_DIR)/*' ! -path './LICENSES/*' | sort)
 
+EXAMPLE_MODS := $(filter ./examples/%,$(ALL_GO_MODS))
+
 # BPF compile time dependencies.
 BPF2GO_CFLAGS += -I${REPODIR}/internal/include/libbpf
 BPF2GO_CFLAGS += -I${REPODIR}/internal/include
@@ -19,6 +21,10 @@ export BPF2GO_CFLAGS
 # Go default variables
 GOCMD?= go
 CGO_ENABLED?=0
+
+# User to run as in docker images.
+DOCKER_USER=$(shell id -u):$(shell id -g)
+DEPENDENCIES_DOCKERFILE=./dependencies.Dockerfile
 
 .DEFAULT_GOAL := precommit
 
@@ -50,8 +56,14 @@ $(TOOLS)/golangci-lint: PACKAGE=github.com/golangci/golangci-lint/cmd/golangci-l
 OFFSETGEN = $(TOOLS)/offsetgen
 $(TOOLS)/offsetgen: PACKAGE=go.opentelemetry.io/auto/$(TOOLS_MOD_DIR)/inspect/cmd/offsetgen
 
+SYNCLIBBPF = $(TOOLS)/synclibbpf
+$(TOOLS)/synclibbpf: PACKAGE=go.opentelemetry.io/auto/$(TOOLS_MOD_DIR)/synclibbpf
+
+CROSSLINK = $(TOOLS)/crosslink
+$(TOOLS)/crosslink: PACKAGE=go.opentelemetry.io/build-tools/crosslink
+
 .PHONY: tools
-tools: $(GOLICENSES) $(MULTIMOD) $(GOLANGCI_LINT) $(DBOTCONF) $(OFFSETGEN)
+tools: $(GOLICENSES) $(MULTIMOD) $(GOLANGCI_LINT) $(DBOTCONF) $(OFFSETGEN) $(SYNCLIBBPF) $(CROSSLINK)
 
 TEST_TARGETS := test-verbose test-ebpf test-race
 .PHONY: $(TEST_TARGETS) test
@@ -82,20 +94,28 @@ generate/all:
 
 .PHONY: docker-generate
 docker-generate: docker-build-base
-	docker run --rm -v $(shell pwd):/app $(IMG_NAME_BASE) /bin/sh -c "cd ../app && make generate"
+	docker run --rm -v $(shell pwd):/app $(IMG_NAME_BASE) /bin/sh -c "cd /app && make generate"
 
 .PHONY: docker-test
 docker-test: docker-build-base
-	docker run --rm -v $(shell pwd):/app $(IMG_NAME_BASE) /bin/sh -c "cd ../app && make test"
+	docker run --rm -v $(shell pwd):/app $(IMG_NAME_BASE) /bin/sh -c "cd /app && make test"
 
 .PHONY: docker-precommit
 docker-precommit: docker-build-base
-	docker run --rm -v $(shell pwd):/app $(IMG_NAME_BASE) /bin/sh -c "cd ../app && make precommit"
+	docker run --rm -v $(shell pwd):/app $(IMG_NAME_BASE) /bin/sh -c "cd /app && make precommit"
+
+null  :=
+space := $(null) #
+comma := ,
+
+.PHONY: crosslink
+crosslink: $(CROSSLINK)
+	@$(CROSSLINK) --root=$(REPODIR) --skip=$(subst $(space),$(comma),$(strip $(EXAMPLE_MODS:./%=%))) --prune
 
 .PHONY: go-mod-tidy
 go-mod-tidy: $(ALL_GO_MOD_DIRS:%=go-mod-tidy/%)
 go-mod-tidy/%: DIR=$*
-go-mod-tidy/%:
+go-mod-tidy/%: crosslink
 	@cd $(DIR) && $(GOCMD) mod tidy -compat=1.20
 
 .PHONY: golangci-lint golangci-lint-fix
@@ -120,14 +140,29 @@ docker-build:
 docker-build-base:
 	docker buildx build -t $(IMG_NAME_BASE) --target base .
 
+.PHONY: sample-app/nethttp sample-app/gin sample-app/databasesql sample-app/nethttp-custom sample-app/otelglobal sample-app/autosdk sample-app/kafka-go
+sample-app/%: LIBRARY=$*
+sample-app/%:
+	if [ -f ./internal/test/e2e/$(LIBRARY)/build.sh ]; then \
+		./internal/test/e2e/$(LIBRARY)/build.sh; \
+	else \
+		cd internal/test/e2e/$(LIBRARY) && docker build -t sample-app . ;\
+	fi
+
+LIBBPF_VERSION ?= "< 1.5, >= 1.4.7"
+LIBBPF_DEST ?= "$(REPODIR)/internal/include/libbpf"
+.PHONY: synclibbpf
+synclibbpf: | $(SYNCLIBBPF)
+	$(SYNCLIBBPF) -version=$(LIBBPF_VERSION) -dest=$(LIBBPF_DEST)
+
 OFFSETS_OUTPUT_FILE="$(REPODIR)/internal/pkg/inject/offset_results.json"
 .PHONY: offsets
 offsets: | $(OFFSETGEN)
 	$(OFFSETGEN) -output=$(OFFSETS_OUTPUT_FILE) -cache=$(OFFSETS_OUTPUT_FILE)
 
 .PHONY: docker-offsets
-docker-offsets:
-	docker run -e DOCKER_USERNAME=$(DOCKER_USERNAME) -e DOCKER_PASSWORD=$(DOCKER_PASSWORD) --rm -v /tmp:/tmp -v /var/run/docker.sock:/var/run/docker.sock -v $(shell pwd):/app golang:1.22 /bin/sh -c "cd ../app && make offsets"
+docker-offsets: docker-build-base
+	docker run -e DOCKER_USERNAME=$(DOCKER_USERNAME) -e DOCKER_PASSWORD=$(DOCKER_PASSWORD) --rm -v /tmp:/tmp -v /var/run/docker.sock:/var/run/docker.sock -v $(shell pwd):/app $(IMG_NAME_BASE) /bin/sh -c "cd ../app && make offsets"
 
 .PHONY: update-licenses
 update-licenses: generate $(GOLICENSES)
@@ -184,13 +219,7 @@ fixture-otelglobal: fixtures/otelglobal
 fixture-autosdk: fixtures/autosdk
 fixture-kafka-go: fixtures/kafka-go
 fixtures/%: LIBRARY=$*
-fixtures/%:
-	$(MAKE) docker-build
-	if [ -f ./internal/test/e2e/$(LIBRARY)/build.sh ]; then \
-		./internal/test/e2e/$(LIBRARY)/build.sh; \
-	else \
-		cd internal/test/e2e/$(LIBRARY) && docker build -t sample-app . ;\
-	fi
+fixtures/%: docker-build sample-app/%
 	kind create cluster
 	kind load docker-image otel-go-instrumentation sample-app
 	helm repo add open-telemetry https://open-telemetry.github.io/opentelemetry-helm-charts
@@ -253,20 +282,20 @@ PIP := $(PYTOOLS)/pip
 WORKDIR := /workdir
 
 # The python image to use for the virtual environment.
-PYTHONIMAGE := python:3.11.3-slim-bullseye
+PYTHONIMAGE := $(shell awk '$$4=="python" {print $$2}' $(DEPENDENCIES_DOCKERFILE))
 
 # Run the python image with the current directory mounted.
-DOCKERPY := docker run --rm -v "$(CURDIR):$(WORKDIR)" -w $(WORKDIR) $(PYTHONIMAGE)
+DOCKERPY := docker run --rm -u $(DOCKER_USER) -v "$(CURDIR):$(WORKDIR)" -w $(WORKDIR) $(PYTHONIMAGE)
 
 # Create a virtual environment for Python tools.
 $(PYTOOLS):
 # The `--upgrade` flag is needed to ensure that the virtual environment is
 # created with the latest pip version.
-	@$(DOCKERPY) bash -c "python3 -m venv $(VENVDIR) && $(PIP) install --upgrade pip"
+	@$(DOCKERPY) bash -c "python3 -m venv $(VENVDIR) && $(PIP) install --upgrade --cache-dir=$(WORKDIR)/.cache/pip pip"
 
 # Install python packages into the virtual environment.
 $(PYTOOLS)/%: $(PYTOOLS)
-	@$(DOCKERPY) $(PIP) install -r requirements.txt
+	@$(DOCKERPY) $(PIP) install --cache-dir=$(WORKDIR)/.cache/pip -r requirements.txt
 
 CODESPELL = $(PYTOOLS)/codespell
 $(CODESPELL): PACKAGE=codespell

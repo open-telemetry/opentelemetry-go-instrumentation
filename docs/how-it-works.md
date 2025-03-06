@@ -35,7 +35,7 @@ When the agent starts up, it first calls [`process.NewAnalyzer`](https://pkg.go.
 
 ### Registering instrumentation function probes
 
-Next, the `Instrumentation` object calls [`i.NewManager()`](https://pkg.go.dev/go.opentelemetry.io/auto@v0.10.1-alpha/internal/pkg/instrumentation#NewManager) to create a [`Manager`](https://pkg.go.dev/go.opentelemetry.io/auto@v0.10.1-alpha/internal/pkg/instrumentation#Manager) object. The `Manager` object  holds a map of the probed symbols, a channel to receive eBPF events, and a reference the the OpenTelemetry `Controller` to hand off parsed events and export telemetry.
+Next, the `Instrumentation` object calls [`i.NewManager()`](https://pkg.go.dev/go.opentelemetry.io/auto@v0.10.1-alpha/internal/pkg/instrumentation#NewManager) to create a [`Manager`](https://pkg.go.dev/go.opentelemetry.io/auto@v0.10.1-alpha/internal/pkg/instrumentation#Manager) object. The `Manager` object  holds a map of the probed symbols, a channel to receive eBPF events, and a reference the OpenTelemetry `Controller` to hand off parsed events and export telemetry.
 
 Calling `NewManager()` uses [`m.registerProbes()`](https://github.com/open-telemetry/opentelemetry-go-instrumentation/blob/02686f0a149b13fec4da73b9d40233a372fbd13b/internal/pkg/instrumentation/manager.go#L216) to instantiate each instrumented library's [`Probe` object](https://pkg.go.dev/go.opentelemetry.io/auto@v0.10.1-alpha/internal/pkg/instrumentation/probe#Probe).
 

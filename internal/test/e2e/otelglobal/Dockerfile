@@ -1,4 +1,4 @@
-ARG BASE_IMAGE=golang:1.23.4@sha256:70031844b8c225351d0bb63e2c383f80db85d92ba894e3da7e13bcf80efa9a37
+ARG BASE_IMAGE=golang:1.24.1@sha256:c5adecdb7b3f8c5ca3c88648a861882849cc8b02fed68ece31e25de88ad13418
 FROM ${BASE_IMAGE}
 
 COPY sdk/ /usr/src/go.opentelemetry.io/auto/sdk

@@ -93,12 +93,12 @@ func main() {
 func checkSpanCount(ctx context.Context, url string, targetCount int) (bool, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
-		return false, fmt.Errorf("failed to create request: %v", err)
+		return false, fmt.Errorf("failed to create request: %w", err)
 	}
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		return false, fmt.Errorf("failed to fetch telemetry data: %v", err)
+		return false, fmt.Errorf("failed to fetch telemetry data: %w", err)
 	}
 	defer resp.Body.Close()
 
@@ -108,7 +108,7 @@ func checkSpanCount(ctx context.Context, url string, targetCount int) (bool, err
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return false, fmt.Errorf("failed to read telemetry response body: %v", err)
+		return false, fmt.Errorf("failed to read telemetry response body: %w", err)
 	}
 
 	lines := strings.Split(string(body), "\n")
@@ -122,7 +122,7 @@ func checkSpanCount(ctx context.Context, url string, targetCount int) (bool, err
 			var value int
 			_, err := fmt.Sscanf(fields[len(fields)-1], "%d", &value)
 			if err != nil {
-				return false, fmt.Errorf("failed to parse span count: %v", err)
+				return false, fmt.Errorf("failed to parse span count: %w", err)
 			}
 
 			return value >= targetCount, nil
@@ -136,12 +136,12 @@ func sendShutdownSignal(ctx context.Context, url string) error {
 	fmt.Printf("Sending shutdown signal to %s\n", url)
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, nil)
 	if err != nil {
-		return fmt.Errorf("failed to create shutdown request: %v", err)
+		return fmt.Errorf("failed to create shutdown request: %w", err)
 	}
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		return fmt.Errorf("failed to send shutdown request: %v", err)
+		return fmt.Errorf("failed to send shutdown request: %w", err)
 	}
 	defer resp.Body.Close()
 

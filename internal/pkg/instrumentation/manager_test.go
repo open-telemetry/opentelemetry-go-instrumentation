@@ -1,4 +1,4 @@
-//go:build !multi_kernel_test
+//go:build !ebpf_test
 
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
@@ -13,8 +13,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Masterminds/semver/v3"
 	"github.com/cilium/ebpf/link"
-	"github.com/hashicorp/go-version"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -22,6 +22,15 @@ import (
 	"go.opentelemetry.io/otel/trace"
 	"go.opentelemetry.io/otel/trace/noop"
 
+	dbSql "go.opentelemetry.io/auto/internal/pkg/instrumentation/bpf/database/sql"
+	kafkaConsumer "go.opentelemetry.io/auto/internal/pkg/instrumentation/bpf/github.com/segmentio/kafka-go/consumer"
+	kafkaProducer "go.opentelemetry.io/auto/internal/pkg/instrumentation/bpf/github.com/segmentio/kafka-go/producer"
+	autosdk "go.opentelemetry.io/auto/internal/pkg/instrumentation/bpf/go.opentelemetry.io/auto/sdk"
+	otelTraceGlobal "go.opentelemetry.io/auto/internal/pkg/instrumentation/bpf/go.opentelemetry.io/otel/traceglobal"
+	grpcClient "go.opentelemetry.io/auto/internal/pkg/instrumentation/bpf/google.golang.org/grpc/client"
+	grpcServer "go.opentelemetry.io/auto/internal/pkg/instrumentation/bpf/google.golang.org/grpc/server"
+	httpClient "go.opentelemetry.io/auto/internal/pkg/instrumentation/bpf/net/http/client"
+	httpServer "go.opentelemetry.io/auto/internal/pkg/instrumentation/bpf/net/http/server"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/probe"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/probe/sampling"
 	"go.opentelemetry.io/auto/internal/pkg/opentelemetry"
@@ -30,21 +39,19 @@ import (
 )
 
 func TestProbeFiltering(t *testing.T) {
-	ver, err := version.NewVersion("1.20.0")
-	assert.NoError(t, err)
+	ver := semver.New(1, 20, 0, "", "")
 
 	t.Run("empty target details", func(t *testing.T) {
 		m := fakeManager(t)
 
-		td := process.TargetDetails{
-			PID:               1,
-			Functions:         []*binary.Func{},
-			GoVersion:         ver,
-			Libraries:         map[string]*version.Version{},
-			AllocationDetails: nil,
+		info := process.Info{
+			ID:        1,
+			Functions: []*binary.Func{},
+			GoVersion: ver,
+			Modules:   map[string]*semver.Version{},
 		}
-		m.FilterUnusedProbes(&td)
-		assert.Equal(t, 0, len(m.probes))
+		m.FilterUnusedProbes(&info)
+		assert.Empty(t, m.probes)
 	})
 
 	t.Run("only HTTP client target details", func(t *testing.T) {
@@ -54,15 +61,14 @@ func TestProbeFiltering(t *testing.T) {
 			{Name: "net/http.(*Transport).roundTrip"},
 		}
 
-		td := process.TargetDetails{
-			PID:               1,
-			Functions:         httpFuncs,
-			GoVersion:         ver,
-			Libraries:         map[string]*version.Version{},
-			AllocationDetails: nil,
+		info := process.Info{
+			ID:        1,
+			Functions: httpFuncs,
+			GoVersion: ver,
+			Modules:   map[string]*semver.Version{},
 		}
-		m.FilterUnusedProbes(&td)
-		assert.Equal(t, 1, len(m.probes)) // one function, single probe
+		m.FilterUnusedProbes(&info)
+		assert.Len(t, m.probes, 1) // one function, single probe
 	})
 
 	t.Run("HTTP server and client target details", func(t *testing.T) {
@@ -73,15 +79,14 @@ func TestProbeFiltering(t *testing.T) {
 			{Name: "net/http.serverHandler.ServeHTTP"},
 		}
 
-		td := process.TargetDetails{
-			PID:               1,
-			Functions:         httpFuncs,
-			GoVersion:         ver,
-			Libraries:         map[string]*version.Version{},
-			AllocationDetails: nil,
+		info := process.Info{
+			ID:        1,
+			Functions: httpFuncs,
+			GoVersion: ver,
+			Modules:   map[string]*semver.Version{},
 		}
-		m.FilterUnusedProbes(&td)
-		assert.Equal(t, 2, len(m.probes))
+		m.FilterUnusedProbes(&info)
+		assert.Len(t, m.probes, 2)
 	})
 
 	t.Run("HTTP server and client dependent function only target details", func(t *testing.T) {
@@ -93,15 +98,14 @@ func TestProbeFiltering(t *testing.T) {
 			{Name: "net/http.serverHandler.ServeHTTP"},
 		}
 
-		td := process.TargetDetails{
-			PID:               1,
-			Functions:         httpFuncs,
-			GoVersion:         ver,
-			Libraries:         map[string]*version.Version{},
-			AllocationDetails: nil,
+		info := process.Info{
+			ID:        1,
+			Functions: httpFuncs,
+			GoVersion: ver,
+			Modules:   map[string]*semver.Version{},
 		}
-		m.FilterUnusedProbes(&td)
-		assert.Equal(t, 1, len(m.probes))
+		m.FilterUnusedProbes(&info)
+		assert.Len(t, m.probes, 1)
 	})
 }
 
@@ -120,7 +124,7 @@ func TestDependencyChecks(t *testing.T) {
 			},
 		}
 
-		assert.Nil(t, m.validateProbeDependents(probe.ID{InstrumentedPkg: "test"}, syms))
+		assert.NoError(t, m.validateProbeDependents(probe.ID{InstrumentedPkg: "test"}, syms))
 	})
 
 	t.Run("Second dependent missing", func(t *testing.T) {
@@ -135,7 +139,7 @@ func TestDependencyChecks(t *testing.T) {
 			},
 		}
 
-		assert.NotNil(t, m.validateProbeDependents(probe.ID{InstrumentedPkg: "test"}, syms))
+		assert.Error(t, m.validateProbeDependents(probe.ID{InstrumentedPkg: "test"}, syms))
 	})
 
 	t.Run("Second dependent present", func(t *testing.T) {
@@ -154,7 +158,7 @@ func TestDependencyChecks(t *testing.T) {
 			},
 		}
 
-		assert.Nil(t, m.validateProbeDependents(probe.ID{InstrumentedPkg: "test"}, syms))
+		assert.NoError(t, m.validateProbeDependents(probe.ID{InstrumentedPkg: "test"}, syms))
 	})
 
 	t.Run("Dependent wrong", func(t *testing.T) {
@@ -169,7 +173,7 @@ func TestDependencyChecks(t *testing.T) {
 			},
 		}
 
-		assert.NotNil(t, m.validateProbeDependents(probe.ID{InstrumentedPkg: "test"}, syms))
+		assert.Error(t, m.validateProbeDependents(probe.ID{InstrumentedPkg: "test"}, syms))
 	})
 
 	t.Run("Two probes without dependents", func(t *testing.T) {
@@ -184,12 +188,24 @@ func TestDependencyChecks(t *testing.T) {
 			},
 		}
 
-		assert.Nil(t, m.validateProbeDependents(probe.ID{InstrumentedPkg: "test"}, syms))
+		assert.NoError(t, m.validateProbeDependents(probe.ID{InstrumentedPkg: "test"}, syms))
 	})
 }
 
 func fakeManager(t *testing.T) *Manager {
-	m, err := NewManager(slog.Default(), nil, true, NewNoopConfigProvider(nil), "")
+	logger := slog.Default()
+	m, err := NewManager(
+		logger, nil, NewNoopConfigProvider(nil),
+		grpcClient.New(logger, ""),
+		grpcServer.New(logger, ""),
+		httpServer.New(logger, ""),
+		httpClient.New(logger, ""),
+		dbSql.New(logger, ""),
+		kafkaProducer.New(logger, ""),
+		kafkaConsumer.New(logger, ""),
+		autosdk.New(logger),
+		otelTraceGlobal.New(logger),
+	)
 	assert.NoError(t, err)
 	assert.NotNil(t, m)
 
@@ -206,8 +222,8 @@ func mockExeAndBpffs(t *testing.T) {
 	t.Cleanup(func() { rlimitRemoveMemlock = origRlimitRemoveMemlock })
 
 	origBpffsMount := bpffsMount
-	bpffsMount = func(td *process.TargetDetails) error {
-		if td == nil {
+	bpffsMount = func(info *process.Info) error {
+		if info == nil {
 			return errors.New("target is nil in Mount")
 		}
 		return nil
@@ -215,8 +231,8 @@ func mockExeAndBpffs(t *testing.T) {
 	t.Cleanup(func() { bpffsMount = origBpffsMount })
 
 	origBpffsCleanup := bpffsCleanup
-	bpffsCleanup = func(td *process.TargetDetails) error {
-		if td == nil {
+	bpffsCleanup = func(info *process.Info) error {
+		if info == nil {
 			return errors.New("target is nil in Cleanup")
 		}
 		return nil
@@ -255,7 +271,7 @@ func TestRunStoppingByContext(t *testing.T) {
 	ctx, stopCtx := context.WithCancel(context.Background())
 	errCh := make(chan error, 1)
 
-	err = m.Load(ctx, &process.TargetDetails{PID: 1000})
+	err = m.Load(ctx, &process.Info{ID: 1000})
 	require.NoError(t, err)
 
 	go func() { errCh <- m.Run(ctx) }()
@@ -304,7 +320,7 @@ func TestRunStoppingByStop(t *testing.T) {
 	ctx := context.Background()
 	errCh := make(chan error, 1)
 
-	err = m.Load(ctx, &process.TargetDetails{PID: 1000})
+	err = m.Load(ctx, &process.Info{ID: 1000})
 	require.NoError(t, err)
 
 	time.AfterFunc(100*time.Millisecond, func() {
@@ -321,7 +337,7 @@ func TestRunStoppingByStop(t *testing.T) {
 			return false
 		}
 	}, time.Second, 10*time.Millisecond)
-	assert.ErrorIs(t, err, nil)
+	assert.NoError(t, err)
 	assert.True(t, tp.called, "Controller not stopped")
 	assert.True(t, p.closed.Load(), "Probe not closed")
 }
@@ -340,7 +356,7 @@ func newSlowProbe(stop chan struct{}) slowProbe {
 	}
 }
 
-func (p slowProbe) Load(*link.Executable, *process.TargetDetails, *sampling.Config) error {
+func (p slowProbe) Load(*link.Executable, *process.Info, *sampling.Config) error {
 	return nil
 }
 
@@ -359,7 +375,7 @@ type noopProbe struct {
 
 var _ probe.Probe = (*noopProbe)(nil)
 
-func (p *noopProbe) Load(*link.Executable, *process.TargetDetails, *sampling.Config) error {
+func (p *noopProbe) Load(*link.Executable, *process.Info, *sampling.Config) error {
 	p.loaded.Store(true)
 	return nil
 }
@@ -434,7 +450,7 @@ func TestConfigProvider(t *testing.T) {
 	mockExeAndBpffs(t)
 	runCtx, cancel := context.WithCancel(context.Background())
 
-	err := m.Load(runCtx, &process.TargetDetails{PID: 1000})
+	err := m.Load(runCtx, &process.Info{ID: 1000})
 	require.NoError(t, err)
 
 	runErr := make(chan error, 1)
@@ -533,7 +549,7 @@ func newHangingProbe() *hangingProbe {
 	return &hangingProbe{closeReturned: make(chan struct{})}
 }
 
-func (p *hangingProbe) Load(*link.Executable, *process.TargetDetails, *sampling.Config) error {
+func (p *hangingProbe) Load(*link.Executable, *process.Info, *sampling.Config) error {
 	return nil
 }
 
@@ -568,7 +584,7 @@ func TestRunStopDeadlock(t *testing.T) {
 	ctx, stopCtx := context.WithCancel(context.Background())
 	errCh := make(chan error, 1)
 
-	err = m.Load(ctx, &process.TargetDetails{PID: 1000})
+	err = m.Load(ctx, &process.Info{ID: 1000})
 	require.NoError(t, err)
 
 	go func() { errCh <- m.Run(ctx) }()
@@ -633,7 +649,7 @@ func TestStopBeforeRun(t *testing.T) {
 
 	mockExeAndBpffs(t)
 
-	err = m.Load(context.Background(), &process.TargetDetails{PID: 1000})
+	err = m.Load(context.Background(), &process.Info{ID: 1000})
 	require.NoError(t, err)
 	require.True(t, p.loaded.Load())
 

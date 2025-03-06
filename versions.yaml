@@ -3,7 +3,7 @@
 
 module-sets:
   auto:
-    version: v0.19.0-alpha
+    version: v0.21.0
     modules:
       - go.opentelemetry.io/auto
   sdk:
@@ -11,12 +11,12 @@ module-sets:
     modules:
       - go.opentelemetry.io/auto/sdk
 excluded-modules:
-  - github.com/hashicorp/go-version
   - go.opentelemetry.io/auto/examples
   - go.opentelemetry.io/auto/examples/httpPlusdb
   - go.opentelemetry.io/auto/examples/kafka-go/producer
   - go.opentelemetry.io/auto/examples/kafka-go/consumer
-  - go.opentelemetry.io/auto/examples/rolldice
+  - go.opentelemetry.io/auto/examples/rolldice/frontend
+  - go.opentelemetry.io/auto/examples/rolldice/user
   - go.opentelemetry.io/auto/internal/test/e2e/autosdk
   - go.opentelemetry.io/auto/internal/test/e2e/databasesql
   - go.opentelemetry.io/auto/internal/test/e2e/gin

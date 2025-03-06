@@ -4,8 +4,8 @@
 package producer
 
 import (
-	"fmt"
 	"log/slog"
+	"math"
 
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/ptrace"
@@ -38,26 +38,25 @@ func New(logger *slog.Logger, version string) probe.Probe {
 			ID:     id,
 			Logger: logger,
 			Consts: []probe.Const{
-				probe.RegistersABIConst{},
 				probe.AllocationConst{},
 				probe.StructFieldConst{
 					Key: "writer_topic_pos",
-					Val: structfield.NewID("github.com/segmentio/kafka-go", "github.com/segmentio/kafka-go", "Writer", "Topic"),
+					ID:  structfield.NewID("github.com/segmentio/kafka-go", "github.com/segmentio/kafka-go", "Writer", "Topic"),
 				},
 				probe.StructFieldConst{
 					Key: "message_headers_pos",
-					Val: structfield.NewID("github.com/segmentio/kafka-go", "github.com/segmentio/kafka-go", "Message", "Headers"),
+					ID:  structfield.NewID("github.com/segmentio/kafka-go", "github.com/segmentio/kafka-go", "Message", "Headers"),
 				},
 				probe.StructFieldConst{
 					Key: "message_key_pos",
-					Val: structfield.NewID("github.com/segmentio/kafka-go", "github.com/segmentio/kafka-go", "Message", "Key"),
+					ID:  structfield.NewID("github.com/segmentio/kafka-go", "github.com/segmentio/kafka-go", "Message", "Key"),
 				},
 				probe.StructFieldConst{
 					Key: "message_time_pos",
-					Val: structfield.NewID("github.com/segmentio/kafka-go", "github.com/segmentio/kafka-go", "Message", "Time"),
+					ID:  structfield.NewID("github.com/segmentio/kafka-go", "github.com/segmentio/kafka-go", "Message", "Time"),
 				},
 			},
-			Uprobes: []probe.Uprobe{
+			Uprobes: []*probe.Uprobe{
 				{
 					Sym:         "github.com/segmentio/kafka-go.(*Writer).WriteMessages",
 					EntryProbe:  "uprobe_WriteMessages",
@@ -100,7 +99,8 @@ func processFn(e *event) ptrace.SpanSlice {
 	}
 
 	if e.ValidMessages > 0 {
-		attrs = append(attrs, semconv.MessagingBatchMessageCount(int(e.ValidMessages)))
+		e.ValidMessages = min(e.ValidMessages, math.MaxInt)
+		attrs = append(attrs, semconv.MessagingBatchMessageCount(int(e.ValidMessages))) // nolint: gosec  // Bounded.
 	}
 
 	traceID := pcommon.TraceID(e.Messages[0].SpanContext.TraceID)
@@ -145,5 +145,5 @@ func processFn(e *event) ptrace.SpanSlice {
 }
 
 func kafkaProducerSpanName(topic string) string {
-	return fmt.Sprintf("%s publish", topic)
+	return topic + " publish"
 }

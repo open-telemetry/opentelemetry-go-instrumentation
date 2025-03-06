@@ -112,11 +112,6 @@ SCOPE="go.opentelemetry.io/auto/google.golang.org/grpc"
   assert_equal "$client_span_id" "$server_parent_span_id"
 }
 
-@test "server :: expected (redacted) trace output" {
-  redact_json
-  assert_equal "$(git --no-pager diff ${BATS_TEST_DIRNAME}/traces.json)" ""
-}
-
 @test "client :: emits a span name 'SayHello'" {
   result=$(client_span_names_for ${SCOPE} | uniq)
   assert_equal "$result" '"/helloworld.Greeter/SayHello"'
@@ -151,8 +146,30 @@ SCOPE="go.opentelemetry.io/auto/google.golang.org/grpc"
   assert_regex "$span_id" ${MATCH_A_SPAN_ID}
 }
 
-@test "client :: error code is present for unsuccessful span" {
+@test "client :: error code is present" {
+  result=$(client_span_attributes_for ${SCOPE} | jq -r "select(.key == \"rpc.grpc.status_code\").value.intValue" | sort -u)
+  # gRPC error code 0 - OK
+  # gRPC error code 12 - Unimplemented
   # gRPC error code 14 - Unavailable
-  result=$(client_span_attributes_for ${SCOPE} | jq 'select(.key == "rpc.grpc.status_code" and .value.intValue == "14")')
-  assert_not_empty "$result"
+
+  expected_result=$(printf "%s\n" "0" "12" "14")
+  assert_equal "$result" "$expected_result"
+}
+
+@test "client :: includes status message" {
+  result=$(client_spans_from_scope_named ${SCOPE} | jq -r '
+    select(.status.message != null)
+    | .status.message
+  ' | sort -u)
+  
+  expected_result=$(printf "%s\n" \
+    "connection error: desc = \"transport: Error while dialing: dial tcp 127.0.0.1:1701: connect: connection refused\"" \
+    "unimplmented")
+
+  assert_equal "$result" "$expected_result"
+}
+
+@test "server :: expected (redacted) trace output" {
+  redact_json
+  assert_equal "$(git --no-pager diff ${BATS_TEST_DIRNAME}/traces.json)" ""
 }

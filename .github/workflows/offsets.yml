@@ -12,9 +12,9 @@ jobs:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
 
       - name: Setup Go
-        uses: actions/setup-go@3041bf56c941b39c61721a86cd11f3bb1338122a # v5
+        uses: actions/setup-go@f111f3307d8850f501ac008e886eec1fd1932a34 # v5
         with:
-          go-version: "~1.23.1"
+          go-version: "~1.24.0"
           check-latest: true
           cache-dependency-path: "**/go.sum"
 
@@ -22,7 +22,7 @@ jobs:
         run: make offsets
 
       - name: Create pull request
-        uses: peter-evans/create-pull-request@5e914681df9dc83aa4e4905692ca88beb2f9e91f # v7
+        uses: peter-evans/create-pull-request@271a8d0340265f705b14b6d32b9829c1cb33d45e # v7
         with:
           commit-message: Update generated offsets
           branch: automated/generated-offsets

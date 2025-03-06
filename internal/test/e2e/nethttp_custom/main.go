@@ -59,7 +59,7 @@ func hello(w http.ResponseWriter, _ *http.Request) {
 }
 
 var tr = &http.Transport{
-	TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+	TLSClientConfig: &tls.Config{InsecureSkipVerify: true}, // nolint: gosec  // Testing server.
 }
 
 // MyRoundTripper implements RoundTripper.
@@ -88,7 +88,7 @@ func main() {
 	defer stop()
 
 	go func() {
-		_ = http.ListenAndServe(":8080", logStatus(http.HandlerFunc(hello)))
+		_ = http.ListenAndServe(":8080", logStatus(http.HandlerFunc(hello))) // nolint: gosec  // Testing server.
 	}()
 
 	// Wait for auto-instrumentation.
@@ -97,7 +97,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	req, err := http.NewRequestWithContext(ctx, "GET", "http://localhost:8080/hello", http.NoBody)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, "http://localhost:8080/hello", http.NoBody)
 	if err != nil {
 		log.Fatal(err)
 	}

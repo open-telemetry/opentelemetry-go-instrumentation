@@ -147,7 +147,7 @@ func main() {
 	http.HandleFunc("/drop", s.drop)
 	http.HandleFunc("/invalid", s.invalid)
 	go func() {
-		_ = http.ListenAndServe(":8080", nil)
+		_ = http.ListenAndServe(":8080", nil) // nolint: gosec  // Testing HTTP server
 	}()
 
 	tests := []struct {

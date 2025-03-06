@@ -4,6 +4,7 @@
 package sql
 
 import (
+	"errors"
 	"fmt"
 	"log/slog"
 	"os"
@@ -46,14 +47,13 @@ func New(logger *slog.Logger, version string) probe.Probe {
 			ID:     id,
 			Logger: logger,
 			Consts: []probe.Const{
-				probe.RegistersABIConst{},
 				probe.AllocationConst{},
 				probe.KeyValConst{
 					Key: "should_include_db_statement",
 					Val: shouldIncludeDBStatement(),
 				},
 			},
-			Uprobes: []probe.Uprobe{
+			Uprobes: []*probe.Uprobe{
 				{
 					Sym:         "database/sql.(*DB).queryDC",
 					EntryProbe:  "uprobe_queryDC",
@@ -162,7 +162,7 @@ func Parse(query string) (string, string, error) {
 	case *sqlparser.Delete:
 		return "DELETE", getTableName(stmt.TableExprs), nil
 	default:
-		return "", "", fmt.Errorf("unsupported operation")
+		return "", "", errors.New("unsupported operation")
 	}
 }
 

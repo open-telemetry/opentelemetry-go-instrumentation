@@ -3,13 +3,11 @@
 
 package sampling
 
-import (
-	"fmt"
-)
+import "errors"
 
 var (
-	errInvalidFraction = fmt.Errorf("fraction must be a positive float between 0 and 1")
-	errPrecisionLoss   = fmt.Errorf("the given float cannot be represented as a fraction with the current precision")
+	errInvalidFraction = errors.New("fraction must be a positive float between 0 and 1")
+	errPrecisionLoss   = errors.New("the given float cannot be represented as a fraction with the current precision")
 )
 
 // floatToNumerator converts a float to a numerator of a fraction with the given denominator.

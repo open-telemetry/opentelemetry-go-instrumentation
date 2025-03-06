@@ -7,7 +7,7 @@ import (
 	"log/slog"
 	"strings"
 
-	"github.com/hashicorp/go-version"
+	"github.com/Masterminds/semver/v3"
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/ptrace"
 	"go.opentelemetry.io/otel/attribute"
@@ -26,9 +26,24 @@ import (
 
 //go:generate go run github.com/cilium/ebpf/cmd/bpf2go -target amd64,arm64 bpf ./bpf/probe.bpf.c
 
-const (
-	// pkg is the package being instrumented.
-	pkg = "net/http"
+// pkg is the package being instrumented.
+const pkg = "net/http"
+
+var (
+	goMapsVersion = semver.New(1, 24, 0, "", "")
+
+	goWithSwissMaps = probe.PackageConstraints{
+		Package: "std",
+		Constraints: func() *semver.Constraints {
+			c, err := semver.NewConstraint(">= " + goMapsVersion.String())
+			if err != nil {
+				panic(err)
+			}
+			return c
+		}(),
+		// Don't warn, we have a backup path.
+		FailureMode: probe.FailureModeIgnore,
+	}
 )
 
 // New returns a new [probe.Probe].
@@ -42,72 +57,83 @@ func New(logger *slog.Logger, version string) probe.Probe {
 			ID:     id,
 			Logger: logger,
 			Consts: []probe.Const{
-				probe.RegistersABIConst{},
 				probe.StructFieldConst{
 					Key: "method_ptr_pos",
-					Val: structfield.NewID("std", "net/http", "Request", "Method"),
+					ID:  structfield.NewID("std", "net/http", "Request", "Method"),
 				},
 				probe.StructFieldConst{
 					Key: "url_ptr_pos",
-					Val: structfield.NewID("std", "net/http", "Request", "URL"),
+					ID:  structfield.NewID("std", "net/http", "Request", "URL"),
 				},
 				probe.StructFieldConst{
 					Key: "ctx_ptr_pos",
-					Val: structfield.NewID("std", "net/http", "Request", "ctx"),
+					ID:  structfield.NewID("std", "net/http", "Request", "ctx"),
 				},
 				probe.StructFieldConst{
 					Key: "path_ptr_pos",
-					Val: structfield.NewID("std", "net/url", "URL", "Path"),
+					ID:  structfield.NewID("std", "net/url", "URL", "Path"),
 				},
 				probe.StructFieldConst{
 					Key: "headers_ptr_pos",
-					Val: structfield.NewID("std", "net/http", "Request", "Header"),
+					ID:  structfield.NewID("std", "net/http", "Request", "Header"),
 				},
 				probe.StructFieldConst{
 					Key: "req_ptr_pos",
-					Val: structfield.NewID("std", "net/http", "response", "req"),
+					ID:  structfield.NewID("std", "net/http", "response", "req"),
 				},
 				probe.StructFieldConst{
 					Key: "status_code_pos",
-					Val: structfield.NewID("std", "net/http", "response", "status"),
+					ID:  structfield.NewID("std", "net/http", "response", "status"),
 				},
-				probe.StructFieldConst{
-					Key: "buckets_ptr_pos",
-					Val: structfield.NewID("std", "runtime", "hmap", "buckets"),
+				probe.StructFieldConstMaxVersion{
+					StructField: probe.StructFieldConst{
+						Key: "buckets_ptr_pos",
+						ID:  structfield.NewID("std", "runtime", "hmap", "buckets"),
+					},
+					MaxVersion: goMapsVersion,
 				},
 				probe.StructFieldConst{
 					Key: "remote_addr_pos",
-					Val: structfield.NewID("std", "net/http", "Request", "RemoteAddr"),
+					ID:  structfield.NewID("std", "net/http", "Request", "RemoteAddr"),
 				},
 				probe.StructFieldConst{
 					Key: "host_pos",
-					Val: structfield.NewID("std", "net/http", "Request", "Host"),
+					ID:  structfield.NewID("std", "net/http", "Request", "Host"),
 				},
 				probe.StructFieldConst{
 					Key: "proto_pos",
-					Val: structfield.NewID("std", "net/http", "Request", "Proto"),
+					ID:  structfield.NewID("std", "net/http", "Request", "Proto"),
 				},
 				probe.StructFieldConstMinVersion{
 					StructField: probe.StructFieldConst{
 						Key: "req_pat_pos",
-						Val: structfield.NewID("std", "net/http", "Request", "pat"),
+						ID:  structfield.NewID("std", "net/http", "Request", "pat"),
 					},
 					MinVersion: patternPathMinVersion,
 				},
 				probe.StructFieldConstMinVersion{
 					StructField: probe.StructFieldConst{
 						Key: "pat_str_pos",
-						Val: structfield.NewID("std", "net/http", "pattern", "str"),
+						ID:  structfield.NewID("std", "net/http", "pattern", "str"),
 					},
 					MinVersion: patternPathMinVersion,
 				},
 				patternPathSupportedConst{},
+				swissMapsUsedConst{},
 			},
-			Uprobes: []probe.Uprobe{
+			Uprobes: []*probe.Uprobe{
 				{
 					Sym:         "net/http.serverHandler.ServeHTTP",
 					EntryProbe:  "uprobe_serverHandler_ServeHTTP",
 					ReturnProbe: "uprobe_serverHandler_ServeHTTP_Returns",
+				},
+				{
+					Sym:         "net/textproto.(*Reader).readContinuedLineSlice",
+					ReturnProbe: "uprobe_textproto_Reader_readContinuedLineSlice_Returns",
+					PackageConstraints: []probe.PackageConstraints{
+						goWithSwissMaps,
+					},
+					DependsOn: []string{"net/http.serverHandler.ServeHTTP"},
 				},
 			},
 			SpecFn: loadBpf,
@@ -121,13 +147,20 @@ func New(logger *slog.Logger, version string) probe.Probe {
 type patternPathSupportedConst struct{}
 
 var (
-	patternPathMinVersion  = version.Must(version.NewVersion("1.22.0"))
+	patternPathMinVersion  = semver.New(1, 22, 0, "", "")
 	isPatternPathSupported = false
 )
 
-func (c patternPathSupportedConst) InjectOption(td *process.TargetDetails) (inject.Option, error) {
-	isPatternPathSupported = td.GoVersion.GreaterThanOrEqual(patternPathMinVersion)
+func (c patternPathSupportedConst) InjectOption(info *process.Info) (inject.Option, error) {
+	isPatternPathSupported = info.GoVersion.GreaterThanEqual(patternPathMinVersion)
 	return inject.WithKeyValue("pattern_path_supported", isPatternPathSupported), nil
+}
+
+type swissMapsUsedConst struct{}
+
+func (c swissMapsUsedConst) InjectOption(info *process.Info) (inject.Option, error) {
+	isUsingGoSwissMaps := info.GoVersion.GreaterThanEqual(goMapsVersion)
+	return inject.WithKeyValue("swiss_maps_used", isUsingGoSwissMaps), nil
 }
 
 // event represents an event in an HTTP server during an HTTP
@@ -156,10 +189,15 @@ func processFn(e *event) ptrace.SpanSlice {
 
 	proto := unix.ByteSliceToString(e.Proto[:])
 
+	// https://www.rfc-editor.org/rfc/rfc9110.html#name-status-codes
+	const maxStatus = 599
+	if e.StatusCode > maxStatus {
+		e.StatusCode = 0
+	}
 	attrs := []attribute.KeyValue{
 		semconv.HTTPRequestMethodKey.String(method),
 		semconv.URLPath(path),
-		semconv.HTTPResponseStatusCodeKey.Int(int(e.StatusCode)),
+		semconv.HTTPResponseStatusCodeKey.Int(int(e.StatusCode)), // nolint: gosec  // Bound checked.
 	}
 
 	// Client address and port
@@ -212,7 +250,7 @@ func processFn(e *event) ptrace.SpanSlice {
 
 	utils.Attributes(span.Attributes(), attrs...)
 
-	if int(e.StatusCode) >= 500 && int(e.StatusCode) < 600 {
+	if e.StatusCode >= 500 && e.StatusCode < 600 {
 		span.Status().SetCode(ptrace.StatusCodeError)
 	}
 

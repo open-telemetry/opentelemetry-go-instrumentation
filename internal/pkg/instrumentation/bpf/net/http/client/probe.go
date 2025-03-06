@@ -40,7 +40,7 @@ func New(logger *slog.Logger, version string) probe.Probe {
 		InstrumentedPkg: pkg,
 	}
 
-	uprobes := []probe.Uprobe{
+	uprobes := []*probe.Uprobe{
 		{
 			Sym:         "net/http.(*Transport).roundTrip",
 			EntryProbe:  "uprobe_Transport_roundTrip",
@@ -52,7 +52,7 @@ func New(logger *slog.Logger, version string) probe.Probe {
 	// probe which writes the data in the outgoing buffer.
 	if utils.SupportsContextPropagation() {
 		uprobes = append(uprobes,
-			probe.Uprobe{
+			&probe.Uprobe{
 				Sym:        "net/http.Header.writeSubset",
 				EntryProbe: "uprobe_writeSubset",
 				// We mark this probe as dependent on roundTrip, so we don't accidentally
@@ -68,91 +68,90 @@ func New(logger *slog.Logger, version string) probe.Probe {
 			ID:     id,
 			Logger: logger,
 			Consts: []probe.Const{
-				probe.RegistersABIConst{},
 				probe.AllocationConst{},
 				probe.StructFieldConst{
 					Key: "method_ptr_pos",
-					Val: structfield.NewID("std", "net/http", "Request", "Method"),
+					ID:  structfield.NewID("std", "net/http", "Request", "Method"),
 				},
 				probe.StructFieldConst{
 					Key: "url_ptr_pos",
-					Val: structfield.NewID("std", "net/http", "Request", "URL"),
+					ID:  structfield.NewID("std", "net/http", "Request", "URL"),
 				},
 				probe.StructFieldConst{
 					Key: "path_ptr_pos",
-					Val: structfield.NewID("std", "net/url", "URL", "Path"),
+					ID:  structfield.NewID("std", "net/url", "URL", "Path"),
 				},
 				probe.StructFieldConst{
 					Key: "headers_ptr_pos",
-					Val: structfield.NewID("std", "net/http", "Request", "Header"),
+					ID:  structfield.NewID("std", "net/http", "Request", "Header"),
 				},
 				probe.StructFieldConst{
 					Key: "ctx_ptr_pos",
-					Val: structfield.NewID("std", "net/http", "Request", "ctx"),
+					ID:  structfield.NewID("std", "net/http", "Request", "ctx"),
 				},
 				probe.StructFieldConst{
 					Key: "status_code_pos",
-					Val: structfield.NewID("std", "net/http", "Response", "StatusCode"),
+					ID:  structfield.NewID("std", "net/http", "Response", "StatusCode"),
 				},
 				probe.StructFieldConst{
 					Key: "request_host_pos",
-					Val: structfield.NewID("std", "net/http", "Request", "Host"),
+					ID:  structfield.NewID("std", "net/http", "Request", "Host"),
 				},
 				probe.StructFieldConst{
 					Key: "request_proto_pos",
-					Val: structfield.NewID("std", "net/http", "Request", "Proto"),
+					ID:  structfield.NewID("std", "net/http", "Request", "Proto"),
 				},
 				probe.StructFieldConst{
 					Key: "io_writer_buf_ptr_pos",
-					Val: structfield.NewID("std", "bufio", "Writer", "buf"),
+					ID:  structfield.NewID("std", "bufio", "Writer", "buf"),
 				},
 				probe.StructFieldConst{
 					Key: "io_writer_n_pos",
-					Val: structfield.NewID("std", "bufio", "Writer", "n"),
+					ID:  structfield.NewID("std", "bufio", "Writer", "n"),
 				},
 				probe.StructFieldConst{
 					Key: "scheme_pos",
-					Val: structfield.NewID("std", "net/url", "URL", "Scheme"),
+					ID:  structfield.NewID("std", "net/url", "URL", "Scheme"),
 				},
 				probe.StructFieldConst{
 					Key: "opaque_pos",
-					Val: structfield.NewID("std", "net/url", "URL", "Opaque"),
+					ID:  structfield.NewID("std", "net/url", "URL", "Opaque"),
 				},
 				probe.StructFieldConst{
 					Key: "user_ptr_pos",
-					Val: structfield.NewID("std", "net/url", "URL", "User"),
+					ID:  structfield.NewID("std", "net/url", "URL", "User"),
 				},
 				probe.StructFieldConst{
 					Key: "raw_path_pos",
-					Val: structfield.NewID("std", "net/url", "URL", "RawPath"),
+					ID:  structfield.NewID("std", "net/url", "URL", "RawPath"),
 				},
 				probe.StructFieldConst{
 					Key: "omit_host_pos",
-					Val: structfield.NewID("std", "net/url", "URL", "OmitHost"),
+					ID:  structfield.NewID("std", "net/url", "URL", "OmitHost"),
 				},
 				probe.StructFieldConst{
 					Key: "force_query_pos",
-					Val: structfield.NewID("std", "net/url", "URL", "ForceQuery"),
+					ID:  structfield.NewID("std", "net/url", "URL", "ForceQuery"),
 				},
 				probe.StructFieldConst{
 					Key: "raw_query_pos",
-					Val: structfield.NewID("std", "net/url", "URL", "RawQuery"),
+					ID:  structfield.NewID("std", "net/url", "URL", "RawQuery"),
 				},
 				probe.StructFieldConst{
 					Key: "fragment_pos",
-					Val: structfield.NewID("std", "net/url", "URL", "Fragment"),
+					ID:  structfield.NewID("std", "net/url", "URL", "Fragment"),
 				},
 				probe.StructFieldConst{
 					Key: "raw_fragment_pos",
-					Val: structfield.NewID("std", "net/url", "URL", "RawFragment"),
+					ID:  structfield.NewID("std", "net/url", "URL", "RawFragment"),
 				},
 				probe.StructFieldConst{
 					Key: "username_pos",
-					Val: structfield.NewID("std", "net/url", "Userinfo", "username"),
+					ID:  structfield.NewID("std", "net/url", "Userinfo", "username"),
 				},
 				probe.StructFieldConst{
 					Key: "url_host_pos",
-					Val: structfield.NewID("std", "net/url", "URL", "Host"),
+					ID:  structfield.NewID("std", "net/url", "URL", "Host"),
 				},
 			},
 			Uprobes: uprobes,
@@ -212,9 +211,14 @@ func processFn(e *event) ptrace.SpanSlice {
 		user = url.User(username)
 	}
 
+	// https://www.rfc-editor.org/rfc/rfc9110.html#name-status-codes
+	const maxStatus = 599
+	if e.StatusCode > maxStatus {
+		e.StatusCode = 0
+	}
 	attrs := []attribute.KeyValue{
 		semconv.HTTPRequestMethodKey.String(method),
-		semconv.HTTPResponseStatusCodeKey.Int(int(e.StatusCode)),
+		semconv.HTTPResponseStatusCodeKey.Int(int(e.StatusCode)), // nolint: gosec  // Bound checked.
 	}
 
 	if path != "" {
@@ -275,7 +279,7 @@ func processFn(e *event) ptrace.SpanSlice {
 
 	utils.Attributes(span.Attributes(), attrs...)
 
-	if int(e.StatusCode) >= 400 && int(e.StatusCode) < 600 {
+	if e.StatusCode >= 400 && e.StatusCode < 600 {
 		span.Status().SetCode(ptrace.StatusCodeError)
 	}
 

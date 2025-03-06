@@ -4,13 +4,14 @@
 package inject
 
 import (
+	"debug/elf"
 	_ "embed"
 	"encoding/json"
 	"errors"
 	"fmt"
 
+	"github.com/Masterminds/semver/v3"
 	"github.com/cilium/ebpf"
-	"github.com/hashicorp/go-version"
 
 	"go.opentelemetry.io/auto/internal/pkg/process"
 	"go.opentelemetry.io/auto/internal/pkg/structfield"
@@ -28,10 +29,9 @@ var (
 )
 
 const (
-	keyIsRegistersABI = "is_registers_abi"
-	keyTotalCPUs      = "total_cpus"
-	keyStartAddr      = "start_addr"
-	keyEndAddr        = "end_addr"
+	keyTotalCPUs = "total_cpus"
+	keyStartAddr = "start_addr"
+	keyEndAddr   = "end_addr"
 )
 
 func init() {
@@ -107,24 +107,13 @@ func (o errOpt) apply(map[string]interface{}) error {
 	return o.err
 }
 
-// WithRegistersABI returns an option that will set the "is_registers_abi" to
-// value. This information can be determined from the IsRegistersABI method of
-// the TargetDetails in "go.opentelemetry.io/auto/internal/pkg/process".
-//
-// Commonly this is called like the following:
-//
-//	WithRegistersABI(target.IsRegistersABI())
-func WithRegistersABI(value bool) Option {
-	return option{keyIsRegistersABI: value}
-}
-
-// WithAllocationDetails returns an option that will set "total_cpus",
-// "start_addr", and "end_addr".
-func WithAllocationDetails(details process.AllocationDetails) Option {
+// WithAllocation returns an option that will set "total_cpus", "start_addr",
+// and "end_addr".
+func WithAllocation(alloc process.Allocation) Option {
 	return option{
-		keyTotalCPUs: details.NumCPU,
-		keyStartAddr: details.StartAddr,
-		keyEndAddr:   details.EndAddr,
+		keyTotalCPUs: alloc.NumCPU,
+		keyStartAddr: alloc.StartAddr,
+		keyEndAddr:   alloc.EndAddr,
 	}
 }
 
@@ -138,7 +127,7 @@ func WithKeyValue(key string, value interface{}) Option {
 //
 // If the offset value is not known, an error is returned when the returned
 // Option is used.
-func WithOffset(key string, id structfield.ID, ver *version.Version) Option {
+func WithOffset(key string, id structfield.ID, ver *semver.Version) Option {
 	if ver == nil {
 		return errOpt{
 			err: fmt.Errorf("missing version: %s", id),
@@ -159,6 +148,32 @@ func WithOffset(key string, id structfield.ID, ver *version.Version) Option {
 	return WithKeyValue(key, off.Offset)
 }
 
-func GetLatestOffset(id structfield.ID) (structfield.OffsetKey, *version.Version) {
+func FindOffset(id structfield.ID, info *process.Info) (structfield.OffsetKey, error) {
+	elfF, err := elf.Open(info.ID.ExePath())
+	if err != nil {
+		return structfield.OffsetKey{}, err
+	}
+	defer elfF.Close()
+
+	data, err := elfF.DWARF()
+	if err != nil {
+		return structfield.OffsetKey{}, err
+	}
+
+	v, err := process.DWARF{Reader: data.Reader()}.GoStructField(id)
+	if err != nil {
+		return structfield.OffsetKey{}, err
+	}
+	if v < 0 {
+		return structfield.OffsetKey{}, fmt.Errorf("invalid offset: %d", v)
+	}
+	return structfield.OffsetKey{Offset: uint64(v), Valid: true}, err // nolint: gosec  // Bounded.
+}
+
+func GetOffset(id structfield.ID, ver *semver.Version) (structfield.OffsetKey, bool) {
+	return offsets.GetOffset(id, ver)
+}
+
+func GetLatestOffset(id structfield.ID) (structfield.OffsetKey, *semver.Version) {
 	return offsets.GetLatestOffset(id)
 }

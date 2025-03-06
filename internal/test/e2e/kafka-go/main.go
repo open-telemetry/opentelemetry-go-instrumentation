@@ -94,7 +94,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	cmd := exec.Command(*setup)
+	cmd := exec.Command(*setup) // nolint: gosec  // Testing script.
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	fmt.Println("starting Kafka...")

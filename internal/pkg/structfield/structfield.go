@@ -11,7 +11,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/hashicorp/go-version"
+	"github.com/Masterminds/semver/v3"
 )
 
 // Index holds all struct field offsets.
@@ -42,7 +42,7 @@ func (i *Index) get(id ID) (*Offsets, bool) {
 // GetOffset returns the offset value and true for the version ver of id
 // contained in the Index i. It will return zero and false for any id not
 // contained in i.
-func (i *Index) GetOffset(id ID, ver *version.Version) (OffsetKey, bool) {
+func (i *Index) GetOffset(id ID, ver *semver.Version) (OffsetKey, bool) {
 	i.dataMu.RLock()
 	defer i.dataMu.RUnlock()
 
@@ -51,7 +51,7 @@ func (i *Index) GetOffset(id ID, ver *version.Version) (OffsetKey, bool) {
 
 // GetLatestOffset returns the latest known offset value and version for id
 // contained in the Index i.
-func (i *Index) GetLatestOffset(id ID) (OffsetKey, *version.Version) {
+func (i *Index) GetLatestOffset(id ID) (OffsetKey, *semver.Version) {
 	i.dataMu.RLock()
 	defer i.dataMu.RUnlock()
 
@@ -60,10 +60,10 @@ func (i *Index) GetLatestOffset(id ID) (OffsetKey, *version.Version) {
 		return OffsetKey{}, nil
 	}
 	off, ver := offs.getLatest()
-	return off, ver.ToVersion()
+	return off, &ver.Version
 }
 
-func (i *Index) getOffset(id ID, ver *version.Version) (OffsetKey, bool) {
+func (i *Index) getOffset(id ID, ver *semver.Version) (OffsetKey, bool) {
 	offs, ok := i.get(id)
 	if !ok {
 		return OffsetKey{}, false
@@ -91,14 +91,14 @@ func (i *Index) put(id ID, offsets *Offsets) {
 //
 // This will update any existing offsets stored for id with offset. If ver
 // already exists within those offsets it will overwrite that value.
-func (i *Index) PutOffset(id ID, ver *version.Version, offset uint64, valid bool) {
+func (i *Index) PutOffset(id ID, ver *semver.Version, offset uint64, valid bool) {
 	i.dataMu.Lock()
 	defer i.dataMu.Unlock()
 
 	i.putOffset(id, ver, offset, valid)
 }
 
-func (i *Index) putOffset(id ID, ver *version.Version, offset uint64, valid bool) {
+func (i *Index) putOffset(id ID, ver *semver.Version, offset uint64, valid bool) {
 	off, ok := i.get(id)
 	if !ok {
 		off = NewOffsets()
@@ -254,7 +254,7 @@ func NewOffsets() *Offsets {
 
 // Get returns the offset in bytes and true if known. Otherwise, 0 and false
 // are returned.
-func (o *Offsets) Get(ver *version.Version) (OffsetKey, bool) {
+func (o *Offsets) Get(ver *semver.Version) (OffsetKey, bool) {
 	if o == nil {
 		return OffsetKey{}, false
 	}
@@ -292,7 +292,7 @@ func (o *Offsets) getLatest() (OffsetKey, verKey) {
 
 // Put sets the offset value for ver. If an offset for ver is already known
 // (i.e. ver.Equal(other) == true), this will overwrite that value.
-func (o *Offsets) Put(ver *version.Version, offset OffsetKey) {
+func (o *Offsets) Put(ver *semver.Version, offset OffsetKey) {
 	ov := offsetVersion{offset: offset, version: ver}
 
 	o.mu.Lock()
@@ -313,37 +313,19 @@ func (o *Offsets) Put(ver *version.Version, offset OffsetKey) {
 }
 
 func (v verKey) GreaterThan(other verKey) bool {
-	if v.major != other.major {
-		return v.major > other.major
-	}
-	if v.minor != other.minor {
-		return v.minor > other.minor
-	}
-	if v.patch != other.patch {
-		return v.patch > other.patch
-	}
-	return false
+	return v.Version.GreaterThan(&other.Version)
 }
 
-func (v verKey) ToVersion() *version.Version {
-	vs := fmt.Sprintf("%d.%d.%d", v.major, v.minor, v.patch)
-	if v.prerelease != "" {
-		vs += "-" + v.prerelease
-	}
-	ver, _ := version.NewVersion(vs)
-	return ver
-}
-
-func (o *Offsets) index() map[OffsetKey][]*version.Version {
+func (o *Offsets) index() map[OffsetKey][]*semver.Version {
 	o.mu.RLock()
 	defer o.mu.RUnlock()
 
-	out := make(map[OffsetKey][]*version.Version)
+	out := make(map[OffsetKey][]*semver.Version)
 	for _, ov := range o.values {
 		vers, ok := out[ov.offset]
 		if ok {
 			i := sort.Search(len(vers), func(i int) bool {
-				return vers[i].GreaterThanOrEqual(ov.version)
+				return vers[i].GreaterThanEqual(ov.version)
 			})
 			vers = append(vers, nil)
 			copy(vers[i+1:], vers[i:])
@@ -357,9 +339,7 @@ func (o *Offsets) index() map[OffsetKey][]*version.Version {
 }
 
 type verKey struct {
-	major, minor, patch uint64
-	prerelease          string
-	metadata            string
+	semver.Version
 }
 
 // OffsetKey is the offset of a specific struct field in a specific version.
@@ -370,19 +350,19 @@ type OffsetKey struct {
 	Valid  bool
 }
 
-func newVerKey(v *version.Version) verKey {
-	var segs [3]int
-	copy(segs[:], v.Segments())
-	return verKey{
-		major:      uint64(segs[0]),
-		minor:      uint64(segs[1]),
-		patch:      uint64(segs[2]),
-		prerelease: v.Prerelease(),
-		metadata:   v.Metadata(),
-	}
+func newVerKey(v *semver.Version) verKey {
+	// Strip out v.original to prevent ambiguity.
+	stripped := semver.New(
+		v.Major(),
+		v.Minor(),
+		v.Patch(),
+		v.Prerelease(),
+		v.Metadata(),
+	)
+	return verKey{Version: *stripped}
 }
 
 type offsetVersion struct {
 	offset  OffsetKey
-	version *version.Version
+	version *semver.Version
 }

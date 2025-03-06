@@ -15,15 +15,6 @@ import (
 
 	"go.opentelemetry.io/otel/trace"
 
-	dbSql "go.opentelemetry.io/auto/internal/pkg/instrumentation/bpf/database/sql"
-	kafkaConsumer "go.opentelemetry.io/auto/internal/pkg/instrumentation/bpf/github.com/segmentio/kafka-go/consumer"
-	kafkaProducer "go.opentelemetry.io/auto/internal/pkg/instrumentation/bpf/github.com/segmentio/kafka-go/producer"
-	autosdk "go.opentelemetry.io/auto/internal/pkg/instrumentation/bpf/go.opentelemetry.io/auto/sdk"
-	otelTraceGlobal "go.opentelemetry.io/auto/internal/pkg/instrumentation/bpf/go.opentelemetry.io/otel/traceglobal"
-	grpcClient "go.opentelemetry.io/auto/internal/pkg/instrumentation/bpf/google.golang.org/grpc/client"
-	grpcServer "go.opentelemetry.io/auto/internal/pkg/instrumentation/bpf/google.golang.org/grpc/server"
-	httpClient "go.opentelemetry.io/auto/internal/pkg/instrumentation/bpf/net/http/client"
-	httpServer "go.opentelemetry.io/auto/internal/pkg/instrumentation/bpf/net/http/server"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/bpffs"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/probe"
 	"go.opentelemetry.io/auto/internal/pkg/opentelemetry"
@@ -50,13 +41,11 @@ const (
 // Manager handles the management of [probe.Probe] instances.
 type Manager struct {
 	logger          *slog.Logger
-	version         string
 	probes          map[probe.ID]probe.Probe
 	otelController  *opentelemetry.Controller
-	globalImpl      bool
 	cp              ConfigProvider
 	exe             *link.Executable
-	td              *process.TargetDetails
+	proc            *process.Info
 	stop            context.CancelCauseFunc
 	runningProbesWG sync.WaitGroup
 	currentConfig   Config
@@ -66,17 +55,15 @@ type Manager struct {
 }
 
 // NewManager returns a new [Manager].
-func NewManager(logger *slog.Logger, otelController *opentelemetry.Controller, globalImpl bool, cp ConfigProvider, version string) (*Manager, error) {
+func NewManager(logger *slog.Logger, otelController *opentelemetry.Controller, cp ConfigProvider, probes ...probe.Probe) (*Manager, error) {
 	m := &Manager{
 		logger:         logger,
-		version:        version,
 		probes:         make(map[probe.ID]probe.Probe),
 		otelController: otelController,
-		globalImpl:     globalImpl,
 		cp:             cp,
 	}
 
-	err := m.registerProbes()
+	err := m.registerProbes(probes)
 	if err != nil {
 		return nil, err
 	}
@@ -103,7 +90,7 @@ func (m *Manager) validateProbeDependents(id probe.ID, symbols []probe.FunctionS
 }
 
 func (m *Manager) registerProbe(p probe.Probe) error {
-	id := p.Manifest().Id
+	id := p.Manifest().ID
 	if _, exists := m.probes[id]; exists {
 		return fmt.Errorf("library %s registered twice, aborting", id)
 	}
@@ -130,7 +117,7 @@ func (m *Manager) GetRelevantFuncs() map[string]interface{} {
 
 // FilterUnusedProbes filterers probes whose functions are already instrumented
 // out of the Manager.
-func (m *Manager) FilterUnusedProbes(target *process.TargetDetails) {
+func (m *Manager) FilterUnusedProbes(target *process.Info) {
 	existingFuncMap := make(map[string]interface{})
 	for _, f := range target.Functions {
 		existingFuncMap[f.Name] = nil
@@ -184,7 +171,7 @@ func isProbeEnabled(id probe.ID, c Config) bool {
 }
 
 func (m *Manager) applyConfig(c Config) error {
-	if m.td == nil {
+	if m.proc == nil {
 		return errors.New("failed to apply config: target details not set")
 	}
 	if m.exe == nil {
@@ -211,7 +198,7 @@ func (m *Manager) applyConfig(c Config) error {
 
 		if !currentlyEnabled && newEnabled {
 			m.logger.Info("Enabling probe", "id", id)
-			err = errors.Join(err, p.Load(m.exe, m.td, c.SamplingConfig))
+			err = errors.Join(err, p.Load(m.exe, m.proc, c.SamplingConfig))
 			if err == nil {
 				m.runProbe(p)
 			}
@@ -250,7 +237,7 @@ func (m *Manager) ConfigLoop(ctx context.Context) {
 	}
 }
 
-func (m *Manager) Load(ctx context.Context, target *process.TargetDetails) error {
+func (m *Manager) Load(ctx context.Context, target *process.Info) error {
 	if len(m.probes) == 0 {
 		return errors.New("no instrumentation for target process")
 	}
@@ -273,7 +260,7 @@ func (m *Manager) Load(ctx context.Context, target *process.TargetDetails) error
 		return err
 	}
 
-	m.td = target
+	m.proc = target
 	m.state = managerStateLoaded
 
 	return nil
@@ -343,7 +330,7 @@ func (m *Manager) Stop() error {
 	defer m.probeMu.Unlock()
 
 	m.logger.Debug("Shutting down all probes")
-	err := m.cleanup(m.td)
+	err := m.cleanup(m.proc)
 
 	// Wait for all probes to stop.
 	m.runningProbesWG.Wait()
@@ -352,13 +339,13 @@ func (m *Manager) Stop() error {
 	return err
 }
 
-func (m *Manager) loadProbes(target *process.TargetDetails) error {
+func (m *Manager) loadProbes(target *process.Info) error {
 	// Remove resource limits for kernels <5.11.
 	if err := rlimitRemoveMemlock(); err != nil {
 		return err
 	}
 
-	exe, err := openExecutable(fmt.Sprintf("/proc/%d/exe", target.PID))
+	exe, err := openExecutable(target.ID.ExePath())
 	if err != nil {
 		return err
 	}
@@ -384,16 +371,16 @@ func (m *Manager) loadProbes(target *process.TargetDetails) error {
 	return nil
 }
 
-func (m *Manager) mount(target *process.TargetDetails) error {
-	if target.AllocationDetails != nil {
-		m.logger.Debug("Mounting bpffs", "allocations_details", target.AllocationDetails)
+func (m *Manager) mount(target *process.Info) error {
+	if target.Allocation != nil {
+		m.logger.Debug("Mounting bpffs", "allocation", target.Allocation)
 	} else {
 		m.logger.Debug("Mounting bpffs")
 	}
 	return bpffsMount(target)
 }
 
-func (m *Manager) cleanup(target *process.TargetDetails) error {
+func (m *Manager) cleanup(target *process.Info) error {
 	ctx := context.Background()
 	err := m.cp.Shutdown(context.Background())
 	for _, i := range m.probes {
@@ -410,27 +397,8 @@ func (m *Manager) cleanup(target *process.TargetDetails) error {
 	return errors.Join(err, bpffsCleanup(target))
 }
 
-func (m *Manager) availableProbes() []probe.Probe {
-	p := []probe.Probe{
-		grpcClient.New(m.logger, m.version),
-		grpcServer.New(m.logger, m.version),
-		httpServer.New(m.logger, m.version),
-		httpClient.New(m.logger, m.version),
-		dbSql.New(m.logger, m.version),
-		kafkaProducer.New(m.logger, m.version),
-		kafkaConsumer.New(m.logger, m.version),
-		autosdk.New(m.logger),
-	}
-
-	if m.globalImpl {
-		p = append(p, otelTraceGlobal.New(m.logger))
-	}
-
-	return p
-}
-
-func (m *Manager) registerProbes() error {
-	for _, p := range m.availableProbes() {
+func (m *Manager) registerProbes(probes []probe.Probe) error {
+	for _, p := range probes {
 		if err := m.registerProbe(p); err != nil {
 			return err
 		}

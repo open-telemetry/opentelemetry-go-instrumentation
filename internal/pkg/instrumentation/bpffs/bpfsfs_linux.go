@@ -16,12 +16,12 @@ import (
 const bpfFsPath = "/sys/fs/bpf"
 
 // PathForTargetApplication returns the path to the BPF file-system for the given target.
-func PathForTargetApplication(target *process.TargetDetails) string {
-	return fmt.Sprintf("%s/%d", bpfFsPath, target.PID)
+func PathForTargetApplication(pi *process.Info) string {
+	return fmt.Sprintf("%s/%d", bpfFsPath, pi.ID)
 }
 
 // Mount mounts the BPF file-system for the given target.
-func Mount(target *process.TargetDetails) error {
+func Mount(target *process.Info) error {
 	if !isBPFFSMounted() {
 		// Directory does not exist, create it and mount
 		if err := os.MkdirAll(bpfFsPath, 0o755); err != nil {
@@ -49,6 +49,6 @@ func isBPFFSMounted() bool {
 }
 
 // Cleanup removes the BPF file-system for the given target.
-func Cleanup(target *process.TargetDetails) error {
+func Cleanup(target *process.Info) error {
 	return os.RemoveAll(PathForTargetApplication(target))
 }

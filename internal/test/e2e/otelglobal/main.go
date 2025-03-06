@@ -5,6 +5,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"flag"
 	"fmt"
 	"os"
@@ -18,10 +19,16 @@ import (
 	"go.opentelemetry.io/auto/internal/test/trigger"
 )
 
+const (
+	name    = "trace-example"
+	version = "v1.23.42"
+	schema  = "https://some_schema"
+)
+
 var tracer = otel.Tracer(
-	"trace-example",
-	trace.WithInstrumentationVersion("v1.23.42"),
-	trace.WithSchemaURL("https://some_schema"),
+	name,
+	trace.WithInstrumentationVersion(version),
+	trace.WithSchemaURL(schema),
 )
 
 func setUnusedTracers() {
@@ -31,17 +38,34 @@ func setUnusedTracers() {
 }
 
 func innerFunction(ctx context.Context) {
-	_, span := tracer.Start(ctx, "child")
+	t := trace.SpanFromContext(ctx).TracerProvider().Tracer(
+		name,
+		trace.WithInstrumentationVersion(version),
+		trace.WithSchemaURL(schema),
+	)
+
+	_, span := t.Start(ctx, "child")
 	defer span.End()
 
 	span.SetAttributes(attribute.String("inner.key", "inner.value"))
 	span.SetAttributes(attribute.Bool("cat.on_keyboard", true))
 	span.SetName("child override")
-	span.SetStatus(codes.Error, "i deleted the prod db sry")
+
+	err := errors.New("i deleted the prod db sry")
+	span.SetStatus(codes.Error, err.Error())
+	span.RecordError(err)
+
+	span.AddLink(trace.Link{
+		SpanContext: trace.NewSpanContext(trace.SpanContextConfig{
+			TraceID:    trace.TraceID{0x2},
+			SpanID:     trace.SpanID{0x1},
+			TraceFlags: trace.FlagsSampled,
+		}),
+	})
 }
 
 func createMainSpan(ctx context.Context) {
-	ctx, span := tracer.Start(ctx, "parent")
+	ctx, span := tracer.Start(ctx, "parent", trace.WithSpanKind(trace.SpanKindServer))
 	defer span.End()
 
 	innerFunction(ctx)

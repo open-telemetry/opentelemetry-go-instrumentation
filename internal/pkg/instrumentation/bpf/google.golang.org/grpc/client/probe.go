@@ -4,13 +4,14 @@
 package grpc
 
 import (
+	"errors"
 	"fmt"
 	"log/slog"
 	"net"
 	"strconv"
 
+	"github.com/Masterminds/semver/v3"
 	"github.com/cilium/ebpf"
-	"github.com/hashicorp/go-version"
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/ptrace"
 	"go.opentelemetry.io/otel/attribute"
@@ -35,17 +36,17 @@ const (
 
 var (
 	writeStatus           = false
-	writeStatusMinVersion = version.Must(version.NewVersion("1.40.0"))
+	writeStatusMinVersion = semver.New(1, 40, 0, "", "")
 )
 
 type writeStatusConst struct{}
 
-func (w writeStatusConst) InjectOption(td *process.TargetDetails) (inject.Option, error) {
-	ver, ok := td.Libraries[pkg]
+func (w writeStatusConst) InjectOption(info *process.Info) (inject.Option, error) {
+	ver, ok := info.Modules[pkg]
 	if !ok {
 		return nil, fmt.Errorf("unknown module version: %s", pkg)
 	}
-	if ver.GreaterThanOrEqual(writeStatusMinVersion) {
+	if ver.GreaterThanEqual(writeStatusMinVersion) {
 		writeStatus = true
 	}
 	return inject.WithKeyValue("write_status_supported", writeStatus), nil
@@ -62,48 +63,54 @@ func New(logger *slog.Logger, version string) probe.Probe {
 			ID:     id,
 			Logger: logger,
 			Consts: []probe.Const{
-				probe.RegistersABIConst{},
 				probe.AllocationConst{},
 				writeStatusConst{},
 				probe.StructFieldConst{
 					Key: "clientconn_target_ptr_pos",
-					Val: structfield.NewID("google.golang.org/grpc", "google.golang.org/grpc", "ClientConn", "target"),
+					ID:  structfield.NewID("google.golang.org/grpc", "google.golang.org/grpc", "ClientConn", "target"),
 				},
 				probe.StructFieldConst{
 					Key: "httpclient_nextid_pos",
-					Val: structfield.NewID("google.golang.org/grpc", "google.golang.org/grpc/internal/transport", "http2Client", "nextID"),
+					ID:  structfield.NewID("google.golang.org/grpc", "google.golang.org/grpc/internal/transport", "http2Client", "nextID"),
 				},
 				probe.StructFieldConst{
 					Key: "headerFrame_hf_pos",
-					Val: structfield.NewID("google.golang.org/grpc", "google.golang.org/grpc/internal/transport", "headerFrame", "hf"),
+					ID:  structfield.NewID("google.golang.org/grpc", "google.golang.org/grpc/internal/transport", "headerFrame", "hf"),
 				},
 				probe.StructFieldConst{
 					Key: "headerFrame_streamid_pos",
-					Val: structfield.NewID("google.golang.org/grpc", "google.golang.org/grpc/internal/transport", "headerFrame", "streamID"),
+					ID:  structfield.NewID("google.golang.org/grpc", "google.golang.org/grpc/internal/transport", "headerFrame", "streamID"),
 				},
 				probe.StructFieldConstMinVersion{
 					StructField: probe.StructFieldConst{
 						Key: "error_status_pos",
-						Val: structfield.NewID("google.golang.org/grpc", "google.golang.org/grpc/internal/status", "Error", "s"),
+						ID:  structfield.NewID("google.golang.org/grpc", "google.golang.org/grpc/internal/status", "Error", "s"),
 					},
 					MinVersion: writeStatusMinVersion,
 				},
 				probe.StructFieldConstMinVersion{
 					StructField: probe.StructFieldConst{
 						Key: "status_s_pos",
-						Val: structfield.NewID("google.golang.org/grpc", "google.golang.org/grpc/internal/status", "Status", "s"),
+						ID:  structfield.NewID("google.golang.org/grpc", "google.golang.org/grpc/internal/status", "Status", "s"),
 					},
 					MinVersion: writeStatusMinVersion,
 				},
 				probe.StructFieldConstMinVersion{
 					StructField: probe.StructFieldConst{
 						Key: "status_code_pos",
-						Val: structfield.NewID("google.golang.org/grpc", "google.golang.org/genproto/googleapis/rpc/status", "Status", "Code"),
+						ID:  structfield.NewID("google.golang.org/grpc", "google.golang.org/genproto/googleapis/rpc/status", "Status", "Code"),
+					},
+					MinVersion: writeStatusMinVersion,
+				},
+				probe.StructFieldConstMinVersion{
+					StructField: probe.StructFieldConst{
+						Key: "status_message_pos",
+						ID:  structfield.NewID("google.golang.org/grpc", "google.golang.org/genproto/googleapis/rpc/status", "Status", "Message"),
 					},
 					MinVersion: writeStatusMinVersion,
 				},
 			},
-			Uprobes: []probe.Uprobe{
+			Uprobes: []*probe.Uprobe{
 				{
 					Sym:         "google.golang.org/grpc.(*ClientConn).Invoke",
 					EntryProbe:  "uprobe_ClientConn_Invoke",
@@ -128,7 +135,7 @@ func New(logger *slog.Logger, version string) probe.Probe {
 
 func verifyAndLoadBpf() (*ebpf.CollectionSpec, error) {
 	if !utils.SupportsContextPropagation() {
-		return nil, fmt.Errorf("the Linux Kernel doesn't support context propagation, please check if the kernel is in lockdown mode (/sys/kernel/security/lockdown)")
+		return nil, errors.New("the Linux Kernel doesn't support context propagation, please check if the kernel is in lockdown mode (/sys/kernel/security/lockdown)")
 	}
 
 	return loadBpf()
@@ -137,6 +144,7 @@ func verifyAndLoadBpf() (*ebpf.CollectionSpec, error) {
 // event represents an event in the gRPC client during a gRPC request.
 type event struct {
 	context.BaseSpanProperties
+	ErrMsg     [128]byte
 	Method     [50]byte
 	Target     [50]byte
 	StatusCode int32
@@ -184,6 +192,10 @@ func processFn(e *event) ptrace.SpanSlice {
 
 	if writeStatus && e.StatusCode > 0 {
 		span.Status().SetCode(ptrace.StatusCodeError)
+		errMsg := unix.ByteSliceToString(e.ErrMsg[:])
+		if errMsg != "" {
+			span.Status().SetMessage(errMsg)
+		}
 	}
 
 	return spans

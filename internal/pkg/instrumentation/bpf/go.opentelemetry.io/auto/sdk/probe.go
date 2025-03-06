@@ -30,11 +30,10 @@ func New(logger *slog.Logger) probe.Probe {
 			ID:     id,
 			Logger: logger,
 			Consts: []probe.Const{
-				probe.RegistersABIConst{},
 				probe.AllocationConst{},
 				probe.StructFieldConst{
 					Key: "span_context_trace_id_pos",
-					Val: structfield.NewID(
+					ID: structfield.NewID(
 						"go.opentelemetry.io/otel",
 						"go.opentelemetry.io/otel/trace",
 						"SpanContext",
@@ -43,7 +42,7 @@ func New(logger *slog.Logger) probe.Probe {
 				},
 				probe.StructFieldConst{
 					Key: "span_context_span_id_pos",
-					Val: structfield.NewID(
+					ID: structfield.NewID(
 						"go.opentelemetry.io/otel",
 						"go.opentelemetry.io/otel/trace",
 						"SpanContext",
@@ -52,7 +51,7 @@ func New(logger *slog.Logger) probe.Probe {
 				},
 				probe.StructFieldConst{
 					Key: "span_context_trace_flags_pos",
-					Val: structfield.NewID(
+					ID: structfield.NewID(
 						"go.opentelemetry.io/otel",
 						"go.opentelemetry.io/otel/trace",
 						"SpanContext",
@@ -60,7 +59,7 @@ func New(logger *slog.Logger) probe.Probe {
 					),
 				},
 			},
-			Uprobes: []probe.Uprobe{
+			Uprobes: []*probe.Uprobe{
 				{
 					Sym:        "go.opentelemetry.io/auto/sdk.(*tracer).start",
 					EntryProbe: "uprobe_Tracer_start",
@@ -86,14 +85,14 @@ type converter struct {
 	logger *slog.Logger
 }
 
-func (c *converter) decodeEvent(record perf.Record) (event, error) {
+func (c *converter) decodeEvent(record perf.Record) (*event, error) {
 	reader := bytes.NewReader(record.RawSample)
 
 	var e event
 	err := binary.Read(reader, binary.LittleEndian, &e.Size)
 	if err != nil {
 		c.logger.Error("failed to decode size", "error", err)
-		return event{}, err
+		return nil, err
 	}
 	c.logger.Debug("decoded size", "size", e.Size)
 
@@ -101,10 +100,10 @@ func (c *converter) decodeEvent(record perf.Record) (event, error) {
 	_, err = reader.Read(e.SpanData)
 	if err != nil {
 		c.logger.Error("failed to read span data", "error", err)
-		return event{}, err
+		return nil, err
 	}
 	c.logger.Debug("decoded span data", "size", e.Size)
-	return e, nil
+	return &e, nil
 }
 
 func (c *converter) processFn(e *event) ptrace.ScopeSpans {

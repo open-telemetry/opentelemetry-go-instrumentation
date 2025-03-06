@@ -9,32 +9,35 @@ import (
 	"fmt"
 	"os"
 	"runtime"
-	"strconv"
 	"strings"
 	"syscall"
 	"time"
 
 	"golang.org/x/sys/unix"
 
-	"github.com/hashicorp/go-version"
+	"github.com/Masterminds/semver/v3"
 )
 
 var unameFn = syscall.Uname
 
-// parse logic adapted from https://github.com/golang/go/blob/go1.21.3/src/internal/syscall/unix/kernel_version_linux.go
-func GetLinuxKernelVersion() (*version.Version, error) {
+// GetLinuxKernelVersion returns the current version of the Linux kernel. If
+// unable to determine the function, nil is returned.
+//
+// Adapted from https://github.com/golang/go/blob/go1.21.3/src/internal/syscall/unix/kernel_version_linux.go
+func GetLinuxKernelVersion() *semver.Version {
 	var uname syscall.Utsname
 	if err := unameFn(&uname); err != nil {
-		return nil, err
+		return nil
 	}
 
 	var (
-		values    [2]int
-		value, vi int
+		values [2]uint64
+		value  uint64
+		vi     int
 	)
 	for _, c := range uname.Release {
 		if '0' <= c && c <= '9' {
-			value = (value * 10) + int(c-'0')
+			value = (value * 10) + uint64(c-'0') // nolint:gosec  // c >= '0'
 		} else {
 			// Note that we're assuming N.N.N here.
 			// If we see anything else, we are likely to mis-parse it.
@@ -46,9 +49,7 @@ func GetLinuxKernelVersion() (*version.Version, error) {
 			value = 0
 		}
 	}
-	ver := fmt.Sprintf("%s.%s", strconv.Itoa(values[0]), strconv.Itoa(values[1]))
-
-	return version.NewVersion(ver)
+	return semver.New(values[0], values[1], 0, "", "")
 }
 
 // KernelLockdown is the lockdown state of the Linux kernel.
@@ -99,7 +100,7 @@ func KernelLockdownMode() KernelLockdown {
 // Injectable for tests, this file is one of the files LSCPU looks for.
 var cpuPresentPath = "/sys/devices/system/cpu/present"
 
-func GetCPUCountFromSysDevices() (int, error) {
+func GetCPUCountFromSysDevices() (uint64, error) {
 	rawFile, err := os.ReadFile(cpuPresentPath)
 	if err != nil {
 		return 0, err
@@ -113,9 +114,9 @@ func GetCPUCountFromSysDevices() (int, error) {
 	return cpuCount, nil
 }
 
-func parseCPUList(raw string) (int, error) {
+func parseCPUList(raw string) (uint64, error) {
 	listPart := strings.Split(raw, ",")
-	count := 0
+	var count uint64
 	for _, v := range listPart {
 		if strings.Contains(v, "-") {
 			rangeC, err := parseCPURange(v)
@@ -130,8 +131,8 @@ func parseCPUList(raw string) (int, error) {
 	return count, nil
 }
 
-func parseCPURange(cpuRange string) (int, error) {
-	var first, last int
+func parseCPURange(cpuRange string) (uint64, error) {
+	var first, last uint64
 	_, err := fmt.Sscanf(cpuRange, "%d-%d", &first, &last)
 	if err != nil {
 		return 0, fmt.Errorf("error reading from range %s: %w", cpuRange, err)
@@ -142,7 +143,7 @@ func parseCPURange(cpuRange string) (int, error) {
 
 var procInfoPath = "/proc/cpuinfo"
 
-func GetCPUCountFromProc() (int, error) {
+func GetCPUCountFromProc() (uint64, error) {
 	file, err := os.Open(procInfoPath)
 	if err != nil {
 		return 0, err
@@ -150,7 +151,7 @@ func GetCPUCountFromProc() (int, error) {
 	defer file.Close()
 
 	scanner := bufio.NewScanner(file)
-	count := 0
+	var count uint64
 	for scanner.Scan() {
 		if strings.Contains(scanner.Text(), "processor") {
 			count++
@@ -164,7 +165,7 @@ func GetCPUCountFromProc() (int, error) {
 	return count, nil
 }
 
-func GetCPUCount() (int, error) {
+func GetCPUCount() (uint64, error) {
 	var err error
 	// First try to get the CPU count from /sys/devices
 	cpuCount, e := GetCPUCountFromSysDevices()

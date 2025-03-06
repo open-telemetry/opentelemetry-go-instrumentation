@@ -1,48 +1,72 @@
-version: "3.9"
-
 networks:
   default:
-    name: roll
+    name: dice
     driver: bridge
 
 services:
-  rolldice:
-    depends_on:
-      - jaeger
+  jaeger:
+    image: jaegertracing/jaeger:2.3.0@sha256:6f578f9f7e3cfadf2f46a3c4ceb52614b8520b519eedcb465d63a08136b5cd24
+    ports:
+      - "16686:16686"   # Web HTTP
+    restart: unless-stopped
+  user:
     build:
-      context: .
+      context: ./user/
       dockerfile: ./Dockerfile
     pid: "host"
     ports:
-      - "8080:8080"
+      - "8082:8082"
     volumes:
       - /proc:/host/proc
-  go-auto:
+    restart: unless-stopped
+  go-auto-user:
     depends_on:
-      - rolldice
+      - user
     build:
       context: ../..
-      dockerfile: Dockerfile
+      dockerfile: ./Dockerfile
     privileged: true
     pid: "host"
     environment:
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://jaeger:4318
-      - OTEL_GO_AUTO_TARGET_EXE=/app/main
-      - OTEL_SERVICE_NAME=rolldice
+      - OTEL_GO_AUTO_TARGET_EXE=/usr/local/bin/user
+      - OTEL_SERVICE_NAME=user
       - OTEL_PROPAGATORS=tracecontext,baggage
+      - OTEL_GO_AUTO_GLOBAL=true
+      - OTEL_GO_AUTO_INCLUDE_DB_STATEMENT=true
+      - OTEL_GO_AUTO_PARSE_DB_STATEMENT=true
     volumes:
       - /proc:/host/proc
-
-  jaeger:
-    image: jaegertracing/all-in-one:1.60@sha256:4fd2d70fa347d6a47e79fcb06b1c177e6079f92cba88b083153d56263082135e
-    ports:
-      - "16686:16686"
-      - "14268:14268"
+  frontend:
+    depends_on:
+      - jaeger
+      - user
+    build:
+      context: .
+      dockerfile: ./frontend/Dockerfile
+    command: "-user=http://user:8082"
+    pid: "host"
     environment:
-      - COLLECTOR_OTLP_ENABLED=true
-      - LOG_LEVEL=debug
-    deploy:
-      resources:
-        limits:
-          memory: 300M
-    restart: unless-stopped
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://jaeger:4318
+      - OTEL_SERVICE_NAME=frontend
+      - OTEL_PROPAGATORS=tracecontext,baggage
+    ports:
+      - "8080:8080"
+    volumes:
+      - /proc:/host/proc
+  go-auto-frontend:
+    depends_on:
+      - frontend
+    build:
+      context: ../..
+      dockerfile: ./Dockerfile
+    privileged: true
+    pid: "host"
+    environment:
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://jaeger:4318
+      - OTEL_GO_AUTO_TARGET_EXE=/usr/local/bin/frontend
+      - OTEL_SERVICE_NAME=frontend
+      - OTEL_PROPAGATORS=tracecontext,baggage
+      - OTEL_GO_AUTO_GLOBAL=true
+    volumes:
+      - /proc:/host/proc

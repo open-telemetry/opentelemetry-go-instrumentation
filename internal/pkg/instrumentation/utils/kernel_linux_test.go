@@ -9,28 +9,29 @@ import (
 	"syscall"
 	"testing"
 
-	"github.com/hashicorp/go-version"
+	"github.com/Masterminds/semver/v3"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestGetLinuxKernelVersion(t *testing.T) {
 	tests := map[string]struct {
 		unameFn func(buf *syscall.Utsname) error
-		want    *version.Version
+		want    *semver.Version
 	}{
 		"ubuntu-23.10": {
 			unameFn: func(buf *syscall.Utsname) error {
 				buf.Release = [65]int8{54, 46, 53, 46, 48, 45, 57, 45, 103, 101, 110, 101, 114, 105, 99, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
 				return nil
 			},
-			want: version.Must(version.NewVersion("6.5")),
+			want: semver.New(6, 5, 0, "", ""),
 		},
 		"debian-12": {
 			unameFn: func(buf *syscall.Utsname) error {
 				buf.Release = [65]int8{54, 46, 49, 46, 48, 45, 49, 50, 45, 99, 108, 111, 117, 100, 45, 97, 109, 100, 54, 52, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
 				return nil
 			},
-			want: version.Must(version.NewVersion("6.1")),
+			want: semver.New(6, 1, 0, "", ""),
 		},
 	}
 	for name, tt := range tests {
@@ -41,11 +42,8 @@ func TestGetLinuxKernelVersion(t *testing.T) {
 			t.Cleanup(func() {
 				unameFn = oldUnameFn
 			})
-			got, err := GetLinuxKernelVersion()
-			if err != nil {
-				t.Errorf("GetLinuxKernelVersion() error = %v", err)
-				return
-			}
+			got := GetLinuxKernelVersion()
+			require.NotNil(t, got)
 
 			assert.Equal(t, tt.want, got)
 		})
@@ -53,7 +51,7 @@ func TestGetLinuxKernelVersion(t *testing.T) {
 }
 
 func TestLockdownParsing(t *testing.T) {
-	noFile, err := os.CreateTemp("", "not_existent_fake_lockdown")
+	noFile, err := os.CreateTemp(t.TempDir(), "not_existent_fake_lockdown")
 	assert.NoError(t, err)
 	notPath, err := filepath.Abs(noFile.Name())
 	assert.NoError(t, err)
@@ -64,7 +62,7 @@ func TestLockdownParsing(t *testing.T) {
 	lockdownPath = notPath
 	assert.Equal(t, KernelLockdownNone, KernelLockdownMode())
 
-	tempFile, err := os.CreateTemp("", "fake_lockdown")
+	tempFile, err := os.CreateTemp(t.TempDir(), "fake_lockdown")
 	assert.NoError(t, err)
 	path, err := filepath.Abs(tempFile.Name())
 	assert.NoError(t, err)
@@ -96,7 +94,7 @@ func TestLockdownParsing(t *testing.T) {
 
 // Utils.
 func setContent(t *testing.T, path, text string) {
-	err := os.WriteFile(path, []byte(text), 0o644)
+	err := os.WriteFile(path, []byte(text), 0o600)
 	assert.NoError(t, err)
 }
 
@@ -106,7 +104,7 @@ func setNotReadable(t *testing.T, path string) {
 }
 
 func TestGetCPUCountFromSysDevices(t *testing.T) {
-	noFile, err := os.CreateTemp("", "not_existent_fake_cpu_present")
+	noFile, err := os.CreateTemp(t.TempDir(), "not_existent_fake_cpu_present")
 	assert.NoError(t, err)
 	notPath, err := filepath.Abs(noFile.Name())
 	assert.NoError(t, err)
@@ -117,9 +115,9 @@ func TestGetCPUCountFromSysDevices(t *testing.T) {
 	cpuPresentPath = notPath
 	ncpu, err := GetCPUCountFromSysDevices()
 	assert.Error(t, err)
-	assert.Equal(t, 0, ncpu)
+	assert.Equal(t, uint64(0), ncpu)
 
-	tempFile, err := os.CreateTemp("", "fake_cpu_present")
+	tempFile, err := os.CreateTemp(t.TempDir(), "fake_cpu_present")
 	assert.NoError(t, err)
 	path, err := filepath.Abs(tempFile.Name())
 	assert.NoError(t, err)
@@ -132,31 +130,31 @@ func TestGetCPUCountFromSysDevices(t *testing.T) {
 	setContent(t, path, "0-7")
 	ncpu, err = GetCPUCountFromSysDevices()
 	assert.NoError(t, err)
-	assert.Equal(t, 8, ncpu)
+	assert.Equal(t, uint64(8), ncpu)
 
 	setContent(t, path, "0-7,10-15")
 	ncpu, err = GetCPUCountFromSysDevices()
 	assert.NoError(t, err)
-	assert.Equal(t, 14, ncpu)
+	assert.Equal(t, uint64(14), ncpu)
 
 	setContent(t, path, "0-7,10-15,20-23")
 	ncpu, err = GetCPUCountFromSysDevices()
 	assert.NoError(t, err)
-	assert.Equal(t, 18, ncpu)
+	assert.Equal(t, uint64(18), ncpu)
 
 	setContent(t, path, "0-")
 	ncpu, err = GetCPUCountFromSysDevices()
 	assert.Error(t, err)
-	assert.Equal(t, 0, ncpu)
+	assert.Equal(t, uint64(0), ncpu)
 
 	setNotReadable(t, path)
 	ncpu, err = GetCPUCountFromSysDevices()
 	assert.Error(t, err)
-	assert.Equal(t, 0, ncpu)
+	assert.Equal(t, uint64(0), ncpu)
 }
 
 func TestGetCPUCountFromProc(t *testing.T) {
-	noFile, err := os.CreateTemp("", "not_existent_fake_cpuinfo")
+	noFile, err := os.CreateTemp(t.TempDir(), "not_existent_fake_cpuinfo")
 	assert.NoError(t, err)
 	notPath, err := filepath.Abs(noFile.Name())
 	assert.NoError(t, err)
@@ -167,9 +165,9 @@ func TestGetCPUCountFromProc(t *testing.T) {
 	procInfoPath = notPath
 	ncpu, err := GetCPUCountFromProc()
 	assert.Error(t, err)
-	assert.Equal(t, 0, ncpu)
+	assert.Equal(t, uint64(0), ncpu)
 
-	tempFile, err := os.CreateTemp("", "fake_cpuinfo")
+	tempFile, err := os.CreateTemp(t.TempDir(), "fake_cpuinfo")
 	assert.NoError(t, err)
 	path, err := filepath.Abs(tempFile.Name())
 	assert.NoError(t, err)
@@ -182,30 +180,30 @@ func TestGetCPUCountFromProc(t *testing.T) {
 	setContent(t, path, "processor	: 0")
 	ncpu, err = GetCPUCountFromProc()
 	assert.NoError(t, err)
-	assert.Equal(t, 1, ncpu)
+	assert.Equal(t, uint64(1), ncpu)
 
 	setContent(t, path, "processor	: 0\nprocessor	: 1")
 	ncpu, err = GetCPUCountFromProc()
 	assert.NoError(t, err)
-	assert.Equal(t, 2, ncpu)
+	assert.Equal(t, uint64(2), ncpu)
 
 	setContent(t, path, "processor	: 0\nprocessor	: 1\nprocessor	: 2")
 	ncpu, err = GetCPUCountFromProc()
 	assert.NoError(t, err)
-	assert.Equal(t, 3, ncpu)
+	assert.Equal(t, uint64(3), ncpu)
 
 	setContent(t, path, "processor	: 0\nprocessor	: 1\nprocessor	: 2\nprocessor	: 3")
 	ncpu, err = GetCPUCountFromProc()
 	assert.NoError(t, err)
-	assert.Equal(t, 4, ncpu)
+	assert.Equal(t, uint64(4), ncpu)
 
 	setContent(t, path, "processor	: 0\n some text \nprocessor	: 1")
 	ncpu, err = GetCPUCountFromProc()
 	assert.NoError(t, err)
-	assert.Equal(t, 2, ncpu)
+	assert.Equal(t, uint64(2), ncpu)
 
 	setNotReadable(t, path)
 	ncpu, err = GetCPUCountFromProc()
 	assert.Error(t, err)
-	assert.Equal(t, 0, ncpu)
+	assert.Equal(t, uint64(0), ncpu)
 }

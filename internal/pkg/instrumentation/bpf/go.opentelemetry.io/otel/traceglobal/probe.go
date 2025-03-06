@@ -4,6 +4,7 @@
 package global
 
 import (
+	"bytes"
 	"encoding/binary"
 	"fmt"
 	"log/slog"
@@ -18,7 +19,8 @@ import (
 	"go.opentelemetry.io/auto/internal/pkg/process"
 	"go.opentelemetry.io/auto/internal/pkg/structfield"
 
-	"github.com/hashicorp/go-version"
+	"github.com/Masterminds/semver/v3"
+	"github.com/cilium/ebpf/perf"
 	"golang.org/x/sys/unix"
 
 	"go.opentelemetry.io/otel/attribute"
@@ -33,6 +35,38 @@ import (
 const (
 	// pkg is the package being instrumented.
 	pkg = "go.opentelemetry.io/otel/internal/global"
+
+	// Minimum version of go.opentelemetry.io/otel that supports using the
+	// go.opentelemetry.io/auto/sdk in the global API.
+	minAutoSDK = "1.33.0"
+)
+
+func must(c *semver.Constraints, err error) *semver.Constraints {
+	if err != nil {
+		panic(err)
+	}
+	return c
+}
+
+var (
+	goMapsVersion = semver.New(1, 24, 0, "", "")
+
+	otelWithAutoSDK = probe.PackageConstraints{
+		Package:     "go.opentelemetry.io/otel",
+		Constraints: must(semver.NewConstraint(">= " + minAutoSDK)),
+		FailureMode: probe.FailureModeIgnore,
+	}
+	otelWithoutAutoSDK = probe.PackageConstraints{
+		Package:     "go.opentelemetry.io/otel",
+		Constraints: must(semver.NewConstraint("< " + minAutoSDK)),
+		FailureMode: probe.FailureModeIgnore,
+	}
+	goWithoutSwissMaps = probe.PackageConstraints{
+		Package:     "std",
+		Constraints: must(semver.NewConstraint("< " + goMapsVersion.String())),
+		// Warn in logs that this is not supported.
+		FailureMode: probe.FailureModeWarn,
+	}
 )
 
 // New returns a new [probe.Probe].
@@ -41,12 +75,24 @@ func New(logger *slog.Logger) probe.Probe {
 		SpanKind:        trace.SpanKindClient,
 		InstrumentedPkg: pkg,
 	}
+
+	uprobeNewStart := &probe.Uprobe{
+		Sym:        "go.opentelemetry.io/otel/internal/global.(*tracer).newSpan",
+		EntryProbe: "uprobe_newStart",
+		PackageConstraints: []probe.PackageConstraints{
+			otelWithAutoSDK,
+		},
+	}
+
+	c := &converter{
+		logger:         logger,
+		uprobeNewStart: uprobeNewStart,
+	}
 	return &probe.TraceProducer[bpfObjects, event]{
 		Base: probe.Base[bpfObjects, event]{
 			ID:     id,
 			Logger: logger,
 			Consts: []probe.Const{
-				probe.RegistersABIConst{},
 				probe.AllocationConst{},
 				probe.KeyValConst{
 					Key: "attr_type_invalid",
@@ -86,57 +132,121 @@ func New(logger *slog.Logger) probe.Probe {
 				},
 				probe.StructFieldConst{
 					Key: "tracer_delegate_pos",
-					Val: structfield.NewID("go.opentelemetry.io/otel", "go.opentelemetry.io/otel/internal/global", "tracer", "delegate"),
+					ID:  structfield.NewID("go.opentelemetry.io/otel", "go.opentelemetry.io/otel/internal/global", "tracer", "delegate"),
 				},
 				probe.StructFieldConst{
 					Key: "tracer_name_pos",
-					Val: structfield.NewID("go.opentelemetry.io/otel", "go.opentelemetry.io/otel/internal/global", "tracer", "name"),
+					ID:  structfield.NewID("go.opentelemetry.io/otel", "go.opentelemetry.io/otel/internal/global", "tracer", "name"),
 				},
 				probe.StructFieldConst{
 					Key: "tracer_provider_pos",
-					Val: structfield.NewID("go.opentelemetry.io/otel", "go.opentelemetry.io/otel/internal/global", "tracer", "provider"),
+					ID:  structfield.NewID("go.opentelemetry.io/otel", "go.opentelemetry.io/otel/internal/global", "tracer", "provider"),
 				},
 				probe.StructFieldConst{
 					Key: "tracer_provider_tracers_pos",
-					Val: structfield.NewID("go.opentelemetry.io/otel", "go.opentelemetry.io/otel/internal/global", "tracerProvider", "tracers"),
+					ID:  structfield.NewID("go.opentelemetry.io/otel", "go.opentelemetry.io/otel/internal/global", "tracerProvider", "tracers"),
 				},
-				probe.StructFieldConst{
-					Key: "buckets_ptr_pos",
-					Val: structfield.NewID("std", "runtime", "hmap", "buckets"),
+				probe.StructFieldConstMaxVersion{
+					StructField: probe.StructFieldConst{
+						Key: "buckets_ptr_pos",
+						ID:  structfield.NewID("std", "runtime", "hmap", "buckets"),
+					},
+					MaxVersion: goMapsVersion,
 				},
 				tracerIDContainsSchemaURL{},
 				tracerIDContainsScopeAttributes{},
 			},
-			Uprobes: []probe.Uprobe{
+			Uprobes: []*probe.Uprobe{
+				uprobeNewStart,
 				{
 					Sym:         "go.opentelemetry.io/otel/internal/global.(*tracer).Start",
 					EntryProbe:  "uprobe_Start",
 					ReturnProbe: "uprobe_Start_Returns",
+					PackageConstraints: []probe.PackageConstraints{
+						otelWithoutAutoSDK,
+						goWithoutSwissMaps,
+					},
 				},
 				{
 					Sym:        "go.opentelemetry.io/otel/internal/global.(*nonRecordingSpan).End",
 					EntryProbe: "uprobe_End",
+					PackageConstraints: []probe.PackageConstraints{
+						otelWithoutAutoSDK,
+						goWithoutSwissMaps,
+					},
 				},
 				{
 					Sym:         "go.opentelemetry.io/otel/internal/global.(*nonRecordingSpan).SetAttributes",
 					EntryProbe:  "uprobe_SetAttributes",
 					FailureMode: probe.FailureModeIgnore,
+					PackageConstraints: []probe.PackageConstraints{
+						otelWithoutAutoSDK,
+						goWithoutSwissMaps,
+					},
 				},
 				{
 					Sym:         "go.opentelemetry.io/otel/internal/global.(*nonRecordingSpan).SetStatus",
 					EntryProbe:  "uprobe_SetStatus",
 					FailureMode: probe.FailureModeIgnore,
+					PackageConstraints: []probe.PackageConstraints{
+						otelWithoutAutoSDK,
+						goWithoutSwissMaps,
+					},
 				},
 				{
 					Sym:         "go.opentelemetry.io/otel/internal/global.(*nonRecordingSpan).SetName",
 					EntryProbe:  "uprobe_SetName",
 					FailureMode: probe.FailureModeIgnore,
+					PackageConstraints: []probe.PackageConstraints{
+						otelWithoutAutoSDK,
+						goWithoutSwissMaps,
+					},
 				},
 			},
-			SpecFn: loadBpf,
+			SpecFn:        loadBpf,
+			ProcessRecord: c.decodeEvent,
 		},
 		ProcessFn: processFn,
 	}
+}
+
+type recordKind uint32
+
+const (
+	recordKindTelemetry recordKind = iota
+	recordKindConrol
+)
+
+type converter struct {
+	logger *slog.Logger
+
+	uprobeNewStart *probe.Uprobe
+}
+
+func (c *converter) decodeEvent(record perf.Record) (*event, error) {
+	reader := bytes.NewReader(record.RawSample)
+
+	var kind recordKind
+	err := binary.Read(reader, binary.LittleEndian, &kind)
+	if err != nil {
+		return nil, err
+	}
+
+	var e *event
+	switch kind {
+	case recordKindTelemetry:
+		e = new(event)
+		reader.Reset(record.RawSample)
+		err = binary.Read(reader, binary.LittleEndian, e)
+	case recordKindConrol:
+		if c.uprobeNewStart != nil {
+			err = c.uprobeNewStart.Close()
+			c.uprobeNewStart = nil
+		}
+	default:
+		err = fmt.Errorf("unknown record kind: %d", kind)
+	}
+	return e, err
 }
 
 // tracerIDContainsSchemaURL is a Probe Const defining whether the tracer key contains schemaURL.
@@ -145,31 +255,31 @@ type tracerIDContainsSchemaURL struct{}
 // Prior to v1.28 the tracer key did not contain schemaURL. However, in that version a
 // change was made to include it.
 // https://github.com/open-telemetry/opentelemetry-go/pull/5426/files
-var schemaAddedToTracerKeyVer = version.Must(version.NewVersion("1.28.0"))
+var schemaAddedToTracerKeyVer = semver.New(1, 28, 0, "", "")
 
-func (c tracerIDContainsSchemaURL) InjectOption(td *process.TargetDetails) (inject.Option, error) {
-	ver, ok := td.Libraries["go.opentelemetry.io/otel"]
+func (c tracerIDContainsSchemaURL) InjectOption(info *process.Info) (inject.Option, error) {
+	ver, ok := info.Modules["go.opentelemetry.io/otel"]
 	if !ok {
 		return nil, fmt.Errorf("unknown module version: %s", pkg)
 	}
 
-	return inject.WithKeyValue("tracer_id_contains_schemaURL", ver.GreaterThanOrEqual(schemaAddedToTracerKeyVer)), nil
+	return inject.WithKeyValue("tracer_id_contains_schemaURL", ver.GreaterThanEqual(schemaAddedToTracerKeyVer)), nil
 }
 
 // In v1.32.0 the tracer key was updated to include the scope attributes.
 // https://github.com/open-telemetry/opentelemetry-go/pull/5924/files
-var scopeAttributesAddedToTracerKeyVer = version.Must(version.NewVersion("1.32.0"))
+var scopeAttributesAddedToTracerKeyVer = semver.New(1, 32, 0, "", "")
 
 // tracerIDContainsScopeAttributes is a Probe Const defining whether the tracer key contains scope attributes.
 type tracerIDContainsScopeAttributes struct{}
 
-func (c tracerIDContainsScopeAttributes) InjectOption(td *process.TargetDetails) (inject.Option, error) {
-	ver, ok := td.Libraries["go.opentelemetry.io/otel"]
+func (c tracerIDContainsScopeAttributes) InjectOption(info *process.Info) (inject.Option, error) {
+	ver, ok := info.Modules["go.opentelemetry.io/otel"]
 	if !ok {
 		return nil, fmt.Errorf("unknown module version: %s", pkg)
 	}
 
-	return inject.WithKeyValue("tracer_id_contains_scope_attributes", ver.GreaterThanOrEqual(scopeAttributesAddedToTracerKeyVer)), nil
+	return inject.WithKeyValue("tracer_id_contains_scope_attributes", ver.GreaterThanEqual(scopeAttributesAddedToTracerKeyVer)), nil
 }
 
 type attributeKeyVal struct {
@@ -241,7 +351,7 @@ func setStatus(dest ptrace.Status, stat status) {
 	case codes.Error:
 		dest.SetCode(ptrace.StatusCodeError)
 	}
-	dest.SetMessage(string(unix.ByteSliceToString(stat.Description[:])))
+	dest.SetMessage(unix.ByteSliceToString(stat.Description[:]))
 }
 
 func setAttributes(dest pcommon.Map, ab attributesBuffer) {
@@ -252,8 +362,8 @@ func setAttributes(dest pcommon.Map, ab attributesBuffer) {
 		case uint8(attribute.BOOL):
 			dest.PutBool(key, akv.Value[0] != 0)
 		case uint8(attribute.INT64):
-			v := int64(binary.LittleEndian.Uint64(akv.Value[:8]))
-			dest.PutInt(key, v)
+			v := binary.LittleEndian.Uint64(akv.Value[:8])
+			dest.PutInt(key, int64(v)) // nolint: gosec  // Raw value decode.
 		case uint8(attribute.FLOAT64):
 			v := math.Float64frombits(binary.LittleEndian.Uint64(akv.Value[:8]))
 			dest.PutDouble(key, v)

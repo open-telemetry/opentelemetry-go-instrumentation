@@ -1,4 +1,4 @@
-ARG BASE_IMAGE=golang:1.23.4@sha256:70031844b8c225351d0bb63e2c383f80db85d92ba894e3da7e13bcf80efa9a37
+ARG BASE_IMAGE=golang:1.24.1@sha256:c5adecdb7b3f8c5ca3c88648a861882849cc8b02fed68ece31e25de88ad13418 AS builder
 FROM ${BASE_IMAGE} AS builder
 
 COPY sdk/ /usr/src/go.opentelemetry.io/auto/sdk
@@ -17,7 +17,7 @@ RUN --mount=type=cache,target=/root/.cache/go-build \
     --mount=type=cache,target=/go/pkg \
 	CGO_ENABLED=0 go build -v -o /usr/local/bin/app .
 
-FROM bitnami/kafka:latest@sha256:3fb376e32af41bab0ad5d891b9749b69b0e500b285e0f3a6fc500affa5f29fb3
+FROM bitnami/kafka:latest@sha256:7c91967e7a76eacbc823f951f4c3826ddfd8188ed3cfc99fc9b2fe0d5e89e75b
 
 USER root
 ENV KAFKA_CFG_PROCESS_ROLES=controller,broker

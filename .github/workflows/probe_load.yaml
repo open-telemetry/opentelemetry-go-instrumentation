@@ -26,7 +26,7 @@ jobs:
         steps:
           - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
           - name: Set up Go
-            uses: actions/setup-go@3041bf56c941b39c61721a86cd11f3bb1338122a # v5
+            uses: actions/setup-go@f111f3307d8850f501ac008e886eec1fd1932a34 # v5
             with:
               go-version: '${{ env.go_version }}'
           - name: make docker-generate
@@ -41,7 +41,9 @@ jobs:
                 sudo chmod 0666 /dev/kvm
           - name: Test without verifier logs
             id: no_verifier_logs_test
-            run: OTEL_GO_AUTO_SHOW_VERIFIER_LOG=false vimto -kernel :${{ matrix.tag }} -- go test -v -count=1 -tags=multi_kernel_test go.opentelemetry.io/auto/internal/pkg/instrumentation
+            run: OTEL_GO_AUTO_SHOW_VERIFIER_LOG=false vimto -kernel :${{ matrix.tag }} -- go test -v -count=1 -tags=ebpf_test go.opentelemetry.io/auto/internal/pkg/instrumentation
           - name: Test with verifier logs
-            run: OTEL_GO_AUTO_SHOW_VERIFIER_LOG=true vimto -kernel :${{ matrix.tag }} -- go test -v -count=1 -tags=multi_kernel_test go.opentelemetry.io/auto/internal/pkg/instrumentation
+            run: OTEL_GO_AUTO_SHOW_VERIFIER_LOG=true vimto -kernel :${{ matrix.tag }} -- go test -v -count=1 -tags=ebpf_test go.opentelemetry.io/auto/internal/pkg/instrumentation
             if: always() && steps.no_verifier_logs_test.outcome == 'failure'
+          - name: Test eBPF sampling
+            run: vimto -kernel :${{ matrix.tag }} -- go test -v -count=1 -tags=ebpf_test go.opentelemetry.io/auto/internal/pkg/instrumentation/probe/sampling

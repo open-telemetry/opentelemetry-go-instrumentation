@@ -4,6 +4,7 @@
 package process
 
 import (
+	"errors"
 	"fmt"
 	"log/slog"
 	"math"
@@ -11,18 +12,17 @@ import (
 	"runtime"
 
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/utils"
-	"go.opentelemetry.io/auto/internal/pkg/process/ptrace"
 )
 
-// AllocationDetails are the details about allocated memory.
-type AllocationDetails struct {
+// Allocation represent memory that has been allocated for a process.
+type Allocation struct {
 	StartAddr uint64
 	EndAddr   uint64
 	NumCPU    uint64
 }
 
 // Allocate allocates memory for the instrumented process.
-func Allocate(logger *slog.Logger, pid int) (*AllocationDetails, error) {
+func Allocate(logger *slog.Logger, id ID) (*Allocation, error) {
 	// runtime.NumCPU doesn't query any kind of hardware or OS state,
 	// but merely uses affinity APIs to count what CPUs the given go process is available to run on.
 	// Go's implementation of runtime.NumCPU (https://github.com/golang/go/blob/48d899dcdbed4534ed942f7ec2917cf86b18af22/src/runtime/os_linux.go#L97)
@@ -33,14 +33,20 @@ func Allocate(logger *slog.Logger, pid int) (*AllocationDetails, error) {
 		return nil, err
 	}
 
-	mapSize := uint64(os.Getpagesize() * nCPU * 8)
+	n := os.Getpagesize()
+	if n < 0 {
+		return nil, fmt.Errorf("invalid page size: %d", n)
+	}
+	pagesize := uint64(n) // nolint: gosec  // Bound checked.
+
+	mapSize := pagesize * nCPU * 8
 	logger.Debug(
 		"Requesting memory allocation",
 		"size", mapSize,
-		"page size", os.Getpagesize(),
+		"page size", pagesize,
 		"cpu count", nCPU)
 
-	addr, err := remoteAllocate(logger, pid, mapSize)
+	addr, err := remoteAllocate(logger, id, mapSize)
 	if err != nil {
 		return nil, err
 	}
@@ -51,26 +57,26 @@ func Allocate(logger *slog.Logger, pid int) (*AllocationDetails, error) {
 		"end_addr", fmt.Sprintf("0x%x", addr+mapSize),
 	)
 
-	return &AllocationDetails{
+	return &Allocation{
 		StartAddr: addr,
 		EndAddr:   addr + mapSize,
-		NumCPU:    uint64(nCPU),
+		NumCPU:    nCPU,
 	}, nil
 }
 
-func remoteAllocate(logger *slog.Logger, pid int, mapSize uint64) (uint64, error) {
+func remoteAllocate(logger *slog.Logger, id ID, mapSize uint64) (uint64, error) {
 	runtime.LockOSThread()
 	defer runtime.UnlockOSThread()
-	program, err := ptrace.NewTracedProgram(pid, logger)
+	program, err := newTracedProgram(id, logger)
 	if err != nil {
 		return 0, err
 	}
 
 	defer func() {
-		logger.Info("Detaching from process", "pid", pid)
+		logger.Info("Detaching from process", "pid", id)
 		err := program.Detach()
 		if err != nil {
-			logger.Error("Failed to detach ptrace", "error", err, "pid", pid)
+			logger.Error("Failed to detach ptrace", "error", err, "pid", id)
 		}
 	}()
 
@@ -80,15 +86,14 @@ func remoteAllocate(logger *slog.Logger, pid int, mapSize uint64) (uint64, error
 		logger.Debug("Set memlock on process successfully")
 	}
 
-	fd := -1
-	addr, err := program.Mmap(mapSize, uint64(fd))
+	addr, err := program.Mmap(mapSize, math.MaxUint64)
 	if err != nil {
 		return 0, err
 	}
 	if addr == math.MaxUint64 {
 		// On success, mmap() returns a pointer to the mapped area.
 		// On error, the value MAP_FAILED (that is, (void *) -1) is returned
-		return 0, fmt.Errorf("mmap MAP_FAILED")
+		return 0, errors.New("mmap MAP_FAILED")
 	}
 
 	err = program.Madvise(addr, mapSize)

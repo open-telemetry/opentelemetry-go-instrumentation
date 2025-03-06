@@ -29,6 +29,7 @@ services:
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://jaeger:4318
       - OTEL_GO_AUTO_TARGET_EXE=/app/main
       - OTEL_GO_AUTO_INCLUDE_DB_STATEMENT=true
+      - OTEL_GO_AUTO_PARSE_DB_STATEMENT=true
       - OTEL_SERVICE_NAME=httpPlusdb
       - OTEL_PROPAGATORS=tracecontext,baggage
       - CGO_ENABLED=1

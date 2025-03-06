@@ -6,16 +6,19 @@ on:
   pull_request:
 
 env:
-  GO_VERSION: "~1.23.1"
+  GO_VERSION: "~1.24.0"
 
 jobs:
-  generate-and-test-x86_64:
-    runs-on: ubuntu-latest
+  generate-and-test:
+    strategy:
+      matrix:
+        os: [ ubuntu-latest, ubuntu-22.04-arm]
+    runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout Repo
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
       - name: Setup Go
-        uses: actions/setup-go@3041bf56c941b39c61721a86cd11f3bb1338122a # v5
+        uses: actions/setup-go@f111f3307d8850f501ac008e886eec1fd1932a34 # v5
         with:
           go-version: ${{ env.GO_VERSION }}
           check-latest: true
@@ -27,30 +30,7 @@ jobs:
           uname -p;
           clang --version;
       - run: make test
-      - run: sudo make test-ebpf
-      - run: make check-clean-work-tree
-  generate-and-test-arm64:
-    runs-on: macos-latest
-    steps:
-      - name: Checkout Repo
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
-      - name: Setup Go
-        uses: actions/setup-go@3041bf56c941b39c61721a86cd11f3bb1338122a # v5
-        with:
-          go-version: ${{ env.GO_VERSION }}
-          check-latest: true
-          cache-dependency-path: "**/go.sum"
-      - name: Install build dependencies
-        run: |
-          brew update && brew install llvm
-          echo "PATH=/opt/homebrew/opt/llvm/bin:$PATH" >> $GITHUB_ENV;
-          echo "LDFLAGS=-L/opt/homebrew/opt/llvm/lib -L/opt/homebrew/opt/llvm/lib/c++ -Wl,-rpath,/opt/homebrew/opt/llvm/lib/c++" >> $GITHUB_ENV;
-          echo "CPPFLAGS=-I/opt/homebrew/opt/llvm/include" >> $GITHUB_ENV;
-      - name: Architecture
-        run: |
-          uname -p;
-          clang --version;
-      - run: make test
+      - run: sudo --preserve-env=PATH make test-ebpf
       - run: make check-clean-work-tree
   docker-build:
     runs-on: ubuntu-latest
@@ -66,7 +46,7 @@ jobs:
       - name: Checkout Repo
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
       - name: Setup Go
-        uses: actions/setup-go@3041bf56c941b39c61721a86cd11f3bb1338122a # v5
+        uses: actions/setup-go@f111f3307d8850f501ac008e886eec1fd1932a34 # v5
         with:
           go-version: ${{ env.GO_VERSION }}
           check-latest: true

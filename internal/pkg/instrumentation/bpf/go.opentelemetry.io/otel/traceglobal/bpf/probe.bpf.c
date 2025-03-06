@@ -23,6 +23,9 @@ char __license[] SEC("license") = "Dual MIT/GPL";
 #define MAX_BUCKETS 8
 #define MAX_TRACERS 64
 
+// Records state of our write to auto-instrumentation flag.
+bool wrote_flag = false;
+
 struct span_description_t {
     char buf[MAX_STATUS_DESCRIPTION_LEN];
 };
@@ -42,7 +45,12 @@ typedef struct tracer_id {
     char schema_url[MAX_TRACER_SCHEMA_URL_LEN];
 } tracer_id_t;
 
+struct control_t {
+    u32 kind; // Required to be 1.
+};
+
 struct otel_span_t {
+    u32 kind; // Required to be 0.
     BASE_SPAN_PROPERTIES
     struct span_name_t span_name;
     otel_status_t status;
@@ -389,6 +397,36 @@ static __always_inline long fill_tracer_id(tracer_id_t *tracer_id, go_tracer_ptr
 }
 
 // This instrumentation attaches uprobe to the following function:
+// func (t *tracer) newSpan(ctx context.Context, autoSpan *bool, name string, opts []trace.SpanStartOption) (context.Context, trace.Span) {
+// https://github.com/open-telemetry/opentelemetry-go/blob/ac386f383cdfc14f546b4e55e8726a0a45e8a409/internal/global/trace.go#L161
+SEC("uprobe/newSpan")
+int uprobe_newStart(struct pt_regs *ctx) {
+    if (wrote_flag) {
+        // Already wrote flag value.
+        return 0;
+    }
+
+    void *flag_ptr = get_argument(ctx, 4);
+    if (flag_ptr == NULL) {
+        bpf_printk("invalid flag_ptr: NULL");
+        return -1;
+    }
+
+    bool true_value = true;
+    long res = bpf_probe_write_user(flag_ptr, &true_value, sizeof(bool));
+    if (res != 0) {
+        bpf_printk("failed to write bool flag value: %ld", res);
+        return -2;
+    }
+
+    wrote_flag = true;
+
+    // Signal this uprobe should be unloaded.
+    struct control_t ctrl = {1};
+    return bpf_perf_event_output(ctx, &events, BPF_F_CURRENT_CPU, (void *)(&ctrl), sizeof(struct control_t));
+}
+
+// This instrumentation attaches uprobe to the following function:
 // func (t *tracer) Start(ctx context.Context, name string, opts ...trace.SpanStartOption) (context.Context, trace.Span)
 // https://github.com/open-telemetry/opentelemetry-go/blob/98b32a6c3a87fbee5d34c063b9096f416b250897/internal/global/trace.go#L149
 SEC("uprobe/Start")
@@ -408,9 +446,7 @@ int uprobe_Start(struct pt_regs *ctx) {
     read_span_name(&span_name, span_name_len, span_name_ptr);
 
     // Save the span name in map to be read once the Start function returns
-    struct go_iface go_context = {0};
-    get_Go_context(ctx, 2, 0, true, &go_context);
-    void *key = get_consistent_key(ctx, go_context.data);
+    void *key = (void *)GOROUTINE(ctx);
     bpf_map_update_elem(&span_name_by_context, &key, &span_name, 0);
 
     // Get the tracer id
@@ -438,7 +474,8 @@ int uprobe_Start_Returns(struct pt_regs *ctx) {
     struct go_iface go_context = {0};
     // In return probe, the context is the first return value
     get_Go_context(ctx, 1, 0, true, &go_context);
-    void *key = get_consistent_key(ctx, go_context.data);
+
+    void *key = (void *)GOROUTINE(ctx);
     struct span_name_t *span_name = bpf_map_lookup_elem(&span_name_by_context, &key); 
     if (span_name == NULL) {
         return 0;
