@@ -80,10 +80,10 @@ github.com/yuin/goldmark v1.1.27/go.mod h1:3hX8gzYuyVAZsxl0MRgGTJEmQBFcNTphYh9de
 github.com/yuin/goldmark v1.2.1/go.mod h1:3hX8gzYuyVAZsxl0MRgGTJEmQBFcNTphYh9decYSb74=
 go.opentelemetry.io/collector/pdata v1.27.0 h1:66yI7FYkUDia74h48Fd2/KG2Vk8DxZnGw54wRXykCEU=
 go.opentelemetry.io/collector/pdata v1.27.0/go.mod h1:18e8/xDZsqyj00h/5HM5GLdJgBzzG9Ei8g9SpNoiMtI=
-go.opentelemetry.io/contrib/bridges/prometheus v0.59.0 h1:HY2hJ7yn3KuEBBBsKxvF3ViSmzLwsgeNvD+0utRMgzc=
-go.opentelemetry.io/contrib/bridges/prometheus v0.59.0/go.mod h1:H4H7vs8766kwFnOZVEGMJFVF+phpBSmTckvvNRdJeDI=
-go.opentelemetry.io/contrib/exporters/autoexport v0.59.0 h1:dKhAFwh7SSoOw+gwMtSv+XLkUGTFAwAGMT3X3XSE4FA=
-go.opentelemetry.io/contrib/exporters/autoexport v0.59.0/go.mod h1:fPl+qlrhRdRntIpPs9JoQ0iBKAsnH5VkgppU1f9kyF4=
+go.opentelemetry.io/contrib/bridges/prometheus v0.60.0 h1:x7sPooQCwSg27SjtQee8GyIIRTQcF4s7eSkac6F2+VA=
+go.opentelemetry.io/contrib/bridges/prometheus v0.60.0/go.mod h1:4K5UXgiHxV484efGs42ejD7E2J/sIlepYgdGoPXe7hE=
+go.opentelemetry.io/contrib/exporters/autoexport v0.60.0 h1:GuQXpvSXNjpswpweIem84U9BNauqHHi2w1GtNAalvpM=
+go.opentelemetry.io/contrib/exporters/autoexport v0.60.0/go.mod h1:CkmxekdHco4d7thFJNPQ7Mby4jMBgZUclnrxT4e+ryk=
 go.opentelemetry.io/otel v1.35.0 h1:xKWKPxrxB6OtMCbmMY021CqC45J+3Onta9MqjhnusiQ=
 go.opentelemetry.io/otel v1.35.0/go.mod h1:UEqy8Zp11hpkUrL73gSlELM0DupHoiq72dR+Zqel/+Y=
 go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc v0.11.0 h1:HMUytBT3uGhPKYY/u/G5MR9itrlSO2SMOsSD3Tk3k7A=
