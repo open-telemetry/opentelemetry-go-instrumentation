@@ -173,14 +173,16 @@ static __always_inline bool get_go_string_from_user_ptr(void *user_str_ptr, char
     }
 
     u64 size_to_read = user_str.len > max_len ? max_len : user_str.len;
+    size_to_read &= 0xFFFFF; // help the verifier, we should never read more than 1MB
     success = bpf_probe_read_user(dst, size_to_read, user_str.str);
     if (success != 0) {
         return false;
     }
 
     if (size_to_read < max_len) {
-           dst[size_to_read] = '\0';
+        dst[size_to_read] = '\0';
     }
+
     return true;
 }
 #endif
