@@ -53,9 +53,8 @@ const (
 // Instrumentation manages and controls all OpenTelemetry Go
 // auto-instrumentation.
 type Instrumentation struct {
-	target   *process.Info
-	analyzer *process.Analyzer
-	manager  *instrumentation.Manager
+	target  *process.Info
+	manager *instrumentation.Manager
 
 	stopMu  sync.Mutex
 	stop    context.CancelFunc
@@ -102,10 +101,13 @@ func NewInstrumentation(ctx context.Context, opts ...InstrumentationOption) (*In
 		return nil, err
 	}
 
-	pa := process.NewAnalyzer(c.logger, c.pid)
-	pi, err := pa.Analyze(mngr.GetRelevantFuncs())
+	pi, err := process.NewInfo(c.pid, mngr.GetRelevantFuncs())
 	if err != nil {
-		return nil, err
+		if pi == nil {
+			return nil, err
+		}
+		// Assume a recoverable error.
+		c.logger.Error("process info", "error", err, "info", pi)
 	}
 
 	alloc, err := process.Allocate(c.logger, c.pid)
@@ -124,9 +126,8 @@ func NewInstrumentation(ctx context.Context, opts ...InstrumentationOption) (*In
 	mngr.FilterUnusedProbes(pi)
 
 	return &Instrumentation{
-		target:   pi,
-		analyzer: pa,
-		manager:  mngr,
+		target:  pi,
+		manager: mngr,
 	}, nil
 }
 
