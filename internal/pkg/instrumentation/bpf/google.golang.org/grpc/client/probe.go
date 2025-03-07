@@ -63,7 +63,7 @@ func New(logger *slog.Logger, version string) probe.Probe {
 			ID:     id,
 			Logger: logger,
 			Consts: []probe.Const{
-				probe.AllocationConst{},
+				probe.AllocationConst{Logger: logger},
 				writeStatusConst{},
 				probe.StructFieldConst{
 					Key: "clientconn_target_ptr_pos",

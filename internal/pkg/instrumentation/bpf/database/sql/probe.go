@@ -47,7 +47,7 @@ func New(logger *slog.Logger, version string) probe.Probe {
 			ID:     id,
 			Logger: logger,
 			Consts: []probe.Const{
-				probe.AllocationConst{},
+				probe.AllocationConst{Logger: logger},
 				probe.KeyValConst{
 					Key: "should_include_db_statement",
 					Val: shouldIncludeDBStatement(),

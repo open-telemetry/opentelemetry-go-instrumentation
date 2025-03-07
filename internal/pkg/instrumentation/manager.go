@@ -351,7 +351,8 @@ func (m *Manager) loadProbes(target *process.Info) error {
 	}
 	m.exe = exe
 
-	if err := m.mount(target); err != nil {
+	m.logger.Debug("Mounting bpffs")
+	if err := bpffsMount(target); err != nil {
 		return err
 	}
 
@@ -369,15 +370,6 @@ func (m *Manager) loadProbes(target *process.Info) error {
 
 	m.logger.Debug("loaded probes to memory", "total_probes", len(m.probes))
 	return nil
-}
-
-func (m *Manager) mount(target *process.Info) error {
-	if target.Allocation != nil {
-		m.logger.Debug("Mounting bpffs", "allocation", target.Allocation)
-	} else {
-		m.logger.Debug("Mounting bpffs")
-	}
-	return bpffsMount(target)
 }
 
 func (m *Manager) cleanup(target *process.Info) error {

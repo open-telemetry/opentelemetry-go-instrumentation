@@ -108,12 +108,6 @@ func NewInstrumentation(ctx context.Context, opts ...InstrumentationOption) (*In
 		return nil, err
 	}
 
-	alloc, err := process.Allocate(c.logger, c.pid)
-	if err != nil {
-		return nil, err
-	}
-	pi.Allocation = alloc
-
 	c.logger.Info(
 		"target process analysis completed",
 		"pid", pi.ID,
