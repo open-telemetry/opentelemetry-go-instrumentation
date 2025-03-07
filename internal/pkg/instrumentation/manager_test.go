@@ -45,7 +45,7 @@ func TestProbeFiltering(t *testing.T) {
 		m := fakeManager(t)
 
 		info := process.Info{
-			PID:       1,
+			ID:        1,
 			Functions: []*binary.Func{},
 			GoVersion: ver,
 			Modules:   map[string]*semver.Version{},
@@ -62,7 +62,7 @@ func TestProbeFiltering(t *testing.T) {
 		}
 
 		info := process.Info{
-			PID:       1,
+			ID:        1,
 			Functions: httpFuncs,
 			GoVersion: ver,
 			Modules:   map[string]*semver.Version{},
@@ -80,7 +80,7 @@ func TestProbeFiltering(t *testing.T) {
 		}
 
 		info := process.Info{
-			PID:       1,
+			ID:        1,
 			Functions: httpFuncs,
 			GoVersion: ver,
 			Modules:   map[string]*semver.Version{},
@@ -99,7 +99,7 @@ func TestProbeFiltering(t *testing.T) {
 		}
 
 		info := process.Info{
-			PID:       1,
+			ID:        1,
 			Functions: httpFuncs,
 			GoVersion: ver,
 			Modules:   map[string]*semver.Version{},
@@ -271,7 +271,7 @@ func TestRunStoppingByContext(t *testing.T) {
 	ctx, stopCtx := context.WithCancel(context.Background())
 	errCh := make(chan error, 1)
 
-	err = m.Load(ctx, &process.Info{PID: 1000})
+	err = m.Load(ctx, &process.Info{ID: 1000})
 	require.NoError(t, err)
 
 	go func() { errCh <- m.Run(ctx) }()
@@ -320,7 +320,7 @@ func TestRunStoppingByStop(t *testing.T) {
 	ctx := context.Background()
 	errCh := make(chan error, 1)
 
-	err = m.Load(ctx, &process.Info{PID: 1000})
+	err = m.Load(ctx, &process.Info{ID: 1000})
 	require.NoError(t, err)
 
 	time.AfterFunc(100*time.Millisecond, func() {
@@ -450,7 +450,7 @@ func TestConfigProvider(t *testing.T) {
 	mockExeAndBpffs(t)
 	runCtx, cancel := context.WithCancel(context.Background())
 
-	err := m.Load(runCtx, &process.Info{PID: 1000})
+	err := m.Load(runCtx, &process.Info{ID: 1000})
 	require.NoError(t, err)
 
 	runErr := make(chan error, 1)
@@ -584,7 +584,7 @@ func TestRunStopDeadlock(t *testing.T) {
 	ctx, stopCtx := context.WithCancel(context.Background())
 	errCh := make(chan error, 1)
 
-	err = m.Load(ctx, &process.Info{PID: 1000})
+	err = m.Load(ctx, &process.Info{ID: 1000})
 	require.NoError(t, err)
 
 	go func() { errCh <- m.Run(ctx) }()
@@ -649,7 +649,7 @@ func TestStopBeforeRun(t *testing.T) {
 
 	mockExeAndBpffs(t)
 
-	err = m.Load(context.Background(), &process.Info{PID: 1000})
+	err = m.Load(context.Background(), &process.Info{ID: 1000})
 	require.NoError(t, err)
 	require.True(t, p.loaded.Load())
 

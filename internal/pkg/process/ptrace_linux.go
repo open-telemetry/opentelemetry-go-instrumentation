@@ -6,7 +6,6 @@ package process
 import (
 	"fmt"
 	"log/slog"
-	"os"
 	"strconv"
 	"strings"
 	"syscall"
@@ -59,7 +58,7 @@ func waitPid(pid int) error {
 }
 
 // newTracedProgram ptrace all threads of a process.
-func newTracedProgram(pid int, logger *slog.Logger) (*tracedProgram, error) {
+func newTracedProgram(id ID, logger *slog.Logger) (*tracedProgram, error) {
 	tidMap := make(map[int]bool)
 	retryCount := make(map[int]int)
 
@@ -71,7 +70,7 @@ func newTracedProgram(pid int, logger *slog.Logger) (*tracedProgram, error) {
 	// ...
 	// only the first way finally worked for every situations
 	for {
-		threads, err := os.ReadDir(fmt.Sprintf("/proc/%d/task", pid))
+		threads, err := id.Tasks()
 		if err != nil {
 			return nil, errors.WithStack(err)
 		}
@@ -139,7 +138,7 @@ func newTracedProgram(pid int, logger *slog.Logger) (*tracedProgram, error) {
 	}
 
 	program := &tracedProgram{
-		pid:        pid,
+		pid:        int(id),
 		tids:       tids,
 		backupRegs: &syscall.PtraceRegs{},
 		backupCode: make([]byte, syscallInstrSize),
