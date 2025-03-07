@@ -140,15 +140,6 @@ docker-build:
 docker-build-base:
 	docker buildx build -t $(IMG_NAME_BASE) --target base .
 
-.PHONY: sample-app/nethttp sample-app/gin sample-app/databasesql sample-app/nethttp-custom sample-app/otelglobal sample-app/autosdk sample-app/kafka-go
-sample-app/%: LIBRARY=$*
-sample-app/%:
-	if [ -f ./internal/test/e2e/$(LIBRARY)/build.sh ]; then \
-		./internal/test/e2e/$(LIBRARY)/build.sh; \
-	else \
-		cd internal/test/e2e/$(LIBRARY) && docker build -t sample-app . ;\
-	fi
-
 LIBBPF_VERSION ?= "< 1.5, >= 1.4.7"
 LIBBPF_DEST ?= "$(REPODIR)/internal/include/libbpf"
 .PHONY: synclibbpf
@@ -204,7 +195,12 @@ fixture-otelglobal: fixtures/otelglobal
 fixture-autosdk: fixtures/autosdk
 fixture-kafka-go: fixtures/kafka-go
 fixtures/%: LIBRARY=$*
-fixtures/%: docker-build sample-app/%
+fixtures/%: docker-build
+	if [ -f ./internal/test/e2e/$(LIBRARY)/build.sh ]; then \
+		./internal/test/e2e/$(LIBRARY)/build.sh; \
+	else \
+		cd internal/test/e2e/$(LIBRARY) && docker build -t sample-app . ;\
+	fi
 	kind create cluster
 	kind load docker-image otel-go-instrumentation sample-app
 	helm repo add open-telemetry https://open-telemetry.github.io/opentelemetry-helm-charts
