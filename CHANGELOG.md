@@ -33,6 +33,10 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
   The `auto` package no longer supports process discovery (note: the built binary (`auto/cli`) still supports process discovery).
   Once a target process has been identified, use `WithPID` to configure `Instrumentation` instead. ([#1890](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1890))
 
+### Fixed
+
+- Fix spans parsing from eBPF for the legacy (go version < 1.24 otel-go < 1.33) otel global instrumentation. ([#1960](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1960))
+
 ## [v0.21.0] - 2025-02-18
 
 > [!WARNING]  

@@ -46,11 +46,11 @@ typedef struct tracer_id {
 } tracer_id_t;
 
 struct control_t {
-    u32 kind; // Required to be 1.
+    u64 kind; // Required to be 1.
 };
 
 struct otel_span_t {
-    u32 kind; // Required to be 0.
+    u64 kind; // Required to be 0.
     BASE_SPAN_PROPERTIES
     struct span_name_t span_name;
     otel_status_t status;
@@ -622,6 +622,7 @@ int uprobe_End(struct pt_regs *ctx) {
         return 0;
     }
     span->end_time = bpf_ktime_get_ns();
+    span->kind = 0;
     stop_tracking_span(&span->sc, &span->psc);
 
     output_span_event(ctx, span, sizeof(*span), &span->sc);

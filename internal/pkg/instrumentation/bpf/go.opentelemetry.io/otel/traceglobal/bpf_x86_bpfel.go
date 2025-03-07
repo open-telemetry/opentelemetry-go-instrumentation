@@ -13,8 +13,7 @@ import (
 )
 
 type bpfOtelSpanT struct {
-	Kind      uint32
-	_         [4]byte
+	Kind      uint64
 	StartTime uint64
 	EndTime   uint64
 	Sc        bpfSpanContext
