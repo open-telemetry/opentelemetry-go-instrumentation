@@ -17,9 +17,15 @@ FROM --platform=$BUILDPLATFORM base AS builder
 COPY . .
 
 ARG TARGETARCH
+ARG CGO_ENABLED=0
+ARG BPF2GO_CFLAGS="-I/usr/src/go.opentelemetry.io/auto/internal/include/libbpf -I/usr/src/go.opentelemetry.io/auto/internal/include"
 RUN --mount=type=cache,target=/root/.cache/go-build \
     --mount=type=cache,target=/go/pkg \
-    GOARCH=$TARGETARCH make build
+    GOARCH=$TARGETARCH \
+	CGO_ENABLED=$CGO_ENABLED \
+	BPF2GO_CFLAGS=$BPF2GO_CFLAGS \
+	go generate ./... \
+	&& go build -o otel-go-instrumentation ./cli/...
 
 FROM gcr.io/distroless/base-debian12@sha256:74ddbf52d93fafbdd21b399271b0b4aac1babf8fa98cab59e5692e01169a1348
 COPY --from=builder /usr/src/go.opentelemetry.io/auto/otel-go-instrumentation /
