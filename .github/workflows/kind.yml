@@ -66,7 +66,7 @@ jobs:
           name: otel-go-instrumentation-${{ matrix.runner }}
       - name: Load Docker image
         run: |
-          ocker load -i otel-go-instrumentation-${{ matrix.runner }}.tar
+          docker load -i otel-go-instrumentation-${{ matrix.runner }}.tar
       - name: Kind load images
         run: |
           kind load docker-image otel-go-instrumentation --name chart-testing
