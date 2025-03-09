@@ -30,7 +30,8 @@ jobs:
       matrix:
         k8s-version: ["v1.26.0"]
         library: ["autosdk", "nethttp", "nethttp_custom", "gin", "databasesql", "grpc", "otelglobal", "kafka-go"]
-    runs-on: ubuntu-latest
+        runner: [ubuntu-latest, ubuntu-22.04-arm]
+    runs-on: ${{ matrix.runner }}
     steps:
       - name: Checkout Repo
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
