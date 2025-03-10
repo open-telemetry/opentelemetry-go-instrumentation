@@ -147,13 +147,12 @@ redact_json() {
 			| .resourceSpans[].scopeSpans[].spans[].parentSpanId|= (if
 					. // "" | test("^[A-Fa-f0-9]{16}$") then "xxxxx" else (. + "")
 				end)
-			| .resourceSpans[].scopeSpans[].spans[].attributes[]? |= if 
+			| .resourceSpans[].scopeSpans[].spans[].attributes[]? |= if
 					(.key == "network.peer.port") then .value.intValue |= (if
 				   		. // "" | test("^[1-9][0-9]{0,4}$") then "xxxxx" else (. + "") 
 					end) else . 
 				end
-			| .resourceSpans[].scopeSpans[].spans[].events[]?.attributes[]? |= if 
-					(.key == "exception.stacktrace")
+			| .resourceSpans[].scopeSpans[].spans[].events[]?.attributes[]? |= if
 				then
 					.value.stringValue |= "xxxxx"
 				else
@@ -161,6 +160,12 @@ redact_json() {
 				end
 			| .resourceSpans[].scopeSpans|=sort_by(.scope.name)
 			| .resourceSpans[].scopeSpans[].spans|=sort_by(.kind)
+			| .resourceSpans[].resource.attributes[]? |= if
+					(.key == "process.runtime.description") then
+					.value.stringValue |= sub("amd64|arm64"; "VALID_ARCH")
+				else
+					.
+				end
 			' > ${BATS_TEST_DIRNAME}/traces.json
 }
 
