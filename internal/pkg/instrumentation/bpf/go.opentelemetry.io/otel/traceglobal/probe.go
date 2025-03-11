@@ -14,20 +14,19 @@ import (
 	"go.opentelemetry.io/collector/pdata/ptrace"
 
 	"go.opentelemetry.io/auto/internal/pkg/inject"
+	"go.opentelemetry.io/auto/internal/pkg/instrumentation/context"
+	"go.opentelemetry.io/auto/internal/pkg/instrumentation/perf"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/probe"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/utils"
 	"go.opentelemetry.io/auto/internal/pkg/process"
 	"go.opentelemetry.io/auto/internal/pkg/structfield"
 
 	"github.com/Masterminds/semver/v3"
-	"github.com/cilium/ebpf/perf"
 	"golang.org/x/sys/unix"
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/trace"
-
-	"go.opentelemetry.io/auto/internal/pkg/instrumentation/context"
 )
 
 //go:generate go run github.com/cilium/ebpf/cmd/bpf2go -target amd64,arm64 bpf ./bpf/probe.bpf.c

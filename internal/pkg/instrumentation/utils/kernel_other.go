@@ -13,20 +13,25 @@ import (
 
 func GetLinuxKernelVersion() *semver.Version { return nil }
 
+// KernelLockdown represents different Linux Kernel security lockdown modes.
 type KernelLockdown uint8
 
 const (
-	KernelLockdownNone            KernelLockdown = iota + 1 // Linux Kernel security lockdown mode [none]
-	KernelLockdownIntegrity                                 // Linux Kernel security lockdown mode [integrity]
-	KernelLockdownConfidentiality                           // Linux Kernel security lockdown mode [confidentiality]
-	KernelLockdownOther                                     // Linux Kernel security lockdown mode unknown
+	// KernelLockdownNone represents the 'none' security lockdown mode.
+	KernelLockdownNone KernelLockdown = iota + 1
+	// KernelLockdownIntegrity represents the 'integrity' security lockdown mode.
+	KernelLockdownIntegrity
+	// KernelLockdownConfidentiality represents the 'confidentiality' security lockdown mode.
+	KernelLockdownConfidentiality
+	// KernelLockdownOther represents an unknown security lockdown mode.
+	KernelLockdownOther
 )
 
 func KernelLockdownMode() KernelLockdown {
 	return 0
 }
 
-func GetCPUCount() (int, error) {
+func GetCPUCount() (uint64, error) {
 	return 0, nil
 }
 

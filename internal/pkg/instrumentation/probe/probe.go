@@ -17,12 +17,12 @@ import (
 	"github.com/Masterminds/semver/v3"
 	"github.com/cilium/ebpf"
 	"github.com/cilium/ebpf/link"
-	"github.com/cilium/ebpf/perf"
 
 	"go.opentelemetry.io/collector/pdata/ptrace"
 
 	"go.opentelemetry.io/auto/internal/pkg/inject"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/bpffs"
+	"go.opentelemetry.io/auto/internal/pkg/instrumentation/perf"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/probe/sampling"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/utils"
 	"go.opentelemetry.io/auto/internal/pkg/process"
