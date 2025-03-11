@@ -27,9 +27,6 @@ const (
 	// envResourceAttrKey is the key for the environment variable value
 	// containing OpenTelemetry Resource attributes.
 	envResourceAttrKey = "OTEL_RESOURCE_ATTRIBUTES"
-	// envTracesExportersKey is the key for the environment variable value
-	// containing what OpenTelemetry trace exporter to use.
-	envTracesExportersKey = "OTEL_TRACES_EXPORTER"
 	// envLogLevelKey is the key for the environment variable value containing
 	// the log level.
 	envLogLevelKey = "OTEL_LOG_LEVEL"
@@ -122,17 +119,9 @@ var (
 func WithEnv() Option {
 	return fnOpt(func(ctx context.Context, c config) (config, error) {
 		var err error
-		if _, ok := lookupEnv(envTracesExportersKey); ok {
-			// Don't track the lookup value because autoexport does not provide
-			// a way to just pass the environment value currently. Just use
-			// NewSpanExporter which will re-read this value.
-
-			var e error
-			// NewSpanExporter will use an OTLP (HTTP/protobuf) exporter as the
-			// default. This is the OTel recommended default.
-			c.exporter, e = autoexport.NewSpanExporter(ctx)
-			err = errors.Join(err, e)
-		}
+		// NewSpanExporter will use an OTLP (HTTP/protobuf) exporter as the
+		// default. This is the OTel recommended default.
+		c.exporter, err = autoexport.NewSpanExporter(ctx)
 
 		c.resAttrs = append(c.resAttrs, lookupResourceData()...)
 
