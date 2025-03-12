@@ -9,7 +9,6 @@ package perf
 
 import (
 	"errors"
-	"fmt"
 	"os"
 	"time"
 
@@ -66,17 +65,17 @@ func NewReaderWithOptions(array *ebpf.Map, perCPUBuffer int, opts ReaderOptions)
 
 // Close frees resources used by the reader.
 func (r *Reader) Close() error {
-	return fmt.Errorf("perf reader: %w", ErrClosed)
+	return errors.New("perf reader already closed")
 }
 
 // Read the next record from the perf ring buffer.
 func (r *Reader) Read() (Record, error) {
-	return Record{}, fmt.Errorf("perf reader: %w", ErrClosed)
+	return Record{}, errors.New("perf reader already closed")
 }
 
 // ReadInto is like Read but allows reusing the Record.
 func (r *Reader) ReadInto(rec *Record) error {
-	return fmt.Errorf("perf reader: %w", ErrClosed)
+	return errors.New("perf reader already closed")
 }
 
 // SetDeadline controls how long Read and ReadInto will block.
@@ -86,22 +85,22 @@ func (r *Reader) SetDeadline(t time.Time) {
 
 // Pause stops all notifications from this Reader.
 func (r *Reader) Pause() error {
-	return fmt.Errorf("perf reader: %w", ErrClosed)
+	return errors.New("perf reader already closed")
 }
 
 // Resume allows this perf reader to emit notifications.
 func (r *Reader) Resume() error {
-	return fmt.Errorf("perf reader: %w", ErrClosed)
+	return errors.New("perf reader already closed")
 }
 
 // FlushAndClose flushes all pending events and closes the reader.
 func (r *Reader) FlushAndClose() error {
-	return fmt.Errorf("perf reader: %w", ErrClosed)
+	return errors.New("perf reader already closed")
 }
 
 // Flush unblocks Read/ReadInto and returns pending samples.
 func (r *Reader) Flush() error {
-	return fmt.Errorf("perf reader: %w", ErrClosed)
+	return errors.New("perf reader already closed")
 }
 
 // BufferSize returns the size in bytes of each per-CPU buffer.
