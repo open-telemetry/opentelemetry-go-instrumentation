@@ -10,7 +10,6 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
-	"runtime"
 	"strconv"
 	"strings"
 	"sync"
@@ -277,16 +276,11 @@ func (c instConfig) res() (res *resource.Resource) {
 	if runName == "gc" {
 		runName = "go"
 	}
-	runDesc := fmt.Sprintf(
-		"go version %s %s/%s",
-		bi.GoVersion, runtime.GOOS, runtime.GOARCH,
-	)
 
 	attrs = append(
 		attrs,
 		semconv.ProcessRuntimeName(runName),
 		semconv.ProcessRuntimeVersion(bi.GoVersion),
-		semconv.ProcessRuntimeDescription(runDesc),
 	)
 
 	return res
