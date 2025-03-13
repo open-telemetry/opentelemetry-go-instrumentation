@@ -11,7 +11,6 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
-	"strings"
 	"syscall"
 )
 
@@ -86,12 +85,6 @@ func (id ID) BuildInfo() (*buildinfo.BuildInfo, error) {
 	bi, err := buildinfoReadFile(id.ExePath())
 	if err != nil {
 		return nil, err
-	}
-
-	bi.GoVersion = strings.ReplaceAll(bi.GoVersion, "go", "")
-	// Trims GOEXPERIMENT version suffix if present.
-	if idx := strings.Index(bi.GoVersion, " X:"); idx > 0 {
-		bi.GoVersion = bi.GoVersion[:idx]
 	}
 
 	return bi, nil
