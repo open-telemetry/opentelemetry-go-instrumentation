@@ -7,7 +7,9 @@ import (
 	"debug/elf"
 	"errors"
 	"fmt"
+	"regexp"
 	"runtime/debug"
+	"strings"
 
 	"github.com/Masterminds/semver/v3"
 
@@ -35,19 +37,16 @@ func NewInfo(id ID, relevantFuncs map[string]interface{}) (*Info, error) {
 	}
 	defer elfF.Close()
 
+	result := &Info{ID: id}
+
 	bi, err := id.BuildInfo()
 	if err != nil {
 		return nil, err
 	}
 
-	goVersion, err := semver.NewVersion(bi.GoVersion)
+	result.GoVersion, err = goVer(bi.GoVersion)
 	if err != nil {
 		return nil, err
-	}
-
-	result := &Info{
-		ID:        id,
-		GoVersion: goVersion,
 	}
 
 	result.Functions, err = findFunctions(elfF, relevantFuncs)
@@ -55,8 +54,38 @@ func NewInfo(id ID, relevantFuncs map[string]interface{}) (*Info, error) {
 		return nil, err
 	}
 
-	result.Modules, err = findModules(goVersion, bi.Deps)
+	result.Modules, err = findModules(result.GoVersion, bi.Deps)
 	return result, err
+}
+
+func goVer(raw string) (*semver.Version, error) {
+	if strings.HasPrefix(raw, "devel") {
+		return goDevVer(raw)
+	}
+	raw = strings.TrimPrefix(raw, "go")
+
+	// Handle local modified versions of Go.
+	raw = strings.TrimSuffix(raw, "+")
+
+	// Trims GOEXPERIMENT version suffix if present.
+	if idx := strings.Index(raw, " X:"); idx > 0 {
+		raw = raw[:idx]
+	}
+
+	return semver.NewVersion(raw)
+}
+
+var devVerRE = regexp.MustCompile(`devel \+([a-f0-9]+) `)
+
+func goDevVer(raw string) (*semver.Version, error) {
+	// Parse development versions. For example,
+	//    "devel +8e496f1 Thu Nov 5 15:41:05 2015 +0000"
+
+	matches := devVerRE.FindStringSubmatch(raw)
+	if len(matches) > 1 {
+		return semver.New(0, 0, 0, "", matches[1]), nil
+	}
+	return nil, errors.New("non-devel version")
 }
 
 func findModules(goVer *semver.Version, deps []*debug.Module) (map[string]*semver.Version, error) {
