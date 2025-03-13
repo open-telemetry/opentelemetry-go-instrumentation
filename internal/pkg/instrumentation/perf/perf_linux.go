@@ -10,9 +10,11 @@ import (
 )
 
 // Re-export the types from github.com/cilium/ebpf/perf.
-type Record = perf.Record
-type Reader = perf.Reader
-type ReaderOptions = perf.ReaderOptions
+type (
+	Record        = perf.Record
+	Reader        = perf.Reader
+	ReaderOptions = perf.ReaderOptions
+)
 
 // Re-export the functions from github.com/cilium/ebpf/perf.
 // NewReader is a re-export of perf.NewReader.
