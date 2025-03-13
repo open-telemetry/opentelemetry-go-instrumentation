@@ -4,12 +4,6 @@
       "resource": {
         "attributes": [
           {
-            "key": "process.runtime.description",
-            "value": {
-              "stringValue": "go version 1.24.1 linux/VALID_ARCH"
-            }
-          },
-          {
             "key": "process.runtime.name",
             "value": {
               "stringValue": "go"
