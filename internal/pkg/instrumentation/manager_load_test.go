@@ -22,8 +22,11 @@ import (
 	grpcServer "go.opentelemetry.io/auto/internal/pkg/instrumentation/bpf/google.golang.org/grpc/server"
 	httpClient "go.opentelemetry.io/auto/internal/pkg/instrumentation/bpf/net/http/client"
 	httpServer "go.opentelemetry.io/auto/internal/pkg/instrumentation/bpf/net/http/server"
+	"go.opentelemetry.io/auto/internal/pkg/instrumentation/probe"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/testutils"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/utils"
+	"go.opentelemetry.io/auto/internal/pkg/process"
+	"go.opentelemetry.io/auto/internal/pkg/process/binary"
 )
 
 func TestLoadProbes(t *testing.T) {
@@ -51,10 +54,9 @@ func TestLoadProbes(t *testing.T) {
 	}
 }
 
-func fakeManager(t *testing.T) *Manager {
+func fakeManager(t *testing.T, fnNames ...string) *Manager {
 	logger := slog.Default()
-	m, err := NewManager(
-		logger, nil, NewNoopConfigProvider(nil),
+	probes := []probe.Probe{
 		grpcClient.New(logger, ""),
 		grpcServer.New(logger, ""),
 		httpServer.New(logger, ""),
@@ -64,9 +66,27 @@ func fakeManager(t *testing.T) *Manager {
 		kafkaConsumer.New(logger, ""),
 		autosdk.New(logger),
 		otelTraceGlobal.New(logger),
-	)
-	assert.NoError(t, err)
-	assert.NotNil(t, m)
+	}
+	ver := semver.New(1, 20, 0, "", "")
+	var fn []*binary.Func
+	for _, name := range fnNames {
+		fn = append(fn, &binary.Func{Name: name})
+	}
+	m := &Manager{
+		logger: slog.Default(),
+		cp:     NewNoopConfigProvider(nil),
+		probes: make(map[probe.ID]probe.Probe),
+		proc: &process.Info{
+			ID:        1,
+			Functions: fn,
+			GoVersion: ver,
+			Modules:   map[string]*semver.Version{},
+		},
+	}
+	for _, p := range probes {
+		m.probes[p.Manifest().ID] = p
+	}
+	m.filterUnusedProbes()
 
 	return m
 }
