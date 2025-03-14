@@ -169,17 +169,18 @@ func TestIDBuildInfo(t *testing.T) {
 	orig := buildinfoReadFile
 	t.Cleanup(func() { buildinfoReadFile = orig })
 
+	const ver = "go1.22.0 X:testing"
 	buildinfoReadFile = func(name string) (*buildinfo.BuildInfo, error) {
 		assert.Equal(t, ID(pid).ExePath(), name, "wrong exe path")
 		return &debug.BuildInfo{
 			Path:      app.Name(),
-			GoVersion: "go1.22.0 X:testing",
+			GoVersion: ver,
 		}, nil
 	}
 
 	got, err := ID(pid).BuildInfo()
 	require.NoError(t, err)
 
-	want := &debug.BuildInfo{Path: app.Name(), GoVersion: "1.22.0"}
+	want := &debug.BuildInfo{Path: app.Name(), GoVersion: ver}
 	assert.Equal(t, want, got)
 }
