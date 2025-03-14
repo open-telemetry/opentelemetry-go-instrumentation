@@ -74,10 +74,8 @@ func NewManager(logger *slog.Logger, otelController *opentelemetry.Controller, p
 		}
 	}
 
-	pa := process.NewAnalyzer(logger, pid)
-
 	var err error
-	m.proc, err = pa.Analyze(funcs)
+	m.proc, err = process.NewInfo(pid, funcs)
 	if err != nil {
 		return nil, err
 	}
