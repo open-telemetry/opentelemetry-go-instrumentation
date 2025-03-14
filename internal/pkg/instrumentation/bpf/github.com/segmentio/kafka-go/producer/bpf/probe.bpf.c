@@ -154,7 +154,7 @@ int uprobe_WriteMessages(struct pt_regs *ctx) {
 
     u32 actual_id = 1;
     // Zero the span we are about to build, eBPF doesn't support memset of large structs (more than 1024 bytes)
-    bpf_map_update_elem(&kafka_request_storage_map, &actual_id, zero_kafka_request, 0);
+    bpf_map_update_elem(&kafka_request_storage_map, &actual_id, zero_kafka_request, BPF_ANY);
     // Get a pointer to the zeroed span
     struct kafka_request_t *kafka_request = bpf_map_lookup_elem(&kafka_request_storage_map, &actual_id);
     if (kafka_request == NULL) {
