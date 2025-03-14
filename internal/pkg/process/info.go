@@ -18,8 +18,13 @@ import (
 
 // Info are the details about a target process.
 type Info struct {
-	ID         ID
-	Functions  []*binary.Func
+	ID        ID
+	Functions []*binary.Func
+	// GoVersion is the semantic version of Go run by the target process.
+	//
+	// Experimental and build information included in the version is dropped.
+	// If a development version of Go is used, the commit hash will be included
+	// in the metadata of the version.
 	GoVersion  *semver.Version
 	Modules    map[string]*semver.Version
 	Allocation *Allocation
