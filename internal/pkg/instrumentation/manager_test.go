@@ -18,10 +18,11 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/ptrace"
 	"go.opentelemetry.io/otel/trace"
-	"go.opentelemetry.io/otel/trace/noop"
 
+	"go.opentelemetry.io/auto/export"
 	dbSql "go.opentelemetry.io/auto/internal/pkg/instrumentation/bpf/database/sql"
 	kafkaConsumer "go.opentelemetry.io/auto/internal/pkg/instrumentation/bpf/github.com/segmentio/kafka-go/consumer"
 	kafkaProducer "go.opentelemetry.io/auto/internal/pkg/instrumentation/bpf/github.com/segmentio/kafka-go/producer"
@@ -33,7 +34,6 @@ import (
 	httpServer "go.opentelemetry.io/auto/internal/pkg/instrumentation/bpf/net/http/server"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/probe"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/probe/sampling"
-	"go.opentelemetry.io/auto/internal/pkg/opentelemetry"
 	"go.opentelemetry.io/auto/internal/pkg/process"
 	"go.opentelemetry.io/auto/internal/pkg/process/binary"
 )
@@ -217,31 +217,29 @@ func mockExeAndBpffs(t *testing.T) {
 	t.Cleanup(func() { bpffsCleanup = origBpffsCleanup })
 }
 
-type shutdownTracerProvider struct {
-	noop.TracerProvider
+// noopTraceHandler is a no-op implementation of the [export.Handler]. It is used
+// for testing when no telemetry is meant to be recorded.
+type noopTraceHandler struct{}
 
-	called bool
-}
+var _ export.TraceHandler = noopTraceHandler{}
 
-func (tp *shutdownTracerProvider) Shutdown(context.Context) error {
-	tp.called = true
-	return nil
+// Handle drops the passed telemetry.
+func (noopTraceHandler) HandleTrace(pcommon.InstrumentationScope, string, ptrace.SpanSlice) {}
+
+func newNoopHandler() *export.Handler {
+	return &export.Handler{TraceHandler: noopTraceHandler{}}
 }
 
 func TestRunStoppingByContext(t *testing.T) {
 	probeStop := make(chan struct{})
 	p := newSlowProbe(probeStop)
 
-	tp := new(shutdownTracerProvider)
-	ctrl, err := opentelemetry.NewController(slog.Default(), tp)
-	require.NoError(t, err)
-
 	m := &Manager{
-		otelController: ctrl,
-		logger:         slog.Default(),
-		probes:         map[probe.ID]probe.Probe{{}: p},
-		cp:             NewNoopConfigProvider(nil),
-		proc:           new(process.Info),
+		handler: newNoopHandler(),
+		logger:  slog.Default(),
+		probes:  map[probe.ID]probe.Probe{{}: p},
+		cp:      NewNoopConfigProvider(nil),
+		proc:    new(process.Info),
 	}
 
 	mockExeAndBpffs(t)
@@ -249,7 +247,7 @@ func TestRunStoppingByContext(t *testing.T) {
 	ctx, stopCtx := context.WithCancel(context.Background())
 	errCh := make(chan error, 1)
 
-	err = m.Load(ctx)
+	err := m.Load(ctx)
 	require.NoError(t, err)
 
 	go func() { errCh <- m.Run(ctx) }()
@@ -276,22 +274,17 @@ func TestRunStoppingByContext(t *testing.T) {
 		}
 	}, time.Second, 10*time.Millisecond)
 	assert.ErrorIs(t, err, context.Canceled, "Stopping Run error")
-	assert.True(t, tp.called, "Controller not stopped")
 }
 
 func TestRunStoppingByStop(t *testing.T) {
 	p := noopProbe{}
 
-	tp := new(shutdownTracerProvider)
-	ctrl, err := opentelemetry.NewController(slog.Default(), tp)
-	require.NoError(t, err)
-
 	m := &Manager{
-		otelController: ctrl,
-		logger:         slog.Default(),
-		probes:         map[probe.ID]probe.Probe{{}: &p},
-		cp:             NewNoopConfigProvider(nil),
-		proc:           new(process.Info),
+		handler: newNoopHandler(),
+		logger:  slog.Default(),
+		probes:  map[probe.ID]probe.Probe{{}: &p},
+		cp:      NewNoopConfigProvider(nil),
+		proc:    new(process.Info),
 	}
 
 	mockExeAndBpffs(t)
@@ -299,7 +292,7 @@ func TestRunStoppingByStop(t *testing.T) {
 	ctx := context.Background()
 	errCh := make(chan error, 1)
 
-	err = m.Load(ctx)
+	err := m.Load(ctx)
 	require.NoError(t, err)
 
 	time.AfterFunc(100*time.Millisecond, func() {
@@ -317,7 +310,6 @@ func TestRunStoppingByStop(t *testing.T) {
 		}
 	}, time.Second, 10*time.Millisecond)
 	assert.NoError(t, err)
-	assert.True(t, tp.called, "Controller not stopped")
 	assert.True(t, p.closed.Load(), "Probe not closed")
 }
 
@@ -339,8 +331,7 @@ func (p slowProbe) Load(*link.Executable, *process.Info, *sampling.Config) error
 	return nil
 }
 
-func (p slowProbe) Run(func(ptrace.ScopeSpans)) {
-}
+func (p slowProbe) Run(*export.Handler) {}
 
 func (p slowProbe) Close() error {
 	p.closeSignal <- struct{}{}
@@ -359,7 +350,7 @@ func (p *noopProbe) Load(*link.Executable, *process.Info, *sampling.Config) erro
 	return nil
 }
 
-func (p *noopProbe) Run(func(ptrace.ScopeSpans)) {
+func (p *noopProbe) Run(*export.Handler) {
 	p.running.Store(true)
 }
 
@@ -533,10 +524,10 @@ func (p *hangingProbe) Load(*link.Executable, *process.Info, *sampling.Config) e
 	return nil
 }
 
-func (p *hangingProbe) Run(handle func(ptrace.ScopeSpans)) {
+func (p *hangingProbe) Run(h *export.Handler) {
 	<-p.closeReturned
 	// Write after Close has returned.
-	handle(ptrace.NewScopeSpans())
+	h.Trace(ptrace.NewSpanSlice())
 }
 
 func (p *hangingProbe) Close() error {
@@ -548,16 +539,12 @@ func TestRunStopDeadlock(t *testing.T) {
 	// Regression test for #1228.
 	p := newHangingProbe()
 
-	tp := new(shutdownTracerProvider)
-	ctrl, err := opentelemetry.NewController(slog.Default(), tp)
-	require.NoError(t, err)
-
 	m := &Manager{
-		otelController: ctrl,
-		logger:         slog.Default(),
-		probes:         map[probe.ID]probe.Probe{{}: p},
-		cp:             NewNoopConfigProvider(nil),
-		proc:           new(process.Info),
+		handler: newNoopHandler(),
+		logger:  slog.Default(),
+		probes:  map[probe.ID]probe.Probe{{}: p},
+		cp:      NewNoopConfigProvider(nil),
+		proc:    new(process.Info),
 	}
 
 	mockExeAndBpffs(t)
@@ -565,7 +552,7 @@ func TestRunStopDeadlock(t *testing.T) {
 	ctx, stopCtx := context.WithCancel(context.Background())
 	errCh := make(chan error, 1)
 
-	err = m.Load(ctx)
+	err := m.Load(ctx)
 	require.NoError(t, err)
 
 	go func() { errCh <- m.Run(ctx) }()
@@ -591,48 +578,37 @@ func TestRunStopDeadlock(t *testing.T) {
 		}
 	}, time.Second, 10*time.Millisecond)
 	assert.ErrorIs(t, err, context.Canceled, "Stopping Run error")
-	assert.True(t, tp.called, "Controller not stopped")
 }
 
 func TestStopBeforeLoad(t *testing.T) {
 	p := noopProbe{}
 
-	tp := new(shutdownTracerProvider)
-	ctrl, err := opentelemetry.NewController(slog.Default(), tp)
-	require.NoError(t, err)
-
 	m := &Manager{
-		otelController: ctrl,
-		logger:         slog.Default(),
-		probes:         map[probe.ID]probe.Probe{{}: &p},
-		cp:             NewNoopConfigProvider(nil),
-		proc:           new(process.Info),
+		handler: newNoopHandler(),
+		logger:  slog.Default(),
+		probes:  map[probe.ID]probe.Probe{{}: &p},
+		cp:      NewNoopConfigProvider(nil),
+		proc:    new(process.Info),
 	}
 
 	mockExeAndBpffs(t)
-
-	err = m.Stop()
-	require.NoError(t, err)
+	require.NoError(t, m.Stop())
 }
 
 func TestStopBeforeRun(t *testing.T) {
 	p := noopProbe{}
 
-	tp := new(shutdownTracerProvider)
-	ctrl, err := opentelemetry.NewController(slog.Default(), tp)
-	require.NoError(t, err)
-
 	m := &Manager{
-		otelController: ctrl,
-		logger:         slog.Default(),
-		probes:         map[probe.ID]probe.Probe{{}: &p},
-		cp:             NewNoopConfigProvider(nil),
-		proc:           new(process.Info),
+		handler: newNoopHandler(),
+		logger:  slog.Default(),
+		probes:  map[probe.ID]probe.Probe{{}: &p},
+		cp:      NewNoopConfigProvider(nil),
+		proc:    new(process.Info),
 	}
 
 	mockExeAndBpffs(t)
 
-	err = m.Load(context.Background())
+	err := m.Load(context.Background())
 	require.NoError(t, err)
 	require.True(t, p.loaded.Load())
 
