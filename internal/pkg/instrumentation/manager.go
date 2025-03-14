@@ -55,7 +55,7 @@ type Manager struct {
 }
 
 // NewManager returns a new [Manager].
-func NewManager(logger *slog.Logger, otelController *opentelemetry.Controller, cp ConfigProvider, probes ...probe.Probe) (*Manager, error) {
+func NewManager(logger *slog.Logger, otelController *opentelemetry.Controller, pid process.ID, cp ConfigProvider, probes ...probe.Probe) (*Manager, error) {
 	m := &Manager{
 		logger:         logger,
 		probes:         make(map[probe.ID]probe.Probe),
@@ -63,10 +63,34 @@ func NewManager(logger *slog.Logger, otelController *opentelemetry.Controller, c
 		cp:             cp,
 	}
 
-	err := m.registerProbes(probes)
+	funcs := make(map[string]any)
+	for _, p := range probes {
+		if err := m.registerProbe(p); err != nil {
+			return nil, err
+		}
+
+		for _, s := range p.Manifest().Symbols {
+			funcs[s.Symbol] = nil
+		}
+	}
+
+	pa := process.NewAnalyzer(logger, pid)
+
+	var err error
+	m.proc, err = pa.Analyze(funcs)
 	if err != nil {
 		return nil, err
 	}
+
+	alloc, err := process.Allocate(logger, pid)
+	if err != nil {
+		return nil, err
+	}
+	m.proc.Allocation = alloc
+
+	m.logger.Info("loaded process info", "process", m.proc)
+
+	m.filterUnusedProbes()
 
 	return m, nil
 }
@@ -103,23 +127,11 @@ func (m *Manager) registerProbe(p probe.Probe) error {
 	return nil
 }
 
-// GetRelevantFuncs returns the instrumented functions for all managed probes.
-func (m *Manager) GetRelevantFuncs() map[string]interface{} {
-	funcsMap := make(map[string]interface{})
-	for _, i := range m.probes {
-		for _, s := range i.Manifest().Symbols {
-			funcsMap[s.Symbol] = nil
-		}
-	}
-
-	return funcsMap
-}
-
-// FilterUnusedProbes filterers probes whose functions are already instrumented
+// filterUnusedProbes filterers probes whose functions are already instrumented
 // out of the Manager.
-func (m *Manager) FilterUnusedProbes(target *process.Info) {
+func (m *Manager) filterUnusedProbes() {
 	existingFuncMap := make(map[string]interface{})
-	for _, f := range target.Functions {
+	for _, f := range m.proc.Functions {
 		existingFuncMap[f.Name] = nil
 	}
 
@@ -237,14 +249,14 @@ func (m *Manager) ConfigLoop(ctx context.Context) {
 	}
 }
 
-func (m *Manager) Load(ctx context.Context, target *process.Info) error {
+func (m *Manager) Load(ctx context.Context) error {
 	if len(m.probes) == 0 {
 		return errors.New("no instrumentation for target process")
 	}
 	if m.cp == nil {
 		return errors.New("no config provider set")
 	}
-	if target == nil {
+	if m.proc == nil {
 		return errors.New("target details not set - load is called on non-initialized instrumentation")
 	}
 	m.stateMu.Lock()
@@ -255,12 +267,11 @@ func (m *Manager) Load(ctx context.Context, target *process.Info) error {
 	}
 
 	m.currentConfig = m.cp.InitialConfig(ctx)
-	err := m.loadProbes(target)
+	err := m.loadProbes()
 	if err != nil {
 		return err
 	}
 
-	m.proc = target
 	m.state = managerStateLoaded
 
 	return nil
@@ -330,7 +341,7 @@ func (m *Manager) Stop() error {
 	defer m.probeMu.Unlock()
 
 	m.logger.Debug("Shutting down all probes")
-	err := m.cleanup(m.proc)
+	err := m.cleanup()
 
 	// Wait for all probes to stop.
 	m.runningProbesWG.Wait()
@@ -339,19 +350,19 @@ func (m *Manager) Stop() error {
 	return err
 }
 
-func (m *Manager) loadProbes(target *process.Info) error {
+func (m *Manager) loadProbes() error {
 	// Remove resource limits for kernels <5.11.
 	if err := rlimitRemoveMemlock(); err != nil {
 		return err
 	}
 
-	exe, err := openExecutable(fmt.Sprintf("/proc/%d/exe", target.PID))
+	exe, err := openExecutable(m.proc.ID.ExePath())
 	if err != nil {
 		return err
 	}
 	m.exe = exe
 
-	if err := m.mount(target); err != nil {
+	if err := m.mount(); err != nil {
 		return err
 	}
 
@@ -359,10 +370,10 @@ func (m *Manager) loadProbes(target *process.Info) error {
 	for name, i := range m.probes {
 		if isProbeEnabled(name, m.currentConfig) {
 			m.logger.Info("loading probe", "name", name)
-			err := i.Load(exe, target, m.currentConfig.SamplingConfig)
+			err := i.Load(exe, m.proc, m.currentConfig.SamplingConfig)
 			if err != nil {
 				m.logger.Error("error while loading probes, cleaning up", "error", err, "name", name)
-				return errors.Join(err, m.cleanup(target))
+				return errors.Join(err, m.cleanup())
 			}
 		}
 	}
@@ -371,16 +382,16 @@ func (m *Manager) loadProbes(target *process.Info) error {
 	return nil
 }
 
-func (m *Manager) mount(target *process.Info) error {
-	if target.Allocation != nil {
-		m.logger.Debug("Mounting bpffs", "allocation", target.Allocation)
+func (m *Manager) mount() error {
+	if m.proc.Allocation != nil {
+		m.logger.Debug("Mounting bpffs", "allocation", m.proc.Allocation)
 	} else {
 		m.logger.Debug("Mounting bpffs")
 	}
-	return bpffsMount(target)
+	return bpffsMount(m.proc)
 }
 
-func (m *Manager) cleanup(target *process.Info) error {
+func (m *Manager) cleanup() error {
 	ctx := context.Background()
 	err := m.cp.Shutdown(context.Background())
 	for _, i := range m.probes {
@@ -394,14 +405,5 @@ func (m *Manager) cleanup(target *process.Info) error {
 	}
 
 	m.logger.Debug("Cleaning bpffs")
-	return errors.Join(err, bpffsCleanup(target))
-}
-
-func (m *Manager) registerProbes(probes []probe.Probe) error {
-	for _, p := range probes {
-		if err := m.registerProbe(p); err != nil {
-			return err
-		}
-	}
-	return nil
+	return errors.Join(err, bpffsCleanup(m.proc))
 }

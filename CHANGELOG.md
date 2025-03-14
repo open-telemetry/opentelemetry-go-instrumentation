@@ -15,6 +15,12 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 - The auto binary (built from `auto/cli`) can now be passed the path of the target process executable directly using the `-target-exe` CLI option. ([#1890](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1890))
 - The auto binary (built from `auto/cli`) now resolves the target PID from the environment variable `"OTEL_GO_AUTO_TARGET_PID"` if no target options are passed. ([#1890](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1890))
 - The auto binary (built from `auto/cli`) will now only resolve the target process executable from the environment variable `"OTEL_GO_AUTO_TARGET_EXE"` if no target options are passed and `"OTEL_GO_AUTO_TARGET_PID"` is not set. ([#1890](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1890))
+- Cache offsets for `golang.org/x/net` `0.36.0`. ([#1940](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1940))
+- Cache offsets for `google.golang.org/grpc` `1.71.0`. ([#1940](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1940))
+- Cache offsets for Go `1.23.7`. ([#1940](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1940))
+- Cache offsets for Go `1.24.1`. ([#1940](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1940))
+- Cache offsets for `go.opentelemetry.io/otel@v1.35.0`. ([#1948](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1948))
+- Cache offsets for `golang.org/x/net` `0.37.0`. ([#1948](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1948))
 
 ### Removed
 
@@ -26,6 +32,10 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 - The `WithTarget` function is removed.
   The `auto` package no longer supports process discovery (note: the built binary (`auto/cli`) still supports process discovery).
   Once a target process has been identified, use `WithPID` to configure `Instrumentation` instead. ([#1890](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1890))
+
+### Fixed
+
+- Fix spans parsing from eBPF for the legacy (go version < 1.24 otel-go < 1.33) otel global instrumentation. ([#1960](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1960))
 
 ## [v0.21.0] - 2025-02-18
 

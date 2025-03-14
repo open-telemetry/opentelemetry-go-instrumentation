@@ -11,6 +11,8 @@ TOOLS = $(CURDIR)/.tools
 ALL_GO_MOD_DIRS := $(shell find . -type f -name 'go.mod' ! -path './LICENSES/*' -exec dirname {} \; | sort)
 ALL_GO_MODS := $(shell find . -type f -name 'go.mod' ! -path '$(TOOLS_MOD_DIR)/*' ! -path './LICENSES/*' | sort)
 
+EXAMPLE_MODS := $(filter ./examples/%,$(ALL_GO_MODS))
+
 # BPF compile time dependencies.
 BPF2GO_CFLAGS += -I${REPODIR}/internal/include/libbpf
 BPF2GO_CFLAGS += -I${REPODIR}/internal/include
@@ -102,9 +104,13 @@ docker-test: docker-build-base
 docker-precommit: docker-build-base
 	docker run --rm -v $(shell pwd):/app $(IMG_NAME_BASE) /bin/sh -c "cd /app && make precommit"
 
+null  :=
+space := $(null) #
+comma := ,
+
 .PHONY: crosslink
 crosslink: $(CROSSLINK)
-	@$(CROSSLINK) --root=$(REPODIR) --prune
+	@$(CROSSLINK) --root=$(REPODIR) --skip=$(subst $(space),$(comma),$(strip $(EXAMPLE_MODS:./%=%))) --prune
 
 .PHONY: go-mod-tidy
 go-mod-tidy: $(ALL_GO_MOD_DIRS:%=go-mod-tidy/%)
@@ -133,15 +139,6 @@ docker-build:
 .PHONY: docker-build-base
 docker-build-base:
 	docker buildx build -t $(IMG_NAME_BASE) --target base .
-
-.PHONY: sample-app/nethttp sample-app/gin sample-app/databasesql sample-app/nethttp-custom sample-app/otelglobal sample-app/autosdk sample-app/kafka-go
-sample-app/%: LIBRARY=$*
-sample-app/%:
-	if [ -f ./internal/test/e2e/$(LIBRARY)/build.sh ]; then \
-		./internal/test/e2e/$(LIBRARY)/build.sh; \
-	else \
-		cd internal/test/e2e/$(LIBRARY) && docker build -t sample-app . ;\
-	fi
 
 LIBBPF_VERSION ?= "< 1.5, >= 1.4.7"
 LIBBPF_DEST ?= "$(REPODIR)/internal/include/libbpf"
@@ -198,7 +195,12 @@ fixture-otelglobal: fixtures/otelglobal
 fixture-autosdk: fixtures/autosdk
 fixture-kafka-go: fixtures/kafka-go
 fixtures/%: LIBRARY=$*
-fixtures/%: docker-build sample-app/%
+fixtures/%: docker-build
+	if [ -f ./internal/test/e2e/$(LIBRARY)/build.sh ]; then \
+		./internal/test/e2e/$(LIBRARY)/build.sh; \
+	else \
+		cd internal/test/e2e/$(LIBRARY) && docker build -t sample-app . ;\
+	fi
 	kind create cluster
 	kind load docker-image otel-go-instrumentation sample-app
 	helm repo add open-telemetry https://open-telemetry.github.io/opentelemetry-helm-charts

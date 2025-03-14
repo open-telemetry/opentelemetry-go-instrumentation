@@ -305,7 +305,7 @@ func TestTrace(t *testing.T) {
 			ctrl.Trace(tt.traces)
 			tp.ForceFlush(context.Background())
 			spans := exporter.GetSpans()
-			assert.Equal(t, len(tt.expected), len(spans))
+			assert.Len(t, spans, len(tt.expected))
 
 			// span contexts get modified by exporter, update expected with output
 			for i, span := range spans {
