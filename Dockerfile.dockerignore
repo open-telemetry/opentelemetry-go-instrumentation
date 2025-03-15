@@ -1,0 +1,13 @@
+*
+
+# must-have toplevel files
+!/go.sum
+!/go.mod
+!*.go
+!/LICENSE
+
+# directories
+!/cli
+!/sdk
+!/internal/include
+!/internal/pkg
