@@ -6,6 +6,7 @@ package probe
 
 import (
 	"bytes"
+	"context"
 	"encoding/binary"
 	"errors"
 	"fmt"
@@ -572,16 +573,46 @@ func (c StructFieldConstMinVersion) InjectOption(info *process.Info) (inject.Opt
 
 // AllocationConst is a [Const] for all the allocation details that need to be
 // injected into an eBPF program.
-type AllocationConst struct{}
+type AllocationConst struct {
+	l *slog.Logger
+}
+
+// SetLogger sets the Logger for AllocationConst operations.
+func (c AllocationConst) SetLogger(l *slog.Logger) Const {
+	c.l = l
+	return c
+}
+
+func (c AllocationConst) logger() *slog.Logger {
+	l := c.l
+	if l == nil {
+		return slog.New(discardHandlerIntance)
+	}
+	return l
+}
+
+var discardHandlerIntance = discardHandler{}
+
+// Copy of slog.DiscardHandler. Remove when support for Go < 1.24 is dropped.
+type discardHandler struct{}
+
+func (dh discardHandler) Enabled(context.Context, slog.Level) bool  { return false }
+func (dh discardHandler) Handle(context.Context, slog.Record) error { return nil }
+func (dh discardHandler) WithAttrs(attrs []slog.Attr) slog.Handler  { return dh }
+func (dh discardHandler) WithGroup(name string) slog.Handler        { return dh }
 
 // InjectOption returns the appropriately configured
 // [inject.WithAllocation] if the [process.Allocation] within td
 // are not nil. An error is returned if [process.Allocation] is nil.
 func (c AllocationConst) InjectOption(info *process.Info) (inject.Option, error) {
-	if info.Allocation == nil {
+	alloc, err := info.Alloc(c.logger())
+	if err != nil {
+		return nil, err
+	}
+	if alloc == nil {
 		return nil, errors.New("no allocation details")
 	}
-	return inject.WithAllocation(*info.Allocation), nil
+	return inject.WithAllocation(*alloc), nil
 }
 
 // KeyValConst is a [Const] for a generic key-value pair.

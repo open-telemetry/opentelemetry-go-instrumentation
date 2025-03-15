@@ -48,16 +48,11 @@ func TestLoadProbes(t *testing.T) {
 	// Reset Info module information.
 	info.Modules = make(map[string]*semver.Version)
 
-	logger := slog.Default()
-	info.Allocation, err = process.Allocate(logger, pid)
-	if err != nil {
-		t.Fatalf("failed to allocate for process %d: %v", id, err)
-	}
-
 	ver := utils.GetLinuxKernelVersion()
 	require.NotNil(t, ver)
 	t.Logf("Running on kernel %s", ver.String())
 
+	logger := slog.Default()
 	probes := []probe.Probe{
 		grpcClient.New(logger, ""),
 		grpcServer.New(logger, ""),

@@ -7,7 +7,10 @@ import (
 	"debug/elf"
 	"errors"
 	"fmt"
+	"log/slog"
 	"runtime/debug"
+	"sync"
+	"sync/atomic"
 
 	"github.com/Masterminds/semver/v3"
 
@@ -16,11 +19,26 @@ import (
 
 // Info are the details about a target process.
 type Info struct {
-	ID         ID
-	Functions  []*binary.Func
-	GoVersion  *semver.Version
-	Modules    map[string]*semver.Version
-	Allocation *Allocation
+	ID        ID
+	Functions []*binary.Func
+	GoVersion *semver.Version
+	Modules   map[string]*semver.Version
+
+	allocOnce onceResult[*Allocation]
+}
+
+// Alloc allocates memory for the process described by Info i.
+//
+// The underlying memory allocation is only successfully performed once for the
+// instance i. Meaning, it is safe to call this multiple times. The first
+// successful result will be returned to all subsequent calls. If an error is
+// returned, subsequent calls will re-attempt to perform the allocation.
+//
+// It is safe to call this method concurrently.
+func (i *Info) Alloc(logger *slog.Logger) (*Allocation, error) {
+	return i.allocOnce.Do(func() (*Allocation, error) {
+		return allocate(logger, i.ID)
+	})
 }
 
 // NewInfo returns a new Info with information about the process identified by
@@ -117,4 +135,39 @@ func (i *Info) GetFunctionReturns(name string) ([]uint64, error) {
 	}
 
 	return nil, fmt.Errorf("could not find returns for function %s", name)
+}
+
+// onceResult is an object that will perform exactly one action if that action
+// does not error. For errors, no state is stored and subsequent attempts will
+// be tried.
+type onceResult[T any] struct {
+	done atomic.Bool
+	mu   sync.Mutex
+	val  T
+}
+
+// Do runs f only once, and only stores the result if f returns a nil error.
+// Subsequent calls to Do will return the stored value or they will re-attempt
+// to run f and store the result if an error had been returned.
+func (o *onceResult[T]) Do(f func() (T, error)) (T, error) {
+	if !o.done.Load() {
+		// Outlined complex-path to allow inlining here.
+		return o.do(f)
+	}
+	return o.val, nil
+}
+
+func (o *onceResult[T]) do(f func() (T, error)) (T, error) {
+	o.mu.Lock()
+	defer o.mu.Unlock()
+
+	if !o.done.Load() {
+		v, err := f()
+		if err != nil {
+			return v, err
+		}
+		o.val = v
+		o.done.Store(true)
+	}
+	return o.val, nil
 }
