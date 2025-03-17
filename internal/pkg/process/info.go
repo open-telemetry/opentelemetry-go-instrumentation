@@ -56,7 +56,7 @@ func NewInfo(id ID, relevantFuncs map[string]interface{}) (*Info, error) {
 
 	result.Functions, err = findFunctions(elfF, relevantFuncs)
 	if err != nil {
-		return nil, err
+		return result, err
 	}
 
 	result.Modules, err = findModules(result.GoVersion, bi.Deps)
