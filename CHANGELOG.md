@@ -42,6 +42,7 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
   This is included by default. ([#1859](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1859))
 - The `WithEnv` function no longer parses `OTEL_SERVICE_NAME` or `OTEL_TRACES_EXPORTER`.
   Use the `Handler` from `go.opentelemtry.io/auto/pipeline/otelsdk` with its own `WithEnv` to replace functionality. ([#1859](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1859))
+- Instrument spans created with the OpenTelemetry trace API from an empty context. ([#2001](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/2001))
 - Upgrade OpenTelemetry semantic conventions to `v1.30.0`. ([#2032](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/2032))
 
 ### Removed
