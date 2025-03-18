@@ -77,3 +77,7 @@ func (m Multiplexer) withProcResAttrs(pid int) (c config) {
 
 	return c
 }
+
+func (m Multiplexer) Shutdown(ctx context.Context) error {
+	return m.cfg.spanProcessor.Shutdown(ctx)
+}
