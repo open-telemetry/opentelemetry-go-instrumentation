@@ -61,7 +61,7 @@ jobs:
           kubectl get node
           docker ps -a --filter label=io.x-k8s.kind.cluster=chart-testing
       - name: Download Docker image artifact
-        uses: actions/download-artifact@cc203385981b70ca67e1cc392babf9cc229d5806 # v4
+        uses: actions/download-artifact@b14cf4c92620c250e1c074ab0a5800e37df86765 # v4
         with:
           name: otel-go-instrumentation-${{ matrix.runner }}
       - name: Load Docker image
