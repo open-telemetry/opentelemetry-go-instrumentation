@@ -5,7 +5,7 @@ go 1.23.0
 require (
 	go.opentelemetry.io/otel v1.35.0
 	google.golang.org/grpc v1.71.0
-	google.golang.org/grpc/examples v0.0.0-20250318070318-1703656ba59e
+	google.golang.org/grpc/examples v0.0.0-20250318220829-0af5a164e0bb
 )
 
 require (
