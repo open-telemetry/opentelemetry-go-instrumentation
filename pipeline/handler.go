@@ -1,10 +1,11 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-// Package export provides interfaces and types shared by other packages that
-// handle export of auto instrumentation generated telemetry. Standard types
-// that implement the included interfaces are found in sub-packages.
-package export
+// Package pipeline provides interfaces and types shared by other packages that
+// handle processing and export of auto instrumentation generated telemetry.
+// Standard types that implement the included interfaces are found in
+// sub-packages.
+package pipeline
 
 import (
 	"go.opentelemetry.io/collector/pdata/pcommon"

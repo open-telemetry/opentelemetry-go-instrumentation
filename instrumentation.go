@@ -15,8 +15,6 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
 
-	"go.opentelemetry.io/auto/export"
-	"go.opentelemetry.io/auto/export/otelsdk"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation"
 	dbSql "go.opentelemetry.io/auto/internal/pkg/instrumentation/bpf/database/sql"
 	kafkaConsumer "go.opentelemetry.io/auto/internal/pkg/instrumentation/bpf/github.com/segmentio/kafka-go/consumer"
@@ -29,6 +27,8 @@ import (
 	httpServer "go.opentelemetry.io/auto/internal/pkg/instrumentation/bpf/net/http/server"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/probe"
 	"go.opentelemetry.io/auto/internal/pkg/process"
+	"go.opentelemetry.io/auto/pipeline"
+	"go.opentelemetry.io/auto/pipeline/otelsdk"
 )
 
 const (
@@ -152,7 +152,7 @@ type InstrumentationOption interface {
 
 type instConfig struct {
 	pid        process.ID
-	handler    *export.Handler
+	handler    *pipeline.Handler
 	globalImpl bool
 	logger     *slog.Logger
 	sampler    Sampler
@@ -372,7 +372,7 @@ func WithConfigProvider(cp ConfigProvider) InstrumentationOption {
 //
 // If this options is not used, the Handler returned from [otelsdk.NewHandler] with
 // environment configuration will be used.
-func WithHandler(h *export.Handler) InstrumentationOption {
+func WithHandler(h *pipeline.Handler) InstrumentationOption {
 	return fnOpt(func(_ context.Context, c instConfig) (instConfig, error) {
 		if h == nil {
 			return c, errors.New("nil handler")
