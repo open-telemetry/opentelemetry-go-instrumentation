@@ -21,8 +21,8 @@ import (
 	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
 
 	"go.opentelemetry.io/auto"
-	"go.opentelemetry.io/auto/export"
-	"go.opentelemetry.io/auto/export/otelsdk"
+	"go.opentelemetry.io/auto/pipeline"
+	"go.opentelemetry.io/auto/pipeline/otelsdk"
 )
 
 const help = `Usage of %s:
@@ -157,7 +157,7 @@ func main() {
 	instOptions := []auto.InstrumentationOption{
 		auto.WithEnv(),
 		auto.WithLogger(logger),
-		auto.WithHandler(&export.Handler{TraceHandler: h}),
+		auto.WithHandler(&pipeline.Handler{TraceHandler: h}),
 	}
 	if globalImpl {
 		instOptions = append(instOptions, auto.WithGlobal())

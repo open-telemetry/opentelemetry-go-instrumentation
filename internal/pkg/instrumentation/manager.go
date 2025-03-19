@@ -17,10 +17,10 @@ import (
 
 	"go.opentelemetry.io/otel/trace"
 
-	"go.opentelemetry.io/auto/export"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/bpffs"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/probe"
 	"go.opentelemetry.io/auto/internal/pkg/process"
+	"go.opentelemetry.io/auto/pipeline"
 )
 
 // Function variables overridden in testing.
@@ -44,7 +44,7 @@ const (
 type Manager struct {
 	logger          *slog.Logger
 	probes          map[probe.ID]probe.Probe
-	handler         *export.Handler
+	handler         *pipeline.Handler
 	cp              ConfigProvider
 	exe             *link.Executable
 	proc            *process.Info
@@ -57,7 +57,7 @@ type Manager struct {
 }
 
 // NewManager returns a new [Manager].
-func NewManager(logger *slog.Logger, h *export.Handler, pid process.ID, cp ConfigProvider, probes ...probe.Probe) (*Manager, error) {
+func NewManager(logger *slog.Logger, h *pipeline.Handler, pid process.ID, cp ConfigProvider, probes ...probe.Probe) (*Manager, error) {
 	m := &Manager{
 		logger:  logger,
 		probes:  make(map[probe.ID]probe.Probe),

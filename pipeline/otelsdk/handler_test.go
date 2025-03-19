@@ -82,7 +82,7 @@ func TestTraceHandlerHandleTrace(t *testing.T) {
 
 	scope := pcommon.NewInstrumentationScope()
 
-	const scopeName = "go.opentelemetry.io/auto/export/otelsdk/test"
+	const scopeName = "go.opentelemetry.io/auto/pipeline/otelsdk/test"
 	scope.SetName(scopeName)
 	const scopeVer = "v0.0.1"
 	scope.SetVersion(scopeVer)

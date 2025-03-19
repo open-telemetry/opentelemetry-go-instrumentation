@@ -22,7 +22,6 @@ import (
 	"go.opentelemetry.io/collector/pdata/ptrace"
 	"go.opentelemetry.io/otel/trace"
 
-	"go.opentelemetry.io/auto/export"
 	dbSql "go.opentelemetry.io/auto/internal/pkg/instrumentation/bpf/database/sql"
 	kafkaConsumer "go.opentelemetry.io/auto/internal/pkg/instrumentation/bpf/github.com/segmentio/kafka-go/consumer"
 	kafkaProducer "go.opentelemetry.io/auto/internal/pkg/instrumentation/bpf/github.com/segmentio/kafka-go/producer"
@@ -36,6 +35,7 @@ import (
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/probe/sampling"
 	"go.opentelemetry.io/auto/internal/pkg/process"
 	"go.opentelemetry.io/auto/internal/pkg/process/binary"
+	"go.opentelemetry.io/auto/pipeline"
 )
 
 func TestProbeFiltering(t *testing.T) {
@@ -215,17 +215,17 @@ func mockExeAndBpffs(t *testing.T) {
 	t.Cleanup(func() { bpffsCleanup = origBpffsCleanup })
 }
 
-// noopTraceHandler is a no-op implementation of the [export.Handler]. It is used
-// for testing when no telemetry is meant to be recorded.
+// noopTraceHandler is a no-op implementation of the [pipeline.Handler]. It is
+// used for testing when no telemetry is meant to be recorded.
 type noopTraceHandler struct{}
 
-var _ export.TraceHandler = noopTraceHandler{}
+var _ pipeline.TraceHandler = noopTraceHandler{}
 
 // Handle drops the passed telemetry.
 func (noopTraceHandler) HandleTrace(pcommon.InstrumentationScope, string, ptrace.SpanSlice) {}
 
-func newNoopHandler() *export.Handler {
-	return &export.Handler{TraceHandler: noopTraceHandler{}}
+func newNoopHandler() *pipeline.Handler {
+	return &pipeline.Handler{TraceHandler: noopTraceHandler{}}
 }
 
 func TestRunStoppingByContext(t *testing.T) {
@@ -329,7 +329,7 @@ func (p slowProbe) Load(*link.Executable, *process.Info, *sampling.Config) error
 	return nil
 }
 
-func (p slowProbe) Run(*export.Handler) {}
+func (p slowProbe) Run(*pipeline.Handler) {}
 
 func (p slowProbe) Close() error {
 	p.closeSignal <- struct{}{}
@@ -348,7 +348,7 @@ func (p *noopProbe) Load(*link.Executable, *process.Info, *sampling.Config) erro
 	return nil
 }
 
-func (p *noopProbe) Run(*export.Handler) {
+func (p *noopProbe) Run(*pipeline.Handler) {
 	p.running.Store(true)
 }
 
@@ -522,7 +522,7 @@ func (p *hangingProbe) Load(*link.Executable, *process.Info, *sampling.Config) e
 	return nil
 }
 
-func (p *hangingProbe) Run(h *export.Handler) {
+func (p *hangingProbe) Run(h *pipeline.Handler) {
 	<-p.closeReturned
 	// Write after Close has returned.
 	h.Trace(ptrace.NewSpanSlice())

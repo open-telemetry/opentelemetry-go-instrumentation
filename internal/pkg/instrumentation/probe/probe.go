@@ -23,13 +23,13 @@ import (
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/ptrace"
 
-	"go.opentelemetry.io/auto/export"
 	"go.opentelemetry.io/auto/internal/pkg/inject"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/bpffs"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/probe/sampling"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/utils"
 	"go.opentelemetry.io/auto/internal/pkg/process"
 	"go.opentelemetry.io/auto/internal/pkg/structfield"
+	"go.opentelemetry.io/auto/pipeline"
 )
 
 // Probe is the instrument used by instrumentation for a Go package to measure
@@ -46,7 +46,7 @@ type Probe interface {
 	Load(*link.Executable, *process.Info, *sampling.Config) error
 
 	// Run runs the events processing loop.
-	Run(*export.Handler)
+	Run(*pipeline.Handler)
 
 	// Close stops the Probe.
 	Close() error
@@ -317,7 +317,7 @@ type SpanProducer[BPFObj any, BPFEvent any] struct {
 }
 
 // Run runs the events processing loop.
-func (i *SpanProducer[BPFObj, BPFEvent]) Run(h *export.Handler) {
+func (i *SpanProducer[BPFObj, BPFEvent]) Run(h *pipeline.Handler) {
 	if h.TraceHandler == nil {
 		i.Logger.Info("tracing not supported by handler, dropping traces", "handler", h)
 		return
@@ -352,7 +352,7 @@ type TraceProducer[BPFObj any, BPFEvent any] struct {
 }
 
 // Run runs the events processing loop.
-func (i *TraceProducer[BPFObj, BPFEvent]) Run(h *export.Handler) {
+func (i *TraceProducer[BPFObj, BPFEvent]) Run(h *pipeline.Handler) {
 	th := h.TraceHandler
 	if th == nil {
 		i.Logger.Info("tracing not supported by handler, dropping traces", "handler", h)
