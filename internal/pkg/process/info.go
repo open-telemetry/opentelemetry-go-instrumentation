@@ -31,7 +31,9 @@ type Info struct {
 	GoVersion *semver.Version
 	Modules   map[string]*semver.Version
 
-	allocOnce onceResult[*Allocation]
+	aDone atomic.Bool
+	aMu   sync.Mutex
+	a     *Allocation
 }
 
 // Alloc allocates memory for the process described by Info i.
@@ -43,9 +45,26 @@ type Info struct {
 //
 // It is safe to call this method concurrently.
 func (i *Info) Alloc(logger *slog.Logger) (*Allocation, error) {
-	return i.allocOnce.Do(func() (*Allocation, error) {
-		return allocate(logger, i.ID)
-	})
+	if !i.aDone.Load() {
+		// Outlined complex-path to allow inlining here.
+		return i.alloc(logger)
+	}
+	return i.a, nil
+}
+
+func (i *Info) alloc(logger *slog.Logger) (*Allocation, error) {
+	i.aMu.Lock()
+	defer i.aMu.Unlock()
+
+	if !i.aDone.Load() {
+		a, err := allocate(logger, i.ID)
+		if err != nil {
+			return a, err
+		}
+		i.a = a
+		i.aDone.Store(true)
+	}
+	return i.a, nil
 }
 
 // NewInfo returns a new Info with information about the process identified by
@@ -169,39 +188,4 @@ func (i *Info) GetFunctionReturns(name string) ([]uint64, error) {
 	}
 
 	return nil, fmt.Errorf("could not find returns for function %s", name)
-}
-
-// onceResult is an object that will perform exactly one action if that action
-// does not error. For errors, no state is stored and subsequent attempts will
-// be tried.
-type onceResult[T any] struct {
-	done atomic.Bool
-	mu   sync.Mutex
-	val  T
-}
-
-// Do runs f only once, and only stores the result if f returns a nil error.
-// Subsequent calls to Do will return the stored value or they will re-attempt
-// to run f and store the result if an error had been returned.
-func (o *onceResult[T]) Do(f func() (T, error)) (T, error) {
-	if !o.done.Load() {
-		// Outlined complex-path to allow inlining here.
-		return o.do(f)
-	}
-	return o.val, nil
-}
-
-func (o *onceResult[T]) do(f func() (T, error)) (T, error) {
-	o.mu.Lock()
-	defer o.mu.Unlock()
-
-	if !o.done.Load() {
-		v, err := f()
-		if err != nil {
-			return v, err
-		}
-		o.val = v
-		o.done.Store(true)
-	}
-	return o.val, nil
 }
