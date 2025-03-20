@@ -8,12 +8,14 @@ package instrumentation
 import (
 	"context"
 	"errors"
+	"io"
 	"log/slog"
 	"sync/atomic"
 	"testing"
 	"time"
 
 	"github.com/Masterminds/semver/v3"
+	"github.com/cilium/ebpf"
 	"github.com/cilium/ebpf/link"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -352,7 +354,35 @@ type noopProbe struct {
 
 var _ probe.Probe = (*noopProbe)(nil)
 
-func (p *noopProbe) Load(*link.Executable, *process.Info, *sampling.Config) error {
+func (p *noopProbe) GetLogger() *slog.Logger {
+	return nil
+}
+
+func (p *noopProbe) Spec() (*ebpf.CollectionSpec, error) {
+	return nil, nil
+}
+
+func (p *noopProbe) SetCollection(*ebpf.Collection) {
+	return
+}
+
+func (p *noopProbe) GetCollection() (*ebpf.Collection) {
+	return nil
+}
+
+func (p *noopProbe) GetConsts() []probe.Const {
+	return nil
+}
+
+func (p *noopProbe) GetUprobes() []*probe.Uprobe {
+	return nil
+}
+
+func (p *noopProbe) UpdateClosers(...io.Closer) []io.Closer {
+	return nil
+}
+
+func (p *noopProbe) Init(*sampling.Config) error {
 	p.loaded.Store(true)
 	return nil
 }

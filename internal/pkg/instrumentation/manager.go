@@ -9,16 +9,20 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"log/slog"
 	"sync"
 
+	"github.com/cilium/ebpf"
 	"github.com/cilium/ebpf/link"
 	"github.com/cilium/ebpf/rlimit"
 
 	"go.opentelemetry.io/otel/trace"
 
+	"go.opentelemetry.io/auto/internal/pkg/inject"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/bpffs"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/probe"
+	"go.opentelemetry.io/auto/internal/pkg/instrumentation/utils"
 	"go.opentelemetry.io/auto/internal/pkg/opentelemetry"
 	"go.opentelemetry.io/auto/internal/pkg/process"
 )
@@ -54,6 +58,7 @@ type Manager struct {
 	probeMu         sync.Mutex
 	state           managerState
 	stateMu         sync.RWMutex
+	collectionOpts  *ebpf.CollectionOptions
 }
 
 // NewManager returns a new [Manager].
@@ -87,6 +92,18 @@ func NewManager(
 	if err != nil {
 		return nil, err
 	}
+
+	m.collectionOpts = &ebpf.CollectionOptions{
+		Maps: ebpf.MapOptions{
+			PinPath: bpffs.PathForTargetApplication(m.proc),
+		},
+	}
+
+	alloc, err := process.Allocate(logger, pid)
+	if err != nil {
+		return nil, err
+	}
+	m.proc.Allocation = alloc
 
 	m.logger.Info("loaded process info", "process", m.proc)
 
@@ -215,7 +232,7 @@ func (m *Manager) applyConfig(c Config) error {
 
 		if !currentlyEnabled && newEnabled {
 			m.logger.Info("Enabling probe", "id", id)
-			err = errors.Join(err, p.Load(m.exe, m.proc, c.SamplingConfig))
+			err = errors.Join(err, m.LoadProbe(p, id, c))
 			if err == nil {
 				m.runProbe(p)
 			}
@@ -379,8 +396,7 @@ func (m *Manager) loadProbes() error {
 	// Load probes
 	for name, i := range m.probes {
 		if isProbeEnabled(name, m.currentConfig) {
-			m.logger.Info("loading probe", "name", name)
-			err := i.Load(exe, m.proc, m.currentConfig.SamplingConfig)
+			err := m.LoadProbe(i, name, m.currentConfig)
 			if err != nil {
 				m.logger.Error(
 					"error while loading probes, cleaning up",
@@ -396,6 +412,175 @@ func (m *Manager) loadProbes() error {
 
 	m.logger.Debug("loaded probes to memory", "total_probes", len(m.probes))
 	return nil
+}
+
+func (m *Manager) LoadProbe(i probe.Probe, name probe.ID, cfg Config) error {
+	m.logger.Info("loading probe", "name", name)
+
+	err := i.Init(cfg.SamplingConfig)
+	if err != nil {
+		return errors.Join(err, m.cleanup())
+	}
+
+	spec, err := i.Spec()
+	if err != nil {
+		return errors.Join(err, m.cleanup())
+	}
+
+	err = m.InjectProbeConsts(i, spec)
+	if err != nil {
+		return err
+	}
+
+	c, err := utils.InitializeEBPFCollection(spec, m.collectionOpts)
+	if err != nil {
+		return err
+	}
+	i.SetCollection(c)
+	return nil
+}
+
+func (m *Manager) InjectProbeConsts(i probe.Probe, spec *ebpf.CollectionSpec) error {
+	var err error
+	var opts []inject.Option
+	for _, cnst := range i.GetConsts() {
+		if l, ok := cnst.(probe.SetLogger); ok {
+			cnst = l.SetLogger(i.GetLogger())
+		}
+
+		o, e := cnst.InjectOption(m.proc)
+		err = errors.Join(err, e)
+		if e == nil && o != nil {
+			opts = append(opts, o)
+		}
+	}
+	if err != nil {
+		return err
+	}
+
+	return inject.Constants(spec, opts...)
+}
+
+func (m *Manager) loadUprobesFromProbe(i probe.Probe) error {
+	for _, up := range i.GetUprobes() {
+		var skip bool
+		for _, pc := range up.PackageConstraints {
+			if pc.Constraints.Check(m.proc.Modules[pc.Package]) {
+				continue
+			}
+
+			var logFn func(string, ...any)
+			switch pc.FailureMode {
+			case probe.FailureModeIgnore:
+				logFn = i.GetLogger().Debug
+			case probe.FailureModeWarn:
+				logFn = i.GetLogger().Warn
+			default:
+				// Unknown and FailureModeError.
+				return fmt.Errorf(
+					"uprobe %s package constraint (%s) not met, version %v",
+					up.Sym,
+					pc.Constraints.String(),
+					m.proc.Modules[pc.Package])
+			}
+
+			logFn(
+				"package constraint not meet, skipping uprobe",
+				"probe", i.Manifest().ID,
+				"symbol", up.Sym,
+				"package", pc.Package,
+				"constraint", pc.Constraints.String(),
+				"version", m.proc.Modules[pc.Package],
+			)
+
+			skip = true
+			break
+		}
+		if skip {
+			continue
+		}
+
+		err := m.loadUprobe(up, i.GetCollection())
+		if err != nil {
+			var logFn func(string, ...any)
+			switch up.FailureMode {
+			case probe.FailureModeIgnore:
+				logFn = i.GetLogger().Debug
+			case probe.FailureModeWarn:
+				logFn = i.GetLogger().Warn
+			default:
+				// Unknown and FailureModeError.
+				return err
+			}
+			logFn("failed to load uprobe", "probe", i.Manifest().ID, "symbol", up.Sym, "error", err)
+			continue
+		}
+		_ = i.UpdateClosers(up)
+	}
+	return nil
+}
+
+func (m *Manager) loadUprobe(u *probe.Uprobe, c *ebpf.Collection) error {
+	offset, err := m.proc.GetFunctionOffset(u.Sym)
+	if err != nil {
+		return err
+	}
+
+	var closers []io.Closer
+
+	if u.EntryProbe != "" {
+		entryProg, ok := c.Programs[u.EntryProbe]
+		if !ok {
+			return fmt.Errorf("entry probe %s not found", u.EntryProbe)
+		}
+		opts := &link.UprobeOptions{Address: offset, PID: int(m.proc.ID)}
+		l, err := m.exe.Uprobe("", entryProg, opts)
+		if err != nil {
+			return err
+		}
+		closers = append(closers, l)
+	}
+
+	if u.ReturnProbe != "" {
+		retProg, ok := c.Programs[u.ReturnProbe]
+		if !ok {
+			return fmt.Errorf("return probe %s not found", u.ReturnProbe)
+		}
+		retOffsets, err := m.proc.GetFunctionReturns(u.Sym)
+		if err != nil {
+			return err
+		}
+
+		for _, ret := range retOffsets {
+			opts := &link.UprobeOptions{Address: ret, PID: int(m.proc.ID)}
+			l, err := m.exe.Uprobe("", retProg, opts)
+			if err != nil {
+				return err
+			}
+			closers = append(closers, l)
+		}
+	}
+
+	old := u.Closers.Swap(&closers)
+	if old != nil {
+		// load called twice without calling Close. Try and handle gracefully.
+		var err error
+		for _, closer := range *old {
+			err = errors.Join(err, closer.Close())
+		}
+		return err
+	}
+
+	return nil
+}
+
+func (m *Manager) mount() error {
+	if m.proc.Allocation != nil {
+		m.logger.Debug("Mounting bpffs", "allocation", m.proc.Allocation)
+	} else {
+		m.logger.Debug("Mounting bpffs")
+	}
+	return bpffsMount(m.proc)
 }
 
 func (m *Manager) cleanup() error {
