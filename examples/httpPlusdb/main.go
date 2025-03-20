@@ -24,9 +24,9 @@ const (
 	email TEXT NOT NULL,
 	phone TEXT NOT NULL);`
 
-	tableInsertion = `INSERT INTO 'contacts'
-	('first_name', 'last_name', 'email', 'phone') VALUES
-	('Moshe', 'Levi', 'moshe@gmail.com', '052-1234567');`
+	tableInsertion = "INSERT INTO `contacts` " +
+		"(`first_name`, `last_name`, `email`, `phone`) VALUES " +
+		"('Moshe', 'Levi', 'moshe@gmail.com', '052-1234567');"
 )
 
 // Server is Http server that exposes multiple endpoints.
