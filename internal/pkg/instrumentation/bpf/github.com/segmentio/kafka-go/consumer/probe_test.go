@@ -11,7 +11,7 @@ import (
 
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/ptrace"
-	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.30.0"
 	"go.opentelemetry.io/otel/trace"
 
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/context"
@@ -60,9 +60,9 @@ func TestProbeConvertEvent(t *testing.T) {
 			semconv.MessagingOperationTypeReceive,
 			semconv.MessagingDestinationPartitionID("12"),
 			semconv.MessagingDestinationName("topic1"),
-			semconv.MessagingKafkaMessageOffset(42),
+			semconv.MessagingKafkaOffset(42),
 			semconv.MessagingKafkaMessageKey("key1"),
-			semconv.MessagingKafkaConsumerGroup("test consumer group"),
+			semconv.MessagingConsumerGroupName("test consumer group"),
 		)
 		return spans
 	}()

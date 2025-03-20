@@ -73,7 +73,7 @@
                 {
                   "key": "messaging.operation.type",
                   "value": {
-                    "stringValue": "publish"
+                    "stringValue": "send"
                   }
                 },
                 {
@@ -114,7 +114,7 @@
                 {
                   "key": "messaging.operation.type",
                   "value": {
-                    "stringValue": "publish"
+                    "stringValue": "send"
                   }
                 },
                 {
@@ -159,7 +159,7 @@
                   }
                 },
                 {
-                  "key": "messaging.kafka.message.offset",
+                  "key": "messaging.kafka.offset",
                   "value": {
                     "intValue": "0"
                   }
@@ -171,7 +171,7 @@
                   }
                 },
                 {
-                  "key": "messaging.kafka.consumer.group",
+                  "key": "messaging.consumer.group.name",
                   "value": {
                     "stringValue": "some group id"
                   }
