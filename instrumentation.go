@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"os/signal"
 	"strconv"
 	"sync"
 
@@ -45,6 +46,7 @@ const (
 // auto-instrumentation.
 type Instrumentation struct {
 	manager *instrumentation.Manager
+	cleanup func()
 
 	stopMu  sync.Mutex
 	stop    context.CancelFunc
@@ -62,10 +64,6 @@ func NewInstrumentation(ctx context.Context, opts ...InstrumentationOption) (*In
 		return nil, err
 	}
 	if err := c.validate(); err != nil {
-		return nil, err
-	}
-
-	if err != nil {
 		return nil, err
 	}
 
@@ -90,7 +88,7 @@ func NewInstrumentation(ctx context.Context, opts ...InstrumentationOption) (*In
 		return nil, err
 	}
 
-	return &Instrumentation{manager: mngr}, nil
+	return &Instrumentation{manager: mngr, cleanup: c.handlerClose}, nil
 }
 
 // Load loads and attaches the relevant probes to the target process.
@@ -103,6 +101,10 @@ func (i *Instrumentation) Load(ctx context.Context) error {
 // This function will not return until either ctx is done, an unrecoverable
 // error is encountered, or Close is called.
 func (i *Instrumentation) Run(ctx context.Context) error {
+	if i.cleanup != nil {
+		defer i.cleanup()
+	}
+
 	ctx, err := i.newStop(ctx)
 	if err != nil {
 		return err
@@ -140,6 +142,10 @@ func (i *Instrumentation) Close() error {
 		return i.manager.Stop()
 	}
 
+	if i.cleanup != nil {
+		defer i.cleanup()
+	}
+
 	i.stop()
 	<-i.stopped
 	i.stop, i.stopped = nil, nil
@@ -153,12 +159,13 @@ type InstrumentationOption interface {
 }
 
 type instConfig struct {
-	pid        process.ID
-	handler    *pipeline.Handler
-	globalImpl bool
-	logger     *slog.Logger
-	sampler    Sampler
-	cp         ConfigProvider
+	pid          process.ID
+	handler      *pipeline.Handler
+	handlerClose func()
+	globalImpl   bool
+	logger       *slog.Logger
+	sampler      Sampler
+	cp           ConfigProvider
 }
 
 func newInstConfig(ctx context.Context, opts []InstrumentationOption) (instConfig, error) {
@@ -207,8 +214,20 @@ func newInstConfig(ctx context.Context, opts []InstrumentationOption) (instConfi
 			otelsdk.WithResourceAttributes(attrs...),
 		)
 		err = errors.Join(err, e)
-	}
 
+		if c.handler != nil {
+			if th, ok := c.handler.TraceHandler.(*otelsdk.TraceHandler); ok {
+				c.handlerClose = sync.OnceFunc(func() {
+					ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
+					defer stop()
+
+					if err := th.Shutdown(ctx); err != nil {
+						c.logger.Error("failed cleanup", "error", err)
+					}
+				})
+			}
+		}
+	}
 	if c.sampler == nil {
 		c.sampler = DefaultSampler()
 	}
