@@ -52,12 +52,15 @@ func (i *Info) Alloc(logger *slog.Logger) (*Allocation, error) {
 	return i.a, nil
 }
 
+// Used for testing.
+var allocateFn = allocate
+
 func (i *Info) alloc(logger *slog.Logger) (*Allocation, error) {
 	i.aMu.Lock()
 	defer i.aMu.Unlock()
 
 	if !i.aDone.Load() {
-		a, err := allocate(logger, i.ID)
+		a, err := allocateFn(logger, i.ID)
 		if err != nil {
 			return a, err
 		}
