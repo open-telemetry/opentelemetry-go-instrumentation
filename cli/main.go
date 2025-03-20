@@ -5,6 +5,7 @@ package main
 
 import (
 	"context"
+	"debug/buildinfo"
 	"flag"
 	"fmt"
 	"log/slog"
@@ -14,7 +15,12 @@ import (
 	"strconv"
 	"syscall"
 
+	"go.opentelemetry.io/otel/attribute"
+	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
+
 	"go.opentelemetry.io/auto"
+	"go.opentelemetry.io/auto/pipeline"
+	"go.opentelemetry.io/auto/pipeline/otelsdk"
 )
 
 const help = `Usage of %s:
@@ -123,17 +129,36 @@ func main() {
 		}
 	}()
 
-	instOptions := []auto.InstrumentationOption{
-		auto.WithEnv(),
-		auto.WithLogger(logger),
-	}
-	if globalImpl {
-		instOptions = append(instOptions, auto.WithGlobal())
-	}
 	pid, err := findPID(ctx, logger, targetPID, targetExe)
 	if err != nil {
 		logger.Error("failed to find target", "error", err)
 		return
+	}
+
+	logger.Info(
+		"building OpenTelemetry Go instrumentation ...",
+		"globalImpl", globalImpl,
+		"version", newVersion(),
+	)
+
+	h, err := otelsdk.NewTraceHandler(
+		ctx,
+		otelsdk.WithEnv(),
+		otelsdk.WithLogger(logger),
+		otelsdk.WithResourceAttributes(resourceAttrs(logger, pid)...),
+	)
+	if err != nil {
+		logger.Error("failed to create OTel SDK handler", "error", err)
+		return
+	}
+
+	instOptions := []auto.InstrumentationOption{
+		auto.WithEnv(),
+		auto.WithLogger(logger),
+		auto.WithHandler(&pipeline.Handler{TraceHandler: h}),
+	}
+	if globalImpl {
+		instOptions = append(instOptions, auto.WithGlobal())
 	}
 	instOptions = append(instOptions, auto.WithPID(pid))
 
@@ -160,6 +185,16 @@ func main() {
 
 	if err = inst.Run(ctx); err != nil {
 		logger.Error("instrumentation crashed", "error", err)
+	}
+
+	logger.Info("shutting down")
+
+	ctx, cancel = signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer cancel()
+
+	err = h.Shutdown(ctx)
+	if err != nil {
+		logger.Error("failed to flush handler", "error", err)
 	}
 }
 
@@ -214,4 +249,38 @@ var findExeFn = findExe
 func findExe(ctx context.Context, l *slog.Logger, exe string) (int, error) {
 	pp := ProcessPoller{Logger: l, BinPath: exe}
 	return pp.Poll(ctx)
+}
+
+func resourceAttrs(logger *slog.Logger, pid int) []attribute.KeyValue {
+	attrs := []attribute.KeyValue{
+		semconv.TelemetryDistroVersionKey.String(auto.Version()),
+	}
+
+	// Add additional process information for the target.
+	path := "/proc/" + strconv.Itoa(pid) + "/exe"
+	bi, err := buildinfo.ReadFile(path)
+	if err != nil {
+		logger.Error("failed to get Go proc build info", "error", err)
+		return attrs
+	}
+
+	attrs = append(attrs, semconv.ProcessRuntimeVersion(bi.GoVersion))
+
+	var compiler string
+	for _, setting := range bi.Settings {
+		if setting.Key == "-compiler" {
+			compiler = setting.Value
+			break
+		}
+	}
+	switch compiler {
+	case "":
+		logger.Debug("failed to identify Go compiler")
+	case "gc":
+		attrs = append(attrs, semconv.ProcessRuntimeName("go"))
+	default:
+		attrs = append(attrs, semconv.ProcessRuntimeName(compiler))
+	}
+
+	return attrs
 }
