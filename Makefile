@@ -140,6 +140,15 @@ docker-build:
 docker-build-base:
 	docker buildx build -t $(IMG_NAME_BASE) --target base .
 
+docker-dev: docker-build-base
+	@docker run \
+		-it \
+		--rm \
+		-v "$(REPODIR)":/usr/src/go.opentelemetry.io/auto \
+		-w /usr/src/go.opentelemetry.io/auto \
+		$(IMG_NAME_BASE) \
+		/bin/bash
+
 LIBBPF_VERSION ?= "< 1.5, >= 1.4.7"
 LIBBPF_DEST ?= "$(REPODIR)/internal/include/libbpf"
 .PHONY: synclibbpf
