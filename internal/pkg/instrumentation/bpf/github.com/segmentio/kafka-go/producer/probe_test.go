@@ -11,7 +11,7 @@ import (
 
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/ptrace"
-	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.30.0"
 	"go.opentelemetry.io/otel/trace"
 
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/context"
@@ -70,7 +70,7 @@ func TestProbeConvertEvent(t *testing.T) {
 			semconv.MessagingKafkaMessageKey("key1"),
 			semconv.MessagingDestinationName("topic1"),
 			semconv.MessagingSystemKafka,
-			semconv.MessagingOperationTypePublish,
+			semconv.MessagingOperationTypeSend,
 			semconv.MessagingBatchMessageCount(2),
 		)
 
@@ -87,7 +87,7 @@ func TestProbeConvertEvent(t *testing.T) {
 			semconv.MessagingKafkaMessageKey("key2"),
 			semconv.MessagingDestinationName("topic2"),
 			semconv.MessagingSystemKafka,
-			semconv.MessagingOperationTypePublish,
+			semconv.MessagingOperationTypeSend,
 			semconv.MessagingBatchMessageCount(2),
 		)
 
