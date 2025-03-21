@@ -1,6 +1,8 @@
-FROM  --platform=$BUILDPLATFORM golang:1.24.1-bookworm@sha256:fa1a01d362a7b9df68b021d59a124d28cae6d99ebd1a876e3557c4dd092f1b1d AS base
+FROM --platform=$BUILDPLATFORM golang:1.24.1-bookworm@sha256:fa1a01d362a7b9df68b021d59a124d28cae6d99ebd1a876e3557c4dd092f1b1d AS base
 
 RUN apt-get update && apt-get install -y curl clang gcc llvm make libbpf-dev
+
+FROM --platform=$BUILDPLATFORM base AS builder
 
 WORKDIR /usr/src/go.opentelemetry.io/auto/
 
@@ -13,7 +15,6 @@ COPY go.mod go.sum ./
 RUN --mount=type=cache,target=/go/pkg \
     go mod download && go mod verify
 
-FROM --platform=$BUILDPLATFORM base AS builder
 COPY . .
 
 ARG TARGETARCH
