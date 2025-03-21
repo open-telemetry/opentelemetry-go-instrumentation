@@ -4,6 +4,8 @@
 package process
 
 import (
+	"log/slog"
+	"sync"
 	"testing"
 
 	"github.com/Masterminds/semver/v3"
@@ -49,4 +51,62 @@ func TestGoVer(t *testing.T) {
 			assert.Equal(t, test.want, got)
 		})
 	}
+}
+
+func TestInfoAlloc(t *testing.T) {
+	setup := func(t *testing.T, err error) {
+		t.Helper()
+
+		orig := allocateFn
+
+		a := new(Allocation)
+		allocateFn = func(*slog.Logger, ID) (*Allocation, error) {
+			a.StartAddr++
+			return a, err
+		}
+		t.Cleanup(func() { allocateFn = orig })
+	}
+
+	logger := slog.Default()
+	const goroutines = 10
+
+	t.Run("ErrorReturn", func(t *testing.T) {
+		setup(t, assert.AnError)
+
+		i := new(Info)
+		var wg sync.WaitGroup
+		for range goroutines {
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				_, err := i.Alloc(logger)
+				assert.ErrorIs(t, err, assert.AnError)
+			}()
+		}
+		wg.Wait()
+
+		a, err := i.Alloc(logger)
+		assert.ErrorIs(t, err, assert.AnError)
+		assert.Equal(t, uint64(goroutines+1), a.StartAddr, "expected increment per error response")
+	})
+
+	t.Run("SuccessCached", func(t *testing.T) {
+		setup(t, nil)
+
+		i := new(Info)
+		var wg sync.WaitGroup
+		for range goroutines {
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				_, err := i.Alloc(logger)
+				assert.NoError(t, err)
+			}()
+		}
+		wg.Wait()
+
+		a, err := i.Alloc(logger)
+		assert.NoError(t, err)
+		assert.Equal(t, uint64(1), a.StartAddr, "allocate not called once")
+	})
 }
