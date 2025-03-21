@@ -49,13 +49,13 @@ SCOPE="go.opentelemetry.io/auto/github.com/segmentio/kafka-go"
   assert_equal "$partition" '"0"'
 }
 
-@test "consumer :: valid {messaging.kafka.message.offset}" {
-  offset=$(consumer_span_attributes_for ${SCOPE} | jq "select(.key == \"messaging.kafka.message.offset\").value.intValue" | sort )
+@test "consumer :: valid {messaging.kafka.offset}" {
+  offset=$(consumer_span_attributes_for ${SCOPE} | jq "select(.key == \"messaging.kafka.offset\").value.intValue" | sort )
   assert_equal "$offset" '"0"'
 }
 
 @test "consumer :: valid {messaging.kafka.consumer.group}" {
-  consumer_group=$(consumer_span_attributes_for ${SCOPE} | jq "select(.key == \"messaging.kafka.consumer.group\").value.stringValue" | sort )
+  consumer_group=$(consumer_span_attributes_for ${SCOPE} | jq "select(.key == \"messaging.consumer.group.name\").value.stringValue" | sort )
   assert_equal "$consumer_group" '"some group id"'
 }
 
