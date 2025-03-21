@@ -7,9 +7,12 @@ import (
 	"debug/elf"
 	"errors"
 	"fmt"
+	"log/slog"
 	"regexp"
 	"runtime/debug"
 	"strings"
+	"sync"
+	"sync/atomic"
 
 	"github.com/Masterminds/semver/v3"
 
@@ -25,9 +28,46 @@ type Info struct {
 	// Experimental and build information included in the version is dropped.
 	// If a development version of Go is used, the commit hash will be included
 	// in the metadata of the version.
-	GoVersion  *semver.Version
-	Modules    map[string]*semver.Version
-	Allocation *Allocation
+	GoVersion *semver.Version
+	Modules   map[string]*semver.Version
+
+	aDone atomic.Bool
+	aMu   sync.Mutex
+	a     *Allocation
+}
+
+// Alloc allocates memory for the process described by Info i.
+//
+// The underlying memory allocation is only successfully performed once for the
+// instance i. Meaning, it is safe to call this multiple times. The first
+// successful result will be returned to all subsequent calls. If an error is
+// returned, subsequent calls will re-attempt to perform the allocation.
+//
+// It is safe to call this method concurrently.
+func (i *Info) Alloc(logger *slog.Logger) (*Allocation, error) {
+	if !i.aDone.Load() {
+		// Outlined complex-path to allow inlining here.
+		return i.alloc(logger)
+	}
+	return i.a, nil
+}
+
+// Used for testing.
+var allocateFn = allocate
+
+func (i *Info) alloc(logger *slog.Logger) (*Allocation, error) {
+	i.aMu.Lock()
+	defer i.aMu.Unlock()
+
+	if !i.aDone.Load() {
+		a, err := allocateFn(logger, i.ID)
+		if err != nil {
+			return a, err
+		}
+		i.a = a
+		i.aDone.Store(true)
+	}
+	return i.a, nil
 }
 
 // NewInfo returns a new Info with information about the process identified by
