@@ -80,6 +80,13 @@ func TestLoadProbes(t *testing.T) {
 			ProbesLoad(t, info, p.(TestProbe))
 		})
 	}
+
+	// The grpcClient, grpcServer, httpClient, dbSql, kafkaProducer,
+	// kafkaConsumer, autosdk, and otelTraceGlobal all allocate. Ensure it has
+	// been called.
+	a, err := info.Alloc(logger)
+	require.NoError(t, err)
+	assert.NotEmpty(t, a.StartAddr, "memory not allocated")
 }
 
 const mainGoContent = `package main
