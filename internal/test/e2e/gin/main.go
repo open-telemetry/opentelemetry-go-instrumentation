@@ -1,6 +1,8 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
+// Package gin is a testing application for the [github.com/gin-gonic/gin]
+// package.
 package main
 
 import (
