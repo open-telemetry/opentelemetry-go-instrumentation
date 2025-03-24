@@ -1,6 +1,8 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
+// Package producer provides an instrumentation probe for Kafka producers using
+// the [github.com/segmentio/kafka-go] package.
 package producer
 
 import (

@@ -83,11 +83,11 @@ type Base[BPFObj any, BPFEvent any] struct {
 }
 
 const (
-	// The default size of the perf buffer in pages.
-	// We will need to make this configurable in the future.
+	// PerfBufferDefaultSizeInPages is the default size of the perf buffer in
+	// pages. We will need to make this configurable in the future.
 	PerfBufferDefaultSizeInPages = 128
-	// The default name of the eBPF map used to pass events from the eBPF program
-	// to userspace.
+	// DefaultBufferMapName is the default name of the eBPF map used to pass
+	// events from the eBPF program to userspace.
 	DefaultBufferMapName = "events"
 )
 

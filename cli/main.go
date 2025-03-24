@@ -1,6 +1,8 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
+// Package cli runs OpenTelemetry automatic instrumentation for Go packages
+// using eBPF.
 package main
 
 import (

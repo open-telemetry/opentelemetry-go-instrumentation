@@ -1,6 +1,8 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
+// Package inject provides types and functionality to extract offset
+// information from target ELF and inject that data into eBPF probes.
 package inject
 
 import (
