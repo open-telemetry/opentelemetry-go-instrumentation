@@ -1,6 +1,8 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
+// Package inspect provides a utility to inspect and output offsets within a
+// target binary ELF.
 package inspect
 
 import (
