@@ -55,19 +55,20 @@ func (p *tracedProgram) Syscall(number uint64, args ...uint64) (uint64, error) {
 	regs.Rax = number
 	for index, arg := range args {
 		// All these registers are hard coded for x86 platform
-		if index == 0 {
+		switch index {
+		case 0:
 			regs.Rdi = arg
-		} else if index == 1 {
+		case 1:
 			regs.Rsi = arg
-		} else if index == 2 {
+		case 2:
 			regs.Rdx = arg
-		} else if index == 3 {
+		case 3:
 			regs.R10 = arg
-		} else if index == 4 {
+		case 4:
 			regs.R8 = arg
-		} else if index == 5 {
+		case 5:
 			regs.R9 = arg
-		} else {
+		default:
 			return 0, errors.New("too many arguments for a syscall")
 		}
 	}

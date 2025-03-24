@@ -1,10 +1,12 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
+// Package grpc is a testing application for the [google.golang.org/grpc]
+// package.
+package main
+
 // Adapted from the gRPC helloworld example:
 // https://github.com/grpc/grpc-go/tree/70f1a4045da95b93f73b6dbdd7049f3f053c0680/examples/helloworld
-
-package main
 
 import (
 	"context"

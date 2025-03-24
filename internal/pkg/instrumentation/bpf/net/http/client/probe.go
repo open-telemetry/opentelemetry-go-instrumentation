@@ -1,6 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
+// Package client provides an instrumentation probe for [net/http] clients.
 package client
 
 import (

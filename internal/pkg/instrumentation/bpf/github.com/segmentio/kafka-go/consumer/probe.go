@@ -1,6 +1,8 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
+// Package consumer provides an instrumentation probe for Kafka consumer using
+// the [github.com/segmentio/kafka-go] package.
 package consumer
 
 import (

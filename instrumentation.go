@@ -1,6 +1,8 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
+// Package auto provides OpenTelemetry automatic tracing instrumentation for Go
+// packages using eBPF.
 package auto
 
 import (

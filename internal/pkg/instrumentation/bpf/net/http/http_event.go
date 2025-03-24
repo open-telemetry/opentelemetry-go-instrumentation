@@ -5,6 +5,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
+// Package http provides common functionality for [net/http] probe instrumentation.
 package http
 
 import (
@@ -63,7 +64,9 @@ var (
 	ErrMissingPathOrHost = errors.New("missing path or host")
 )
 
-// The string's syntax is
+// ParsePattern parses an HTTP request and returns the parsed path pattern if one exists.
+//
+// The string's syntax is expected to be for the form:
 //
 //	[METHOD] [HOST]/[PATH]
 //

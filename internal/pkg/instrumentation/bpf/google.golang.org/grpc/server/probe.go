@@ -1,6 +1,8 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
+// Package server provides an instrumentation probe for
+// [google.golang.org/grpc] servers.
 package server
 
 import (

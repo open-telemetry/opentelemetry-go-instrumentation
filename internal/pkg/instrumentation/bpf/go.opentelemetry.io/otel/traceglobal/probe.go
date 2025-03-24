@@ -1,6 +1,8 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
+// Package global provides an instrumentation probe for the
+// [go.opentelemetry.io/otel] global trace API.
 package global
 
 import (

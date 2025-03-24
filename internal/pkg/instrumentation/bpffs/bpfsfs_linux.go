@@ -1,6 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
+// Package bpffs manages the BPF file-system.
 package bpffs
 
 import (

@@ -21,9 +21,9 @@ import (
 const waitPidErrorMessage = "waitpid ret value: %d"
 
 const (
-	// MADV_POPULATE_READ.
+	// MadvisePopulateRead is the MADV_POPULATE_READ advice flag.
 	MadvisePopulateRead = 0x16
-	// MADV_POPULATE_WRITE.
+	// MadvisePopulateWrite is the MADV_POPULATE_WRITE advice flag.
 	MadvisePopulateWrite = 0x17
 )
 

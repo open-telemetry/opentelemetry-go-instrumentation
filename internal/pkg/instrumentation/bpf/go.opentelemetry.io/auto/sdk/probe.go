@@ -1,6 +1,8 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
+// Package sdk provides an instrumentation probe for the
+// [go.opentelemetry.io/auto/sdk] package.
 package sdk
 
 import (

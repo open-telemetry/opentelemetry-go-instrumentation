@@ -60,7 +60,8 @@ type noopProvider struct {
 	SamplingConfig *sampling.Config
 }
 
-// NewNoopProvider returns a provider that does not provide any updates and provide the default configuration as the initial one.
+// NewNoopConfigProvider returns a provider that does not provide any updates
+// and provide the default configuration as the initial one.
 func NewNoopConfigProvider(sc *sampling.Config) ConfigProvider {
 	return &noopProvider{SamplingConfig: sc}
 }

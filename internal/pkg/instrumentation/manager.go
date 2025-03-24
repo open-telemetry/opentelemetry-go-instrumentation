@@ -1,6 +1,8 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
+// Package instrumentation provides functionality to manage instrumentation
+// using eBPF for Go programs.
 package instrumentation
 
 import (
