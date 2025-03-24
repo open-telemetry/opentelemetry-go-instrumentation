@@ -51,7 +51,7 @@ IMG_NAME ?= otel-go-instrumentation
 IMG_NAME_BASE = $(IMG_NAME)-base
 
 GOLANGCI_LINT = $(TOOLS)/golangci-lint
-$(TOOLS)/golangci-lint: PACKAGE=github.com/golangci/golangci-lint/cmd/golangci-lint
+$(TOOLS)/golangci-lint: PACKAGE=github.com/golangci/golangci-lint/v2/cmd/golangci-lint
 
 OFFSETGEN = $(TOOLS)/offsetgen
 $(TOOLS)/offsetgen: PACKAGE=go.opentelemetry.io/auto/$(TOOLS_MOD_DIR)/inspect/cmd/offsetgen
