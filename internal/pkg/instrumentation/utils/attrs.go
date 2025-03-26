@@ -1,6 +1,12 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
+// Package utils is an overly-generic utility package that provides a catch-all
+// for instrumentation utilities.
+//
+// New functionality should not be added to this package. Instead it should be
+// added to an appropriately named and scoped package for the functionality
+// being added to follow Go programming best practices.
 package utils
 
 import (

@@ -4,12 +4,6 @@
       "resource": {
         "attributes": [
           {
-            "key": "process.runtime.description",
-            "value": {
-              "stringValue": "go version 1.24.1 linux/amd64"
-            }
-          },
-          {
             "key": "process.runtime.name",
             "value": {
               "stringValue": "go"
@@ -18,7 +12,7 @@
           {
             "key": "process.runtime.version",
             "value": {
-              "stringValue": "1.24.1"
+              "stringValue": "go1.24.1"
             }
           },
           {
@@ -47,10 +41,10 @@
           }
         ]
       },
-      "schemaUrl": "https://opentelemetry.io/schemas/1.26.0",
+      "schemaUrl": "https://opentelemetry.io/schemas/1.30.0",
       "scopeSpans": [
         {
-          "schemaUrl": "https://opentelemetry.io/schemas/1.26.0",
+          "schemaUrl": "https://opentelemetry.io/schemas/1.30.0",
           "scope": {
             "name": "go.opentelemetry.io/auto/github.com/segmentio/kafka-go",
             "version": "v0.21.0"
@@ -79,7 +73,7 @@
                 {
                   "key": "messaging.operation.type",
                   "value": {
-                    "stringValue": "publish"
+                    "stringValue": "send"
                   }
                 },
                 {
@@ -120,7 +114,7 @@
                 {
                   "key": "messaging.operation.type",
                   "value": {
-                    "stringValue": "publish"
+                    "stringValue": "send"
                   }
                 },
                 {
@@ -165,7 +159,7 @@
                   }
                 },
                 {
-                  "key": "messaging.kafka.message.offset",
+                  "key": "messaging.kafka.offset",
                   "value": {
                     "intValue": "0"
                   }
@@ -177,7 +171,7 @@
                   }
                 },
                 {
-                  "key": "messaging.kafka.consumer.group",
+                  "key": "messaging.consumer.group.name",
                   "value": {
                     "stringValue": "some group id"
                   }

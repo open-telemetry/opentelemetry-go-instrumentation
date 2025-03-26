@@ -1,6 +1,8 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
+// Package global provides an instrumentation probe for the
+// [go.opentelemetry.io/otel] global trace API.
 package global
 
 import (
@@ -210,7 +212,7 @@ func New(logger *slog.Logger) probe.Probe {
 	}
 }
 
-type recordKind uint32
+type recordKind uint64
 
 const (
 	recordKindTelemetry recordKind = iota
@@ -236,7 +238,6 @@ func (c *converter) decodeEvent(record perf.Record) (*event, error) {
 	switch kind {
 	case recordKindTelemetry:
 		e = new(event)
-		reader.Reset(record.RawSample)
 		err = binary.Read(reader, binary.LittleEndian, e)
 	case recordKindConrol:
 		if c.uprobeNewStart != nil {

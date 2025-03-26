@@ -1,6 +1,8 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
+// Package frontend is an example application that uses OpenTelemetry APIs
+// directly to instrument its functionality.
 package main
 
 import (

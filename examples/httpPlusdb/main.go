@@ -1,6 +1,9 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
+// Package httpPlusdb provides an example of how to OpenTelemetry
+// auto-instrumentation for Go to instrument an application that runs an HTTP
+// server and interacts with a database.
 package main
 
 import (
@@ -24,9 +27,9 @@ const (
 	email TEXT NOT NULL,
 	phone TEXT NOT NULL);`
 
-	tableInsertion = `INSERT INTO 'contacts'
-	('first_name', 'last_name', 'email', 'phone') VALUES
-	('Moshe', 'Levi', 'moshe@gmail.com', '052-1234567');`
+	tableInsertion = "INSERT INTO `contacts` " +
+		"(`first_name`, `last_name`, `email`, `phone`) VALUES " +
+		"('Moshe', 'Levi', 'moshe@gmail.com', '052-1234567');"
 )
 
 // Server is Http server that exposes multiple endpoints.
@@ -34,7 +37,7 @@ type Server struct {
 	db *sql.DB
 }
 
-// Create the db file.
+// CreateDb creates the db file.
 func CreateDb() {
 	file, err := os.Create(dbName)
 	if err != nil {

@@ -10,19 +10,23 @@ on:
 
 jobs:
   build-auto-instrumentation:
-    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        runner: [ubuntu-latest, ubuntu-22.04-arm]
+    runs-on: ${{ matrix.runner }}
     steps:
       - name: Checkout Repo
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
       - name: Build auto-instrumentation
         run: |
           IMG=otel-go-instrumentation:latest make docker-build
-          docker save otel-go-instrumentation:latest -o otel-go-instrumentation.tar
+          docker save otel-go-instrumentation:latest -o otel-go-instrumentation-${{ matrix.runner }}.tar
       - name: Upload Docker image artifact
-        uses: actions/upload-artifact@4cec3d8aa04e39d1a68397de0c4cd6fb9dce8ec1 # v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: otel-go-instrumentation
-          path: otel-go-instrumentation.tar
+          name: otel-go-instrumentation-${{ matrix.runner }}
+          path: otel-go-instrumentation-${{ matrix.runner }}.tar
+
   kubernetes-test:
     needs:
       - build-auto-instrumentation
@@ -30,7 +34,8 @@ jobs:
       matrix:
         k8s-version: ["v1.26.0"]
         library: ["autosdk", "nethttp", "nethttp_custom", "gin", "databasesql", "grpc", "otelglobal", "kafka-go"]
-    runs-on: ubuntu-latest
+        runner: [ubuntu-latest, ubuntu-22.04-arm]
+    runs-on: ${{ matrix.runner }}
     steps:
       - name: Checkout Repo
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
@@ -56,12 +61,12 @@ jobs:
           kubectl get node
           docker ps -a --filter label=io.x-k8s.kind.cluster=chart-testing
       - name: Download Docker image artifact
-        uses: actions/download-artifact@cc203385981b70ca67e1cc392babf9cc229d5806 # v4
+        uses: actions/download-artifact@95815c38cf2ff2164869cbab79da8d1f422bc89e # v4
         with:
-          name: otel-go-instrumentation
+          name: otel-go-instrumentation-${{ matrix.runner }}
       - name: Load Docker image
         run: |
-          docker load -i otel-go-instrumentation.tar
+          docker load -i otel-go-instrumentation-${{ matrix.runner }}.tar
       - name: Kind load images
         run: |
           kind load docker-image otel-go-instrumentation --name chart-testing

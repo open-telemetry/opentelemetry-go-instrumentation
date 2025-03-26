@@ -1,6 +1,8 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
+// Package kafka-go is a testing application for the
+// [github.com/segmentio/kafka-go] package.
 package main
 
 import (

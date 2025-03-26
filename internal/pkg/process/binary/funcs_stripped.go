@@ -36,11 +36,12 @@ func FindFunctionsStripped(elfF *elf.File, relevantFuncs map[string]interface{})
 	// https://github.com/golang/go/blob/master/src/runtime/symtab.go#L374
 	var runtimeText uint64
 	ptrSize := uint32(pclndat[7])
-	if ptrSize == 4 {
+	switch ptrSize {
+	case 4:
 		runtimeText = uint64(binary.LittleEndian.Uint32(pclndat[8+2*ptrSize:]))
-	} else if ptrSize == 8 {
+	case 8:
 		runtimeText = binary.LittleEndian.Uint64(pclndat[8+2*ptrSize:])
-	} else {
+	default:
 		return nil, errors.New("invalid pointer size of text section of .gopclntab")
 	}
 

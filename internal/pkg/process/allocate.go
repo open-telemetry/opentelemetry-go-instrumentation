@@ -1,6 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
+// Package process provides type and functionality for target Go processes.
 package process
 
 import (
@@ -21,8 +22,8 @@ type Allocation struct {
 	NumCPU    uint64
 }
 
-// Allocate allocates memory for the instrumented process.
-func Allocate(logger *slog.Logger, id ID) (*Allocation, error) {
+// allocate allocates memory for the instrumented process.
+func allocate(logger *slog.Logger, id ID) (*Allocation, error) {
 	// runtime.NumCPU doesn't query any kind of hardware or OS state,
 	// but merely uses affinity APIs to count what CPUs the given go process is available to run on.
 	// Go's implementation of runtime.NumCPU (https://github.com/golang/go/blob/48d899dcdbed4534ed942f7ec2917cf86b18af22/src/runtime/os_linux.go#L97)

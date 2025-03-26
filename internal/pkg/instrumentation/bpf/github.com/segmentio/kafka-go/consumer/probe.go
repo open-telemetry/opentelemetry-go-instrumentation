@@ -1,6 +1,8 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
+// Package consumer provides an instrumentation probe for Kafka consumer using
+// the [github.com/segmentio/kafka-go] package.
 package consumer
 
 import (
@@ -9,7 +11,7 @@ import (
 
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/ptrace"
-	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.30.0"
 	"go.opentelemetry.io/otel/trace"
 	"golang.org/x/sys/unix"
 
@@ -116,9 +118,9 @@ func processFn(e *event) ptrace.SpanSlice {
 		semconv.MessagingOperationTypeReceive,
 		semconv.MessagingDestinationPartitionID(strconv.Itoa(int(e.Partition))),
 		semconv.MessagingDestinationName(topic),
-		semconv.MessagingKafkaMessageOffsetKey.Int64(e.Offset),
+		semconv.MessagingKafkaOffsetKey.Int64(e.Offset),
 		semconv.MessagingKafkaMessageKey(unix.ByteSliceToString(e.Key[:])),
-		semconv.MessagingKafkaConsumerGroup(unix.ByteSliceToString(e.ConsumerGroup[:])),
+		semconv.MessagingConsumerGroupName(unix.ByteSliceToString(e.ConsumerGroup[:])),
 	)
 
 	return spans

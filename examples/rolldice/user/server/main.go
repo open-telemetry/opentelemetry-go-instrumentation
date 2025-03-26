@@ -1,6 +1,9 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
+// Package server is an example application that relies on a mixture of
+// OpenTelemetry API use and OpenTelemetry automatic instrumentation to
+// instrument its functionality.
 package main
 
 import (

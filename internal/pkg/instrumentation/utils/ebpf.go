@@ -50,8 +50,9 @@ func ShouldShowVerifierLogs() bool {
 	return false
 }
 
-// Does kernel version check and /sys/kernel/security/lockdown inspection to determine if it's
-// safe to use bpf_probe_write_user.
+// SupportsContextPropagation returns if the Linux kernel supports use of
+// bpf_probe_write_user. It will check for supported versions of the Linux
+// kernel and then verify if /sys/kernel/security/lockdown is not locked down.
 func SupportsContextPropagation() bool {
 	ver := GetLinuxKernelVersion()
 	if ver == nil {

@@ -27,7 +27,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
-	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.30.0"
 	"go.opentelemetry.io/otel/trace"
 
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/utils"
@@ -305,7 +305,7 @@ func TestTrace(t *testing.T) {
 			ctrl.Trace(tt.traces)
 			tp.ForceFlush(context.Background())
 			spans := exporter.GetSpans()
-			assert.Equal(t, len(tt.expected), len(spans))
+			assert.Len(t, spans, len(tt.expected))
 
 			// span contexts get modified by exporter, update expected with output
 			for i, span := range spans {

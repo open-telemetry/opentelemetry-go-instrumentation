@@ -1,6 +1,8 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
+// Package auto provides OpenTelemetry automatic tracing instrumentation for Go
+// packages using eBPF.
 package auto
 
 import (
@@ -10,7 +12,6 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
-	"runtime"
 	"strconv"
 	"strings"
 	"sync"
@@ -20,7 +21,7 @@ import (
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp"
 	"go.opentelemetry.io/otel/sdk/resource"
 	"go.opentelemetry.io/otel/sdk/trace"
-	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.30.0"
 
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation"
 	dbSql "go.opentelemetry.io/auto/internal/pkg/instrumentation/bpf/database/sql"
@@ -53,9 +54,7 @@ const (
 // Instrumentation manages and controls all OpenTelemetry Go
 // auto-instrumentation.
 type Instrumentation struct {
-	target   *process.Info
-	analyzer *process.Analyzer
-	manager  *instrumentation.Manager
+	manager *instrumentation.Manager
 
 	stopMu  sync.Mutex
 	stop    context.CancelFunc
@@ -97,42 +96,17 @@ func NewInstrumentation(ctx context.Context, opts ...InstrumentationOption) (*In
 	}
 
 	cp := convertConfigProvider(c.cp)
-	mngr, err := instrumentation.NewManager(c.logger, ctrl, cp, p...)
+	mngr, err := instrumentation.NewManager(c.logger, ctrl, c.pid, cp, p...)
 	if err != nil {
 		return nil, err
 	}
 
-	pa := process.NewAnalyzer(c.logger, c.pid)
-	pi, err := pa.Analyze(mngr.GetRelevantFuncs())
-	if err != nil {
-		return nil, err
-	}
-
-	alloc, err := process.Allocate(c.logger, c.pid)
-	if err != nil {
-		return nil, err
-	}
-	pi.Allocation = alloc
-
-	c.logger.Info(
-		"target process analysis completed",
-		"pid", pi.ID,
-		"go_version", pi.GoVersion,
-		"dependencies", pi.Modules,
-		"total_functions_found", len(pi.Functions),
-	)
-	mngr.FilterUnusedProbes(pi)
-
-	return &Instrumentation{
-		target:   pi,
-		analyzer: pa,
-		manager:  mngr,
-	}, nil
+	return &Instrumentation{manager: mngr}, nil
 }
 
 // Load loads and attaches the relevant probes to the target process.
 func (i *Instrumentation) Load(ctx context.Context) error {
-	return i.manager.Load(ctx, i.target)
+	return i.manager.Load(ctx)
 }
 
 // Run starts the instrumentation. It must be called after [Instrumentation.Load].
@@ -304,16 +278,11 @@ func (c instConfig) res() (res *resource.Resource) {
 	if runName == "gc" {
 		runName = "go"
 	}
-	runDesc := fmt.Sprintf(
-		"go version %s %s/%s",
-		bi.GoVersion, runtime.GOOS, runtime.GOARCH,
-	)
 
 	attrs = append(
 		attrs,
 		semconv.ProcessRuntimeName(runName),
 		semconv.ProcessRuntimeVersion(bi.GoVersion),
-		semconv.ProcessRuntimeDescription(runDesc),
 	)
 
 	return res

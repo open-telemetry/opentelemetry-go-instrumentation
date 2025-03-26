@@ -1,6 +1,8 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
+// Package producer provides an instrumentation probe for Kafka producers using
+// the [github.com/segmentio/kafka-go] package.
 package producer
 
 import (
@@ -10,7 +12,7 @@ import (
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/ptrace"
 	"go.opentelemetry.io/otel/attribute"
-	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.30.0"
 	"go.opentelemetry.io/otel/trace"
 	"golang.org/x/sys/unix"
 
@@ -93,7 +95,7 @@ type event struct {
 func processFn(e *event) ptrace.SpanSlice {
 	globalTopic := unix.ByteSliceToString(e.GlobalTopic[:])
 
-	attrs := []attribute.KeyValue{semconv.MessagingSystemKafka, semconv.MessagingOperationTypePublish}
+	attrs := []attribute.KeyValue{semconv.MessagingSystemKafka, semconv.MessagingOperationTypeSend}
 	if len(globalTopic) > 0 {
 		attrs = append(attrs, semconv.MessagingDestinationName(globalTopic))
 	}
