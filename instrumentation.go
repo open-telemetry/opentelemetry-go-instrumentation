@@ -10,7 +10,6 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
-	"runtime"
 	"strconv"
 	"strings"
 	"sync"
@@ -20,7 +19,7 @@ import (
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp"
 	"go.opentelemetry.io/otel/sdk/resource"
 	"go.opentelemetry.io/otel/sdk/trace"
-	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.30.0"
 
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation"
 	dbSql "go.opentelemetry.io/auto/internal/pkg/instrumentation/bpf/database/sql"
@@ -277,16 +276,11 @@ func (c instConfig) res() (res *resource.Resource) {
 	if runName == "gc" {
 		runName = "go"
 	}
-	runDesc := fmt.Sprintf(
-		"go version %s %s/%s",
-		bi.GoVersion, runtime.GOOS, runtime.GOARCH,
-	)
 
 	attrs = append(
 		attrs,
 		semconv.ProcessRuntimeName(runName),
 		semconv.ProcessRuntimeVersion(bi.GoVersion),
-		semconv.ProcessRuntimeDescription(runDesc),
 	)
 
 	return res

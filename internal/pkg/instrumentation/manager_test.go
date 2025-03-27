@@ -40,18 +40,17 @@ import (
 
 func TestProbeFiltering(t *testing.T) {
 	t.Run("empty target details", func(t *testing.T) {
-		m := fakeManager(t)
+		m := fakeManager()
 		assert.Empty(t, m.probes)
 	})
 
 	t.Run("only HTTP client target details", func(t *testing.T) {
-		m := fakeManager(t, "net/http.(*Transport).roundTrip")
+		m := fakeManager("net/http.(*Transport).roundTrip")
 		assert.Len(t, m.probes, 1) // one function, single probe
 	})
 
 	t.Run("HTTP server and client target details", func(t *testing.T) {
 		m := fakeManager(
-			t,
 			"net/http.(*Transport).roundTrip",
 			"net/http.serverHandler.ServeHTTP",
 		)
@@ -60,7 +59,6 @@ func TestProbeFiltering(t *testing.T) {
 
 	t.Run("HTTP server and client dependent function only target details", func(t *testing.T) {
 		m := fakeManager(
-			t,
 			// writeSubset depends on "net/http.(*Transport).roundTrip", it should be ignored without roundTrip
 			"net/http.Header.writeSubset",
 			"net/http.serverHandler.ServeHTTP",
@@ -70,7 +68,7 @@ func TestProbeFiltering(t *testing.T) {
 }
 
 func TestDependencyChecks(t *testing.T) {
-	m := fakeManager(t)
+	m := fakeManager()
 
 	t.Run("Dependent probes match", func(t *testing.T) {
 		syms := []probe.FunctionSymbol{
@@ -152,7 +150,7 @@ func TestDependencyChecks(t *testing.T) {
 	})
 }
 
-func fakeManager(t *testing.T, fnNames ...string) *Manager {
+func fakeManager(fnNames ...string) *Manager {
 	logger := slog.Default()
 	probes := []probe.Probe{
 		grpcClient.New(logger, ""),

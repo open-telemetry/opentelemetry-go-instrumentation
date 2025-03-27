@@ -4,12 +4,6 @@
       "resource": {
         "attributes": [
           {
-            "key": "process.runtime.description",
-            "value": {
-              "stringValue": "go version 1.24.1 linux/VALID_ARCH"
-            }
-          },
-          {
             "key": "process.runtime.name",
             "value": {
               "stringValue": "go"
@@ -18,7 +12,7 @@
           {
             "key": "process.runtime.version",
             "value": {
-              "stringValue": "1.24.1"
+              "stringValue": "go1.24.1"
             }
           },
           {
@@ -47,10 +41,10 @@
           }
         ]
       },
-      "schemaUrl": "https://opentelemetry.io/schemas/1.26.0",
+      "schemaUrl": "https://opentelemetry.io/schemas/1.30.0",
       "scopeSpans": [
         {
-          "schemaUrl": "https://opentelemetry.io/schemas/1.26.0",
+          "schemaUrl": "https://opentelemetry.io/schemas/1.30.0",
           "scope": {
             "name": "go.opentelemetry.io/auto/google.golang.org/grpc",
             "version": "v0.21.0"

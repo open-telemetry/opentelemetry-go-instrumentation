@@ -1,4 +1,4 @@
-FROM golang:1.24.1@sha256:8678013a2add364dc3d5df2acc2b36893fbbd60ebafa5d5149bc22158512f021 AS builder
+FROM golang:1.24.1@sha256:52ff1b35ff8de185bf9fd26c70077190cd0bed1e9f16a2d498ce907e5c421268 AS builder
 
 # pre-copy/cache go.mod for pre-downloading dependencies and only redownloading
 # them in subsequent builds if they change
@@ -12,7 +12,7 @@ RUN --mount=type=cache,target=/root/.cache/go-build \
     --mount=type=cache,target=/go/pkg \
 	CGO_ENABLED=0 go build -v -o /usr/local/bin/app .
 
-FROM bitnami/kafka:latest@sha256:7c91967e7a76eacbc823f951f4c3826ddfd8188ed3cfc99fc9b2fe0d5e89e75b
+FROM bitnami/kafka:latest@sha256:55df55bfc7ed5980447387620afa3498eab3985a4d8c731013d82b3fa8b43bff
 
 USER root
 ENV KAFKA_CFG_PROCESS_ROLES=controller,broker

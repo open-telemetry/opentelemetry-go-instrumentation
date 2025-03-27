@@ -22,6 +22,10 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 - Cache offsets for `go.opentelemetry.io/otel@v1.35.0`. ([#1948](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1948))
 - Cache offsets for `golang.org/x/net` `0.37.0`. ([#1948](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1948))
 
+### Changed
+
+- Upgrade OpenTelemetry semantic conventions to `v1.30.0`. ([#2032](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/2032))
+
 ### Removed
 
 - Build support for Go 1.22 has been removed.
@@ -36,6 +40,8 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 ### Fixed
 
 - Fix spans parsing from eBPF for the legacy (go version < 1.24 otel-go < 1.33) otel global instrumentation. ([#1960](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1960))
+- The `process.runtime.version` resource attribute is now the exact value returned from `debug` to match what OpenTelemetry semantic conventions recommend. ([#1985](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1985))
+- Stop adding `process.runtime.description` to `Resource` to follow OpenTelemetry semantic conventions. ([#1986](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1986))
 - Reset Kafka producer span underlying memory before each span. ([#1937](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1937))
 
 ## [v0.21.0] - 2025-02-18
