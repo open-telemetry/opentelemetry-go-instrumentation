@@ -1,6 +1,8 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
+// Package otelglobal is a testing application for the
+// [go.opentelemetry.io/otel] package.
 package main
 
 import (

@@ -1,6 +1,8 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
+// Package sql provides an instrumentation probe for database clients using the
+// [database/sql] package.
 package sql
 
 import (

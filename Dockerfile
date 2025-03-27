@@ -1,6 +1,8 @@
-FROM  --platform=$BUILDPLATFORM golang:1.24.1-bookworm@sha256:fa1a01d362a7b9df68b021d59a124d28cae6d99ebd1a876e3557c4dd092f1b1d AS base
+FROM --platform=$BUILDPLATFORM golang:1.24.1-bookworm@sha256:fa1a01d362a7b9df68b021d59a124d28cae6d99ebd1a876e3557c4dd092f1b1d AS base
 
 RUN apt-get update && apt-get install -y curl clang gcc llvm make libbpf-dev
+
+FROM --platform=$BUILDPLATFORM base AS builder
 
 WORKDIR /usr/src/go.opentelemetry.io/auto/
 
@@ -13,13 +15,18 @@ COPY go.mod go.sum ./
 RUN --mount=type=cache,target=/go/pkg \
     go mod download && go mod verify
 
-FROM --platform=$BUILDPLATFORM base AS builder
 COPY . .
 
 ARG TARGETARCH
+ARG CGO_ENABLED=0
+ARG BPF2GO_CFLAGS="-I/usr/src/go.opentelemetry.io/auto/internal/include/libbpf -I/usr/src/go.opentelemetry.io/auto/internal/include"
 RUN --mount=type=cache,target=/root/.cache/go-build \
     --mount=type=cache,target=/go/pkg \
-    GOARCH=$TARGETARCH make build
+    GOARCH=$TARGETARCH \
+	CGO_ENABLED=$CGO_ENABLED \
+	BPF2GO_CFLAGS=$BPF2GO_CFLAGS \
+	go generate ./... \
+	&& go build -o otel-go-instrumentation ./cli/...
 
 FROM gcr.io/distroless/base-debian12@sha256:125eb09bbd8e818da4f9eac0dfc373892ca75bec4630aa642d315ecf35c1afb7
 COPY --from=builder /usr/src/go.opentelemetry.io/auto/otel-go-instrumentation /

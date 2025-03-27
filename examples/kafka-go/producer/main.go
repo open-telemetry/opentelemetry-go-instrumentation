@@ -1,6 +1,8 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
+// Package producer exemplifies use of OpenTelemetry auto-instrumentation for
+// Kafka producers using github.com/segmentio/kafka-go.
 package main
 
 import (

@@ -1,6 +1,8 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
+// Package grpc provides an instrumentation probe for [google.golang.org/grpc]
+// clients.
 package grpc
 
 import (

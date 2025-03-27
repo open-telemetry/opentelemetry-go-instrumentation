@@ -1,6 +1,8 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
+// Package instrumentation provides functionality to manage instrumentation
+// using eBPF for Go programs.
 package instrumentation
 
 import (
@@ -79,12 +81,6 @@ func NewManager(logger *slog.Logger, otelController *opentelemetry.Controller, p
 	if err != nil {
 		return nil, err
 	}
-
-	alloc, err := process.Allocate(logger, pid)
-	if err != nil {
-		return nil, err
-	}
-	m.proc.Allocation = alloc
 
 	m.logger.Info("loaded process info", "process", m.proc)
 
@@ -360,7 +356,8 @@ func (m *Manager) loadProbes() error {
 	}
 	m.exe = exe
 
-	if err := m.mount(); err != nil {
+	m.logger.Debug("Mounting bpffs")
+	if err := bpffsMount(m.proc); err != nil {
 		return err
 	}
 
@@ -378,15 +375,6 @@ func (m *Manager) loadProbes() error {
 
 	m.logger.Debug("loaded probes to memory", "total_probes", len(m.probes))
 	return nil
-}
-
-func (m *Manager) mount() error {
-	if m.proc.Allocation != nil {
-		m.logger.Debug("Mounting bpffs", "allocation", m.proc.Allocation)
-	} else {
-		m.logger.Debug("Mounting bpffs")
-	}
-	return bpffsMount(m.proc)
 }
 
 func (m *Manager) cleanup() error {

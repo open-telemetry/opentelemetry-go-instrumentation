@@ -1,6 +1,8 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
+// Package opentelemetry provides an export and processing pipeline for
+// auto-instrumentation telemetry using the OpenTelemetry default SDK.
 package opentelemetry
 
 import (

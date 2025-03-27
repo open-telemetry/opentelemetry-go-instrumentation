@@ -51,7 +51,7 @@ IMG_NAME ?= otel-go-instrumentation
 IMG_NAME_BASE = $(IMG_NAME)-base
 
 GOLANGCI_LINT = $(TOOLS)/golangci-lint
-$(TOOLS)/golangci-lint: PACKAGE=github.com/golangci/golangci-lint/cmd/golangci-lint
+$(TOOLS)/golangci-lint: PACKAGE=github.com/golangci/golangci-lint/v2/cmd/golangci-lint
 
 OFFSETGEN = $(TOOLS)/offsetgen
 $(TOOLS)/offsetgen: PACKAGE=go.opentelemetry.io/auto/$(TOOLS_MOD_DIR)/inspect/cmd/offsetgen
@@ -139,6 +139,15 @@ docker-build:
 .PHONY: docker-build-base
 docker-build-base:
 	docker buildx build -t $(IMG_NAME_BASE) --target base .
+
+docker-dev: docker-build-base
+	@docker run \
+		-it \
+		--rm \
+		-v "$(REPODIR)":/usr/src/go.opentelemetry.io/auto \
+		-w /usr/src/go.opentelemetry.io/auto \
+		$(IMG_NAME_BASE) \
+		/bin/bash
 
 LIBBPF_VERSION ?= "< 1.5, >= 1.4.7"
 LIBBPF_DEST ?= "$(REPODIR)/internal/include/libbpf"

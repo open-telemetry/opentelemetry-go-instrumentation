@@ -56,13 +56,13 @@ func GetLinuxKernelVersion() *semver.Version {
 type KernelLockdown uint8
 
 const (
-	// Linux Kernel security lockdown mode [none].
+	// KernelLockdownNone is the "none" Linux Kernel security lockdown mode.
 	KernelLockdownNone KernelLockdown = iota + 1
-	// Linux Kernel security lockdown mode [integrity].
+	// KernelLockdownIntegrity is the "integrity" Linux Kernel security lockdown mode.
 	KernelLockdownIntegrity
-	// Linux Kernel security lockdown mode [confidentiality].
+	// KernelLockdownConfidentiality is the "confidentiality" Linux Kernel security lockdown mode.
 	KernelLockdownConfidentiality
-	// Linux Kernel security lockdown mode unknown.
+	// KernelLockdownOther is the "unknown" Linux Kernel security lockdown mode.
 	KernelLockdownOther
 )
 
