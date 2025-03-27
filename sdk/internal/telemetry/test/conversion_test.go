@@ -233,7 +233,9 @@ func TestEncode(t *testing.T) {
 	require.NoError(t, enc.Encode(traces))
 
 	data := buf.Bytes()
-	t.Log(string(data)) // This helps when test fails to understand what how the data has been encoded.
+	t.Log(
+		string(data),
+	) // This helps when test fails to understand what how the data has been encoded.
 
 	var dec ptrace.JSONUnmarshaler
 	got, err := dec.UnmarshalTraces(data)

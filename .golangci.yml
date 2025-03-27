@@ -257,6 +257,7 @@ formatters:
   enable:
     - gofumpt
     - goimports
+    - golines
   settings:
     goimports:
       local-prefixes:

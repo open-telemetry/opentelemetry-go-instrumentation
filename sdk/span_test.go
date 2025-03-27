@@ -698,15 +698,33 @@ func TestSpanAttributeValueLimits(t *testing.T) {
 
 			s := builder.Build()
 			s.SetAttributes(aStr, aStrSlice)
-			assert.Truef(t, eq(want, s.span.Attrs), "set span attributes: got %#v, want %#v", s.span.Attrs, want)
+			assert.Truef(
+				t,
+				eq(want, s.span.Attrs),
+				"set span attributes: got %#v, want %#v",
+				s.span.Attrs,
+				want,
+			)
 
 			s.AddEvent("test", trace.WithAttributes(aStr, aStrSlice))
-			assert.Truef(t, eq(want, s.span.Events[0].Attrs), "span event attributes: got %#v, want %#v", s.span.Events[0].Attrs, want)
+			assert.Truef(
+				t,
+				eq(want, s.span.Events[0].Attrs),
+				"span event attributes: got %#v, want %#v",
+				s.span.Events[0].Attrs,
+				want,
+			)
 
 			s.AddLink(trace.Link{
 				Attributes: []attribute.KeyValue{aStr, aStrSlice},
 			})
-			assert.Truef(t, eq(want, s.span.Links[0].Attrs), "span link attributes: got %#v, want %#v", s.span.Links[0].Attrs, want)
+			assert.Truef(
+				t,
+				eq(want, s.span.Links[0].Attrs),
+				"span link attributes: got %#v, want %#v",
+				s.span.Links[0].Attrs,
+				want,
+			)
 
 			builder.Options = []trace.SpanStartOption{
 				trace.WithAttributes(aStr, aStrSlice),
@@ -715,8 +733,20 @@ func TestSpanAttributeValueLimits(t *testing.T) {
 				}),
 			}
 			s = builder.Build()
-			assert.Truef(t, eq(want, s.span.Attrs), "new span attributes: got %#v, want %#v", s.span.Attrs, want)
-			assert.Truef(t, eq(want, s.span.Links[0].Attrs), "new span link attributes: got %#v, want %#v", s.span.Attrs, want)
+			assert.Truef(
+				t,
+				eq(want, s.span.Attrs),
+				"new span attributes: got %#v, want %#v",
+				s.span.Attrs,
+				want,
+			)
+			assert.Truef(
+				t,
+				eq(want, s.span.Links[0].Attrs),
+				"new span link attributes: got %#v, want %#v",
+				s.span.Attrs,
+				want,
+			)
 		})
 	}
 }

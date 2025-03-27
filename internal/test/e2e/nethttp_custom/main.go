@@ -77,7 +77,10 @@ func (rt *MyRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
 
 func main() {
 	go func() {
-		_ = http.ListenAndServe(":8080", logStatus(http.HandlerFunc(hello))) // nolint: gosec  // Testing server.
+		_ = http.ListenAndServe( // nolint: gosec  // Testing server.
+			":8080",
+			logStatus(http.HandlerFunc(hello)),
+		)
 	}()
 
 	// give time for auto-instrumentation to start up

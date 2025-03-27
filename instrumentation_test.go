@@ -148,7 +148,13 @@ func TestWithResourceAttributes(t *testing.T) {
 		attr2 := semconv.K8SPodName("test_pod_name")
 		attr3 := semconv.K8SNamespaceName("test_namespace_name")
 
-		c, err := newInstConfig(context.Background(), []InstrumentationOption{WithResourceAttributes(attr1, attr2), WithResourceAttributes(attr3)})
+		c, err := newInstConfig(
+			context.Background(),
+			[]InstrumentationOption{
+				WithResourceAttributes(attr1, attr2),
+				WithResourceAttributes(attr3),
+			},
+		)
 		require.NoError(t, err)
 		assert.Equal(t, []attribute.KeyValue{attr1, attr2, attr3}, c.additionalResAttrs)
 	})
@@ -159,7 +165,15 @@ func TestWithResourceAttributes(t *testing.T) {
 		attr3 := semconv.K8SNamespaceName("test_namespace_name")
 
 		mockEnv(t, map[string]string{
-			"OTEL_RESOURCE_ATTRIBUTES": fmt.Sprintf("%s=%s,%s=%s,%s=%s", nameAttr.Key, nameAttr.Value.AsString(), attr2.Key, attr2.Value.AsString(), attr3.Key, attr3.Value.AsString()),
+			"OTEL_RESOURCE_ATTRIBUTES": fmt.Sprintf(
+				"%s=%s,%s=%s,%s=%s",
+				nameAttr.Key,
+				nameAttr.Value.AsString(),
+				attr2.Key,
+				attr2.Value.AsString(),
+				attr3.Key,
+				attr3.Value.AsString(),
+			),
 		})
 
 		c, err := newInstConfig(context.Background(), []InstrumentationOption{WithEnv()})
@@ -174,11 +188,20 @@ func TestWithResourceAttributes(t *testing.T) {
 		attr3 := semconv.K8SNamespaceName("test_namespace_name")
 
 		mockEnv(t, map[string]string{
-			"OTEL_RESOURCE_ATTRIBUTES": fmt.Sprintf("%s=%s,%s=%s", nameAttr.Key, nameAttr.Value.AsString(), attr2.Key, attr2.Value.AsString()),
+			"OTEL_RESOURCE_ATTRIBUTES": fmt.Sprintf(
+				"%s=%s,%s=%s",
+				nameAttr.Key,
+				nameAttr.Value.AsString(),
+				attr2.Key,
+				attr2.Value.AsString(),
+			),
 		})
 
 		// Use WithResourceAttributes to config the additional resource attributes
-		c, err := newInstConfig(context.Background(), []InstrumentationOption{WithEnv(), WithResourceAttributes(attr3)})
+		c, err := newInstConfig(
+			context.Background(),
+			[]InstrumentationOption{WithEnv(), WithResourceAttributes(attr3)},
+		)
 		require.NoError(t, err)
 		assert.Equal(t, nameAttr.Value.AsString(), c.serviceName)
 		assert.Equal(t, []attribute.KeyValue{attr2, attr3}, c.additionalResAttrs)

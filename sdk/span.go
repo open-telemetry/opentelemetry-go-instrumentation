@@ -88,7 +88,9 @@ func (s *span) SetAttributes(attrs ...attribute.KeyValue) {
 		// No attributes allowed.
 		n := int64(len(attrs))
 		if n > 0 {
-			s.span.DroppedAttrs += uint32(min(n, math.MaxUint32)) // nolint: gosec  // Bounds checked.
+			s.span.DroppedAttrs += uint32( // nolint: gosec  // Bounds checked.
+				min(n, math.MaxUint32),
+			)
 		}
 		return
 	}
