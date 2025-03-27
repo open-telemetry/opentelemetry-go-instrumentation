@@ -42,6 +42,7 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 - Fix spans parsing from eBPF for the legacy (go version < 1.24 otel-go < 1.33) otel global instrumentation. ([#1960](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1960))
 - The `process.runtime.version` resource attribute is now the exact value returned from `debug` to match what OpenTelemetry semantic conventions recommend. ([#1985](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1985))
 - Stop adding `process.runtime.description` to `Resource` to follow OpenTelemetry semantic conventions. ([#1986](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1986))
+- Reset Kafka producer span underlying memory before each span. ([#1937](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1937))
 
 ## [v0.21.0] - 2025-02-18
 
