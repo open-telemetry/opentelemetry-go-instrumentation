@@ -1,11 +1,11 @@
 name: Automatic libbpf Sync
 on:
   workflow_dispatch:
-  inputs:
-      version:
-        description: 'Version constraint'
-        default: '< 1.5, >= 1.4.7'
-        type: string
+    inputs:
+        version:
+          description: 'Version constraint'
+          default: '< 1.5, >= 1.4.7'
+          type: string
   schedule:
     - cron: '0 0 * * 0' # Sunday at midnight.
 
