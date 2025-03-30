@@ -33,5 +33,19 @@
       "matchPackageNames": ["golang.org/x/**"],
       "groupName": "golang.org/x"
     }
+    {
+      "matchManagers": ["regex"],
+      "matchPackagePatterns": ["otel/opentelemetry-collector-contrib"],
+      "groupName": "otel-collector"
+    }
+  ],
+  "regexManagers": [
+    {
+      "fileMatch": [".github/workflows/e2e/k8s/.*\\.ya?ml"],
+      "matchStrings": [
+        "repository:\\s*(?<depName>otel/opentelemetry-collector-contrib)\\s*tag:\\s*\"?(?<currentValue>[^\"]+)\"?"
+      ],
+      "datasourceTemplate": "docker"
+    }
   ]
 }
