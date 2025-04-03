@@ -107,15 +107,8 @@ func New(logger *slog.Logger, version string) probe.Probe {
 				},
 				probe.StructFieldConstMinVersion{
 					StructField: probe.StructFieldConst{
-						Key: "req_pat_pos",
-						ID:  structfield.NewID("std", "net/http", "Request", "pat"),
-					},
-					MinVersion: patternPathMinVersion,
-				},
-				probe.StructFieldConstMinVersion{
-					StructField: probe.StructFieldConst{
-						Key: "pat_str_pos",
-						ID:  structfield.NewID("std", "net/http", "pattern", "str"),
+						Key: "req_pattern_pos",
+						ID:  structfield.NewID("std", "net/http", "Request", "Pattern"),
 					},
 					MinVersion: patternPathMinVersion,
 				},
@@ -148,7 +141,7 @@ func New(logger *slog.Logger, version string) probe.Probe {
 type patternPathSupportedConst struct{}
 
 var (
-	patternPathMinVersion  = semver.New(1, 22, 0, "", "")
+	patternPathMinVersion  = semver.New(1, 23, 0, "", "")
 	isPatternPathSupported = false
 )
 

@@ -90,8 +90,7 @@ volatile const u64 proto_pos;
 // A flag indicating whether pattern handlers are supported
 volatile const bool pattern_path_supported;
 // In case pattern handlers are supported the following offsets will be used:
-volatile const u64 req_pat_pos;
-volatile const u64 pat_str_pos;
+volatile const u64 req_pattern_pos;
 // A flag indicating whether the Go version is using swiss maps
 volatile const bool swiss_maps_used;
 
@@ -297,11 +296,7 @@ int uprobe_serverHandler_ServeHTTP_Returns(struct pt_regs *ctx) {
     // Collect fields from response
     read_go_string(req_ptr, method_ptr_pos, http_server_span->method, sizeof(http_server_span->method), "method from request");
     if (pattern_path_supported) {
-        void *pat_ptr = NULL;
-        bpf_probe_read(&pat_ptr, sizeof(pat_ptr), (void *)(req_ptr + req_pat_pos));
-        if (pat_ptr != NULL) {
-            read_go_string(pat_ptr, pat_str_pos, http_server_span->path_pattern, sizeof(http_server_span->path), "patterned path from Request");
-        }
+        read_go_string(req_ptr, req_pattern_pos, http_server_span->path_pattern, sizeof(http_server_span->path_pattern), "pattern from Request");
     }
     read_go_string(url_ptr, path_ptr_pos, http_server_span->path, sizeof(http_server_span->path), "path from Request.URL");
     read_go_string(req_ptr, remote_addr_pos, http_server_span->remote_addr, sizeof(http_server_span->remote_addr), "remote addr from Request.RemoteAddr");

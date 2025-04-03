@@ -119,6 +119,7 @@ type bpfVariableSpecs struct {
 	ProtoPos             *ebpf.VariableSpec `ebpf:"proto_pos"`
 	RemoteAddrPos        *ebpf.VariableSpec `ebpf:"remote_addr_pos"`
 	ReqPatPos            *ebpf.VariableSpec `ebpf:"req_pat_pos"`
+	ReqPatternPos        *ebpf.VariableSpec `ebpf:"req_pattern_pos"`
 	ReqPtrPos            *ebpf.VariableSpec `ebpf:"req_ptr_pos"`
 	StartAddr            *ebpf.VariableSpec `ebpf:"start_addr"`
 	StatusCodePos        *ebpf.VariableSpec `ebpf:"status_code_pos"`
@@ -193,6 +194,7 @@ type bpfVariables struct {
 	ProtoPos             *ebpf.Variable `ebpf:"proto_pos"`
 	RemoteAddrPos        *ebpf.Variable `ebpf:"remote_addr_pos"`
 	ReqPatPos            *ebpf.Variable `ebpf:"req_pat_pos"`
+	ReqPatternPos        *ebpf.Variable `ebpf:"req_pattern_pos"`
 	ReqPtrPos            *ebpf.Variable `ebpf:"req_ptr_pos"`
 	StartAddr            *ebpf.Variable `ebpf:"start_addr"`
 	StatusCodePos        *ebpf.Variable `ebpf:"status_code_pos"`
