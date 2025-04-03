@@ -34,14 +34,13 @@ type Probe interface {
 	// the information about the package the Probe instruments.
 	Manifest() Manifest
 
-	// Init initializes the Probe, setting up the reader, closers, and sampling config.
-	Init(*sampling.Config) error
+	// InitStartupConfig sets up initialization config options for the Probe,
+	// such as its sampling config, sets up its BPFObj as a closer, and initializes
+	// the Probe's reader, returning it as an io.Closer.
+	InitStartupConfig(*ebpf.Collection, *sampling.Config) (io.Closer, error)
 
 	// Run runs the events processing loop.
 	Run(func(ptrace.ScopeSpans))
-
-	// Close stops the Probe.
-	Close() error
 
 	// GetLogger returns the *slog.Logger associated with the Probe.
 	GetLogger() *slog.Logger
@@ -49,21 +48,11 @@ type Probe interface {
 	// Spec returns the *ebpf.CollectionSpec for the Probe.
 	Spec() (*ebpf.CollectionSpec, error)
 
-	// SetCollection sets the *ebpf.Collection for the Probe.
-	SetCollection(*ebpf.Collection)
-
-	// GetCollection returns the *ebpf.Collection for the Probe.
-	GetCollection() *ebpf.Collection
-
 	// GetUprobes returns a list of *Uprobes for the Probe.
 	GetUprobes() []*Uprobe
 
 	// GetConsts returns a list of Consts for the Probe.
 	GetConsts() []Const
-
-	// UpdateClosers updates the closers for the Probe to the io.Closers passed to it,
-	// and returns the new list of io.Closers for the Probe.
-	UpdateClosers(...io.Closer) []io.Closer
 }
 
 // Base is a base implementation of [Probe].
@@ -93,7 +82,6 @@ type Base[BPFObj any, BPFEvent any] struct {
 	ProcessRecord func(perf.Record) (*BPFEvent, error)
 
 	reader          *perf.Reader
-	collection      *ebpf.Collection
 	closers         []io.Closer
 	samplingManager *sampling.Manager
 }
@@ -131,38 +119,31 @@ func (i *Base[BPFObj, BPFEvent]) Spec() (*ebpf.CollectionSpec, error) {
 	return i.SpecFn()
 }
 
-// Init initializes the Probe, setting up the io.Closers, Reader, and Sampling config.
-func (i *Base[BPFObj, BPFEvent]) Init(sampler *sampling.Config) error {
+func (i *Base[BPFObj, BPFEvent]) InitStartupConfig(c *ebpf.Collection, sampler *sampling.Config) (io.Closer, error) {
 	obj := new(BPFObj)
 	if c, ok := ((interface{})(obj)).(io.Closer); ok {
 		i.closers = append(i.closers, c)
 	}
 
-	err := i.initReader()
+	samplingManager, err := sampling.NewSamplingManager(c, sampler)
 	if err != nil {
-		return err
+		return nil, err
 	}
+	i.samplingManager = samplingManager
 
-	i.samplingManager, err = sampling.NewSamplingManager(i.collection, sampler)
+	buf, ok := c.Maps[DefaultBufferMapName]
+	if !ok {
+		return nil, fmt.Errorf("%s map not found", DefaultBufferMapName)
+	}
+	i.reader, err = perf.NewReader(buf, PerfBufferDefaultSizeInPages*os.Getpagesize())
 	if err != nil {
-		return err
+		return nil, err
 	}
-
-	i.closers = append(i.closers, i.reader)
-
-	return nil
+	return i.reader, nil
 }
 
 func (i *Base[BPFObj, BPFEvent]) GetLogger() *slog.Logger {
 	return i.Logger
-}
-
-func (i *Base[BPFObj, BPFEvent]) SetCollection(c *ebpf.Collection) {
-	i.collection = c
-}
-
-func (i *Base[BPFObj, BPFEvent]) GetCollection() *ebpf.Collection {
-	return i.collection
 }
 
 func (i *Base[BPFObj, BPFEvent]) GetUprobes() []*Uprobe {
@@ -176,20 +157,6 @@ func (i *Base[BPFObj, BPFEvent]) UpdateClosers(closers ...io.Closer) []io.Closer
 
 func (i *Base[BPFObj, BPFEvent]) GetConsts() []Const {
 	return i.Consts
-}
-
-func (i *Base[BPFObj, BPFEvent]) initReader() error {
-	buf, ok := i.collection.Maps[DefaultBufferMapName]
-	if !ok {
-		return fmt.Errorf("%s map not found", DefaultBufferMapName)
-	}
-	var err error
-	i.reader, err = perf.NewReader(buf, PerfBufferDefaultSizeInPages*os.Getpagesize())
-	if err != nil {
-		return err
-	}
-	i.closers = append(i.closers, i.reader)
-	return nil
 }
 
 // read reads a new BPFEvent from the perf Reader.
@@ -220,21 +187,6 @@ func (i *Base[BPFObj, BPFEvent]) read() (*BPFEvent, error) {
 		return nil, err
 	}
 	return event, nil
-}
-
-// Close stops the Probe.
-func (i *Base[BPFObj, BPFEvent]) Close() error {
-	if i.collection != nil {
-		i.collection.Close()
-	}
-	var err error
-	for _, c := range i.closers {
-		err = errors.Join(err, c.Close())
-	}
-	if err == nil {
-		i.Logger.Debug("Closed", "Probe", i.ID)
-	}
-	return err
 }
 
 type SpanProducer[BPFObj any, BPFEvent any] struct {

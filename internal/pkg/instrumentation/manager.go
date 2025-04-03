@@ -47,7 +47,7 @@ const (
 // Manager handles the management of [probe.Probe] instances.
 type Manager struct {
 	logger          *slog.Logger
-	probes          map[probe.ID]probe.Probe
+	probes          map[probe.ID]ProbeReference
 	otelController  *opentelemetry.Controller
 	cp              ConfigProvider
 	exe             *link.Executable
@@ -61,6 +61,14 @@ type Manager struct {
 	collectionOpts  *ebpf.CollectionOptions
 }
 
+// ProbeReference is used by the Manager to track an initialized reference
+// to a Probe and its related resources such as its ebpf.Collection and io.Closers.
+type ProbeReference struct {
+	probe      probe.Probe
+	collection *ebpf.Collection
+	closers    []io.Closer
+}
+
 // NewManager returns a new [Manager].
 func NewManager(
 	logger *slog.Logger,
@@ -71,7 +79,7 @@ func NewManager(
 ) (*Manager, error) {
 	m := &Manager{
 		logger:         logger,
-		probes:         make(map[probe.ID]probe.Probe),
+		probes:         make(map[probe.ID]ProbeReference),
 		otelController: otelController,
 		cp:             cp,
 	}
@@ -98,12 +106,6 @@ func NewManager(
 			PinPath: bpffs.PathForTargetApplication(m.proc),
 		},
 	}
-
-	alloc, err := process.Allocate(logger, pid)
-	if err != nil {
-		return nil, err
-	}
-	m.proc.Allocation = alloc
 
 	m.logger.Info("loaded process info", "process", m.proc)
 
@@ -145,7 +147,10 @@ func (m *Manager) registerProbe(p probe.Probe) error {
 		return err
 	}
 
-	m.probes[id] = p
+	m.probes[id] = ProbeReference{
+		probe:   p,
+		closers: make([]io.Closer, 0),
+	}
 	return nil
 }
 
@@ -159,7 +164,7 @@ func (m *Manager) filterUnusedProbes() {
 
 	for name, inst := range m.probes {
 		funcsFound := false
-		for _, s := range inst.Manifest().Symbols {
+		for _, s := range inst.probe.Manifest().Symbols {
 			if len(s.DependsOn) == 0 {
 				if _, exists := existingFuncMap[s.Symbol]; exists {
 					funcsFound = true
@@ -226,7 +231,7 @@ func (m *Manager) applyConfig(c Config) error {
 
 		if currentlyEnabled && !newEnabled {
 			m.logger.Info("Disabling probe", "id", id)
-			err = errors.Join(err, p.Close())
+			err = errors.Join(err, m.CloseProbe(p))
 			continue
 		}
 
@@ -234,7 +239,7 @@ func (m *Manager) applyConfig(c Config) error {
 			m.logger.Info("Enabling probe", "id", id)
 			err = errors.Join(err, m.LoadProbe(p, id, c))
 			if err == nil {
-				m.runProbe(p)
+				m.runProbe(p.probe)
 			}
 			continue
 		}
@@ -313,7 +318,7 @@ func (m *Manager) runProbes(ctx context.Context) (context.Context, error) {
 
 	for id, p := range m.probes {
 		if isProbeEnabled(id, m.currentConfig) {
-			m.runProbe(p)
+			m.runProbe(p.probe)
 		}
 	}
 
@@ -414,29 +419,31 @@ func (m *Manager) loadProbes() error {
 	return nil
 }
 
-func (m *Manager) LoadProbe(i probe.Probe, name probe.ID, cfg Config) error {
+func (m *Manager) LoadProbe(i ProbeReference, name probe.ID, cfg Config) error {
 	m.logger.Info("loading probe", "name", name)
 
-	err := i.Init(cfg.SamplingConfig)
+	spec, err := i.probe.Spec()
 	if err != nil {
 		return errors.Join(err, m.cleanup())
 	}
 
-	spec, err := i.Spec()
+	err = m.InjectProbeConsts(i.probe, spec)
 	if err != nil {
 		return errors.Join(err, m.cleanup())
-	}
-
-	err = m.InjectProbeConsts(i, spec)
-	if err != nil {
-		return err
 	}
 
 	c, err := utils.InitializeEBPFCollection(spec, m.collectionOpts)
 	if err != nil {
-		return err
+		return errors.Join(err, m.cleanup())
 	}
-	i.SetCollection(c)
+	i.collection = c
+
+	reader, err := i.probe.InitStartupConfig(c, cfg.SamplingConfig)
+	if err != nil {
+		return errors.Join(err, m.cleanup())
+	}
+	i.closers = append(i.closers, reader)
+
 	return nil
 }
 
@@ -461,8 +468,8 @@ func (m *Manager) InjectProbeConsts(i probe.Probe, spec *ebpf.CollectionSpec) er
 	return inject.Constants(spec, opts...)
 }
 
-func (m *Manager) loadUprobesFromProbe(i probe.Probe) error {
-	for _, up := range i.GetUprobes() {
+func (m *Manager) loadUprobesFromProbe(i ProbeReference) error {
+	for _, up := range i.probe.GetUprobes() {
 		var skip bool
 		for _, pc := range up.PackageConstraints {
 			if pc.Constraints.Check(m.proc.Modules[pc.Package]) {
@@ -472,9 +479,9 @@ func (m *Manager) loadUprobesFromProbe(i probe.Probe) error {
 			var logFn func(string, ...any)
 			switch pc.FailureMode {
 			case probe.FailureModeIgnore:
-				logFn = i.GetLogger().Debug
+				logFn = i.probe.GetLogger().Debug
 			case probe.FailureModeWarn:
-				logFn = i.GetLogger().Warn
+				logFn = i.probe.GetLogger().Warn
 			default:
 				// Unknown and FailureModeError.
 				return fmt.Errorf(
@@ -486,7 +493,7 @@ func (m *Manager) loadUprobesFromProbe(i probe.Probe) error {
 
 			logFn(
 				"package constraint not meet, skipping uprobe",
-				"probe", i.Manifest().ID,
+				"probe", i.probe.Manifest().ID,
 				"symbol", up.Sym,
 				"package", pc.Package,
 				"constraint", pc.Constraints.String(),
@@ -500,22 +507,23 @@ func (m *Manager) loadUprobesFromProbe(i probe.Probe) error {
 			continue
 		}
 
-		err := m.loadUprobe(up, i.GetCollection())
+		err := m.loadUprobe(up, i.collection)
 		if err != nil {
 			var logFn func(string, ...any)
 			switch up.FailureMode {
 			case probe.FailureModeIgnore:
-				logFn = i.GetLogger().Debug
+				logFn = i.probe.GetLogger().Debug
 			case probe.FailureModeWarn:
-				logFn = i.GetLogger().Warn
+				logFn = i.probe.GetLogger().Warn
 			default:
 				// Unknown and FailureModeError.
 				return err
 			}
-			logFn("failed to load uprobe", "probe", i.Manifest().ID, "symbol", up.Sym, "error", err)
+			logFn("failed to load uprobe", "probe", i.probe.Manifest().ID, "symbol", up.Sym, "error", err)
 			continue
 		}
-		_ = i.UpdateClosers(up)
+
+		i.closers = append(i.closers, up)
 	}
 	return nil
 }
@@ -574,20 +582,26 @@ func (m *Manager) loadUprobe(u *probe.Uprobe, c *ebpf.Collection) error {
 	return nil
 }
 
-func (m *Manager) mount() error {
-	if m.proc.Allocation != nil {
-		m.logger.Debug("Mounting bpffs", "allocation", m.proc.Allocation)
-	} else {
-		m.logger.Debug("Mounting bpffs")
+func (m *Manager) CloseProbe(p ProbeReference) error {
+	if p.collection != nil {
+		p.collection.Close()
 	}
-	return bpffsMount(m.proc)
+
+	var err error
+	for _, c := range p.closers {
+		err = errors.Join(err, c.Close())
+	}
+	if err == nil {
+		p.probe.GetLogger().Debug("Closed", "Probe", p.probe.Manifest().ID)
+	}
+	return err
 }
 
 func (m *Manager) cleanup() error {
 	ctx := context.Background()
 	err := m.cp.Shutdown(context.Background())
 	for _, i := range m.probes {
-		err = errors.Join(err, i.Close())
+		err = errors.Join(err, m.CloseProbe(i))
 	}
 
 	// Wait for all probes to close so we know there is no more telemetry being
