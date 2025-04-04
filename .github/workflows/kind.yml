@@ -27,25 +27,17 @@ jobs:
           name: otel-go-instrumentation-${{ matrix.runner }}
           path: otel-go-instrumentation-${{ matrix.runner }}.tar
 
-  kubernetes-test:
+  create-kind-cluster:
     needs:
       - build-auto-instrumentation
     strategy:
       matrix:
         k8s-version: ["v1.26.0"]
-        library: ["autosdk", "nethttp", "nethttp_custom", "gin", "databasesql", "grpc", "otelglobal", "kafka-go"]
         runner: [ubuntu-latest, ubuntu-22.04-arm]
     runs-on: ${{ matrix.runner }}
     steps:
       - name: Checkout Repo
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
-      - name: Build sample app from script
-        if: ${{ hashFiles(format('internal/test/e2e/{0}/build.sh', matrix.library)) != '' }}
-        run: ./internal/test/e2e/${{ matrix.library }}/build.sh -t sample-app:latest
-      - name: Build sample app
-        if: ${{ hashFiles(format('internal/test/e2e/{0}/build.sh', matrix.library)) == '' }}
-        working-directory: ./internal/test/e2e/${{ matrix.library }}
-        run: docker build -t sample-app:latest .
       - name: Set up Helm
         uses: azure/setup-helm@b9e51907a09c216f16ebe8536097933489208112 # v4
         with:
@@ -55,11 +47,12 @@ jobs:
         with:
           node_image: kindest/node:${{ matrix.k8s-version }}
           kubectl_version: ${{ matrix.k8s-version }}
+          cluster_name: otel-test-cluster
       - name: Check kind
         run: |
-          kubectl cluster-info --context kind-chart-testing
+          kubectl cluster-info --context kind-otel-test-cluster
           kubectl get node
-          docker ps -a --filter label=io.x-k8s.kind.cluster=chart-testing
+          docker ps -a --filter label=io.x-k8s.kind.cluster=otel-test-cluster
       - name: Download Docker image artifact
         uses: actions/download-artifact@95815c38cf2ff2164869cbab79da8d1f422bc89e # v4
         with:
@@ -69,47 +62,120 @@ jobs:
           docker load -i otel-go-instrumentation-${{ matrix.runner }}.tar
       - name: Kind load images
         run: |
-          kind load docker-image otel-go-instrumentation --name chart-testing
-          kind load docker-image sample-app --name chart-testing
+          kind load docker-image otel-go-instrumentation --name otel-test-cluster
       - name: Add Dependencies
         shell: bash
         run: |
-            helm repo add open-telemetry https://open-telemetry.github.io/opentelemetry-helm-charts
+          helm repo add open-telemetry https://open-telemetry.github.io/opentelemetry-helm-charts
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
         with:
           repository: 'open-telemetry/opentelemetry-helm-charts'
           path: opentelemetry-helm-charts
+      - name: Create cluster info file
+        run: |
+          echo "Cluster created" > cluster-info-${{ matrix.runner }}
+      - name: Upload cluster info
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: cluster-info-${{ matrix.runner }}
+          path: cluster-info-${{ matrix.runner }}
+
+  kubernetes-test:
+    needs:
+      - create-kind-cluster
+    strategy:
+      matrix:
+        library: ["autosdk", "nethttp", "nethttp_custom", "gin", "databasesql", "grpc", "otelglobal", "kafka-go"]
+        runner: [ubuntu-latest, ubuntu-22.04-arm]
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+      - name: Build sample app from script
+        if: ${{ hashFiles(format('internal/test/e2e/{0}/build.sh', matrix.library)) != '' }}
+        run: ./internal/test/e2e/${{ matrix.library }}/build.sh -t sample-app-${{ matrix.library }}:latest
+      - name: Build sample app
+        if: ${{ hashFiles(format('internal/test/e2e/{0}/build.sh', matrix.library)) == '' }}
+        working-directory: ./internal/test/e2e/${{ matrix.library }}
+        run: docker build -t sample-app-${{ matrix.library }}:latest .
+      - name: Set up Helm
+        uses: azure/setup-helm@b9e51907a09c216f16ebe8536097933489208112 # v4
+        with:
+          version: v3.9.0
+      - name: Download cluster info
+        uses: actions/download-artifact@95815c38cf2ff2164869cbab79da8d1f422bc89e # v4
+        with:
+          name: cluster-info-${{ matrix.runner }}
+      - name: Check kind
+        run: |
+          kubectl cluster-info --context kind-otel-test-cluster
+          kubectl get node
+      - name: Download Docker image artifact
+        uses: actions/download-artifact@95815c38cf2ff2164869cbab79da8d1f422bc89e # v4
+        with:
+          name: otel-go-instrumentation-${{ matrix.runner }}
+      - name: Load Docker image
+        run: |
+          docker load -i otel-go-instrumentation-${{ matrix.runner }}.tar
+      - name: Kind load images
+        run: |
+          kind load docker-image otel-go-instrumentation --name otel-test-cluster
+          kind load docker-image sample-app-${{ matrix.library }}:latest --name otel-test-cluster
+      - name: Add Dependencies
+        shell: bash
+        run: |
+          helm repo add open-telemetry https://open-telemetry.github.io/opentelemetry-helm-charts
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+        with:
+          repository: 'open-telemetry/opentelemetry-helm-charts'
+          path: opentelemetry-helm-charts
+      - name: Create namespace
+        run: |
+          kubectl create namespace ${{ matrix.library }}
       - name: Helm install collector
         run: |
           if [ -f ./internal/test/e2e/${{ matrix.library }}/collector-helm-values.yml ]; then
-            helm install test -f ./internal/test/e2e/${{ matrix.library }}/collector-helm-values.yml opentelemetry-helm-charts/charts/opentelemetry-collector
+            helm install test-${{ matrix.library }} -n ${{ matrix.library }} -f ./internal/test/e2e/${{ matrix.library }}/collector-helm-values.yml opentelemetry-helm-charts/charts/opentelemetry-collector
           else
-            helm install test -f .github/workflows/e2e/k8s/collector-helm-values.yml opentelemetry-helm-charts/charts/opentelemetry-collector
+            helm install test-${{ matrix.library }} -n ${{ matrix.library }} -f .github/workflows/e2e/k8s/collector-helm-values.yml opentelemetry-helm-charts/charts/opentelemetry-collector
           fi
       - name: check collector status
         # The loop is needed if the pod is not created yet
         # once https://github.com/kubernetes/kubectl/issues/1516 is fixed we can remove the loop
         run: |
           while : ; do
-            kubectl get pod/test-opentelemetry-collector-0 && break
+            kubectl get pod/test-${{ matrix.library }}-opentelemetry-collector-0 -n ${{ matrix.library }} && break
             sleep 5
           done
-          kubectl wait --for=condition=Ready --timeout=60s pod/test-opentelemetry-collector-0
-      - name: start sample job
+          kubectl wait --for=condition=Ready --timeout=60s pod/test-${{ matrix.library }}-opentelemetry-collector-0 -n ${{ matrix.library }}
+      - name: Apply sample job with environment variables
         run: |
-          kubectl -n default create -f .github/workflows/e2e/k8s/sample-job.yml
+          # Set environment variables for substitution
+          export JOB_NAME=sample-job
+          export NAMESPACE=${{ matrix.library }}
+          export APP_LABEL=sample-${{ matrix.library }}
+          export SAMPLE_APP_IMAGE=sample-app-${{ matrix.library }}
+          export INSTRUMENTATION_IMAGE=otel-go-instrumentation
+          export COLLECTOR_NAME=test-${{ matrix.library }}-opentelemetry-collector
+          export SERVICE_NAME=sample-app-${{ matrix.library }}
+          
+          # Use envsubst to replace variables in the sample job template
+          envsubst < .github/workflows/e2e/k8s/sample-job.yml > sample-job-rendered.yml
+          
+          # Apply the rendered job
+          kubectl apply -f sample-job-rendered.yml
       - name: check job status
         id: job-status
         run: |
-          kubectl wait --for=condition=Complete --timeout=60s job/sample-job
+          kubectl wait --for=condition=Complete --timeout=60s job/sample-job -n ${{ matrix.library }}
       - name: copy telemetry trace output
         run: |
-          kubectl cp -c filecp default/test-opentelemetry-collector-0:tmp/trace.json ./internal/test/e2e/${{ matrix.library }}/traces-orig.json
+          kubectl cp -c filecp ${{ matrix.library }}/test-${{ matrix.library }}-opentelemetry-collector-0:tmp/trace.json ./internal/test/e2e/${{ matrix.library }}/traces-orig.json
           rm -f ./internal/test/e2e/${{ matrix.library }}/traces.json
         if: always() && steps.job-status.outcome == 'success'
       - name: print auto-instrumentation logs
         run: |
-          kubectl logs -l app=sample -c auto-instrumentation --tail=300
+          kubectl logs -l app=sample-${{ matrix.library }} -c auto-instrumentation -n ${{ matrix.library }} --tail=300
           exit 1
         if: always() && steps.job-status.outcome == 'failure'
       - name: Setup BATS
