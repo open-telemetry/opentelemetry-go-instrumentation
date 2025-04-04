@@ -19,7 +19,7 @@ retract (
 
 require (
 	github.com/Masterminds/semver/v3 v3.3.1
-	github.com/cilium/ebpf v0.17.3
+	github.com/cilium/ebpf v0.18.0
 	github.com/go-logr/stdr v1.2.2
 	github.com/pkg/errors v0.9.1
 	github.com/stretchr/testify v1.10.0
