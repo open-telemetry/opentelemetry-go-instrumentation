@@ -48,7 +48,7 @@ jobs:
       - name: Build sample app
         if: ${{ hashFiles(format('internal/test/e2e/{0}/build.sh', matrix.library)) == '' }}
         working-directory: ./internal/test/e2e/${{ matrix.library }}
-        run: docker build -t sample-app:latest --build-arg GOLANG_VERSION=$(GOLANG_VERSION) .
+        run: docker build -t sample-app:latest --build-arg GOLANG_VERSION=${{ env.GOLANG_VERSION }} .
       - name: Set up Helm
         uses: azure/setup-helm@b9e51907a09c216f16ebe8536097933489208112 # v4
         with:
