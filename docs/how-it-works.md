@@ -27,60 +27,60 @@ The agent uses the [Cilium eBPF libraries for Go](https://github.com/cilium/ebpf
 
 ### The `Instrumentation` object
 
-The main entry point for the agent is the [`Instrumentation`](https://pkg.go.dev/go.opentelemetry.io/auto#Instrumentation) object, defined in [`instrumentation.go`](https://github.com/open-telemetry/opentelemetry-go-instrumentation/blob/02686f0a149b13fec4da73b9d40233a372fbd13b/instrumentation.go). This object coordinates the `Controller`, `Manager`, and `Analyzer` to orchestrate the auto-instrumentation of a process.
+The main entry point for the agent is the [`Instrumentation`](https://pkg.go.dev/go.opentelemetry.io/auto@v0.21.0#Instrumentation) object, defined in [`instrumentation.go`](https://github.com/open-telemetry/opentelemetry-go-instrumentation/blob/v0.21.0/instrumentation.go). This object coordinates the `Controller`, `Manager`, and `Analyzer` to orchestrate the auto-instrumentation of a process.
 
 ### Finding the target process on the host
 
-When the agent starts up, it first calls [`process.NewAnalyzer`](https://pkg.go.dev/go.opentelemetry.io/auto@v0.10.1-alpha/internal/pkg/process#NewAnalyzer) which creates the [`Analyzer`](https://pkg.go.dev/go.opentelemetry.io/auto@v0.10.1-alpha/internal/pkg/process#Analyzer) object. The `Analyzer` then calls [`a.DiscoverProcessID()`](https://pkg.go.dev/go.opentelemetry.io/auto@v0.10.1-alpha/internal/pkg/process#Analyzer.DiscoverProcessID), which loops through the host's `/proc` directory to find a process matching the target binary's name.
+When the agent starts up, it first calls [findPID()](https://github.com/open-telemetry/opentelemetry-go-instrumentation/blob/17b76b1e5f3778bcd35d82b0464d7f727fc8aaf8/cli/main.go#L135). It accepts the PID or the executable path run by the process. In case of providing the executable path, it will call the [ProcessPoller](https://github.com/open-telemetry/opentelemetry-go-instrumentation/blob/17b76b1e5f3778bcd35d82b0464d7f727fc8aaf8/cli/process_poller.go#L59), which will be in charge of looping through the host's `/proc` directory to find a process matching the target binary's name.
 
 ### Registering instrumentation function probes
 
-Next, the `Instrumentation` object calls [`i.NewManager()`](https://pkg.go.dev/go.opentelemetry.io/auto@v0.10.1-alpha/internal/pkg/instrumentation#NewManager) to create a [`Manager`](https://pkg.go.dev/go.opentelemetry.io/auto@v0.10.1-alpha/internal/pkg/instrumentation#Manager) object. The `Manager` object  holds a map of the probed symbols, a channel to receive eBPF events, and a reference the OpenTelemetry `Controller` to hand off parsed events and export telemetry.
+Next, the `Instrumentation` object calls [`i.NewManager()`](https://pkg.go.dev/go.opentelemetry.io/auto@v0.21.0/internal/pkg/instrumentation#NewManager) to create a [`Manager`](https://pkg.go.dev/go.opentelemetry.io/auto@v0.21.0/internal/pkg/instrumentation#Manager) object. The `Manager` object holds a map of the probed symbols, and a reference the OpenTelemetry `Controller` to hand off parsed events and export telemetry. It's also the responsible for passing OpenTelemetry controller to probes while running them (see [Loading EBPF programs section](#loading-ebpf-programs)).
 
-Calling `NewManager()` uses [`m.registerProbes()`](https://github.com/open-telemetry/opentelemetry-go-instrumentation/blob/02686f0a149b13fec4da73b9d40233a372fbd13b/internal/pkg/instrumentation/manager.go#L216) to instantiate each instrumented library's [`Probe` object](https://pkg.go.dev/go.opentelemetry.io/auto@v0.10.1-alpha/internal/pkg/instrumentation/probe#Probe).
+Calling `NewManager()` uses [`m.registerProbes()`](https://github.com/open-telemetry/opentelemetry-go-instrumentation/blob/v0.21.0/internal/pkg/instrumentation/manager.go#L432) to instantiate each instrumented library's [`Probe` object](https://pkg.go.dev/go.opentelemetry.io/auto@v0.21.0/internal/pkg/instrumentation/probe).
 
-Each Go library that is supported by the auto-instrumentation agent implements its own `Probe`. For example, the [gRPC `New()` function](https://pkg.go.dev/go.opentelemetry.io/auto@v0.10.1-alpha/internal/pkg/instrumentation/bpf/google.golang.org/grpc/client#New) does the following:
+Each Go library that is supported by the auto-instrumentation agent implements its own `Probe`. For example, the [gRPC `New()` function](https://pkg.go.dev/go.opentelemetry.io/auto@v0.21.0/internal/pkg/instrumentation/bpf/google.golang.org/grpc/client#New) does the following:
 
-* Creates an [`ID`](https://pkg.go.dev/go.opentelemetry.io/auto@v0.10.1-alpha/internal/pkg/instrumentation/probe#ID) that uniquely identifies the `Probe` by its OpenTelemetry [`trace.SpanKind`](https://pkg.go.dev/go.opentelemetry.io/otel/trace#SpanKind) and package name.
-* Defines the [`probe.Const`](https://pkg.go.dev/go.opentelemetry.io/auto@v0.10.1-alpha/internal/pkg/instrumentation/probe#Const) values to configure settings and define the relevant struct fields (and their offsets) for parsing telemetry data. Each `Const` is an object that implements the `InjectOption()` function to configure settings on the target process. For example, [`RegistersABIConst`](https://pkg.go.dev/go.opentelemetry.io/auto@v0.10.1-alpha/internal/pkg/instrumentation/probe#RegistersABIConst) calls [`inject.WithRegistersABI()`](https://pkg.go.dev/go.opentelemetry.io/auto@v0.10.1-alpha/internal/pkg/inject#WithRegistersABI).
-* [Configures functions](https://github.com/open-telemetry/opentelemetry-go-instrumentation/blob/02686f0a149b13fec4da73b9d40233a372fbd13b/internal/pkg/instrumentation/bpf/google.golang.org/grpc/client/probe.go#L75) to attach Uprobes. Each function is represented by a [`probe.Uprobe` object](https://pkg.go.dev/go.opentelemetry.io/auto@v0.10.1-alpha/internal/pkg/instrumentation/probe#Uprobe) that holds the name of the function, the Cilium library call that will attach the eBPF program to the function, and an additional flag to indicate whether the Uprobe is optional.
-* [Creates](https://github.com/open-telemetry/opentelemetry-go-instrumentation/blob/02686f0a149b13fec4da73b9d40233a372fbd13b/internal/pkg/instrumentation/bpf/google.golang.org/grpc/client/probe.go#L94) a `ReaderFn` that returns a Perf event reader from the Cilium libraries.
-* [Creates](https://github.com/open-telemetry/opentelemetry-go-instrumentation/blob/02686f0a149b13fec4da73b9d40233a372fbd13b/internal/pkg/instrumentation/bpf/google.golang.org/grpc/client/probe.go#L97) a `SpecFn` that holds a reference the eBPF collection from the Cilium libraries.
-* [Creates](https://github.com/open-telemetry/opentelemetry-go-instrumentation/blob/02686f0a149b13fec4da73b9d40233a372fbd13b/internal/pkg/instrumentation/bpf/google.golang.org/grpc/client/probe.go#L98) a `ProcessFn` that converts bytes to eBPF events.
+* Creates an [`ID`](https://pkg.go.dev/go.opentelemetry.io/auto@v0.21.0/internal/pkg/instrumentation/probe#ID) that uniquely identifies the `Probe` by its OpenTelemetry [`trace.SpanKind`](https://pkg.go.dev/go.opentelemetry.io/otel/trace#SpanKind) and package name.
+* Defines the [`probe.Const`](https://pkg.go.dev/go.opentelemetry.io/auto@v0.21.0/internal/pkg/instrumentation/probe#Const) values to configure settings and define the relevant struct fields (and their offsets) for parsing telemetry data. Each `Const` is an object that implements the `InjectOption()` function to configure settings on the target process. For example, [`StructFieldConst`](https://pkg.go.dev/go.opentelemetry.io/auto@v0.21.0/internal/pkg/instrumentation/probe#StructFieldConst) calls [`inject.WithKeyValue()`](https://pkg.go.dev/go.opentelemetry.io/auto/internal/pkg/inject#WithKeyValue).
+* [Configures functions](https://github.com/open-telemetry/opentelemetry-go-instrumentation/blob/v0.21.0/internal/pkg/instrumentation/bpf/google.golang.org/grpc/client/probe.go#L113) to attach Uprobes. Each function is represented by a [`probe.Uprobe` object](https://pkg.go.dev/go.opentelemetry.io/auto@v0.21.0/internal/pkg/instrumentation/probe#Uprobe) that holds the name of the function, the Cilium library call that will attach the eBPF program to the function, and an additional flag to indicate whether the Uprobe is optional.
+* [Creates](https://github.com/open-telemetry/opentelemetry-go-instrumentation/blob/v0.21.0/internal/pkg/instrumentation/bpf/google.golang.org/grpc/client/probe.go#L128) a `SpecFn` that holds a reference the eBPF collection from the Cilium libraries.
+* [Creates](https://github.com/open-telemetry/opentelemetry-go-instrumentation/blob/v0.21.0/internal/pkg/instrumentation/bpf/google.golang.org/grpc/client/probe.go#L132) a `ProcessFn` that converts bytes to eBPF events.
 
-Once each library's `Probe` object is created, the `Manager` calls [`m.registerProbe()`](https://github.com/open-telemetry/opentelemetry-go-instrumentation/blob/02686f0a149b13fec4da73b9d40233a372fbd13b/internal/pkg/instrumentation/manager.go#L73) on each one. This uses the `Probe`'s `Id` to store a reference to the `Probe` in a map. In doing this, the `Manager` calls `Manifest()` on each `Probe`. This in turn calls [`NewManifest()`](https://pkg.go.dev/go.opentelemetry.io/auto@v0.10.1-alpha/internal/pkg/instrumentation/probe#NewManifest) that returns a [`Manifest`](https://pkg.go.dev/go.opentelemetry.io/auto@v0.10.1-alpha/internal/pkg/instrumentation/probe#Manifest) object containing the `Id`, `StructFields`, and `Symbols` for the `Probe`.
+Once each library's `Probe` object is created, the `Manager` calls [`m.registerProbe()`](https://github.com/open-telemetry/opentelemetry-go-instrumentation/blob/b872fd893f6af7c1bad348b9f147bb2b394755be/internal/pkg/instrumentation/manager.go#L92) on each one. This uses the `Probe`'s `Id` to store a reference to the `Probe` in a map. In doing this, the `Manager` calls `Manifest()` on each `Probe`. This in turn calls [`NewManifest()`](https://pkg.go.dev/go.opentelemetry.io/auto@v0.21.0/internal/pkg/instrumentation/probe#NewManifest) that returns a [`Manifest`](https://pkg.go.dev/go.opentelemetry.io/auto@v0.21.0/internal/pkg/instrumentation/probe#Manifest) object containing the `Id`, `StructFields`, and `Symbols` for the `Probe`.
 
 ### Analyzing Go Process details
 
-Next, the `Instrumentation` object calls [`analyzer.Analyze()`](https://pkg.go.dev/go.opentelemetry.io/auto@v0.10.1-alpha/internal/pkg/process#Analyzer.Analyze) to get the Go details and Modules (dependencies) for the target binary.
+Next, the `Instrumentation` object calls [`analyzer.Analyze()`](https://pkg.go.dev/go.opentelemetry.io/auto@v0.21.0/internal/pkg/process#Analyzer.Analyze) to get the Go details and Modules (dependencies) for the target binary.
 
-The `Analyze()` function first creates a [`TargetDetails` object](https://pkg.go.dev/go.opentelemetry.io/auto@v0.10.1-alpha/internal/pkg/process#TargetDetails) to hold information about the target process. By opening `proc/{pid}/exe` (using the PID it found earlier in `DiscoverProcessID()`), it can then read the Go build info, Go version, dependencies, and instrumentable functions in the process. When calling `analyzer.Analyze()`, the `Instrumentation` object passes [`manager.GetRelevantFuncs()`](https://pkg.go.dev/go.opentelemetry.io/auto@v0.10.1-alpha/internal/pkg/instrumentation#Manager.GetRelevantFuncs) as an argument. This function gets the list of `Symbol`s from each `Probe` by checking its `Manifest`, telling `Analyze()` which functions to locate.
+The `Analyze()` function first creates a [`TargetDetails` object](https://pkg.go.dev/go.opentelemetry.io/auto@v0.21.0/internal/pkg/process#TargetDetails) to hold information about the target process. By opening `proc/{pid}/exe` (using the PID from [findPID()](https://github.com/open-telemetry/opentelemetry-go-instrumentation/blob/17b76b1e5f3778bcd35d82b0464d7f727fc8aaf8/cli/main.go#L135)), it can then read the Go build info, Go version, dependencies, and instrumentable functions in the process. When calling `analyzer.Analyze()`, the `Instrumentation` object passes [`manager.GetRelevantFuncs()`](https://pkg.go.dev/go.opentelemetry.io/auto@v0.21.0/internal/pkg/instrumentation#Manager.GetRelevantFuncs) as an argument. This function gets the list of `Symbol`s from each `Probe` by checking its `Manifest`, telling `Analyze()` which functions to locate.
 
-With the list of relevant functions, the `Analyzer` can call [`binary.FindFunctionsStripped()`](https://pkg.go.dev/go.opentelemetry.io/auto@v0.10.1-alpha/internal/pkg/process/binary#FindFunctionsStripped) or [`binary.FindFunctionsUnStripped`](https://pkg.go.dev/go.opentelemetry.io/auto@v0.10.1-alpha/internal/pkg/process/binary#FindFunctionsUnStripped) to get the exact location of the functions in the process (see [Instrumentation Stability](#instrumentation-stability) below for more details on this). Once it has that data, it returns a list of [`binary.Func` objects](https://pkg.go.dev/go.opentelemetry.io/auto@v0.10.1-alpha/internal/pkg/process/binary#Func) for each relevant function.
+With the list of relevant functions, the `Analyzer` can call [`binary.FindFunctionsStripped()`](https://pkg.go.dev/go.opentelemetry.io/auto@v0.21.0/internal/pkg/process/binary#FindFunctionsStripped) or [`binary.FindFunctionsUnStripped`](https://pkg.go.dev/go.opentelemetry.io/auto@v0.21.0/internal/pkg/process/binary#FindFunctionsUnStripped) to get the exact location of the functions in the process (see [Instrumentation Stability](#instrumentation-stability) below for more details on this). Once it has that data, it returns a list of [`binary.Func` objects](https://pkg.go.dev/go.opentelemetry.io/auto@v0.21.0/internal/pkg/process/binary#Func) for each relevant function.
 
-The result of calling `Analyze()` is a `TargetDetails` object.
+The result of calling `Analyze()` is a `process.Info` object.
 
 ### Allocating memory for eBPF maps
 
-The `Instrumentation` object calls [`process.Allocate()`](https://pkg.go.dev/go.opentelemetry.io/auto@v0.10.1-alpha/internal/pkg/process#Allocate) to allocate memory for the agent to access eBPF maps. It does this by first calling [`ptrace.NewTracedProgram()`](https://pkg.go.dev/go.opentelemetry.io/auto@v0.10.1-alpha/internal/pkg/process/ptrace#NewTracedProgram) to attach to the target process with `ptrace`. It then makes a number of syscalls to set up the eBPF map:
+The `Instrumentation` object calls [`process.Allocate()`](https://pkg.go.dev/go.opentelemetry.io/auto@v0.21.0/internal/pkg/process#Allocate) to allocate memory for the agent to access eBPF maps. It uses the OS page size and the CPU number to calculate the map size. It calls [`process.newTracedProgram()`](https://github.com/open-telemetry/opentelemetry-go-instrumentation/blob/v0.21.0/internal/pkg/process/ptrace_linux.go#L62) to attach to the target process with `ptrace`. It then makes a number of syscalls to set up the eBPF map:
 
 * `mmap` to create the map
 * `madvise` to tell the kernel it will need to read this address soon
 * `mlock` to lock the address into RAM
 
-The address of the map data is returned in an [`AllocationDetails` object](https://pkg.go.dev/go.opentelemetry.io/auto@v0.10.1-alpha/internal/pkg/process#AllocationDetails), which is stored in the `TargetDetails` built above.
+The address of the map data is returned in an [`AllocationDetails` object](https://pkg.go.dev/go.opentelemetry.io/auto@v0.21.0/internal/pkg/process#AllocationDetails), which is stored in the `TargetDetails` built above.
 
 ### Loading eBPF programs
 
-With all of the initialization steps complete (analyzing the target process, finding relevant instrumentation points, allocating memory), the agent calls [`instrumentation.Run()`](https://pkg.go.dev/go.opentelemetry.io/auto#Instrumentation.Run) to start the `Instrumentation` object. This calls [`manager.Run()`](https://pkg.go.dev/go.opentelemetry.io/auto@v0.10.1-alpha/internal/pkg/instrumentation#Manager.Run) and starts the `Manager` object within the `Instrumentation`.
+With all of the initialization steps complete (analyzing the target process, finding relevant instrumentation points, allocating memory), the agent calls [`instrumentation.Load()`](https://pkg.go.dev/go.opentelemetry.io/auto@v0.21.0#Instrumentation.Load) which calls [`manager.Load()`](https://pkg.go.dev/go.opentelemetry.io/auto@v0.21.0/internal/pkg/instrumentation#Manager.Load). The `Manager` mounts the target binary and calls [`bpffs.Mount()`](https://pkg.go.dev/go.opentelemetry.io/auto@v0.21.0/internal/pkg/instrumentation/bpffs#Mount) to create a subdirectory for the target executable under `/sys/fs/bpf`. It then calls [`probe.Load()`](https://pkg.go.dev/go.opentelemetry.io/auto@v0.21.0/internal/pkg/instrumentation/probe#Base.Load) on each registered `Probe`. 
 
-The `Manager` mounts the target binary and calls [`bpffs.Mount()`](https://pkg.go.dev/go.opentelemetry.io/auto@v0.10.1-alpha/internal/pkg/instrumentation/bpffs#Mount) to create a subdirectory for the target executable under `/sys/fs/bpf`. It then calls [`probe.Load()`](https://pkg.go.dev/go.opentelemetry.io/auto@v0.10.1-alpha/internal/pkg/instrumentation/probe#Base.Load) on each registered `Probe`. At this point the inject options are applied to the target, and this is where offsets are loaded from the embedded JSON file with [`inject.WithOffset()`](https://pkg.go.dev/go.opentelemetry.io/auto@v0.10.1-alpha/internal/pkg/inject#WithOffset) (see [Instrumentation Stability](#instrumentation-stability)).
-
-It then builds a [Cilium `CollectionSpec`](https://pkg.go.dev/github.com/cilium/ebpf#CollectionSpec) and calls [`LoadAndAssign()`](https://pkg.go.dev/github.com/cilium/ebpf#CollectionSpec.LoadAndAssign) to load the eBPF map and program into the kernel. It analyzes the relevant Uprobes and stores their links.
-
-After each `Probe` is loaded, they start separate goroutines with [`probe.Run()`](https://pkg.go.dev/go.opentelemetry.io/auto@v0.10.1-alpha/internal/pkg/instrumentation/probe#Base.Run). This function will send [`Event`s](https://pkg.go.dev/go.opentelemetry.io/auto@v0.10.1-alpha/internal/pkg/instrumentation/probe#Event) out to the `Manager` on a channel called `dest` (or `incomingEvents` in the `Manager`).
+At this point the inject options are applied to the target, and this is where offsets are loaded from the embedded JSON file with [`inject.WithOffset()`](https://pkg.go.dev/go.opentelemetry.io/auto@v0.21.0/internal/pkg/inject#WithOffset) (see [Instrumentation Stability](#instrumentation-stability)).
+ [`instrumentation.Run()`](https://pkg.go.dev/go.opentelemetry.io/auto@v0.21.0#Instrumentation.Run) to start the `Instrumentation` object. This calls [`manager.Run()`](https://pkg.go.dev/go.opentelemetry.io/auto@v0.21.0/internal/pkg/instrumentation#Manager.Run) and starts the `Manager` object within the `Instrumentation`.
+ 
+ It then builds a [Cilium `CollectionSpec`](https://pkg.go.dev/github.com/cilium/ebpf#CollectionSpec) and calls [`LoadAndAssign()`](https://pkg.go.dev/github.com/cilium/ebpf#CollectionSpec.LoadAndAssign) to load the eBPF map and program into the kernel. It analyzes the relevant Uprobes and stores their links.
 
 ### Processing events
+
+After each `Probe` is loaded, the agent calls now [`instrumentation.Run()`](https://pkg.go.dev/go.opentelemetry.io/auto@v0.21.0#Instrumentation.Run) which calls [`manager.Run()`](https://pkg.go.dev/go.opentelemetry.io/auto@v0.21.0/internal/pkg/instrumentation#Manager.Run). Probes start separate goroutines with [`probe.Run()`](https://pkg.go.dev/go.opentelemetry.io/auto@v0.21.0/internal/pkg/instrumentation/probe#Probe). 
 
 Each goroutine starts an infinite loop that blocks on a call to the [Cilium `reader.Read()` function](https://pkg.go.dev/github.com/cilium/ebpf/perf#Reader.Read). This reads from the perf ring buffer when there are bytes available.
 
@@ -88,7 +88,7 @@ When an event is received, it is processed from byte data to an eBPF event by th
 
 ### Exporting events
 
-With the `Probe`s running in their own goroutines, the `Manager` starts another loop listening on the `m.incomingEvents` channel for `Event`s. When a `Probe` sends a processed `Event` out on its `dest` channel, the `Manager` receives it to the OpenTelemetry `Controller` object with [`c.Trace()`](https://pkg.go.dev/go.opentelemetry.io/auto@v0.10.1-alpha/internal/pkg/opentelemetry#Controller.Trace). The `Controller` then uses the standard OpenTelemetry Go SDK to export the trace.
+Each `Probe` runs in its own goroutine. The manager passes a parameter to `Probe.Run` ([SpanProducer.Run](https://pkg.go.dev/go.opentelemetry.io/auto@v0.21.0/internal/pkg/instrumentation/probe#SpanProducer.Run) and [TraceProducer.Run](https://pkg.go.dev/go.opentelemetry.io/auto@v0.21.0/internal/pkg/instrumentation/probe#TraceProducer.Run)) which receives the [Controller.Trace](https://pkg.go.dev/go.opentelemetry.io/auto@v0.21.0/internal/pkg/opentelemetry#Controller.Trace). This controller is responsible for exporting traces using the standard OpenTelemetry Go SDK. The probe invokes `Controller.Trace`, passing its `ProcessFn` function as an argument.  
 
 ## Main Challenges and How We Overcome Them
 
@@ -101,11 +101,23 @@ eBPF programs access user code and variables by analyzing the stack and the CPU 
 Hard coding this offset information into the eBPF programs creates a very unstable instrumentation. Fields locations inside structs are subject to change and the eBPF program needs to be recompiled every time the struct definition changes.
 Luckily for us, there is a way to analyze the target binary and extract the required offsets, by using DWARF. The DWARF debug information is generated by the compiler and is stored inside the binary.
 
-Notice that one of our design goals is to support stripped Go binaries - meaning binaries that do not contain debug information. In order to support stripped binaries and to create a stable instrumentation, we created a library called [offsets-tracker](https://github.com/keyval-dev/offsets-tracker). This library tracks the offset of different fields across versions.
+Notice that one of our design goals is to support stripped Go binaries - meaning binaries that do not contain debug information. In order to support stripped binaries and to create a stable instrumentation, we created a tool called [offsetgen](https://github.com/open-telemetry/opentelemetry-go-instrumentation/tree/v0.21.0/internal/tools/inspect). This library tracks the offset of different fields across versions.
 
 We currently track instrumented structs inside the Go standard library and selected open source packages. This solution does not require DWARF information on the target binary and provides stability to instrumentations. Instrumentation authors can get a field location by name instead of hard coding a field offset.
 
-The offsets-tracker generates the [offset_results.json](../internal/pkg/inject/offset_results.json) file. This file contains the offsets of the fields in the instrumented structs.
+The `offsetgen` tool generates the [offset_results.json](../internal/pkg/inject/offset_results.json) file. This file contains the offsets of the fields in the instrumented structs.
+
+From a high level, the tool generates offsets by...
+* First checking the cache for the offset
+* If it is not found in the cache building a token Go application is compiled into an executable
+  * All applications are built using a Go docker container.
+  * If the offset is for a stdlib package:
+    * The version of the Go docker image used is the same as the version the offset was requested for
+  * If the offset is for a 3rd-party package:
+    * The latest version of the Go docker image is used to build the application
+    * The go.mod file of the application is updated to ensure the 3rd-party package version what the offset was requested for
+* The DWARF symbols of the built executable are inspected for the offset
+
 
 ### Uretprobes
 
