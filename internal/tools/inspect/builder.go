@@ -59,7 +59,12 @@ func newBuilder(l *slog.Logger, cli *client.Client, goVer *semver.Version) *buil
 }
 
 // Build builds the appV version of a Go application located in dir.
-func (b *builder) Build(ctx context.Context, dir string, appV *semver.Version, modName string) (string, error) {
+func (b *builder) Build(
+	ctx context.Context,
+	dir string,
+	appV *semver.Version,
+	modName string,
+) (string, error) {
 	b.log.Debug("building application...", "version", appV, "dir", dir, "image", b.GoImage)
 
 	app := "app" + appV.Original()

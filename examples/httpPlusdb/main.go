@@ -98,7 +98,15 @@ func (s *Server) queryDb(w http.ResponseWriter, req *http.Request) {
 		if err != nil {
 			panic(err)
 		}
-		fmt.Fprintf(w, "ID: %d, firstName: %s, lastName: %s, email: %s, phone: %s\n", id, firstName, lastName, email, phone)
+		fmt.Fprintf(
+			w,
+			"ID: %d, firstName: %s, lastName: %s, email: %s, phone: %s\n",
+			id,
+			firstName,
+			lastName,
+			email,
+			phone,
+		)
 	}
 }
 

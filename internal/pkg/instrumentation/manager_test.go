@@ -404,7 +404,10 @@ func (p *dummyProvider) sendConfig(c Config) {
 func TestConfigProvider(t *testing.T) {
 	netHTTPClientProbeID := probe.ID{InstrumentedPkg: "net/http", SpanKind: trace.SpanKindClient}
 	netHTTPServerProbeID := probe.ID{InstrumentedPkg: "net/http", SpanKind: trace.SpanKindServer}
-	somePackageProducerProbeID := probe.ID{InstrumentedPkg: "some/package", SpanKind: trace.SpanKindProducer}
+	somePackageProducerProbeID := probe.ID{
+		InstrumentedPkg: "some/package",
+		SpanKind:        trace.SpanKindProducer,
+	}
 
 	netHTTPClientLibID := LibraryID{InstrumentedPkg: "net/http", SpanKind: trace.SpanKindClient}
 	netHTTPLibID := LibraryID{InstrumentedPkg: "net/http"}

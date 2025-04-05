@@ -141,7 +141,9 @@ func TestGetLatestOffsetFromIndex(t *testing.T) {
 	assert.Equal(t, v120, ver, "invalid version for Response.Status")
 	assert.Equal(t, OffsetKey{Offset: 0, Valid: true}, off, "invalid value for Response.Status")
 
-	off, ver = index.GetLatestOffset(NewID("google.golang.org/grpc", "google.golang.org/grpc", "ClientConn", "target"))
+	off, ver = index.GetLatestOffset(
+		NewID("google.golang.org/grpc", "google.golang.org/grpc", "ClientConn", "target"),
+	)
 	assert.Equal(t, v120, ver, "invalid version for ClientConn.target")
 	assert.Equal(t, OffsetKey{Offset: 0, Valid: true}, off, "invalid value for ClientConn.target")
 }
