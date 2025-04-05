@@ -220,3 +220,19 @@ assert_not_empty() {
 		return 1
 	fi
 }
+
+get_go_minor_version() {
+  local ver="$1"
+
+  ver=${ver#go}
+
+  local minor
+  minor=$(echo "$ver" | cut -d. -f2)
+
+  if ! [[ "$minor" =~ ^[0-9]+$ ]]; then
+    echo "Unexpected version format: $ver" >&2
+    return 1
+  fi
+
+  echo "$minor"
+}

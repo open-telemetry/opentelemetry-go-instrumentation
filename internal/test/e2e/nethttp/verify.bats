@@ -3,6 +3,7 @@
 load ../../test_helpers/utilities.sh
 
 SCOPE="go.opentelemetry.io/auto/net/http"
+GO_MINOR_VERSION=$(get_go_minor_version "$GOLANG_VERSION") || exit 1
 
 @test "go-auto :: includes service.name in resource attributes" {
   result=$(resource_attributes_received | jq "select(.key == \"service.name\").value.stringValue")
@@ -11,7 +12,12 @@ SCOPE="go.opentelemetry.io/auto/net/http"
 
 @test "server :: emits a span name '{http.request.method} {http.route}' (per semconv)" {
   result=$(server_span_names_for ${SCOPE})
-  assert_equal "$result" '"GET /hello/{id}"'
+
+  if (( GO_MINOR_VERSION >= 22 )); then
+    assert_equal "$result" '"GET /hello/{id}"'
+  else
+    assert_equal "$result" '"GET"'
+  fi
 }
 
 @test "client :: emits a span name '{http.request.method}' (per semconv)" {
@@ -91,10 +97,12 @@ SCOPE="go.opentelemetry.io/auto/net/http"
   assert_equal "$result" '"::1"'
 }
 
-@test "server :: includes http.route attribute" {
-  result=$(server_span_attributes_for ${SCOPE} | jq "select(.key == \"http.route\").value.stringValue")
-  assert_equal "$result" '"/hello/{id}"'
-}
+if (( GO_MINOR_VERSION >= 22 )); then
+  @test "server :: includes http.route attribute" {
+    result=$(server_span_attributes_for ${SCOPE} | jq "select(.key == \"http.route\").value.stringValue")
+    assert_equal "$result" '"/hello/{id}"'
+  }
+fi
 
 @test "client :: includes server.address attribute" {
   result=$(client_span_attributes_for ${SCOPE} | jq "select(.key == \"server.address\").value.stringValue")

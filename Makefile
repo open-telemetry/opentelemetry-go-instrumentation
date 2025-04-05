@@ -208,7 +208,7 @@ fixtures/%: docker-build
 	if [ -f ./internal/test/e2e/$(LIBRARY)/build.sh ]; then \
 		./internal/test/e2e/$(LIBRARY)/build.sh; \
 	else \
-		cd internal/test/e2e/$(LIBRARY) && docker build -t sample-app . ;\
+		cd internal/test/e2e/$(LIBRARY) && docker build -t sample-app --build-arg GOLANG_VERSION=$(GOLANG_VERSION) . ;\
 	fi
 	kind create cluster
 	kind load docker-image otel-go-instrumentation sample-app
