@@ -12,7 +12,7 @@ RUN --mount=type=cache,target=/root/.cache/go-build \
     --mount=type=cache,target=/go/pkg \
 	CGO_ENABLED=0 go build -v -o /usr/local/bin/app .
 
-FROM bitnami/kafka:latest@sha256:55df55bfc7ed5980447387620afa3498eab3985a4d8c731013d82b3fa8b43bff
+FROM bitnami/kafka:latest@sha256:74d23b84870f47f95f85996c3fadc1221adfbc16ff8aaa23754e6d9b7097319f
 
 USER root
 ENV KAFKA_CFG_PROCESS_ROLES=controller,broker
