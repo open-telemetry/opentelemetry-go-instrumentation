@@ -9,6 +9,9 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"runtime"
+	"strconv"
+	"strings"
 	"time"
 )
 
@@ -17,7 +20,22 @@ func hello(w http.ResponseWriter, _ *http.Request) {
 }
 
 func main() {
-	http.HandleFunc("/hello/{id}", hello)
+	ver := runtime.Version()[len("go"):]
+	parts := strings.Split(ver, ".")
+	if len(parts) > 3 {
+		log.Fatalf("unexpected version format: %s", ver)
+	}
+	minor := parts[1]
+	minorI, err := strconv.Atoi(minor)
+	if err != nil {
+		log.Fatalf("unexpected version format: %s", ver)
+	}
+
+	if minorI >= 22 {
+		http.HandleFunc("/hello/{id}", hello)
+	} else {
+		http.HandleFunc("/hello/", hello)
+	}
 	go func() {
 		_ = http.ListenAndServe(":8080", nil) // nolint: gosec  // Testing server.
 	}()
