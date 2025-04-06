@@ -28,7 +28,7 @@ config:
           
 image:
   repository: otel/opentelemetry-collector-contrib
-  tag: "0.115.1"
+  tag: "0.123.0"
 
 command:
   name: otelcol-contrib
