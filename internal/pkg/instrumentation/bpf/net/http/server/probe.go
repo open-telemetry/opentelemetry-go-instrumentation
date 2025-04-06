@@ -110,8 +110,23 @@ func New(logger *slog.Logger, version string) probe.Probe {
 						Key: "req_pattern_pos",
 						ID:  structfield.NewID("std", "net/http", "Request", "Pattern"),
 					},
+					MinVersion: patternPathPublicMinVersion,
+				},
+				probe.StructFieldConstMinVersion{
+					StructField: probe.StructFieldConst{
+						Key: "req_pat_pos",
+						ID:  structfield.NewID("std", "net/http", "Request", "pat"),
+					},
 					MinVersion: patternPathMinVersion,
 				},
+				probe.StructFieldConstMinVersion{
+					StructField: probe.StructFieldConst{
+						Key: "pat_str_pos",
+						ID:  structfield.NewID("std", "net/http", "pattern", "str"),
+					},
+					MinVersion: patternPathMinVersion,
+				},
+				patternPathPublicSupportedConst{},
 				patternPathSupportedConst{},
 				swissMapsUsedConst{},
 			},
@@ -138,10 +153,22 @@ func New(logger *slog.Logger, version string) probe.Probe {
 	}
 }
 
+type patternPathPublicSupportedConst struct{}
+
+var (
+	patternPathPublicMinVersion  = semver.New(1, 23, 0, "", "")
+	isPatternPathPublicSupported = false
+)
+
+func (c patternPathPublicSupportedConst) InjectOption(info *process.Info) (inject.Option, error) {
+	isPatternPathPublicSupported = info.GoVersion.GreaterThanEqual(patternPathPublicMinVersion)
+	return inject.WithKeyValue("pattern_path_public_supported", isPatternPathPublicSupported), nil
+}
+
 type patternPathSupportedConst struct{}
 
 var (
-	patternPathMinVersion  = semver.New(1, 23, 0, "", "")
+	patternPathMinVersion  = semver.New(1, 22, 0, "", "")
 	isPatternPathSupported = false
 )
 
@@ -225,7 +252,7 @@ func processFn(e *event) ptrace.SpanSlice {
 	}
 
 	spanName := method
-	if isPatternPathSupported && isValidPatternPath {
+	if (isPatternPathPublicSupported || isPatternPathSupported) && isValidPatternPath {
 		spanName = spanName + " " + patternPath
 		attrs = append(attrs, semconv.HTTPRouteKey.String(patternPath))
 	}

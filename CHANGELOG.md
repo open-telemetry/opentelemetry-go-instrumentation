@@ -31,7 +31,7 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 ### Changed
 
 - Upgrade OpenTelemetry semantic conventions to `v1.30.0`. ([#2032](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/2032))
-- Modify how the pattern is fetch from `net/http.Request`. Now it uses `Request.Pattern` instead of `Request.pat.str` ([#2090](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/2090))
+- Modify how the pattern is fetch from `net/http.Request`. Now it uses `Request.Pattern` instead of `Request.pat.str` ([#2090](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/2090)) unless it's go1.22, which continue using `Request.pat.str`.
 
 ### Removed
 
