@@ -69,6 +69,7 @@ volatile const u64 message_time_pos;
 
 volatile const u64 writer_topic_pos;
 
+#ifndef NO_HEADER_PROPAGATION
 static __always_inline int build_contxet_header(struct kafka_header_t *header, struct span_context *span_ctx) {
     if (header == NULL || span_ctx == NULL) {
         bpf_printk("build_contxt_header: Invalid arguments");
@@ -108,6 +109,7 @@ static __always_inline int inject_kafka_header(void *message, struct kafka_heade
     append_item_to_slice(header, sizeof(*header), (void *)(message + message_headers_pos));
     return 0;
 }
+#endif
 
 static __always_inline long collect_kafka_attributes(void *message, struct message_attributes_t *attrs, bool collect_topic) {
     if (collect_topic) {
@@ -204,6 +206,7 @@ int uprobe_WriteMessages(struct pt_regs *ctx) {
             __builtin_memcpy(kafka_request->msgs[i].sc.TraceID, kafka_request->msgs[0].sc.TraceID, TRACE_ID_SIZE);
         }
 
+#ifndef NO_HEADER_PROPAGATION
         // Build the header
         if (build_contxet_header(&header, &kafka_request->msgs[i].sc) != 0) {
             bpf_printk("uprobe/WriteMessages: Failed to build header");
@@ -211,6 +214,7 @@ int uprobe_WriteMessages(struct pt_regs *ctx) {
         }
         // Inject the header
         inject_kafka_header(msg_ptr, &header);
+#endif
         kafka_request->valid_messages++;
         msg_ptr = msg_ptr + msg_size;
     }

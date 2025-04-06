@@ -6,9 +6,12 @@
 package producer
 
 import (
+	"fmt"
 	"log/slog"
 	"math"
+	"os"
 
+	"github.com/cilium/ebpf"
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/ptrace"
 	"go.opentelemetry.io/otel/attribute"
@@ -23,6 +26,7 @@ import (
 )
 
 //go:generate go run github.com/cilium/ebpf/cmd/bpf2go -target amd64,arm64 bpf ./bpf/probe.bpf.c
+//go:generate go run github.com/cilium/ebpf/cmd/bpf2go -target amd64,arm64 bpf_no_tp ./bpf/probe.bpf.c -- -DNO_HEADER_PROPAGATION
 
 const (
 	// pkg is the package being instrumented.
@@ -65,12 +69,21 @@ func New(logger *slog.Logger, version string) probe.Probe {
 					ReturnProbe: "uprobe_WriteMessages_Returns",
 				},
 			},
-			SpecFn: loadBpf,
+			SpecFn: verifyAndLoadBpf,
 		},
 		Version:   version,
 		SchemaURL: semconv.SchemaURL,
 		ProcessFn: processFn,
 	}
+}
+
+func verifyAndLoadBpf() (*ebpf.CollectionSpec, error) {
+	if !utils.SupportsContextPropagation() {
+		fmt.Fprintf(os.Stderr, "the Linux Kernel doesn't support context propagation, please check if the kernel is in lockdown mode (/sys/kernel/security/lockdown)")
+		return loadBpf_no_tp()
+	}
+
+	return loadBpf()
 }
 
 type messageAttributes struct {
