@@ -102,7 +102,15 @@ func newTracedProgram(id ID, logger *slog.Logger) (*tracedProgram, error) {
 					retryCount[tid]++
 				}
 				if retryCount[tid] < threadRetryLimit {
-					logger.Debug("retry attaching thread", "tid", tid, "retryCount", retryCount[tid], "limit", threadRetryLimit)
+					logger.Debug(
+						"retry attaching thread",
+						"tid",
+						tid,
+						"retryCount",
+						retryCount[tid],
+						"limit",
+						threadRetryLimit,
+					)
 					continue
 				}
 
@@ -221,7 +229,15 @@ func (p *tracedProgram) SetMemLockInfinity() error {
 
 // Mmap runs mmap syscall.
 func (p *tracedProgram) Mmap(length uint64, fd uint64) (uint64, error) {
-	return p.Syscall(syscall.SYS_MMAP, 0, length, syscall.PROT_READ|syscall.PROT_WRITE, syscall.MAP_ANON|syscall.MAP_PRIVATE|syscall.MAP_POPULATE|syscall.MAP_LOCKED, fd, 0)
+	return p.Syscall(
+		syscall.SYS_MMAP,
+		0,
+		length,
+		syscall.PROT_READ|syscall.PROT_WRITE,
+		syscall.MAP_ANON|syscall.MAP_PRIVATE|syscall.MAP_POPULATE|syscall.MAP_LOCKED,
+		fd,
+		0,
+	)
 }
 
 // Madvise runs madvise syscall.

@@ -99,7 +99,12 @@ func main() {
 	var targetPID int
 	var targetExe string
 
-	flag.BoolVar(&globalImpl, "global-impl", false, "Record telemetry from the OpenTelemetry default global implementation")
+	flag.BoolVar(
+		&globalImpl,
+		"global-impl",
+		false,
+		"Record telemetry from the OpenTelemetry default global implementation",
+	)
 	flag.StringVar(&logLevel, "log-level", "", `Logging level ("debug", "info", "warn", "error")`)
 	flag.IntVar(&targetPID, "target-pid", -1, `PID of target process`)
 	flag.StringVar(&targetExe, "target-exe", "", `Executable path run by the target process`)

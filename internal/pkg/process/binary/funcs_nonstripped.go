@@ -10,7 +10,10 @@ import (
 	"math"
 )
 
-func FindFunctionsUnStripped(elfF *elf.File, relevantFuncs map[string]interface{}) ([]*Func, error) {
+func FindFunctionsUnStripped(
+	elfF *elf.File,
+	relevantFuncs map[string]interface{},
+) ([]*Func, error) {
 	symbols, err := elfF.Symbols()
 	if err != nil {
 		return nil, err
@@ -72,7 +75,11 @@ func getFuncOffsetUnstripped(f *elf.File, symbol elf.Symbol) (uint64, error) {
 	return symbol.Value - execSection.Addr + execSection.Offset, nil
 }
 
-func findFuncReturnsUnstripped(elfFile *elf.File, sym elf.Symbol, functionOffset uint64) ([]uint64, error) {
+func findFuncReturnsUnstripped(
+	elfFile *elf.File,
+	sym elf.Symbol,
+	functionOffset uint64,
+) ([]uint64, error) {
 	textSection := elfFile.Section(".text")
 	if textSection == nil {
 		return nil, errors.New("could not find .text section in binary")
@@ -80,7 +87,11 @@ func findFuncReturnsUnstripped(elfFile *elf.File, sym elf.Symbol, functionOffset
 
 	lowPC := sym.Value
 	if textSection.Addr > lowPC {
-		return nil, fmt.Errorf("invalid .text section address: %d (symbol value %d)", textSection.Addr, lowPC)
+		return nil, fmt.Errorf(
+			"invalid .text section address: %d (symbol value %d)",
+			textSection.Addr,
+			lowPC,
+		)
 	}
 	offset := lowPC - textSection.Addr
 	if offset > math.MaxInt64 {

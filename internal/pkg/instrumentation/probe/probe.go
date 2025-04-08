@@ -116,7 +116,11 @@ func (i *Base[BPFObj, BPFEvent]) Spec() (*ebpf.CollectionSpec, error) {
 }
 
 // Load loads all instrumentation offsets.
-func (i *Base[BPFObj, BPFEvent]) Load(exec *link.Executable, info *process.Info, sampler *sampling.Config) error {
+func (i *Base[BPFObj, BPFEvent]) Load(
+	exec *link.Executable,
+	info *process.Info,
+	sampler *sampling.Config,
+) error {
 	spec, err := i.SpecFn()
 	if err != nil {
 		return err
@@ -189,7 +193,12 @@ func (i *Base[BPFObj, BPFEvent]) loadUprobes(exec *link.Executable, info *proces
 				logFn = i.Logger.Warn
 			default:
 				// Unknown and FailureModeError.
-				return fmt.Errorf("uprobe %s package constraint (%s) not met, version %v", up.Sym, pc.Constraints.String(), info.Modules[pc.Package])
+				return fmt.Errorf(
+					"uprobe %s package constraint (%s) not met, version %v",
+					up.Sym,
+					pc.Constraints.String(),
+					info.Modules[pc.Package],
+				)
 			}
 
 			logFn(
@@ -242,7 +251,10 @@ func (i *Base[BPFObj, BPFEvent]) initReader() error {
 	return nil
 }
 
-func (i *Base[BPFObj, BPFEvent]) buildEBPFCollection(info *process.Info, spec *ebpf.CollectionSpec) (*ebpf.Collection, error) {
+func (i *Base[BPFObj, BPFEvent]) buildEBPFCollection(
+	info *process.Info,
+	spec *ebpf.CollectionSpec,
+) (*ebpf.Collection, error) {
 	obj := new(BPFObj)
 	if c, ok := ((interface{})(obj)).(io.Closer); ok {
 		i.closers = append(i.closers, c)
