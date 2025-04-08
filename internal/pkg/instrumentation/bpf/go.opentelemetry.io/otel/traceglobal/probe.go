@@ -134,19 +134,39 @@ func New(logger *slog.Logger) probe.Probe {
 				},
 				probe.StructFieldConst{
 					Key: "tracer_delegate_pos",
-					ID:  structfield.NewID("go.opentelemetry.io/otel", "go.opentelemetry.io/otel/internal/global", "tracer", "delegate"),
+					ID: structfield.NewID(
+						"go.opentelemetry.io/otel",
+						"go.opentelemetry.io/otel/internal/global",
+						"tracer",
+						"delegate",
+					),
 				},
 				probe.StructFieldConst{
 					Key: "tracer_name_pos",
-					ID:  structfield.NewID("go.opentelemetry.io/otel", "go.opentelemetry.io/otel/internal/global", "tracer", "name"),
+					ID: structfield.NewID(
+						"go.opentelemetry.io/otel",
+						"go.opentelemetry.io/otel/internal/global",
+						"tracer",
+						"name",
+					),
 				},
 				probe.StructFieldConst{
 					Key: "tracer_provider_pos",
-					ID:  structfield.NewID("go.opentelemetry.io/otel", "go.opentelemetry.io/otel/internal/global", "tracer", "provider"),
+					ID: structfield.NewID(
+						"go.opentelemetry.io/otel",
+						"go.opentelemetry.io/otel/internal/global",
+						"tracer",
+						"provider",
+					),
 				},
 				probe.StructFieldConst{
 					Key: "tracer_provider_tracers_pos",
-					ID:  structfield.NewID("go.opentelemetry.io/otel", "go.opentelemetry.io/otel/internal/global", "tracerProvider", "tracers"),
+					ID: structfield.NewID(
+						"go.opentelemetry.io/otel",
+						"go.opentelemetry.io/otel/internal/global",
+						"tracerProvider",
+						"tracers",
+					),
 				},
 				probe.StructFieldConstMaxVersion{
 					StructField: probe.StructFieldConst{
@@ -264,7 +284,10 @@ func (c tracerIDContainsSchemaURL) InjectOption(info *process.Info) (inject.Opti
 		return nil, fmt.Errorf("unknown module version: %s", pkg)
 	}
 
-	return inject.WithKeyValue("tracer_id_contains_schemaURL", ver.GreaterThanEqual(schemaAddedToTracerKeyVer)), nil
+	return inject.WithKeyValue(
+		"tracer_id_contains_schemaURL",
+		ver.GreaterThanEqual(schemaAddedToTracerKeyVer),
+	), nil
 }
 
 // In v1.32.0 the tracer key was updated to include the scope attributes.
@@ -280,7 +303,10 @@ func (c tracerIDContainsScopeAttributes) InjectOption(info *process.Info) (injec
 		return nil, fmt.Errorf("unknown module version: %s", pkg)
 	}
 
-	return inject.WithKeyValue("tracer_id_contains_scope_attributes", ver.GreaterThanEqual(scopeAttributesAddedToTracerKeyVer)), nil
+	return inject.WithKeyValue(
+		"tracer_id_contains_scope_attributes",
+		ver.GreaterThanEqual(scopeAttributesAddedToTracerKeyVer),
+	), nil
 }
 
 type attributeKeyVal struct {

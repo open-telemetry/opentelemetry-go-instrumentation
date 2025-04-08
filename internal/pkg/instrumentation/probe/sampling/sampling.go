@@ -240,7 +240,11 @@ func (m *Manager) applyConfig(conf *Config) error {
 			return err
 		}
 		if len(b) != sampleConfigSize {
-			return fmt.Errorf("unexpected sampler config size, expected %d, got %d", sampleConfigSize, len(b))
+			return fmt.Errorf(
+				"unexpected sampler config size, expected %d, got %d",
+				sampleConfigSize,
+				len(b),
+			)
 		}
 		copy(configsBytes[i][:], b)
 	}
