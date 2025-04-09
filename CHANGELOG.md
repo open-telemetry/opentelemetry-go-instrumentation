@@ -51,6 +51,7 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 - Reset Kafka producer span underlying memory before each span. ([#1937](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1937))
 - Stop pinning collector image in e2e tests. ([#2072](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/2072))
 - Fallback to avoid context propagation in `kafka-go` instrumentation if the kernel does not support `bpf_probe_write_user`. ([#2105](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/2105))
+- Make sure Go strings being read from eBPF are null terminated. ([#1936](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1936))
 
 ## [v0.21.0] - 2025-02-18
 
