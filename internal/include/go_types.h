@@ -161,7 +161,7 @@ static __always_inline void append_item_to_slice(void *new_item, u32 item_size, 
 
 static __always_inline bool get_go_string_from_user_ptr(void *user_str_ptr, char *dst, u64 max_len)
 {
-    if (user_str_ptr == NULL) {
+    if (user_str_ptr == NULL || max_len == 0) {
         return false;
     }
 
@@ -173,17 +173,12 @@ static __always_inline bool get_go_string_from_user_ptr(void *user_str_ptr, char
     }
 
     u64 size_to_read = user_str.len > max_len ? max_len : user_str.len;
-    // help the verifier with the bounds, we should never read more than 1MB
-    u32 size = size_to_read & 0xFFFFF;
-    success = bpf_probe_read_user(dst, size, user_str.str);
+    __builtin_memset(dst, 0, max_len)
+    
+    success = bpf_probe_read_user(dst, size_to_read, user_str.str);
     if (success != 0) {
         return false;
     }
-
-    if (size_to_read < max_len) {
-        dst[size_to_read] = '\0';
-    }
-
     return true;
 }
 #endif
