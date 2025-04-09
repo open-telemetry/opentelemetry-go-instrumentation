@@ -99,7 +99,10 @@ func New(logger *slog.Logger, version string) probe.Probe {
 
 func verifyAndLoadBpf() (*ebpf.CollectionSpec, error) {
 	if !utils.SupportsContextPropagation() {
-		fmt.Fprintf(os.Stderr, "the Linux Kernel doesn't support context propagation, please check if the kernel is in lockdown mode (/sys/kernel/security/lockdown)")
+		fmt.Fprintf(
+			os.Stderr,
+			"the Linux Kernel doesn't support context propagation, please check if the kernel is in lockdown mode (/sys/kernel/security/lockdown)",
+		)
 		return loadBpf_no_tp()
 	}
 
