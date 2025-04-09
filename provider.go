@@ -117,7 +117,10 @@ func (c *converter) instrumentationConfig(ic InstrumentationConfig) instrumentat
 
 	out.DefaultTracesDisabled = ic.DefaultTracesDisabled
 	if n := len(ic.InstrumentationLibraryConfigs); n > 0 {
-		out.InstrumentationLibraryConfigs = make(map[instrumentation.LibraryID]instrumentation.Library, len(ic.InstrumentationLibraryConfigs))
+		out.InstrumentationLibraryConfigs = make(
+			map[instrumentation.LibraryID]instrumentation.Library,
+			len(ic.InstrumentationLibraryConfigs),
+		)
 		for k, v := range ic.InstrumentationLibraryConfigs {
 			id := instrumentation.LibraryID{
 				InstrumentedPkg: k.InstrumentedPkg,

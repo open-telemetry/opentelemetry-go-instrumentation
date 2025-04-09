@@ -7,7 +7,9 @@ import "errors"
 
 var (
 	errInvalidFraction = errors.New("fraction must be a positive float between 0 and 1")
-	errPrecisionLoss   = errors.New("the given float cannot be represented as a fraction with the current precision")
+	errPrecisionLoss   = errors.New(
+		"the given float cannot be represented as a fraction with the current precision",
+	)
 )
 
 // floatToNumerator converts a float to a numerator of a fraction with the given denominator.
