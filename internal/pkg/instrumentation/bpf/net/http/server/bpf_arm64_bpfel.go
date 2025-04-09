@@ -106,26 +106,27 @@ type bpfMapSpecs struct {
 //
 // It can be passed ebpf.CollectionSpec.Assign.
 type bpfVariableSpecs struct {
-	BucketsPtrPos        *ebpf.VariableSpec `ebpf:"buckets_ptr_pos"`
-	CtxPtrPos            *ebpf.VariableSpec `ebpf:"ctx_ptr_pos"`
-	EndAddr              *ebpf.VariableSpec `ebpf:"end_addr"`
-	HeadersPtrPos        *ebpf.VariableSpec `ebpf:"headers_ptr_pos"`
-	Hex                  *ebpf.VariableSpec `ebpf:"hex"`
-	HostPos              *ebpf.VariableSpec `ebpf:"host_pos"`
-	MethodPtrPos         *ebpf.VariableSpec `ebpf:"method_ptr_pos"`
-	PatStrPos            *ebpf.VariableSpec `ebpf:"pat_str_pos"`
-	PathPtrPos           *ebpf.VariableSpec `ebpf:"path_ptr_pos"`
-	PatternPathSupported *ebpf.VariableSpec `ebpf:"pattern_path_supported"`
-	ProtoPos             *ebpf.VariableSpec `ebpf:"proto_pos"`
-	RemoteAddrPos        *ebpf.VariableSpec `ebpf:"remote_addr_pos"`
-	ReqPatPos            *ebpf.VariableSpec `ebpf:"req_pat_pos"`
-	ReqPatternPos        *ebpf.VariableSpec `ebpf:"req_pattern_pos"`
-	ReqPtrPos            *ebpf.VariableSpec `ebpf:"req_ptr_pos"`
-	StartAddr            *ebpf.VariableSpec `ebpf:"start_addr"`
-	StatusCodePos        *ebpf.VariableSpec `ebpf:"status_code_pos"`
-	SwissMapsUsed        *ebpf.VariableSpec `ebpf:"swiss_maps_used"`
-	TotalCpus            *ebpf.VariableSpec `ebpf:"total_cpus"`
-	UrlPtrPos            *ebpf.VariableSpec `ebpf:"url_ptr_pos"`
+	BucketsPtrPos              *ebpf.VariableSpec `ebpf:"buckets_ptr_pos"`
+	CtxPtrPos                  *ebpf.VariableSpec `ebpf:"ctx_ptr_pos"`
+	EndAddr                    *ebpf.VariableSpec `ebpf:"end_addr"`
+	HeadersPtrPos              *ebpf.VariableSpec `ebpf:"headers_ptr_pos"`
+	Hex                        *ebpf.VariableSpec `ebpf:"hex"`
+	HostPos                    *ebpf.VariableSpec `ebpf:"host_pos"`
+	MethodPtrPos               *ebpf.VariableSpec `ebpf:"method_ptr_pos"`
+	PatStrPos                  *ebpf.VariableSpec `ebpf:"pat_str_pos"`
+	PathPtrPos                 *ebpf.VariableSpec `ebpf:"path_ptr_pos"`
+	PatternPathPublicSupported *ebpf.VariableSpec `ebpf:"pattern_path_public_supported"`
+	PatternPathSupported       *ebpf.VariableSpec `ebpf:"pattern_path_supported"`
+	ProtoPos                   *ebpf.VariableSpec `ebpf:"proto_pos"`
+	RemoteAddrPos              *ebpf.VariableSpec `ebpf:"remote_addr_pos"`
+	ReqPatPos                  *ebpf.VariableSpec `ebpf:"req_pat_pos"`
+	ReqPatternPos              *ebpf.VariableSpec `ebpf:"req_pattern_pos"`
+	ReqPtrPos                  *ebpf.VariableSpec `ebpf:"req_ptr_pos"`
+	StartAddr                  *ebpf.VariableSpec `ebpf:"start_addr"`
+	StatusCodePos              *ebpf.VariableSpec `ebpf:"status_code_pos"`
+	SwissMapsUsed              *ebpf.VariableSpec `ebpf:"swiss_maps_used"`
+	TotalCpus                  *ebpf.VariableSpec `ebpf:"total_cpus"`
+	UrlPtrPos                  *ebpf.VariableSpec `ebpf:"url_ptr_pos"`
 }
 
 // bpfObjects contains all objects after they have been loaded into the kernel.
@@ -181,26 +182,27 @@ func (m *bpfMaps) Close() error {
 //
 // It can be passed to loadBpfObjects or ebpf.CollectionSpec.LoadAndAssign.
 type bpfVariables struct {
-	BucketsPtrPos        *ebpf.Variable `ebpf:"buckets_ptr_pos"`
-	CtxPtrPos            *ebpf.Variable `ebpf:"ctx_ptr_pos"`
-	EndAddr              *ebpf.Variable `ebpf:"end_addr"`
-	HeadersPtrPos        *ebpf.Variable `ebpf:"headers_ptr_pos"`
-	Hex                  *ebpf.Variable `ebpf:"hex"`
-	HostPos              *ebpf.Variable `ebpf:"host_pos"`
-	MethodPtrPos         *ebpf.Variable `ebpf:"method_ptr_pos"`
-	PatStrPos            *ebpf.Variable `ebpf:"pat_str_pos"`
-	PathPtrPos           *ebpf.Variable `ebpf:"path_ptr_pos"`
-	PatternPathSupported *ebpf.Variable `ebpf:"pattern_path_supported"`
-	ProtoPos             *ebpf.Variable `ebpf:"proto_pos"`
-	RemoteAddrPos        *ebpf.Variable `ebpf:"remote_addr_pos"`
-	ReqPatPos            *ebpf.Variable `ebpf:"req_pat_pos"`
-	ReqPatternPos        *ebpf.Variable `ebpf:"req_pattern_pos"`
-	ReqPtrPos            *ebpf.Variable `ebpf:"req_ptr_pos"`
-	StartAddr            *ebpf.Variable `ebpf:"start_addr"`
-	StatusCodePos        *ebpf.Variable `ebpf:"status_code_pos"`
-	SwissMapsUsed        *ebpf.Variable `ebpf:"swiss_maps_used"`
-	TotalCpus            *ebpf.Variable `ebpf:"total_cpus"`
-	UrlPtrPos            *ebpf.Variable `ebpf:"url_ptr_pos"`
+	BucketsPtrPos              *ebpf.Variable `ebpf:"buckets_ptr_pos"`
+	CtxPtrPos                  *ebpf.Variable `ebpf:"ctx_ptr_pos"`
+	EndAddr                    *ebpf.Variable `ebpf:"end_addr"`
+	HeadersPtrPos              *ebpf.Variable `ebpf:"headers_ptr_pos"`
+	Hex                        *ebpf.Variable `ebpf:"hex"`
+	HostPos                    *ebpf.Variable `ebpf:"host_pos"`
+	MethodPtrPos               *ebpf.Variable `ebpf:"method_ptr_pos"`
+	PatStrPos                  *ebpf.Variable `ebpf:"pat_str_pos"`
+	PathPtrPos                 *ebpf.Variable `ebpf:"path_ptr_pos"`
+	PatternPathPublicSupported *ebpf.Variable `ebpf:"pattern_path_public_supported"`
+	PatternPathSupported       *ebpf.Variable `ebpf:"pattern_path_supported"`
+	ProtoPos                   *ebpf.Variable `ebpf:"proto_pos"`
+	RemoteAddrPos              *ebpf.Variable `ebpf:"remote_addr_pos"`
+	ReqPatPos                  *ebpf.Variable `ebpf:"req_pat_pos"`
+	ReqPatternPos              *ebpf.Variable `ebpf:"req_pattern_pos"`
+	ReqPtrPos                  *ebpf.Variable `ebpf:"req_ptr_pos"`
+	StartAddr                  *ebpf.Variable `ebpf:"start_addr"`
+	StatusCodePos              *ebpf.Variable `ebpf:"status_code_pos"`
+	SwissMapsUsed              *ebpf.Variable `ebpf:"swiss_maps_used"`
+	TotalCpus                  *ebpf.Variable `ebpf:"total_cpus"`
+	UrlPtrPos                  *ebpf.Variable `ebpf:"url_ptr_pos"`
 }
 
 // bpfPrograms contains all programs after they have been loaded into the kernel.
