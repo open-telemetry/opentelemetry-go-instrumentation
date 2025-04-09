@@ -11,7 +11,7 @@ import (
 
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/ptrace"
-	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.30.0"
 	"go.opentelemetry.io/otel/trace"
 
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/context"
@@ -39,9 +39,12 @@ func TestProbeConvertEvent(t *testing.T) {
 		// key1
 		Key: [256]byte{0x6b, 0x65, 0x79, 0x31},
 		// test consumer group
-		ConsumerGroup: [128]byte{0x74, 0x65, 0x73, 0x74, 0x20, 0x63, 0x6f, 0x6e, 0x73, 0x75, 0x6d, 0x65, 0x72, 0x20, 0x67, 0x72, 0x6f, 0x75, 0x70},
-		Offset:        42,
-		Partition:     12,
+		ConsumerGroup: [128]byte{
+			0x74, 0x65, 0x73, 0x74, 0x20, 0x63, 0x6f, 0x6e, 0x73, 0x75,
+			0x6d, 0x65, 0x72, 0x20, 0x67, 0x72, 0x6f, 0x75, 0x70,
+		},
+		Offset:    42,
+		Partition: 12,
 	})
 
 	want := func() ptrace.SpanSlice {
@@ -60,9 +63,9 @@ func TestProbeConvertEvent(t *testing.T) {
 			semconv.MessagingOperationTypeReceive,
 			semconv.MessagingDestinationPartitionID("12"),
 			semconv.MessagingDestinationName("topic1"),
-			semconv.MessagingKafkaMessageOffset(42),
+			semconv.MessagingKafkaOffset(42),
 			semconv.MessagingKafkaMessageKey("key1"),
-			semconv.MessagingKafkaConsumerGroup("test consumer group"),
+			semconv.MessagingConsumerGroupName("test consumer group"),
 		)
 		return spans
 	}()

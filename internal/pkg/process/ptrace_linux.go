@@ -6,7 +6,6 @@ package process
 import (
 	"fmt"
 	"log/slog"
-	"os"
 	"strconv"
 	"strings"
 	"syscall"
@@ -22,9 +21,9 @@ import (
 const waitPidErrorMessage = "waitpid ret value: %d"
 
 const (
-	// MADV_POPULATE_READ.
+	// MadvisePopulateRead is the MADV_POPULATE_READ advice flag.
 	MadvisePopulateRead = 0x16
-	// MADV_POPULATE_WRITE.
+	// MadvisePopulateWrite is the MADV_POPULATE_WRITE advice flag.
 	MadvisePopulateWrite = 0x17
 )
 
@@ -59,7 +58,7 @@ func waitPid(pid int) error {
 }
 
 // newTracedProgram ptrace all threads of a process.
-func newTracedProgram(pid int, logger *slog.Logger) (*tracedProgram, error) {
+func newTracedProgram(id ID, logger *slog.Logger) (*tracedProgram, error) {
 	tidMap := make(map[int]bool)
 	retryCount := make(map[int]int)
 
@@ -71,7 +70,7 @@ func newTracedProgram(pid int, logger *slog.Logger) (*tracedProgram, error) {
 	// ...
 	// only the first way finally worked for every situations
 	for {
-		threads, err := os.ReadDir(fmt.Sprintf("/proc/%d/task", pid))
+		threads, err := id.Tasks()
 		if err != nil {
 			return nil, errors.WithStack(err)
 		}
@@ -103,7 +102,15 @@ func newTracedProgram(pid int, logger *slog.Logger) (*tracedProgram, error) {
 					retryCount[tid]++
 				}
 				if retryCount[tid] < threadRetryLimit {
-					logger.Debug("retry attaching thread", "tid", tid, "retryCount", retryCount[tid], "limit", threadRetryLimit)
+					logger.Debug(
+						"retry attaching thread",
+						"tid",
+						tid,
+						"retryCount",
+						retryCount[tid],
+						"limit",
+						threadRetryLimit,
+					)
 					continue
 				}
 
@@ -139,7 +146,7 @@ func newTracedProgram(pid int, logger *slog.Logger) (*tracedProgram, error) {
 	}
 
 	program := &tracedProgram{
-		pid:        pid,
+		pid:        int(id),
 		tids:       tids,
 		backupRegs: &syscall.PtraceRegs{},
 		backupCode: make([]byte, syscallInstrSize),
@@ -222,7 +229,15 @@ func (p *tracedProgram) SetMemLockInfinity() error {
 
 // Mmap runs mmap syscall.
 func (p *tracedProgram) Mmap(length uint64, fd uint64) (uint64, error) {
-	return p.Syscall(syscall.SYS_MMAP, 0, length, syscall.PROT_READ|syscall.PROT_WRITE, syscall.MAP_ANON|syscall.MAP_PRIVATE|syscall.MAP_POPULATE|syscall.MAP_LOCKED, fd, 0)
+	return p.Syscall(
+		syscall.SYS_MMAP,
+		0,
+		length,
+		syscall.PROT_READ|syscall.PROT_WRITE,
+		syscall.MAP_ANON|syscall.MAP_PRIVATE|syscall.MAP_POPULATE|syscall.MAP_LOCKED,
+		fd,
+		0,
+	)
 }
 
 // Madvise runs madvise syscall.

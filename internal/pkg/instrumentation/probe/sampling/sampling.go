@@ -1,6 +1,8 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
+// Package sampling provides types and functionality to support sampling of
+// auto-instrumentation generated trace telemetry.
 package sampling
 
 import (
@@ -238,7 +240,11 @@ func (m *Manager) applyConfig(conf *Config) error {
 			return err
 		}
 		if len(b) != sampleConfigSize {
-			return fmt.Errorf("unexpected sampler config size, expected %d, got %d", sampleConfigSize, len(b))
+			return fmt.Errorf(
+				"unexpected sampler config size, expected %d, got %d",
+				sampleConfigSize,
+				len(b),
+			)
 		}
 		copy(configsBytes[i][:], b)
 	}

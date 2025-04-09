@@ -12,7 +12,7 @@ import (
 	"go.opentelemetry.io/auto/internal/pkg/structfield"
 )
 
-// Wrapper object for the Manifest function symbol.
+// FunctionSymbol is a function symbol targeted by a uprobe.
 type FunctionSymbol struct {
 	Symbol    string
 	DependsOn []string

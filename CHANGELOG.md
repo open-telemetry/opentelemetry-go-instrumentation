@@ -15,6 +15,22 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 - The auto binary (built from `auto/cli`) can now be passed the path of the target process executable directly using the `-target-exe` CLI option. ([#1890](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1890))
 - The auto binary (built from `auto/cli`) now resolves the target PID from the environment variable `"OTEL_GO_AUTO_TARGET_PID"` if no target options are passed. ([#1890](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1890))
 - The auto binary (built from `auto/cli`) will now only resolve the target process executable from the environment variable `"OTEL_GO_AUTO_TARGET_EXE"` if no target options are passed and `"OTEL_GO_AUTO_TARGET_PID"` is not set. ([#1890](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1890))
+- Cache offsets for `golang.org/x/net` `0.36.0`. ([#1940](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1940))
+- Cache offsets for `google.golang.org/grpc` `1.71.0`. ([#1940](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1940))
+- Cache offsets for Go `1.23.7`. ([#1940](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1940))
+- Cache offsets for Go `1.24.1`. ([#1940](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1940))
+- Cache offsets for `go.opentelemetry.io/otel@v1.35.0`. ([#1948](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1948))
+- Cache offsets for `golang.org/x/net` `0.37.0`. ([#1948](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1948))
+- Cache offsets for `golang.org/x/net` `0.38.0`. ([#2063](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/2063))
+- Cache offsets for `google.golang.org/grpc` `1.71.1`. ([#2078](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/2078))
+- Cache offsets for Go `1.23.8`. ([#2081](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/2081))
+- Cache offsets for Go `1.24.2`. ([#2081](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/2081))
+- Cache offsets for `google.golang.org/grpc` `1.73.0-dev`. ([#2091](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/2091))
+- Cache offsets for `golang.org/x/net` `0.39.0`. ([#2107](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/2107))
+
+### Changed
+
+- Upgrade OpenTelemetry semantic conventions to `v1.30.0`. ([#2032](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/2032))
 
 ### Removed
 
@@ -26,6 +42,15 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 - The `WithTarget` function is removed.
   The `auto` package no longer supports process discovery (note: the built binary (`auto/cli`) still supports process discovery).
   Once a target process has been identified, use `WithPID` to configure `Instrumentation` instead. ([#1890](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1890))
+
+### Fixed
+
+- Fix spans parsing from eBPF for the legacy (go version < 1.24 otel-go < 1.33) otel global instrumentation. ([#1960](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1960))
+- The `process.runtime.version` resource attribute is now the exact value returned from `debug` to match what OpenTelemetry semantic conventions recommend. ([#1985](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1985))
+- Stop adding `process.runtime.description` to `Resource` to follow OpenTelemetry semantic conventions. ([#1986](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1986))
+- Reset Kafka producer span underlying memory before each span. ([#1937](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1937))
+- Stop pinning collector image in e2e tests. ([#2072](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/2072))
+- Fallback to avoid context propagation in `kafka-go` instrumentation if the kernel does not support `bpf_probe_write_user`. ([#2105](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/2105))
 
 ## [v0.21.0] - 2025-02-18
 

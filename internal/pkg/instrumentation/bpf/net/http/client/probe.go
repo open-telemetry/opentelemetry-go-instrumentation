@@ -1,6 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
+// Package client provides an instrumentation probe for [net/http] clients.
 package client
 
 import (
@@ -14,7 +15,7 @@ import (
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/ptrace"
 	"go.opentelemetry.io/otel/attribute"
-	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.30.0"
 	"go.opentelemetry.io/otel/trace"
 	"golang.org/x/sys/unix"
 
@@ -165,7 +166,10 @@ func New(logger *slog.Logger, version string) probe.Probe {
 
 func verifyAndLoadBpf() (*ebpf.CollectionSpec, error) {
 	if !utils.SupportsContextPropagation() {
-		fmt.Fprintf(os.Stderr, "the Linux Kernel doesn't support context propagation, please check if the kernel is in lockdown mode (/sys/kernel/security/lockdown)")
+		fmt.Fprintf(
+			os.Stderr,
+			"the Linux Kernel doesn't support context propagation, please check if the kernel is in lockdown mode (/sys/kernel/security/lockdown)",
+		)
 		return loadBpf_no_tp()
 	}
 
@@ -218,7 +222,9 @@ func processFn(e *event) ptrace.SpanSlice {
 	}
 	attrs := []attribute.KeyValue{
 		semconv.HTTPRequestMethodKey.String(method),
-		semconv.HTTPResponseStatusCodeKey.Int(int(e.StatusCode)), // nolint: gosec  // Bound checked.
+		semconv.HTTPResponseStatusCodeKey.Int(
+			int(e.StatusCode),
+		), // nolint: gosec  // Bound checked.
 	}
 
 	if path != "" {

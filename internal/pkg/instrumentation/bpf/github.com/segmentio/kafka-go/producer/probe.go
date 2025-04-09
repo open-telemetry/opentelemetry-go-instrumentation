@@ -1,16 +1,21 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
+// Package producer provides an instrumentation probe for Kafka producers using
+// the [github.com/segmentio/kafka-go] package.
 package producer
 
 import (
+	"fmt"
 	"log/slog"
 	"math"
+	"os"
 
+	"github.com/cilium/ebpf"
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/ptrace"
 	"go.opentelemetry.io/otel/attribute"
-	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.30.0"
 	"go.opentelemetry.io/otel/trace"
 	"golang.org/x/sys/unix"
 
@@ -21,6 +26,7 @@ import (
 )
 
 //go:generate go run github.com/cilium/ebpf/cmd/bpf2go -target amd64,arm64 bpf ./bpf/probe.bpf.c
+//go:generate go run github.com/cilium/ebpf/cmd/bpf2go -target amd64,arm64 bpf_no_tp ./bpf/probe.bpf.c -- -DNO_HEADER_PROPAGATION
 
 const (
 	// pkg is the package being instrumented.
@@ -41,19 +47,39 @@ func New(logger *slog.Logger, version string) probe.Probe {
 				probe.AllocationConst{},
 				probe.StructFieldConst{
 					Key: "writer_topic_pos",
-					ID:  structfield.NewID("github.com/segmentio/kafka-go", "github.com/segmentio/kafka-go", "Writer", "Topic"),
+					ID: structfield.NewID(
+						"github.com/segmentio/kafka-go",
+						"github.com/segmentio/kafka-go",
+						"Writer",
+						"Topic",
+					),
 				},
 				probe.StructFieldConst{
 					Key: "message_headers_pos",
-					ID:  structfield.NewID("github.com/segmentio/kafka-go", "github.com/segmentio/kafka-go", "Message", "Headers"),
+					ID: structfield.NewID(
+						"github.com/segmentio/kafka-go",
+						"github.com/segmentio/kafka-go",
+						"Message",
+						"Headers",
+					),
 				},
 				probe.StructFieldConst{
 					Key: "message_key_pos",
-					ID:  structfield.NewID("github.com/segmentio/kafka-go", "github.com/segmentio/kafka-go", "Message", "Key"),
+					ID: structfield.NewID(
+						"github.com/segmentio/kafka-go",
+						"github.com/segmentio/kafka-go",
+						"Message",
+						"Key",
+					),
 				},
 				probe.StructFieldConst{
 					Key: "message_time_pos",
-					ID:  structfield.NewID("github.com/segmentio/kafka-go", "github.com/segmentio/kafka-go", "Message", "Time"),
+					ID: structfield.NewID(
+						"github.com/segmentio/kafka-go",
+						"github.com/segmentio/kafka-go",
+						"Message",
+						"Time",
+					),
 				},
 			},
 			Uprobes: []*probe.Uprobe{
@@ -63,12 +89,24 @@ func New(logger *slog.Logger, version string) probe.Probe {
 					ReturnProbe: "uprobe_WriteMessages_Returns",
 				},
 			},
-			SpecFn: loadBpf,
+			SpecFn: verifyAndLoadBpf,
 		},
 		Version:   version,
 		SchemaURL: semconv.SchemaURL,
 		ProcessFn: processFn,
 	}
+}
+
+func verifyAndLoadBpf() (*ebpf.CollectionSpec, error) {
+	if !utils.SupportsContextPropagation() {
+		fmt.Fprintf(
+			os.Stderr,
+			"the Linux Kernel doesn't support context propagation, please check if the kernel is in lockdown mode (/sys/kernel/security/lockdown)",
+		)
+		return loadBpf_no_tp()
+	}
+
+	return loadBpf()
 }
 
 type messageAttributes struct {
@@ -93,14 +131,17 @@ type event struct {
 func processFn(e *event) ptrace.SpanSlice {
 	globalTopic := unix.ByteSliceToString(e.GlobalTopic[:])
 
-	attrs := []attribute.KeyValue{semconv.MessagingSystemKafka, semconv.MessagingOperationTypePublish}
+	attrs := []attribute.KeyValue{semconv.MessagingSystemKafka, semconv.MessagingOperationTypeSend}
 	if len(globalTopic) > 0 {
 		attrs = append(attrs, semconv.MessagingDestinationName(globalTopic))
 	}
 
 	if e.ValidMessages > 0 {
 		e.ValidMessages = min(e.ValidMessages, math.MaxInt)
-		attrs = append(attrs, semconv.MessagingBatchMessageCount(int(e.ValidMessages))) // nolint: gosec  // Bounded.
+		attrs = append(
+			attrs,
+			semconv.MessagingBatchMessageCount(int(e.ValidMessages)), // nolint: gosec  // Bounded.
+		)
 	}
 
 	traceID := pcommon.TraceID(e.Messages[0].SpanContext.TraceID)

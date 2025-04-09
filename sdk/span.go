@@ -17,7 +17,7 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
-	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.30.0"
 	"go.opentelemetry.io/otel/trace"
 	"go.opentelemetry.io/otel/trace/noop"
 
@@ -88,7 +88,9 @@ func (s *span) SetAttributes(attrs ...attribute.KeyValue) {
 		// No attributes allowed.
 		n := int64(len(attrs))
 		if n > 0 {
-			s.span.DroppedAttrs += uint32(min(n, math.MaxUint32)) // nolint: gosec  // Bounds checked.
+			s.span.DroppedAttrs += uint32( // nolint: gosec  // Bounds checked.
+				min(n, math.MaxUint32),
+			)
 		}
 		return
 	}

@@ -16,7 +16,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
-	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.30.0"
 	"go.opentelemetry.io/otel/trace"
 
 	"go.opentelemetry.io/auto/sdk/internal/telemetry"
@@ -391,7 +391,7 @@ func TestSpanAddLinkLimit(t *testing.T) {
 
 func TestSpanLinkAttrLimit(t *testing.T) {
 	nInt := len(tAttrs)
-	require.GreaterOrEqual(t, len(tAttrs), 0)
+	require.GreaterOrEqual(t, nInt, 0)
 	n := uint32(nInt) // nolint: gosec  // Bound checked.
 
 	tests := []struct {
@@ -523,7 +523,7 @@ func TestAddEventLimit(t *testing.T) {
 
 func TestAddEventAttrLimit(t *testing.T) {
 	nInt := len(tAttrs)
-	require.GreaterOrEqual(t, len(tAttrs), 0)
+	require.GreaterOrEqual(t, nInt, 0)
 	n := uint32(nInt) // nolint: gosec  // Bound checked.
 
 	tests := []struct {
@@ -612,7 +612,7 @@ func TestSpanSetAttributes(t *testing.T) {
 
 func TestSpanAttributeLimits(t *testing.T) {
 	nInt := len(tAttrs)
-	require.GreaterOrEqual(t, len(tAttrs), 0)
+	require.GreaterOrEqual(t, nInt, 0)
 	n := uint32(nInt) // nolint: gosec  // Bound checked.
 
 	tests := []struct {
@@ -698,15 +698,33 @@ func TestSpanAttributeValueLimits(t *testing.T) {
 
 			s := builder.Build()
 			s.SetAttributes(aStr, aStrSlice)
-			assert.Truef(t, eq(want, s.span.Attrs), "set span attributes: got %#v, want %#v", s.span.Attrs, want)
+			assert.Truef(
+				t,
+				eq(want, s.span.Attrs),
+				"set span attributes: got %#v, want %#v",
+				s.span.Attrs,
+				want,
+			)
 
 			s.AddEvent("test", trace.WithAttributes(aStr, aStrSlice))
-			assert.Truef(t, eq(want, s.span.Events[0].Attrs), "span event attributes: got %#v, want %#v", s.span.Events[0].Attrs, want)
+			assert.Truef(
+				t,
+				eq(want, s.span.Events[0].Attrs),
+				"span event attributes: got %#v, want %#v",
+				s.span.Events[0].Attrs,
+				want,
+			)
 
 			s.AddLink(trace.Link{
 				Attributes: []attribute.KeyValue{aStr, aStrSlice},
 			})
-			assert.Truef(t, eq(want, s.span.Links[0].Attrs), "span link attributes: got %#v, want %#v", s.span.Links[0].Attrs, want)
+			assert.Truef(
+				t,
+				eq(want, s.span.Links[0].Attrs),
+				"span link attributes: got %#v, want %#v",
+				s.span.Links[0].Attrs,
+				want,
+			)
 
 			builder.Options = []trace.SpanStartOption{
 				trace.WithAttributes(aStr, aStrSlice),
@@ -715,8 +733,20 @@ func TestSpanAttributeValueLimits(t *testing.T) {
 				}),
 			}
 			s = builder.Build()
-			assert.Truef(t, eq(want, s.span.Attrs), "new span attributes: got %#v, want %#v", s.span.Attrs, want)
-			assert.Truef(t, eq(want, s.span.Links[0].Attrs), "new span link attributes: got %#v, want %#v", s.span.Attrs, want)
+			assert.Truef(
+				t,
+				eq(want, s.span.Attrs),
+				"new span attributes: got %#v, want %#v",
+				s.span.Attrs,
+				want,
+			)
+			assert.Truef(
+				t,
+				eq(want, s.span.Links[0].Attrs),
+				"new span link attributes: got %#v, want %#v",
+				s.span.Attrs,
+				want,
+			)
 		})
 	}
 }

@@ -1,6 +1,8 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
+// Package grpc provides an instrumentation probe for [google.golang.org/grpc]
+// clients.
 package grpc
 
 import (
@@ -15,7 +17,7 @@ import (
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/ptrace"
 	"go.opentelemetry.io/otel/attribute"
-	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.30.0"
 	"go.opentelemetry.io/otel/trace"
 	"golang.org/x/sys/unix"
 
@@ -67,45 +69,85 @@ func New(logger *slog.Logger, version string) probe.Probe {
 				writeStatusConst{},
 				probe.StructFieldConst{
 					Key: "clientconn_target_ptr_pos",
-					ID:  structfield.NewID("google.golang.org/grpc", "google.golang.org/grpc", "ClientConn", "target"),
+					ID: structfield.NewID(
+						"google.golang.org/grpc",
+						"google.golang.org/grpc",
+						"ClientConn",
+						"target",
+					),
 				},
 				probe.StructFieldConst{
 					Key: "httpclient_nextid_pos",
-					ID:  structfield.NewID("google.golang.org/grpc", "google.golang.org/grpc/internal/transport", "http2Client", "nextID"),
+					ID: structfield.NewID(
+						"google.golang.org/grpc",
+						"google.golang.org/grpc/internal/transport",
+						"http2Client",
+						"nextID",
+					),
 				},
 				probe.StructFieldConst{
 					Key: "headerFrame_hf_pos",
-					ID:  structfield.NewID("google.golang.org/grpc", "google.golang.org/grpc/internal/transport", "headerFrame", "hf"),
+					ID: structfield.NewID(
+						"google.golang.org/grpc",
+						"google.golang.org/grpc/internal/transport",
+						"headerFrame",
+						"hf",
+					),
 				},
 				probe.StructFieldConst{
 					Key: "headerFrame_streamid_pos",
-					ID:  structfield.NewID("google.golang.org/grpc", "google.golang.org/grpc/internal/transport", "headerFrame", "streamID"),
+					ID: structfield.NewID(
+						"google.golang.org/grpc",
+						"google.golang.org/grpc/internal/transport",
+						"headerFrame",
+						"streamID",
+					),
 				},
 				probe.StructFieldConstMinVersion{
 					StructField: probe.StructFieldConst{
 						Key: "error_status_pos",
-						ID:  structfield.NewID("google.golang.org/grpc", "google.golang.org/grpc/internal/status", "Error", "s"),
+						ID: structfield.NewID(
+							"google.golang.org/grpc",
+							"google.golang.org/grpc/internal/status",
+							"Error",
+							"s",
+						),
 					},
 					MinVersion: writeStatusMinVersion,
 				},
 				probe.StructFieldConstMinVersion{
 					StructField: probe.StructFieldConst{
 						Key: "status_s_pos",
-						ID:  structfield.NewID("google.golang.org/grpc", "google.golang.org/grpc/internal/status", "Status", "s"),
+						ID: structfield.NewID(
+							"google.golang.org/grpc",
+							"google.golang.org/grpc/internal/status",
+							"Status",
+							"s",
+						),
 					},
 					MinVersion: writeStatusMinVersion,
 				},
 				probe.StructFieldConstMinVersion{
 					StructField: probe.StructFieldConst{
 						Key: "status_code_pos",
-						ID:  structfield.NewID("google.golang.org/grpc", "google.golang.org/genproto/googleapis/rpc/status", "Status", "Code"),
+						ID: structfield.NewID(
+							"google.golang.org/grpc",
+							"google.golang.org/genproto/googleapis/rpc/status",
+							"Status",
+							"Code",
+						),
 					},
 					MinVersion: writeStatusMinVersion,
 				},
 				probe.StructFieldConstMinVersion{
 					StructField: probe.StructFieldConst{
 						Key: "status_message_pos",
-						ID:  structfield.NewID("google.golang.org/grpc", "google.golang.org/genproto/googleapis/rpc/status", "Status", "Message"),
+						ID: structfield.NewID(
+							"google.golang.org/grpc",
+							"google.golang.org/genproto/googleapis/rpc/status",
+							"Status",
+							"Message",
+						),
 					},
 					MinVersion: writeStatusMinVersion,
 				},
@@ -135,7 +177,9 @@ func New(logger *slog.Logger, version string) probe.Probe {
 
 func verifyAndLoadBpf() (*ebpf.CollectionSpec, error) {
 	if !utils.SupportsContextPropagation() {
-		return nil, errors.New("the Linux Kernel doesn't support context propagation, please check if the kernel is in lockdown mode (/sys/kernel/security/lockdown)")
+		return nil, errors.New(
+			"the Linux Kernel doesn't support context propagation, please check if the kernel is in lockdown mode (/sys/kernel/security/lockdown)",
+		)
 	}
 
 	return loadBpf()

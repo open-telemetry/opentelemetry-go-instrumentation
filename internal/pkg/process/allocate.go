@@ -1,6 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
+// Package process provides type and functionality for target Go processes.
 package process
 
 import (
@@ -21,8 +22,8 @@ type Allocation struct {
 	NumCPU    uint64
 }
 
-// Allocate allocates memory for the instrumented process.
-func Allocate(logger *slog.Logger, pid int) (*Allocation, error) {
+// allocate allocates memory for the instrumented process.
+func allocate(logger *slog.Logger, id ID) (*Allocation, error) {
 	// runtime.NumCPU doesn't query any kind of hardware or OS state,
 	// but merely uses affinity APIs to count what CPUs the given go process is available to run on.
 	// Go's implementation of runtime.NumCPU (https://github.com/golang/go/blob/48d899dcdbed4534ed942f7ec2917cf86b18af22/src/runtime/os_linux.go#L97)
@@ -46,7 +47,7 @@ func Allocate(logger *slog.Logger, pid int) (*Allocation, error) {
 		"page size", pagesize,
 		"cpu count", nCPU)
 
-	addr, err := remoteAllocate(logger, pid, mapSize)
+	addr, err := remoteAllocate(logger, id, mapSize)
 	if err != nil {
 		return nil, err
 	}
@@ -64,19 +65,19 @@ func Allocate(logger *slog.Logger, pid int) (*Allocation, error) {
 	}, nil
 }
 
-func remoteAllocate(logger *slog.Logger, pid int, mapSize uint64) (uint64, error) {
+func remoteAllocate(logger *slog.Logger, id ID, mapSize uint64) (uint64, error) {
 	runtime.LockOSThread()
 	defer runtime.UnlockOSThread()
-	program, err := newTracedProgram(pid, logger)
+	program, err := newTracedProgram(id, logger)
 	if err != nil {
 		return 0, err
 	}
 
 	defer func() {
-		logger.Info("Detaching from process", "pid", pid)
+		logger.Info("Detaching from process", "pid", id)
 		err := program.Detach()
 		if err != nil {
-			logger.Error("Failed to detach ptrace", "error", err, "pid", pid)
+			logger.Error("Failed to detach ptrace", "error", err, "pid", id)
 		}
 	}()
 

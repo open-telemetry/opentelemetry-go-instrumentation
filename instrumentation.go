@@ -1,28 +1,27 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
+// Package auto provides OpenTelemetry automatic tracing instrumentation for Go
+// packages using eBPF.
 package auto
 
 import (
 	"context"
-	"debug/buildinfo"
 	"errors"
 	"fmt"
 	"log/slog"
 	"os"
 	"path/filepath"
-	"runtime"
 	"strconv"
 	"strings"
 	"sync"
-	"syscall"
 
 	"go.opentelemetry.io/contrib/exporters/autoexport"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp"
 	"go.opentelemetry.io/otel/sdk/resource"
 	"go.opentelemetry.io/otel/sdk/trace"
-	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.30.0"
 
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation"
 	dbSql "go.opentelemetry.io/auto/internal/pkg/instrumentation/bpf/database/sql"
@@ -55,9 +54,7 @@ const (
 // Instrumentation manages and controls all OpenTelemetry Go
 // auto-instrumentation.
 type Instrumentation struct {
-	target   *process.Info
-	analyzer *process.Analyzer
-	manager  *instrumentation.Manager
+	manager *instrumentation.Manager
 
 	stopMu  sync.Mutex
 	stop    context.CancelFunc
@@ -69,7 +66,10 @@ type Instrumentation struct {
 //
 // If conflicting or duplicate options are provided, the last one will have
 // precedence and be used.
-func NewInstrumentation(ctx context.Context, opts ...InstrumentationOption) (*Instrumentation, error) {
+func NewInstrumentation(
+	ctx context.Context,
+	opts ...InstrumentationOption,
+) (*Instrumentation, error) {
 	c, err := newInstConfig(ctx, opts)
 	if err != nil {
 		return nil, err
@@ -78,13 +78,7 @@ func NewInstrumentation(ctx context.Context, opts ...InstrumentationOption) (*In
 		return nil, err
 	}
 
-	pa := process.NewAnalyzer(c.logger)
-	err = pa.SetBuildInfo(c.targetPID)
-	if err != nil {
-		return nil, err
-	}
-
-	ctrl, err := opentelemetry.NewController(c.logger, c.tracerProvider(pa.BuildInfo))
+	ctrl, err := opentelemetry.NewController(c.logger, c.tracerProvider())
 	if err != nil {
 		return nil, err
 	}
@@ -105,41 +99,17 @@ func NewInstrumentation(ctx context.Context, opts ...InstrumentationOption) (*In
 	}
 
 	cp := convertConfigProvider(c.cp)
-	mngr, err := instrumentation.NewManager(c.logger, ctrl, cp, p...)
+	mngr, err := instrumentation.NewManager(c.logger, ctrl, c.pid, cp, p...)
 	if err != nil {
 		return nil, err
 	}
 
-	td, err := pa.Analyze(c.targetPID, mngr.GetRelevantFuncs())
-	if err != nil {
-		return nil, err
-	}
-
-	alloc, err := process.Allocate(c.logger, c.targetPID)
-	if err != nil {
-		return nil, err
-	}
-	td.Allocation = alloc
-
-	c.logger.Info(
-		"target process analysis completed",
-		"pid", td.PID,
-		"go_version", td.GoVersion,
-		"dependencies", td.Modules,
-		"total_functions_found", len(td.Functions),
-	)
-	mngr.FilterUnusedProbes(td)
-
-	return &Instrumentation{
-		target:   td,
-		analyzer: pa,
-		manager:  mngr,
-	}, nil
+	return &Instrumentation{manager: mngr}, nil
 }
 
 // Load loads and attaches the relevant probes to the target process.
 func (i *Instrumentation) Load(ctx context.Context) error {
-	return i.manager.Load(ctx, i.target)
+	return i.manager.Load(ctx)
 }
 
 // Run starts the instrumentation. It must be called after [Instrumentation.Load].
@@ -198,7 +168,7 @@ type InstrumentationOption interface {
 
 type instConfig struct {
 	traceExp           trace.SpanExporter
-	targetPID          int
+	pid                process.ID
 	serviceName        string
 	additionalResAttrs []attribute.KeyValue
 	globalImpl         bool
@@ -208,7 +178,7 @@ type instConfig struct {
 }
 
 func newInstConfig(ctx context.Context, opts []InstrumentationOption) (instConfig, error) {
-	c := instConfig{targetPID: -1}
+	c := instConfig{pid: -1}
 	var err error
 	for _, opt := range opts {
 		if opt != nil {
@@ -246,48 +216,60 @@ func newInstConfig(ctx context.Context, opts []InstrumentationOption) (instConfi
 
 func (c instConfig) defaultServiceName() string {
 	name := "unknown_service"
-	if exe, err := os.Readlink(fmt.Sprintf("/proc/%d/exe", c.targetPID)); err == nil {
+	if exe, err := c.pid.ExeLink(); err == nil {
 		name = fmt.Sprintf("%s:%s", name, filepath.Base(exe))
 	}
 	return name
 }
 
 func (c instConfig) validate() error {
-	if c.targetPID <= 0 {
-		return errors.New("target PID not provided")
+	var err error
+	if e := c.pid.Validate(); e != nil {
+		err = errors.Join(err, e)
 	}
-	p, err := os.FindProcess(c.targetPID)
-	if err != nil {
-		return fmt.Errorf("invalid PID: no process was found with PID %d: %w", c.targetPID, err)
-	}
-	err = p.Signal(syscall.Signal(0))
-	if err != nil {
-		return fmt.Errorf("non-existent PID: %d: %w", c.targetPID, err)
-	}
-
 	if c.traceExp == nil {
-		return errors.New("undefined trace exporter")
+		err = errors.Join(err, errors.New("undefined trace exporter"))
 	}
-
-	return nil
+	return err
 }
 
-func (c instConfig) tracerProvider(bi *buildinfo.BuildInfo) *trace.TracerProvider {
+func (c instConfig) tracerProvider() *trace.TracerProvider {
 	return trace.NewTracerProvider(
 		// the actual sampling is done in the eBPF probes.
 		// this is just to make sure that we export all spans we get from the probes
 		trace.WithSampler(trace.AlwaysSample()),
-		trace.WithResource(c.res(bi)),
+		trace.WithResource(c.res()),
 		trace.WithBatcher(c.traceExp),
 		trace.WithIDGenerator(opentelemetry.NewEBPFSourceIDGenerator()),
 	)
 }
 
-func (c instConfig) res(bi *buildinfo.BuildInfo) *resource.Resource {
-	runVer := bi.GoVersion
+func (c instConfig) res() (res *resource.Resource) {
+	attrs := []attribute.KeyValue{
+		semconv.ServiceNameKey.String(c.serviceName),
+		semconv.TelemetrySDKLanguageGo,
+		semconv.TelemetryDistroVersionKey.String(Version()),
+		semconv.TelemetryDistroNameKey.String("opentelemetry-go-instrumentation"),
+	}
+
+	defer func() {
+		if len(c.additionalResAttrs) > 0 {
+			attrs = append(attrs, c.additionalResAttrs...)
+		}
+
+		res = resource.NewWithAttributes(
+			semconv.SchemaURL,
+			attrs...,
+		)
+	}()
+
+	bi, err := c.pid.BuildInfo()
+	if err != nil {
+		c.logger.Error("omitting Go process info from resource", "error", err)
+		return
+	}
 
 	var compiler string
-
 	for _, setting := range bi.Settings {
 		if setting.Key == "-compiler" {
 			compiler = setting.Value
@@ -299,29 +281,14 @@ func (c instConfig) res(bi *buildinfo.BuildInfo) *resource.Resource {
 	if runName == "gc" {
 		runName = "go"
 	}
-	runDesc := fmt.Sprintf(
-		"go version %s %s/%s",
-		runVer, runtime.GOOS, runtime.GOARCH,
-	)
 
-	attrs := []attribute.KeyValue{
-		semconv.ServiceNameKey.String(c.serviceName),
-		semconv.TelemetrySDKLanguageGo,
-		semconv.TelemetryDistroVersionKey.String(Version()),
-		semconv.TelemetryDistroNameKey.String("opentelemetry-go-instrumentation"),
+	attrs = append(
+		attrs,
 		semconv.ProcessRuntimeName(runName),
-		semconv.ProcessRuntimeVersion(runVer),
-		semconv.ProcessRuntimeDescription(runDesc),
-	}
-
-	if len(c.additionalResAttrs) > 0 {
-		attrs = append(attrs, c.additionalResAttrs...)
-	}
-
-	return resource.NewWithAttributes(
-		semconv.SchemaURL,
-		attrs...,
+		semconv.ProcessRuntimeVersion(bi.GoVersion),
 	)
+
+	return res
 }
 
 // newLogger is used for testing.
@@ -359,7 +326,7 @@ func WithServiceName(serviceName string) InstrumentationOption {
 // one will be used.
 func WithPID(pid int) InstrumentationOption {
 	return fnOpt(func(_ context.Context, c instConfig) (instConfig, error) {
-		c.targetPID = pid
+		c.pid = process.ID(pid)
 		return c, nil
 	})
 }

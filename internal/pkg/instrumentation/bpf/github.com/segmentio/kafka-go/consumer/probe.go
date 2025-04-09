@@ -1,6 +1,8 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
+// Package consumer provides an instrumentation probe for Kafka consumer using
+// the [github.com/segmentio/kafka-go] package.
 package consumer
 
 import (
@@ -9,7 +11,7 @@ import (
 
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/ptrace"
-	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.30.0"
 	"go.opentelemetry.io/otel/trace"
 	"golang.org/x/sys/unix"
 
@@ -40,31 +42,66 @@ func New(logger *slog.Logger, version string) probe.Probe {
 				probe.AllocationConst{},
 				probe.StructFieldConst{
 					Key: "message_headers_pos",
-					ID:  structfield.NewID("github.com/segmentio/kafka-go", "github.com/segmentio/kafka-go", "Message", "Headers"),
+					ID: structfield.NewID(
+						"github.com/segmentio/kafka-go",
+						"github.com/segmentio/kafka-go",
+						"Message",
+						"Headers",
+					),
 				},
 				probe.StructFieldConst{
 					Key: "message_key_pos",
-					ID:  structfield.NewID("github.com/segmentio/kafka-go", "github.com/segmentio/kafka-go", "Message", "Key"),
+					ID: structfield.NewID(
+						"github.com/segmentio/kafka-go",
+						"github.com/segmentio/kafka-go",
+						"Message",
+						"Key",
+					),
 				},
 				probe.StructFieldConst{
 					Key: "message_topic_pos",
-					ID:  structfield.NewID("github.com/segmentio/kafka-go", "github.com/segmentio/kafka-go", "Message", "Topic"),
+					ID: structfield.NewID(
+						"github.com/segmentio/kafka-go",
+						"github.com/segmentio/kafka-go",
+						"Message",
+						"Topic",
+					),
 				},
 				probe.StructFieldConst{
 					Key: "message_partition_pos",
-					ID:  structfield.NewID("github.com/segmentio/kafka-go", "github.com/segmentio/kafka-go", "Message", "Partition"),
+					ID: structfield.NewID(
+						"github.com/segmentio/kafka-go",
+						"github.com/segmentio/kafka-go",
+						"Message",
+						"Partition",
+					),
 				},
 				probe.StructFieldConst{
 					Key: "message_offset_pos",
-					ID:  structfield.NewID("github.com/segmentio/kafka-go", "github.com/segmentio/kafka-go", "Message", "Offset"),
+					ID: structfield.NewID(
+						"github.com/segmentio/kafka-go",
+						"github.com/segmentio/kafka-go",
+						"Message",
+						"Offset",
+					),
 				},
 				probe.StructFieldConst{
 					Key: "reader_config_pos",
-					ID:  structfield.NewID("github.com/segmentio/kafka-go", "github.com/segmentio/kafka-go", "Reader", "config"),
+					ID: structfield.NewID(
+						"github.com/segmentio/kafka-go",
+						"github.com/segmentio/kafka-go",
+						"Reader",
+						"config",
+					),
 				},
 				probe.StructFieldConst{
 					Key: "reader_config_group_id_pos",
-					ID:  structfield.NewID("github.com/segmentio/kafka-go", "github.com/segmentio/kafka-go", "ReaderConfig", "GroupID"),
+					ID: structfield.NewID(
+						"github.com/segmentio/kafka-go",
+						"github.com/segmentio/kafka-go",
+						"ReaderConfig",
+						"GroupID",
+					),
 				},
 			},
 			Uprobes: []*probe.Uprobe{
@@ -116,9 +153,9 @@ func processFn(e *event) ptrace.SpanSlice {
 		semconv.MessagingOperationTypeReceive,
 		semconv.MessagingDestinationPartitionID(strconv.Itoa(int(e.Partition))),
 		semconv.MessagingDestinationName(topic),
-		semconv.MessagingKafkaMessageOffsetKey.Int64(e.Offset),
+		semconv.MessagingKafkaOffsetKey.Int64(e.Offset),
 		semconv.MessagingKafkaMessageKey(unix.ByteSliceToString(e.Key[:])),
-		semconv.MessagingKafkaConsumerGroup(unix.ByteSliceToString(e.ConsumerGroup[:])),
+		semconv.MessagingConsumerGroupName(unix.ByteSliceToString(e.ConsumerGroup[:])),
 	)
 
 	return spans

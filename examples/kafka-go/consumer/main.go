@@ -1,6 +1,8 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
+// Package consumer exemplifies use of OpenTelemetry auto-instrumentation for
+// Kafka consumers using github.com/segmentio/kafka-go.
 package main
 
 import (
@@ -50,7 +52,14 @@ func reader(ctx context.Context) {
 				attribute.Int64("partition", int64(m.Partition)),
 				attribute.Int64("offset", m.Offset),
 			)
-			fmt.Printf("consumed message at topic:%v partition:%v offset:%v	%s = %s\n", m.Topic, m.Partition, m.Offset, string(m.Key), string(m.Value))
+			fmt.Printf(
+				"consumed message at topic:%v partition:%v offset:%v	%s = %s\n",
+				m.Topic,
+				m.Partition,
+				m.Offset,
+				string(m.Key),
+				string(m.Value),
+			)
 			span.End()
 		}
 	}

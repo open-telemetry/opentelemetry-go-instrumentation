@@ -1,6 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
+// Package databasesql is a testing application for the [database/sql] package.
 package main
 
 import (
@@ -35,7 +36,7 @@ type Server struct {
 	db *sql.DB
 }
 
-// Create the db file.
+// CreateDb creates the db file.
 func CreateDb() {
 	file, err := os.Create(dbName)
 	if err != nil {
@@ -95,7 +96,15 @@ func (s *Server) query(w http.ResponseWriter, req *http.Request, query string) {
 		if err != nil {
 			panic(err)
 		}
-		fmt.Fprintf(w, "ID: %d, firstName: %s, lastName: %s, email: %s, phone: %s\n", id, firstName, lastName, email, phone)
+		fmt.Fprintf(
+			w,
+			"ID: %d, firstName: %s, lastName: %s, email: %s, phone: %s\n",
+			id,
+			firstName,
+			lastName,
+			email,
+			phone,
+		)
 	}
 }
 

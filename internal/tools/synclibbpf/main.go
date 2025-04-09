@@ -1,6 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
+// Package synclibbpf provides a utility to synchronize the copied libbpf code.
 package main
 
 import (

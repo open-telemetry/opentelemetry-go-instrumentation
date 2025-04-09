@@ -1,6 +1,8 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
+// Package inject provides types and functionality to extract offset
+// information from target ELF and inject that data into eBPF probes.
 package inject
 
 import (
@@ -149,16 +151,11 @@ func WithOffset(key string, id structfield.ID, ver *semver.Version) Option {
 }
 
 func FindOffset(id structfield.ID, info *process.Info) (structfield.OffsetKey, error) {
-	fd, err := info.OpenExe()
+	elfF, err := elf.Open(info.ID.ExePath())
 	if err != nil {
 		return structfield.OffsetKey{}, err
 	}
-	defer fd.Close()
-
-	elfF, err := elf.NewFile(fd)
-	if err != nil {
-		return structfield.OffsetKey{}, err
-	}
+	defer elfF.Close()
 
 	data, err := elfF.DWARF()
 	if err != nil {

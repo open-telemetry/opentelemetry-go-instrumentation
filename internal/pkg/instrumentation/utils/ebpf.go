@@ -19,7 +19,10 @@ const (
 
 // InitializeEBPFCollection loads eBPF objects from the given spec and returns a collection corresponding to the spec.
 // If the environment variable OTEL_GO_AUTO_SHOW_VERIFIER_LOG is set to true, the verifier log will be printed.
-func InitializeEBPFCollection(spec *ebpf.CollectionSpec, opts *ebpf.CollectionOptions) (*ebpf.Collection, error) {
+func InitializeEBPFCollection(
+	spec *ebpf.CollectionSpec,
+	opts *ebpf.CollectionOptions,
+) (*ebpf.Collection, error) {
 	// Getting full verifier log is expensive, so we only do it if the user explicitly asks for it.
 	showVerifierLogs := ShouldShowVerifierLogs()
 	if showVerifierLogs {
@@ -50,8 +53,9 @@ func ShouldShowVerifierLogs() bool {
 	return false
 }
 
-// Does kernel version check and /sys/kernel/security/lockdown inspection to determine if it's
-// safe to use bpf_probe_write_user.
+// SupportsContextPropagation returns if the Linux kernel supports use of
+// bpf_probe_write_user. It will check for supported versions of the Linux
+// kernel and then verify if /sys/kernel/security/lockdown is not locked down.
 func SupportsContextPropagation() bool {
 	ver := GetLinuxKernelVersion()
 	if ver == nil {
