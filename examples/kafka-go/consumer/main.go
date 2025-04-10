@@ -23,7 +23,7 @@ var tracer = otel.Tracer("trace-example-kafka-go", trace.WithInstrumentationVers
 
 func getKafkaReader() *kafka.Reader {
 	return kafka.NewReader(kafka.ReaderConfig{
-		Brokers:          []string{"kafka:9092"},
+		Brokers:          []string{"broker:9092"},
 		GroupID:          "some group id",
 		Topic:            "topic1",
 		ReadBatchTimeout: 1 * time.Millisecond,
