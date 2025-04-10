@@ -150,11 +150,6 @@ func (i *Base[BPFObj, BPFEvent]) GetUprobes() []*Uprobe {
 	return i.Uprobes
 }
 
-func (i *Base[BPFObj, BPFEvent]) UpdateClosers(closers ...io.Closer) []io.Closer {
-	i.closers = append(i.closers, closers...)
-	return i.closers
-}
-
 func (i *Base[BPFObj, BPFEvent]) GetConsts() []Const {
 	return i.Consts
 }
