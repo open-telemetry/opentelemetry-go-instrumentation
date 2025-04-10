@@ -98,7 +98,16 @@ docker-generate: docker-build-base
 
 .PHONY: docker-test
 docker-test: docker-build-base
-	docker run --rm -v $(shell pwd):/app $(IMG_NAME_BASE) /bin/sh -c "cd /app && make test"
+	@docker run \
+		--rm \
+		--privileged \
+		--network=host \
+		--user=root \
+		-v /var/run/docker.sock:/var/run/docker.sock \
+		-v "$(REPODIR)":/usr/src/go.opentelemetry.io/auto \
+		-w /usr/src/go.opentelemetry.io/auto \
+		$(IMG_NAME_BASE) \
+		/bin/sh -c "make test"
 
 .PHONY: docker-precommit
 docker-precommit: docker-build-base
@@ -144,6 +153,10 @@ docker-dev: docker-build-base
 	@docker run \
 		-it \
 		--rm \
+		--privileged \
+		--network=host \
+		--user=root \
+		-v /var/run/docker.sock:/var/run/docker.sock \
 		-v "$(REPODIR)":/usr/src/go.opentelemetry.io/auto \
 		-w /usr/src/go.opentelemetry.io/auto \
 		$(IMG_NAME_BASE) \
