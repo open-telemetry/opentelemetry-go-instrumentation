@@ -44,8 +44,7 @@ func TestIntegration(t *testing.T) {
 	t.Run("DatabaseSQL", testIntegration("./internal/test/e2e/databasesql"))
 	t.Run("GRPC", testIntegration("./internal/test/e2e/grpc"))
 	t.Run("Gin", testIntegration("./internal/test/e2e/gin"))
-	// TODO: Requires additional setup.
-	// t.Run("KafkaGo", testIntegration("./internal/test/e2e/kafka-go"))
+	t.Run("KafkaGo", testIntegration("./internal/test/e2e/kafka-go"))
 	t.Run("NetHTTP", testIntegration("./internal/test/e2e/nethttp"))
 	t.Run("NetHTTPCustom", testIntegration("./internal/test/e2e/nethttp_custom"))
 	t.Run("OTelGlobal", testIntegration("./internal/test/e2e/otelglobal"))

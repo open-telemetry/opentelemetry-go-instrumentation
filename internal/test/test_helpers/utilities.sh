@@ -175,6 +175,13 @@ MATCH_A_SPAN_ID=^"\"[A-Fa-f0-9]{16}\"$"
 # ecpect a valid port number
 MATCH_A_PORT_NUMBER=^"\"[1-9][0-9]{0,4}\"$"
 
+assert_each() {
+  while IFS= read -r line 
+  do
+	  assert_equal "$line" "$2"
+  done <<< "$1"
+}
+
 # Fail and display details if the expected and actual values do not
 # equal. Details include both values.
 #
