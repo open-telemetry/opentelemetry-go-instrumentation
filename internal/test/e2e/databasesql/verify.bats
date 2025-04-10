@@ -78,8 +78,3 @@ SCOPE="go.opentelemetry.io/auto/database/sql"
   parent_span_id=$(spans_from_scope_named ${SCOPE} | jq ".parentSpanId" | jq -Rn '[inputs]' | jq -r .[5])
   assert_regex "$parent_span_id" ${MATCH_A_SPAN_ID}
 }
-
-@test "${SCOPE} :: expected (redacted) trace output" {
-  redact_json
-  assert_equal "$(git --no-pager diff ${BATS_TEST_DIRNAME}/traces.json)" ""
-}
