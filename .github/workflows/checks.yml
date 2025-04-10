@@ -73,7 +73,10 @@ jobs:
       - name: Run tests
         run: make test-race
   integration-test:
-    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        runner: [ubuntu-latest, ubuntu-22.04-arm]
+    runs-on: ${{ matrix.runner }}
     steps:
       - name: Checkout Repo
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
