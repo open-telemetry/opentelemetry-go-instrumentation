@@ -75,7 +75,12 @@ jobs:
   integration-test:
     strategy:
       matrix:
-        runner: [ubuntu-latest, ubuntu-22.04-arm]
+        runner: 
+          - ubuntu-latest
+          - ubuntu-22.04-arm
+        go:
+          - stable
+          - oldstable
     runs-on: ${{ matrix.runner }}
     container: golang:1.24.2-bookworm@sha256:00eccd446e023d3cd9566c25a6e6a02b90db3e1e0bbe26a48fc29cd96e800901
     steps:
@@ -84,7 +89,7 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@0aaccfd150d50ccaeb58ebd88d36e91967a5f35b # v5
         with:
-          go-version: ${{ env.GO_VERSION }}
+          go-version: ${{ matrix.go }}
           check-latest: true
           cache-dependency-path: |
             go.sum
