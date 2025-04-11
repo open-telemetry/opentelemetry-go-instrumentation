@@ -13,7 +13,7 @@ volumes:
 
 services:
   broker:
-    image: apache/kafka:3.7.2
+    image: apache/kafka:3.7.2@sha256:8bd63e1bd445e5e19427a4bdbcc3d23bf6efd774b058a41b36ba87fda7623e34
     container_name: broker
     restart: on-failure:3
     environment:
