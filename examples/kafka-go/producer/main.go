@@ -61,7 +61,7 @@ func (s *server) producerHandler(wrt http.ResponseWriter, req *http.Request) {
 
 func getKafkaWriter() *kafka.Writer {
 	return &kafka.Writer{
-		Addr:            kafka.TCP("kafka:9092"),
+		Addr:            kafka.TCP("broker:9092"),
 		Balancer:        &kafka.LeastBytes{},
 		RequiredAcks:    1,
 		Async:           true,
@@ -74,12 +74,12 @@ func main() {
 	kafkaWriter := getKafkaWriter()
 	defer kafkaWriter.Close()
 
-	_, err := kafka.DialLeader(context.Background(), "tcp", "kafka:9092", "topic1", 0)
+	_, err := kafka.DialLeader(context.Background(), "tcp", "broker:9092", "topic1", 0)
 	if err != nil {
 		panic(err.Error())
 	}
 
-	_, err = kafka.DialLeader(context.Background(), "tcp", "kafka:9092", "topic2", 0)
+	_, err = kafka.DialLeader(context.Background(), "tcp", "broker:9092", "topic2", 0)
 	if err != nil {
 		panic(err.Error())
 	}
