@@ -6,32 +6,70 @@
   "ignorePaths": [
     "**/LICENSES/**"
   ],
-  "labels": ["Skip Changelog", "dependencies"],
-  "postUpdateOptions" : [
+  "labels": [
+    "Skip Changelog",
+    "dependencies"
+  ],
+  "postUpdateOptions": [
     "gomodTidy"
   ],
   "packageRules": [
     {
-      "matchManagers": ["gomod"],
-      "matchDepTypes": ["indirect"],
+      "matchManagers": [
+        "gomod"
+      ],
+      "matchDepTypes": [
+        "indirect"
+      ],
       "enabled": true
     },
     {
-      "matchManagers": ["gomod"],
-      "matchPackageNames": ["go.opentelemetry.io/auto/examples/rolldice/user"],
+      "matchManagers": [
+        "gomod"
+      ],
+      "matchPackageNames": [
+        "go.opentelemetry.io/auto/examples/rolldice/user"
+      ],
       "enabled": false
     },
     {
-      "matchPackageNames": ["go.opentelemetry.io/build-tools/**"],
+      "matchPackageNames": [
+        "go.opentelemetry.io/build-tools/**"
+      ],
       "groupName": "build-tools"
     },
     {
-      "matchPackageNames": ["google.golang.org/genproto/googleapis/**"],
+      "matchPackageNames": [
+        "google.golang.org/genproto/googleapis/**"
+      ],
       "groupName": "googleapis"
     },
     {
-      "matchPackageNames": ["golang.org/x/**"],
+      "matchPackageNames": [
+        "golang.org/x/**"
+      ],
       "groupName": "golang.org/x"
+    },
+    {
+      "matchManagers": [
+        "custom.regex"
+      ],
+      "groupName": "otel-collector",
+      "matchPackageNames": [
+        "/otel/opentelemetry-collector-contrib/"
+      ]
+    }
+  ],
+  "customManagers": [
+    {
+      "customType": "regex",
+      "fileMatch": [
+        ".github/workflows/e2e/k8s/.*\\.ya?ml"
+      ],
+      "matchStrings": [
+        "repository:\\s*(?<depName>otel/opentelemetry-collector-contrib)\\s*tag:\\s*\"?(?<currentValue>[^\"]+)\"?"
+      ],
+      "datasourceTemplate": "docker"
     }
   ]
 }

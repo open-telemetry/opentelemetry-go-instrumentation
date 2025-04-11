@@ -5,12 +5,17 @@
 package main
 
 import (
+	"context"
 	"crypto/tls"
+	"flag"
 	"fmt"
 	"io"
 	"log"
 	"net/http"
-	"time"
+	"os"
+	"os/signal"
+
+	"go.opentelemetry.io/auto/internal/test/trigger"
 )
 
 type statusRecorder struct {
@@ -76,17 +81,34 @@ func (rt *MyRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
 }
 
 func main() {
+	var trig trigger.Flag
+	flag.Var(&trig, "trigger", trig.Docs())
+	flag.Parse()
+
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
+	defer stop()
+
 	go func() {
-		_ = http.ListenAndServe(":8080", logStatus(http.HandlerFunc(hello))) // nolint: gosec  // Testing server.
+		_ = http.ListenAndServe( // nolint: gosec  // Testing server.
+			":8080",
+			logStatus(http.HandlerFunc(hello)),
+		)
 	}()
 
-	// give time for auto-instrumentation to start up
-	time.Sleep(5 * time.Second)
-
-	req, err := http.NewRequest(http.MethodGet, "http://localhost:8080/hello", nil)
+	// Wait for auto-instrumentation.
+	err := trig.Wait(ctx)
 	if err != nil {
 		log.Fatal(err)
-		return
+	}
+
+	req, err := http.NewRequestWithContext(
+		ctx,
+		http.MethodGet,
+		"http://localhost:8080/hello",
+		http.NoBody,
+	)
+	if err != nil {
+		log.Fatal(err)
 	}
 
 	mt := &MyRoundTripper{}
@@ -102,7 +124,4 @@ func main() {
 
 	log.Printf("Body: %s\n", string(body))
 	_ = resp.Body.Close()
-
-	// give time for auto-instrumentation to report signal
-	time.Sleep(5 * time.Second)
 }

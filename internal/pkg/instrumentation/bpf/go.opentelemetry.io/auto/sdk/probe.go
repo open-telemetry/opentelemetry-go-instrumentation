@@ -109,7 +109,9 @@ func (c *converter) decodeEvent(record perf.Record) (*event, error) {
 	return &e, nil
 }
 
-func (c *converter) processFn(e *event) (scope pcommon.InstrumentationScope, url string, spans ptrace.SpanSlice) {
+func (c *converter) processFn(
+	e *event,
+) (scope pcommon.InstrumentationScope, url string, spans ptrace.SpanSlice) {
 	// Ensure correct initialization of return values.
 	scope = pcommon.NewInstrumentationScope()
 	spans = ptrace.NewSpanSlice()

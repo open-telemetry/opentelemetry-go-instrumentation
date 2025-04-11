@@ -168,8 +168,3 @@ SCOPE="go.opentelemetry.io/auto/google.golang.org/grpc"
 
   assert_equal "$result" "$expected_result"
 }
-
-@test "server :: expected (redacted) trace output" {
-  redact_json
-  assert_equal "$(git --no-pager diff ${BATS_TEST_DIRNAME}/traces.json)" ""
-}

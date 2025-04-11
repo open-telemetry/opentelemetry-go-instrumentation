@@ -5,15 +5,19 @@
 package main
 
 import (
+	"context"
 	"database/sql"
+	"flag"
 	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
 	"os"
-	"time"
+	"os/signal"
 
 	_ "github.com/mattn/go-sqlite3"
+
+	"go.opentelemetry.io/auto/internal/test/trigger"
 )
 
 const (
@@ -96,7 +100,15 @@ func (s *Server) query(w http.ResponseWriter, req *http.Request, query string) {
 		if err != nil {
 			panic(err)
 		}
-		fmt.Fprintf(w, "ID: %d, firstName: %s, lastName: %s, email: %s, phone: %s\n", id, firstName, lastName, email, phone)
+		fmt.Fprintf(
+			w,
+			"ID: %d, firstName: %s, lastName: %s, email: %s, phone: %s\n",
+			id,
+			firstName,
+			lastName,
+			email,
+			phone,
+		)
 	}
 }
 
@@ -125,6 +137,13 @@ func (s *Server) invalid(w http.ResponseWriter, req *http.Request) {
 }
 
 func main() {
+	var trig trigger.Flag
+	flag.Var(&trig, "trigger", trig.Docs())
+	flag.Parse()
+
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
+	defer stop()
+
 	port := fmt.Sprintf(":%d", 8080)
 	slog.Info("starting http server", "port", port)
 
@@ -151,8 +170,12 @@ func main() {
 		{url: "http://localhost:8080/invalid"},
 	}
 
-	// give time for auto-instrumentation to start up
-	time.Sleep(5 * time.Second)
+	// Wait for auto-instrumentation.
+	err := trig.Wait(ctx)
+	if err != nil {
+		slog.Error("Error waiting for auto-instrumentation", "error", err)
+		os.Exit(1)
+	}
 
 	for _, t := range tests {
 		resp, err := http.Get(t.url)
@@ -168,7 +191,4 @@ func main() {
 			_ = resp.Body.Close()
 		}
 	}
-
-	// give time for auto-instrumentation to report signal
-	time.Sleep(5 * time.Second)
 }

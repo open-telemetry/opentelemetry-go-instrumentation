@@ -32,7 +32,11 @@ func TestIDGenerator(t *testing.T) {
 	t.Run("Valid", testIDGenerator(ctx, tID, sID))
 }
 
-func testIDGenerator(ctx context.Context, wantTID trace.TraceID, wantSID trace.SpanID) func(*testing.T) {
+func testIDGenerator(
+	ctx context.Context,
+	wantTID trace.TraceID,
+	wantSID trace.SpanID,
+) func(*testing.T) {
 	gen := newIDGenerator()
 
 	return func(t *testing.T) {

@@ -58,7 +58,10 @@ type Instrumentation struct {
 //
 // If conflicting or duplicate options are provided, the last one will have
 // precedence and be used.
-func NewInstrumentation(ctx context.Context, opts ...InstrumentationOption) (*Instrumentation, error) {
+func NewInstrumentation(
+	ctx context.Context,
+	opts ...InstrumentationOption,
+) (*Instrumentation, error) {
 	c, err := newInstConfig(ctx, opts)
 	if err != nil {
 		return nil, err

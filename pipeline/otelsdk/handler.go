@@ -62,7 +62,11 @@ func NewTraceHandler(ctx context.Context, options ...Option) (*TraceHandler, err
 }
 
 // HandleTrace the passed telemetry using the default OpenTelemetry Go SDK.
-func (h *TraceHandler) HandleTrace(scope pcommon.InstrumentationScope, url string, spans ptrace.SpanSlice) {
+func (h *TraceHandler) HandleTrace(
+	scope pcommon.InstrumentationScope,
+	url string,
+	spans ptrace.SpanSlice,
+) {
 	var (
 		startOpts []trace.SpanStartOption
 		eventOpts []trace.EventOption

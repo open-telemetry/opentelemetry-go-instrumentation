@@ -6,8 +6,7 @@ SCOPE="go.opentelemetry.io/auto/github.com/segmentio/kafka-go"
 
 @test "go-auto :: includes service.name in resource attributes" {
   result=$(resource_attributes_received | jq "select(.key == \"service.name\").value.stringValue")
-  result_separated=$(echo $result | sed 's/\n/,/g')
-  assert_equal "$result_separated" '"sample-app"'
+  assert_each "$result" '"sample-app"'
 }
 
 @test "kafka producer,consumer :: valid {messaging.system} for all spans" {
@@ -23,7 +22,7 @@ SCOPE="go.opentelemetry.io/auto/github.com/segmentio/kafka-go"
 }
 
 @test "consumer :: valid {messaging.destination.name} for all spans" {
-  topics=$(consumer_span_attributes_for ${SCOPE} | jq "select(.key == \"messaging.destination.name\").value.stringValue" | sort )
+  topics=$(consumer_span_attributes_for ${SCOPE} | jq "select(.key == \"messaging.destination.name\").value.stringValue" | sort)
   assert_equal "$topics" '"topic1"'
 }
 
@@ -96,9 +95,4 @@ SCOPE="go.opentelemetry.io/auto/github.com/segmentio/kafka-go"
   consumer_parent_span_id=$(consumer_spans_from_scope_named ${SCOPE} | jq ".parentSpanId")
   producer_span_id=$(producer_spans_from_scope_named ${SCOPE} | jq "select(.name == \"topic1 publish\")" | jq ."spanId")
   assert_equal "$producer_span_id" "$consumer_parent_span_id"
-}
-
-@test "kafka :: expected (redacted) trace output" {
-  redact_json
-  assert_equal "$(git --no-pager diff ${BATS_TEST_DIRNAME}/traces.json)" ""
 }

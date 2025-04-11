@@ -1,7 +1,12 @@
-FROM golang:1.24.1@sha256:52ff1b35ff8de185bf9fd26c70077190cd0bed1e9f16a2d498ce907e5c421268
+FROM golang:1.24.2@sha256:1ecc479bc712a6bdb56df3e346e33edcc141f469f82840bab9f4bc2bc41bf91d
 WORKDIR /app
-COPY . .
 ARG BINARY_NAME
 ENV BINARY_NAME=$BINARY_NAME
-RUN go build -o $BINARY_NAME
+# Copy go.mod for better layer caching
+COPY go.mod go.sum* ./
+RUN --mount=type=cache,target=/go/pkg go mod download && go mod verify
+COPY ./*.go .
+RUN --mount=type=cache,target=/root/.cache/go-build \
+    --mount=type=cache,target=/go/pkg \
+    go build -o $BINARY_NAME
 ENTRYPOINT ["sh", "-c", "/app/$BINARY_NAME"]

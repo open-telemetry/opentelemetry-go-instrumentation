@@ -19,7 +19,10 @@ const (
 
 // InitializeEBPFCollection loads eBPF objects from the given spec and returns a collection corresponding to the spec.
 // If the environment variable OTEL_GO_AUTO_SHOW_VERIFIER_LOG is set to true, the verifier log will be printed.
-func InitializeEBPFCollection(spec *ebpf.CollectionSpec, opts *ebpf.CollectionOptions) (*ebpf.Collection, error) {
+func InitializeEBPFCollection(
+	spec *ebpf.CollectionSpec,
+	opts *ebpf.CollectionOptions,
+) (*ebpf.Collection, error) {
 	// Getting full verifier log is expensive, so we only do it if the user explicitly asks for it.
 	showVerifierLogs := ShouldShowVerifierLogs()
 	if showVerifierLogs {

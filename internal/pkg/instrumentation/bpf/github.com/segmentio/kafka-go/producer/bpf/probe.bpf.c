@@ -52,7 +52,7 @@ struct
     __uint(type, BPF_MAP_TYPE_PERCPU_ARRAY);
     __uint(key_size, sizeof(u32));
     __uint(value_size, sizeof(struct kafka_request_t));
-    __uint(max_entries, 1);
+    __uint(max_entries, 2);
 } kafka_request_storage_map SEC(".maps");
 
 // https://github.com/segmentio/kafka-go/blob/main/protocol/record.go#L48
@@ -69,6 +69,7 @@ volatile const u64 message_time_pos;
 
 volatile const u64 writer_topic_pos;
 
+#ifndef NO_HEADER_PROPAGATION
 static __always_inline int build_contxet_header(struct kafka_header_t *header, struct span_context *span_ctx) {
     if (header == NULL || span_ctx == NULL) {
         bpf_printk("build_contxt_header: Invalid arguments");
@@ -108,6 +109,7 @@ static __always_inline int inject_kafka_header(void *message, struct kafka_heade
     append_item_to_slice(header, sizeof(*header), (void *)(message + message_headers_pos));
     return 0;
 }
+#endif
 
 static __always_inline long collect_kafka_attributes(void *message, struct message_attributes_t *attrs, bool collect_topic) {
     if (collect_topic) {
@@ -144,13 +146,24 @@ int uprobe_WriteMessages(struct pt_regs *ctx) {
         return 0;
     }
 
-    u32 map_id = 0;
-    struct kafka_request_t *kafka_request = bpf_map_lookup_elem(&kafka_request_storage_map, &map_id);
-    if (kafka_request == NULL)
+    u32 zero_id = 0;
+    struct kafka_request_t *zero_kafka_request = bpf_map_lookup_elem(&kafka_request_storage_map, &zero_id);
+    if (zero_kafka_request == NULL)
     {
-        bpf_printk("uuprobe/WriteMessages: kafka_request is NULL");
+        bpf_printk("uuprobe/WriteMessages: zero_kafka_request is NULL");
         return 0;
     }
+
+    u32 actual_id = 1;
+    // Zero the span we are about to build, eBPF doesn't support memset of large structs (more than 1024 bytes)
+    bpf_map_update_elem(&kafka_request_storage_map, &actual_id, zero_kafka_request, BPF_ANY);
+    // Get a pointer to the zeroed span
+    struct kafka_request_t *kafka_request = bpf_map_lookup_elem(&kafka_request_storage_map, &actual_id);
+    if (kafka_request == NULL) {
+        bpf_printk("uprobe/WriteMessages: Failed to get kafka_request");
+        return 0;
+    }
+
     kafka_request->start_time = bpf_ktime_get_ns();
 
     start_span_params_t start_span_params = {
@@ -193,6 +206,7 @@ int uprobe_WriteMessages(struct pt_regs *ctx) {
             __builtin_memcpy(kafka_request->msgs[i].sc.TraceID, kafka_request->msgs[0].sc.TraceID, TRACE_ID_SIZE);
         }
 
+#ifndef NO_HEADER_PROPAGATION
         // Build the header
         if (build_contxet_header(&header, &kafka_request->msgs[i].sc) != 0) {
             bpf_printk("uprobe/WriteMessages: Failed to build header");
@@ -200,6 +214,7 @@ int uprobe_WriteMessages(struct pt_regs *ctx) {
         }
         // Inject the header
         inject_kafka_header(msg_ptr, &header);
+#endif
         kafka_request->valid_messages++;
         msg_ptr = msg_ptr + msg_size;
     }

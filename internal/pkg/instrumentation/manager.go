@@ -57,7 +57,13 @@ type Manager struct {
 }
 
 // NewManager returns a new [Manager].
-func NewManager(logger *slog.Logger, h *pipeline.Handler, pid process.ID, cp ConfigProvider, probes ...probe.Probe) (*Manager, error) {
+func NewManager(
+	logger *slog.Logger,
+	h *pipeline.Handler,
+	pid process.ID,
+	cp ConfigProvider,
+	probes ...probe.Probe,
+) (*Manager, error) {
 	m := &Manager{
 		logger:  logger,
 		probes:  make(map[probe.ID]probe.Probe),
@@ -99,7 +105,12 @@ func (m *Manager) validateProbeDependents(id probe.ID, symbols []probe.FunctionS
 	for _, s := range symbols {
 		for _, d := range s.DependsOn {
 			if _, exists := funcsMap[d]; !exists {
-				return fmt.Errorf("library %s has declared a dependent function %s for probe %s which does not exist, aborting", id, d, s.Symbol)
+				return fmt.Errorf(
+					"library %s has declared a dependent function %s for probe %s which does not exist, aborting",
+					id,
+					d,
+					s.Symbol,
+				)
 			}
 		}
 	}
@@ -230,7 +241,9 @@ func (m *Manager) ConfigLoop(ctx context.Context) {
 			return
 		case c, ok := <-m.cp.Watch():
 			if !ok {
-				m.logger.Info("Configuration provider closed, configuration updates will no longer be received")
+				m.logger.Info(
+					"Configuration provider closed, configuration updates will no longer be received",
+				)
 				return
 			}
 			err := m.applyConfig(c)
@@ -251,7 +264,9 @@ func (m *Manager) Load(ctx context.Context) error {
 		return errors.New("no config provider set")
 	}
 	if m.proc == nil {
-		return errors.New("target details not set - load is called on non-initialized instrumentation")
+		return errors.New(
+			"target details not set - load is called on non-initialized instrumentation",
+		)
 	}
 	m.stateMu.Lock()
 	defer m.stateMu.Unlock()
@@ -367,7 +382,13 @@ func (m *Manager) loadProbes() error {
 			m.logger.Info("loading probe", "name", name)
 			err := i.Load(exe, m.proc, m.currentConfig.SamplingConfig)
 			if err != nil {
-				m.logger.Error("error while loading probes, cleaning up", "error", err, "name", name)
+				m.logger.Error(
+					"error while loading probes, cleaning up",
+					"error",
+					err,
+					"name",
+					name,
+				)
 				return errors.Join(err, m.cleanup())
 			}
 		}
