@@ -201,24 +201,24 @@ func newInstConfig(ctx context.Context, opts []InstrumentationOption) (instConfi
 			}
 		}
 
-		c.handler, e = otelsdk.NewHandler(
+		th, e := otelsdk.NewTraceHandler(
 			ctx,
 			otelsdk.WithEnv(),
 			otelsdk.WithResourceAttributes(attrs...),
 		)
 		err = errors.Join(err, e)
 
-		if c.handler != nil {
-			if th, ok := c.handler.TraceHandler.(*otelsdk.TraceHandler); ok {
-				c.handlerClose = sync.OnceFunc(func() {
-					ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
-					defer stop()
+		if th != nil {
+			c.handler = &pipeline.Handler{TraceHandler: th}
 
-					if err := th.Shutdown(ctx); err != nil {
-						c.logger.Error("failed cleanup", "error", err)
-					}
-				})
-			}
+			c.handlerClose = sync.OnceFunc(func() {
+				ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
+				defer stop()
+
+				if err := th.Shutdown(ctx); err != nil {
+					c.logger.Error("failed cleanup", "error", err)
+				}
+			})
 		}
 	}
 	if c.sampler == nil {
