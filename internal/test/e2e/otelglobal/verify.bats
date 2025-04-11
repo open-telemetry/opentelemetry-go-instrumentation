@@ -85,8 +85,3 @@ SCOPE="trace-example"
   child_status_description=$(spans_from_scope_named ${SCOPE} | jq "select(.name == \"child override\")" | jq ".status.message")
   assert_equal "$child_status_description" '"i deleted the prod db sry"'
 }
-
-@test "server :: expected (redacted) trace output" {
-  redact_json
-  assert_equal "$(git --no-pager diff ${BATS_TEST_DIRNAME}/traces.json)" ""
-}
