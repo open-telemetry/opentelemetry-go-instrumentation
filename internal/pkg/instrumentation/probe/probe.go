@@ -20,6 +20,7 @@ import (
 	"github.com/cilium/ebpf/link"
 	"github.com/cilium/ebpf/perf"
 
+	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/ptrace"
 
 	"go.opentelemetry.io/auto/internal/pkg/inject"
@@ -28,6 +29,7 @@ import (
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/utils"
 	"go.opentelemetry.io/auto/internal/pkg/process"
 	"go.opentelemetry.io/auto/internal/pkg/structfield"
+	"go.opentelemetry.io/auto/pipeline"
 )
 
 // Probe is the instrument used by instrumentation for a Go package to measure
@@ -44,7 +46,7 @@ type Probe interface {
 	Load(*link.Executable, *process.Info, *sampling.Config) error
 
 	// Run runs the events processing loop.
-	Run(func(ptrace.ScopeSpans))
+	Run(*pipeline.Handler)
 
 	// Close stops the Probe.
 	Close() error
@@ -327,7 +329,18 @@ type SpanProducer[BPFObj any, BPFEvent any] struct {
 }
 
 // Run runs the events processing loop.
-func (i *SpanProducer[BPFObj, BPFEvent]) Run(handle func(ptrace.ScopeSpans)) {
+func (i *SpanProducer[BPFObj, BPFEvent]) Run(h *pipeline.Handler) {
+	if h.TraceHandler == nil {
+		i.Logger.Info("tracing not supported by handler, dropping traces", "handler", h)
+		return
+	}
+
+	// Bind the single scope to the handler.
+	scope := pcommon.NewInstrumentationScope()
+	scope.SetName("go.opentelemetry.io/auto/" + i.ID.InstrumentedPkg)
+	scope.SetVersion(i.Version)
+	handler := h.WithScope(scope, i.SchemaURL)
+
 	for {
 		event, err := i.read()
 		if err != nil {
@@ -340,26 +353,24 @@ func (i *SpanProducer[BPFObj, BPFEvent]) Run(handle func(ptrace.ScopeSpans)) {
 			continue
 		}
 
-		ss := ptrace.NewScopeSpans()
-
-		ss.Scope().SetName("go.opentelemetry.io/auto/" + i.ID.InstrumentedPkg)
-		ss.Scope().SetVersion(i.Version)
-		ss.SetSchemaUrl(i.SchemaURL)
-
-		i.ProcessFn(event).CopyTo(ss.Spans())
-
-		handle(ss)
+		handler.Trace(i.ProcessFn(event))
 	}
 }
 
 type TraceProducer[BPFObj any, BPFEvent any] struct {
 	Base[BPFObj, BPFEvent]
 
-	ProcessFn func(*BPFEvent) ptrace.ScopeSpans
+	ProcessFn func(*BPFEvent) (scope pcommon.InstrumentationScope, url string, spans ptrace.SpanSlice)
 }
 
 // Run runs the events processing loop.
-func (i *TraceProducer[BPFObj, BPFEvent]) Run(handle func(ptrace.ScopeSpans)) {
+func (i *TraceProducer[BPFObj, BPFEvent]) Run(h *pipeline.Handler) {
+	th := h.TraceHandler
+	if th == nil {
+		i.Logger.Info("tracing not supported by handler, dropping traces", "handler", h)
+		return
+	}
+
 	for {
 		event, err := i.read()
 		if err != nil {
@@ -372,7 +383,8 @@ func (i *TraceProducer[BPFObj, BPFEvent]) Run(handle func(ptrace.ScopeSpans)) {
 			continue
 		}
 
-		handle(i.ProcessFn(event))
+		scope, url, spans := i.ProcessFn(event)
+		th.HandleTrace(scope, url, spans)
 	}
 }
 
