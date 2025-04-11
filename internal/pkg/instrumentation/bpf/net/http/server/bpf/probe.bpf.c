@@ -88,8 +88,11 @@ volatile const u64 host_pos;
 volatile const u64 proto_pos;
 
 // A flag indicating whether pattern handlers are supported
+volatile const bool pattern_path_public_supported;
+// A flag indicating whether pattern handlers are supported via the private field
 volatile const bool pattern_path_supported;
 // In case pattern handlers are supported the following offsets will be used:
+volatile const u64 req_pattern_pos;
 volatile const u64 req_pat_pos;
 volatile const u64 pat_str_pos;
 // A flag indicating whether the Go version is using swiss maps
@@ -296,7 +299,9 @@ int uprobe_serverHandler_ServeHTTP_Returns(struct pt_regs *ctx) {
     bpf_probe_read(&url_ptr, sizeof(url_ptr), (void *)(req_ptr + url_ptr_pos));
     // Collect fields from response
     read_go_string(req_ptr, method_ptr_pos, http_server_span->method, sizeof(http_server_span->method), "method from request");
-    if (pattern_path_supported) {
+    if (pattern_path_public_supported) {
+        read_go_string(req_ptr, req_pattern_pos, http_server_span->path_pattern, sizeof(http_server_span->path_pattern), "pattern from Request");
+    } else if (pattern_path_supported) {
         void *pat_ptr = NULL;
         bpf_probe_read(&pat_ptr, sizeof(pat_ptr), (void *)(req_ptr + req_pat_pos));
         if (pat_ptr != NULL) {
