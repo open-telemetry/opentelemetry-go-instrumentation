@@ -8,12 +8,14 @@ package instrumentation
 import (
 	"context"
 	"errors"
+	"io"
 	"log/slog"
 	"sync/atomic"
 	"testing"
 	"time"
 
 	"github.com/Masterminds/semver/v3"
+	"github.com/cilium/ebpf"
 	"github.com/cilium/ebpf/link"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -171,7 +173,7 @@ func fakeManager(fnNames ...string) *Manager {
 	m := &Manager{
 		logger: slog.Default(),
 		cp:     NewNoopConfigProvider(nil),
-		probes: make(map[probe.ID]probe.Probe),
+		probes: make(map[probe.ID]ProbeReference),
 		proc: &process.Info{
 			ID:        1,
 			Functions: fn,
@@ -180,7 +182,7 @@ func fakeManager(fnNames ...string) *Manager {
 		},
 	}
 	for _, p := range probes {
-		m.probes[p.Manifest().ID] = p
+		m.probes[p.Manifest().ID] = ProbeReference{probe: p}
 	}
 	m.filterUnusedProbes()
 
@@ -237,7 +239,7 @@ func TestRunStoppingByContext(t *testing.T) {
 	m := &Manager{
 		otelController: ctrl,
 		logger:         slog.Default(),
-		probes:         map[probe.ID]probe.Probe{{}: p},
+		probes:         map[probe.ID]ProbeReference{{}: ProbeReference{probe: p}},
 		cp:             NewNoopConfigProvider(nil),
 		proc:           new(process.Info),
 	}
@@ -287,7 +289,7 @@ func TestRunStoppingByStop(t *testing.T) {
 	m := &Manager{
 		otelController: ctrl,
 		logger:         slog.Default(),
-		probes:         map[probe.ID]probe.Probe{{}: &p},
+		probes:         map[probe.ID]ProbeReference{{}: ProbeReference{probe: &p}},
 		cp:             NewNoopConfigProvider(nil),
 		proc:           new(process.Info),
 	}
@@ -333,10 +335,6 @@ func newSlowProbe(stop chan struct{}) slowProbe {
 	}
 }
 
-func (p slowProbe) Load(*link.Executable, *process.Info, *sampling.Config) error {
-	return nil
-}
-
 func (p slowProbe) Run(func(ptrace.ScopeSpans)) {
 }
 
@@ -346,15 +344,47 @@ func (p slowProbe) Close() error {
 	return nil
 }
 
+func (p slowProbe) Spec() (*ebpf.CollectionSpec, error) {
+	return nil, nil
+}
+
+func (p slowProbe) GetConsts() []probe.Const {
+	return []probe.Const{}
+}
+
+func (p slowProbe) GetUprobes() []*probe.Uprobe {
+	return []*probe.Uprobe{}
+}
+
 type noopProbe struct {
 	loaded, running, closed atomic.Bool
 }
 
 var _ probe.Probe = (*noopProbe)(nil)
 
-func (p *noopProbe) Load(*link.Executable, *process.Info, *sampling.Config) error {
-	p.loaded.Store(true)
+func (p *noopProbe) GetLogger() *slog.Logger {
 	return nil
+}
+
+func (p *noopProbe) Spec() (*ebpf.CollectionSpec, error) {
+	return nil, nil
+}
+
+func (p *noopProbe) GetConsts() []probe.Const {
+	return nil
+}
+
+func (p *noopProbe) GetUprobes() []*probe.Uprobe {
+	return nil
+}
+
+func (p *noopProbe) UpdateClosers(...io.Closer) []io.Closer {
+	return nil
+}
+
+func (p *noopProbe) InitStartupConfig(*ebpf.Collection, *sampling.Config) (io.Closer, error) {
+	p.loaded.Store(true)
+	return nil, nil
 }
 
 func (p *noopProbe) Run(func(ptrace.ScopeSpans)) {
@@ -415,10 +445,10 @@ func TestConfigProvider(t *testing.T) {
 
 	m := &Manager{
 		logger: slog.Default(),
-		probes: map[probe.ID]probe.Probe{
-			netHTTPClientProbeID:       &noopProbe{},
-			netHTTPServerProbeID:       &noopProbe{},
-			somePackageProducerProbeID: &noopProbe{},
+		probes: map[probe.ID]ProbeReference{
+			netHTTPClientProbeID:       ProbeReference{probe: &noopProbe{}},
+			netHTTPServerProbeID:       ProbeReference{probe: &noopProbe{}},
+			somePackageProducerProbeID: ProbeReference{probe: &noopProbe{}},
 		},
 		cp: newDummyProvider(Config{
 			InstrumentationLibraryConfigs: map[LibraryID]Library{
@@ -439,17 +469,17 @@ func TestConfigProvider(t *testing.T) {
 	go func() { runErr <- m.Run(runCtx) }()
 
 	probeRunning := func(id probe.ID) bool {
-		p := m.probes[id].(*noopProbe)
+		p := m.probes[id].probe.(*noopProbe)
 		return p.loaded.Load() && p.running.Load()
 	}
 
 	probePending := func(id probe.ID) bool {
-		p := m.probes[id].(*noopProbe)
+		p := m.probes[id].probe.(*noopProbe)
 		return !p.loaded.Load() && !p.running.Load()
 	}
 
 	probeClosed := func(id probe.ID) bool {
-		p := m.probes[id].(*noopProbe)
+		p := m.probes[id].probe.(*noopProbe)
 		return p.closed.Load()
 	}
 
@@ -556,7 +586,7 @@ func TestRunStopDeadlock(t *testing.T) {
 	m := &Manager{
 		otelController: ctrl,
 		logger:         slog.Default(),
-		probes:         map[probe.ID]probe.Probe{{}: p},
+		probes:         map[probe.ID]ProbeReference{{}: ProbeReference{probe: p}},
 		cp:             NewNoopConfigProvider(nil),
 		proc:           new(process.Info),
 	}
@@ -605,7 +635,7 @@ func TestStopBeforeLoad(t *testing.T) {
 	m := &Manager{
 		otelController: ctrl,
 		logger:         slog.Default(),
-		probes:         map[probe.ID]probe.Probe{{}: &p},
+		probes:         map[probe.ID]ProbeReference{{}: ProbeReference{probe: &p}},
 		cp:             NewNoopConfigProvider(nil),
 		proc:           new(process.Info),
 	}
@@ -626,7 +656,7 @@ func TestStopBeforeRun(t *testing.T) {
 	m := &Manager{
 		otelController: ctrl,
 		logger:         slog.Default(),
-		probes:         map[probe.ID]probe.Probe{{}: &p},
+		probes:         map[probe.ID]ProbeReference{{}: ProbeReference{probe: &p}},
 		cp:             NewNoopConfigProvider(nil),
 		proc:           new(process.Info),
 	}
