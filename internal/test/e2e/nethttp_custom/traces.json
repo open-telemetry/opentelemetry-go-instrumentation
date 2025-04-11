@@ -12,7 +12,7 @@
           {
             "key": "process.runtime.version",
             "value": {
-              "stringValue": "go1.24.1"
+              "stringValue": "go1.24.2"
             }
           },
           {
