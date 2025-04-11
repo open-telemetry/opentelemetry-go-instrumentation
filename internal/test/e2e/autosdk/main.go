@@ -8,6 +8,8 @@ package main
 import (
 	"context"
 	"errors"
+	"flag"
+	"fmt"
 	"os"
 	"os/signal"
 	"time"
@@ -16,6 +18,7 @@ import (
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/trace"
 
+	"go.opentelemetry.io/auto/internal/test/trigger"
 	"go.opentelemetry.io/auto/sdk"
 )
 
@@ -78,8 +81,19 @@ func sig(ctx context.Context) <-chan msg {
 }
 
 func main() {
-	// give time for auto-instrumentation to start up
-	time.Sleep(5 * time.Second)
+	var trig trigger.Flag
+	flag.Var(&trig, "trigger", trig.Docs())
+	flag.Parse()
+
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
+	defer stop()
+
+	// Wait for auto-instrumentation.
+	err := trig.Wait(ctx)
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
 
 	provider := sdk.TracerProvider()
 	tracer := provider.Tracer(
@@ -89,12 +103,9 @@ func main() {
 	)
 	app := app{tracer: tracer}
 
-	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
-	defer stop()
-
 	ctx, span := tracer.Start(ctx, "main", trace.WithTimestamp(y2k))
 
-	err := app.Run(ctx, "Alice", true, sig(ctx))
+	err = app.Run(ctx, "Alice", true, sig(ctx))
 	if err != nil {
 		span.SetStatus(codes.Error, "application error")
 		span.RecordError(
@@ -106,7 +117,4 @@ func main() {
 	}
 
 	span.End(trace.WithTimestamp(y2k.Add(5 * time.Second)))
-
-	// give time for auto-instrumentation to report signal
-	time.Sleep(5 * time.Second)
 }

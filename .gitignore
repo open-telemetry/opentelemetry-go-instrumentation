@@ -33,7 +33,6 @@ venv/
 
 otel-go-instrumentation
 launcher/
-opentelemetry-helm-charts/
 
 # don't track temp e2e trace json files
 internal/test/**/traces-orig.json

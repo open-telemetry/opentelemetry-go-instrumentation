@@ -105,10 +105,3 @@ SCOPE="go.opentelemetry.io/auto/net/http"
   result=$(client_span_attributes_for ${SCOPE} | jq "select(.key == \"network.protocol.version\").value.stringValue")
   assert_equal "$result" '"1.1"'
 }
-
-@test "server :: expected (redacted) trace output" {
-  redact_json
-  assert_equal "$(git --no-pager diff ${BATS_TEST_DIRNAME}/traces.json)" ""
-}
-
-
