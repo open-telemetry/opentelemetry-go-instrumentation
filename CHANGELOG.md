@@ -35,6 +35,8 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 
 ### Changed
 
+- The `WithEnv` function no longer parses `OTEL_GO_AUTO_GLOBAL`.
+  This is included by default. ([#1859](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1859))
 - The `WithEnv` function no longer parses `OTEL_SERVICE_NAME` or `OTEL_TRACES_EXPORTER`.
   Use the `Handler` from `go.opentelemtry.io/auto/pipeline/otelsdk` with its own `WithEnv` to replace functionality. ([#1859](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1859))
 - Upgrade OpenTelemetry semantic conventions to `v1.30.0`. ([#2032](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/2032))
@@ -43,6 +45,8 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 
 - Build support for Go 1.22 has been removed.
   Use Go >= 1.23 to develop and build the project. ([#1841](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1841))
+- The `WithGlobal` function is removed from `go.opentelemtry.io/auto`
+  This option is on by default. ([#1859](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1859))
 - The `WithServiceName` function is removed from `go.opentelemtry.io/auto`
   Use `WithServiceName` in `go.opentelemtry.io/auto/pipeline/otelsdk` along with `WithHandler` to replace functionality. ([#1859](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1859))
 - The `WithTraceExporter` function is removed from `go.opentelemtry.io/auto`

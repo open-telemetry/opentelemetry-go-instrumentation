@@ -100,17 +100,10 @@ func newLogger(lvlStr string) *slog.Logger {
 }
 
 func main() {
-	var globalImpl bool
 	var logLevel string
 	var targetPID int
 	var targetExe string
 
-	flag.BoolVar(
-		&globalImpl,
-		"global-impl",
-		false,
-		"Record telemetry from the OpenTelemetry default global implementation",
-	)
 	flag.StringVar(&logLevel, "log-level", "", `Logging level ("debug", "info", "warn", "error")`)
 	flag.IntVar(&targetPID, "target-pid", -1, `PID of target process`)
 	flag.StringVar(&targetExe, "target-exe", "", `Executable path run by the target process`)
@@ -144,7 +137,6 @@ func main() {
 
 	logger.Info(
 		"building OpenTelemetry Go instrumentation ...",
-		"globalImpl", globalImpl,
 		"version", newVersion(),
 	)
 
@@ -164,14 +156,10 @@ func main() {
 		auto.WithLogger(logger),
 		auto.WithHandler(&pipeline.Handler{TraceHandler: h}),
 	}
-	if globalImpl {
-		instOptions = append(instOptions, auto.WithGlobal())
-	}
 	instOptions = append(instOptions, auto.WithPID(pid))
 
 	logger.Info(
 		"building OpenTelemetry Go instrumentation ...",
-		"globalImpl", globalImpl,
 		"PID", pid,
 		"version", newVersion(),
 	)

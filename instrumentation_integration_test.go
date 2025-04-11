@@ -181,7 +181,6 @@ func run(t *testing.T, ctx context.Context, binPath string, endpoint string) {
 	inst, err := auto.NewInstrumentation(
 		ctx,
 		auto.WithPID(cmd.Process.Pid),
-		auto.WithGlobal(),
 		auto.WithLogger(NewTestLogger(t)),
 		auto.WithEnv(),
 	)

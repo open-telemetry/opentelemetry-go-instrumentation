@@ -12,7 +12,6 @@ import (
 	"log/slog"
 	"os"
 	"os/signal"
-	"strconv"
 	"sync"
 
 	"go.opentelemetry.io/otel/attribute"
@@ -34,13 +33,8 @@ import (
 	"go.opentelemetry.io/auto/pipeline/otelsdk"
 )
 
-const (
-	// envOtelGlobalImplKey is the key for the environment variable value enabling to opt-in for the
-	// OpenTelemetry global implementation. It should be a boolean value.
-	envOtelGlobalImplKey = "OTEL_GO_AUTO_GLOBAL"
-	// envLogLevelKey is the key for the environment variable value containing the log level.
-	envLogLevelKey = "OTEL_LOG_LEVEL"
-)
+// envLogLevelKey is the key for the environment variable value containing the log level.
+const envLogLevelKey = "OTEL_LOG_LEVEL"
 
 // Instrumentation manages and controls all OpenTelemetry Go
 // auto-instrumentation.
@@ -79,10 +73,7 @@ func NewInstrumentation(
 		kafkaProducer.New(c.logger, Version()),
 		kafkaConsumer.New(c.logger, Version()),
 		autosdk.New(c.logger),
-	}
-
-	if c.globalImpl {
-		p = append(p, otelTraceGlobal.New(c.logger))
+		otelTraceGlobal.New(c.logger),
 	}
 
 	cp := convertConfigProvider(c.cp)
@@ -165,7 +156,6 @@ type instConfig struct {
 	pid          process.ID
 	handler      *pipeline.Handler
 	handlerClose func()
-	globalImpl   bool
 	logger       *slog.Logger
 	sampler      Sampler
 	cp           ConfigProvider
@@ -281,15 +271,13 @@ var lookupEnv = os.LookupEnv
 // [Instrumentation] using the values defined by the following environment
 // variables:
 //
-//   - OTEL_GO_AUTO_GLOBAL: enables the OpenTelemetry global implementation
 //   - OTEL_LOG_LEVEL: sets the default logger's minimum logging level
 //   - OTEL_TRACES_SAMPLER: sets the trace sampler
 //   - OTEL_TRACES_SAMPLER_ARG: optionally sets the trace sampler argument
 //
-// This option may conflict with [WithTraceExporter], [WithServiceName],
-// [WithGlobal], and [WithSampler] if their respective environment variable is
-// defined. If more than one of these options are used, the last one provided
-// to an [Instrumentation] will be used.
+// This option may conflict with [WithSampler] if their respective environment
+// variable is defined. If more than one of these options are used, the last
+// one provided to an [Instrumentation] will be used.
 //
 // If [WithLogger] is used, OTEL_LOG_LEVEL will not be used for the
 // [Instrumentation] logger. Instead, the [slog.Logger] passed to that option
@@ -301,12 +289,6 @@ var lookupEnv = os.LookupEnv
 func WithEnv() InstrumentationOption {
 	return fnOpt(func(ctx context.Context, c instConfig) (instConfig, error) {
 		var err error
-		if val, ok := lookupEnv(envOtelGlobalImplKey); ok {
-			boolVal, err := strconv.ParseBool(val)
-			if err == nil {
-				c.globalImpl = boolVal
-			}
-		}
 		if val, ok := lookupEnv(envLogLevelKey); c.logger == nil && ok {
 			var level slog.Level
 			if e := level.UnmarshalText([]byte(val)); e != nil {
@@ -332,34 +314,6 @@ func WithEnv() InstrumentationOption {
 func WithSampler(sampler Sampler) InstrumentationOption {
 	return fnOpt(func(_ context.Context, c instConfig) (instConfig, error) {
 		c.sampler = sampler
-		return c, nil
-	})
-}
-
-// WithGlobal returns an [InstrumentationOption] that will configure an
-// [Instrumentation] to record telemetry from the [OpenTelemetry default global
-// implementation]. By default, the OpenTelemetry global implementation is a
-// no-op implementation of the OpenTelemetry API. However, by using this
-// option, all telemetry that would have been dropped by the global
-// implementation will be recorded using telemetry pipelines from the
-// configured [Instrumentation].
-//
-// If the target process overrides the default global implementation (e.g.
-// [otel.SetTracerProvider]), the telemetry from that process will go to the
-// set implementation. It will not be recorded using the telemetry pipelines
-// from the configured [Instrumentation] even if this option is used.
-//
-// The OpenTelemetry default global implementation is left unchanged (i.e. it
-// remains a no-op implementation) if this options is not used.
-//
-// If OTEL_GO_AUTO_GLOBAL is defined, this option will conflict with
-// [WithEnv]. If both are used, the last one provided to an [Instrumentation]
-// will be used.
-//
-// [OpenTelemetry default global implementation]: https://pkg.go.dev/go.opentelemetry.io/otel
-func WithGlobal() InstrumentationOption {
-	return fnOpt(func(_ context.Context, c instConfig) (instConfig, error) {
-		c.globalImpl = true
 		return c, nil
 	})
 }

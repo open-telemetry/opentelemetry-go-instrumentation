@@ -45,36 +45,34 @@ func TestWithEnv(t *testing.T) {
 }
 
 func TestOptionPrecedence(t *testing.T) {
-	const b = "false"
-
 	t.Run("Env", func(t *testing.T) {
 		mockEnv(t, map[string]string{
-			"OTEL_GO_AUTO_GLOBAL": b,
+			"OTEL_TRACES_SAMPLER": samplerNameAlwaysOn,
 		})
 
 		// WithEnv passed last, it should have precedence.
 		opts := []InstrumentationOption{
-			WithGlobal(),
+			WithSampler(AlwaysOffSampler{}),
 			WithEnv(),
 		}
 		c, err := newInstConfig(context.Background(), opts)
 		require.NoError(t, err)
-		assert.False(t, c.globalImpl)
+		assert.Equal(t, AlwaysOnSampler{}, c.sampler)
 	})
 
 	t.Run("Options", func(t *testing.T) {
 		mockEnv(t, map[string]string{
-			"OTEL_GO_AUTO_GLOBAL": b,
+			"OTEL_TRACES_SAMPLER": samplerNameAlwaysOn,
 		})
 
 		// WithEnv passed first, it should be overridden.
 		opts := []InstrumentationOption{
 			WithEnv(),
-			WithGlobal(),
+			WithSampler(AlwaysOffSampler{}),
 		}
 		c, err := newInstConfig(context.Background(), opts)
 		require.NoError(t, err)
-		assert.True(t, c.globalImpl)
+		assert.Equal(t, AlwaysOffSampler{}, c.sampler)
 	})
 }
 
