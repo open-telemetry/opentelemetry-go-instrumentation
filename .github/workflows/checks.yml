@@ -98,13 +98,8 @@ jobs:
   compatibility-test:
     strategy:
       matrix:
-        go-version: ["~1.24.0", "~1.23.1"]
-        os: [ubuntu-latest]
-        # GitHub Actions does not support arm* architectures on default
-        # runners. It is possible to accomplish this with a self-hosted runner
-        # if we want to add this in the future:
-        # https://docs.github.com/en/actions/hosting-your-own-runners/using-self-hosted-runners-in-a-workflow
-        arch: [amd64]
+        go-version: ["stable", "oldstable"]
+        os: [ubuntu-latest, ubuntu-22.04-arm]
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout Repo
@@ -118,9 +113,11 @@ jobs:
       - name: Install build dependencies
         run: sudo apt-get update && sudo apt-get install -y clang llvm
       - name: Run tests
-        env:
-          GOARCH: ${{ matrix.arch }}
         run: make test
+      - name: Run eBPF verification tests
+        run: sudo --preserve-env=PATH make test-ebpf
+      - name: Check repository unmodified
+        run: make check-clean-work-tree
   verify-licenses:
     runs-on: ubuntu-24.04
     steps:
@@ -135,3 +132,25 @@ jobs:
       - name: Install build dependencies
         run: sudo apt-get update && sudo apt-get install -y clang llvm libbpf-dev
       - run: make verify-licenses
+  docker-build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+      - name: Build auto-instrumentation
+        run: make docker-build
+  offsets:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+      - name: Setup Go
+        uses: actions/setup-go@0aaccfd150d50ccaeb58ebd88d36e91967a5f35b # v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          check-latest: true
+          cache-dependency-path: "**/go.sum"
+      - name: Update offsets
+        run: make offsets
+      - name: Check diff
+        run: make check-clean-work-tree
