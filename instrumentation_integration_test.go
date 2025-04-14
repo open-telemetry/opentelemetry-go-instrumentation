@@ -22,6 +22,8 @@ import (
 	"go.uber.org/goleak"
 
 	"go.opentelemetry.io/auto"
+	"go.opentelemetry.io/auto/internal/test/e2e"
+	"go.opentelemetry.io/auto/internal/test/e2e/autosdk"
 )
 
 const (
@@ -40,17 +42,33 @@ func TestIntegration(t *testing.T) {
 
 	defer goleak.VerifyNone(t)
 
-	t.Run("AutoSDK", testIntegration("./internal/test/e2e/autosdk"))
-	t.Run("DatabaseSQL", testIntegration("./internal/test/e2e/databasesql"))
-	t.Run("GRPC", testIntegration("./internal/test/e2e/grpc"))
-	t.Run("Gin", testIntegration("./internal/test/e2e/gin"))
-	t.Run("KafkaGo", testIntegration("./internal/test/e2e/kafka-go"))
-	t.Run("NetHTTP", testIntegration("./internal/test/e2e/nethttp"))
-	t.Run("NetHTTPCustom", testIntegration("./internal/test/e2e/nethttp_custom"))
-	t.Run("OTelGlobal", testIntegration("./internal/test/e2e/otelglobal"))
+	t.Run("AutoSDK", testIntegration("./internal/test/e2e/autosdk/cmd", autosdk.Verifications))
+	t.Run("DatabaseSQL", testIntegrationBats("./internal/test/e2e/databasesql"))
+	t.Run("GRPC", testIntegrationBats("./internal/test/e2e/grpc"))
+	t.Run("Gin", testIntegrationBats("./internal/test/e2e/gin"))
+	t.Run("KafkaGo", testIntegrationBats("./internal/test/e2e/kafka-go"))
+	t.Run("NetHTTP", testIntegrationBats("./internal/test/e2e/nethttp"))
+	t.Run("NetHTTPCustom", testIntegrationBats("./internal/test/e2e/nethttp_custom"))
+	t.Run("OTelGlobal", testIntegrationBats("./internal/test/e2e/otelglobal"))
 }
 
-func testIntegration(pkgPath string) func(*testing.T) {
+func testIntegration(pkgPath string, checks []e2e.ResourceSpanVerifier) func(*testing.T) {
+	return func(t *testing.T) {
+		ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+		defer cancel()
+
+		binPath := compile(t, ctx, pkgPath)
+
+		server := newCollector(t)
+		defer server.Close()
+
+		run(t, ctx, binPath, server.URL)
+
+		e2e.VerifyOTLP(t, &server.Received, checks)
+	}
+}
+
+func testIntegrationBats(pkgPath string) func(*testing.T) {
 	return func(t *testing.T) {
 		ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 		defer cancel()
@@ -135,6 +153,7 @@ func newCollector(t *testing.T) *collector {
 
 // Flush flushes all received data to the dest directory.
 func (c *collector) Flush(t *testing.T, dest string) {
+	// TODO: remove when testIntegrationBats is removed
 	t.Helper()
 
 	// Create the file in the specified directory

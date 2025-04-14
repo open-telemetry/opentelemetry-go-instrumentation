@@ -261,3 +261,5 @@ require (
 replace go.opentelemetry.io/auto => ../../
 
 replace go.opentelemetry.io/auto/sdk => ../../sdk
+
+replace go.opentelemetry.io/auto/internal/test/e2e => ../test/e2e
