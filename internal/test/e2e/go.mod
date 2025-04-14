@@ -13,7 +13,7 @@ require (
 	go.opentelemetry.io/otel v1.35.0
 	go.opentelemetry.io/otel/trace v1.35.0
 	google.golang.org/grpc v1.71.1
-	google.golang.org/grpc/examples v0.0.0-20250409045659-732f3f32f536
+	google.golang.org/grpc/examples v0.0.0-20250414090033-6319a2c1cd44
 )
 
 require (
