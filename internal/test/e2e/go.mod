@@ -1,4 +1,4 @@
-module go.opentelemetry.io/auto/internal/test
+module go.opentelemetry.io/auto/internal/test/e2e
 
 go 1.23.0
 
@@ -10,6 +10,7 @@ require (
 	github.com/segmentio/kafka-go v0.4.47
 	go.opentelemetry.io/auto v0.21.0
 	go.opentelemetry.io/auto/sdk v1.1.0
+	go.opentelemetry.io/collector/pdata v1.29.0
 	go.opentelemetry.io/otel v1.35.0
 	go.opentelemetry.io/otel/trace v1.35.0
 	google.golang.org/grpc v1.71.1
@@ -53,6 +54,7 @@ require (
 	github.com/ugorji/go/codec v1.2.12 // indirect
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.60.0 // indirect
 	go.opentelemetry.io/otel/metric v1.35.0 // indirect
+	go.uber.org/multierr v1.11.0 // indirect
 	golang.org/x/arch v0.16.0 // indirect
 	golang.org/x/crypto v0.37.0 // indirect
 	golang.org/x/net v0.39.0 // indirect
