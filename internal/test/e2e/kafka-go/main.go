@@ -230,9 +230,10 @@ func runKafkaContainer(ctx context.Context, cli *client.Client) error {
 			nat.Port(port + "/tcp"): struct{}{},
 		},
 	}, &container.HostConfig{
+		NetworkMode: container.NetworkMode("host"),
 		PortBindings: nat.PortMap{
 			nat.Port(port + "/tcp"): []nat.PortBinding{
-				{HostIP: addr, HostPort: port},
+				{HostIP: "0.0.0.0", HostPort: port},
 			},
 		},
 	}, nil, nil, containerName)
