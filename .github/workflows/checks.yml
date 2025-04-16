@@ -94,7 +94,7 @@ jobs:
       - name: Initialize
         run: make go-mod-tidy generate
       - name: Run tests
-        run: sudo env "PATH=$PATH" go test -v -run=TestIntegration
+        run: cd internal/test/e2e && sudo env "PATH=$PATH" go test -v -run=TestIntegration
   compatibility-test:
     strategy:
       matrix:
