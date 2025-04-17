@@ -1,9 +1,9 @@
 module go.opentelemetry.io/auto/examples/rolldice/user
 
-go 1.24.1
+go 1.23.0
 
 require (
-	github.com/mattn/go-sqlite3 v1.14.27
+	github.com/mattn/go-sqlite3 v1.14.28
 	go.opentelemetry.io/otel v1.35.0
 )
 

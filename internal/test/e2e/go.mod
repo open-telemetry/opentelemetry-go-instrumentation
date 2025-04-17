@@ -6,14 +6,14 @@ require (
 	github.com/docker/docker v28.0.4+incompatible
 	github.com/docker/go-connections v0.5.0
 	github.com/gin-gonic/gin v1.10.0
-	github.com/mattn/go-sqlite3 v1.14.27
+	github.com/mattn/go-sqlite3 v1.14.28
 	github.com/segmentio/kafka-go v0.4.47
 	go.opentelemetry.io/auto v0.21.0
 	go.opentelemetry.io/auto/sdk v1.1.0
 	go.opentelemetry.io/otel v1.35.1-0.20250319215043-90a9d1d93604
 	go.opentelemetry.io/otel/trace v1.35.1-0.20250319215043-90a9d1d93604
 	google.golang.org/grpc v1.71.1
-	google.golang.org/grpc/examples v0.0.0-20250409045659-732f3f32f536
+	google.golang.org/grpc/examples v0.0.0-20250416162445-d36887b3697f
 )
 
 require (
@@ -58,7 +58,7 @@ require (
 	golang.org/x/net v0.39.0 // indirect
 	golang.org/x/sys v0.32.0 // indirect
 	golang.org/x/text v0.24.0 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20250409194420-de1ac958c67a // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20250414145226-207652e42e2e // indirect
 	google.golang.org/protobuf v1.36.6 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	gotest.tools/v3 v3.5.2 // indirect
