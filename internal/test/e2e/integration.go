@@ -31,6 +31,39 @@ const (
 	tracesOrig = "traces-orig.json"
 )
 
+// RunInstrumentation runs the auto-instrumentation for an end-to-end test.
+// It compiles and runs the target binary located in the mainDir. It then runs
+// the auto-instrumentation targeting the running binary. The traces generated
+// are returned.
+//
+// The compiled binary is expected to be located in the mainDir directory. It
+// is expected to wait for a SIGCONT signal before starting the main function.
+// The signal is sent to the binary after the auto-instrumentation is loaded,
+// thus ensuring all operations are instrumented correctly.
+//
+// All setup needed for the correct operation of the binary (i.e. message
+// queues, databases) must be done by the binary itself.
+//
+// The function is skipped if the memory limit cannot be removed due to
+// insufficient permissions.
+func RunInstrumentation(t *testing.T, mainDir string) ptrace.Traces {
+	if err := rlimit.RemoveMemlock(); err != nil {
+		t.Skip("cannot manage memory, skipping test.")
+	}
+
+	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer cancel()
+
+	binPath := compile(t, ctx, mainDir)
+
+	server := newCollector(t)
+	defer server.Close()
+
+	run(t, ctx, binPath, server.URL)
+
+	return server.Received
+}
+
 func TestIntegration(t *testing.T, mainDir string, batsDir string) {
 	if testing.Short() {
 		t.Skip("skipping long-running integration test in short mode.")
