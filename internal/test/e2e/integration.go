@@ -1,7 +1,9 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package auto_test
+// Package e2e provides end-to-end testing utilities for the OpenTelemetry Go
+// Auto instrumentation probes.
+package e2e
 
 import (
 	"context"
@@ -15,7 +17,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"syscall"
-	"testing"
+	"testing" // nolint:depguard  // This is a testing utility package.
 
 	"github.com/cilium/ebpf/rlimit"
 	"go.opentelemetry.io/collector/pdata/ptrace"
@@ -29,7 +31,40 @@ const (
 	tracesOrig = "traces-orig.json"
 )
 
-func TestIntegration(t *testing.T) {
+// RunInstrumentation runs the auto-instrumentation for an end-to-end test.
+// It compiles and runs the target binary located in the mainDir. It then runs
+// the auto-instrumentation targeting the running binary. The traces generated
+// are returned.
+//
+// The compiled binary is expected to be located in the mainDir directory. It
+// is expected to wait for a SIGCONT signal before starting the main function.
+// The signal is sent to the binary after the auto-instrumentation is loaded,
+// thus ensuring all operations are instrumented correctly.
+//
+// All setup needed for the correct operation of the binary (i.e. message
+// queues, databases) must be done by the binary itself.
+//
+// The function is skipped if the memory limit cannot be removed due to
+// insufficient permissions.
+func RunInstrumentation(t *testing.T, mainDir string) ptrace.Traces {
+	if err := rlimit.RemoveMemlock(); err != nil {
+		t.Skip("cannot manage memory, skipping test.")
+	}
+
+	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer cancel()
+
+	binPath := compile(t, ctx, mainDir)
+
+	server := newCollector(t)
+	defer server.Close()
+
+	run(t, ctx, binPath, server.URL)
+
+	return server.Received
+}
+
+func TestIntegration(t *testing.T, mainDir string, batsDir string) {
 	if testing.Short() {
 		t.Skip("skipping long-running integration test in short mode.")
 	}
@@ -40,36 +75,23 @@ func TestIntegration(t *testing.T) {
 
 	defer goleak.VerifyNone(t)
 
-	t.Run("AutoSDK", testIntegration("./internal/test/e2e/autosdk"))
-	t.Run("DatabaseSQL", testIntegration("./internal/test/e2e/databasesql"))
-	t.Run("GRPC", testIntegration("./internal/test/e2e/grpc"))
-	t.Run("Gin", testIntegration("./internal/test/e2e/gin"))
-	t.Run("KafkaGo", testIntegration("./internal/test/e2e/kafka-go"))
-	t.Run("NetHTTP", testIntegration("./internal/test/e2e/nethttp"))
-	t.Run("NetHTTPCustom", testIntegration("./internal/test/e2e/nethttp_custom"))
-	t.Run("OTelGlobal", testIntegration("./internal/test/e2e/otelglobal"))
+	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer cancel()
+
+	binPath := compile(t, ctx, mainDir)
+
+	server := newCollector(t)
+	defer server.Close()
+
+	run(t, ctx, binPath, server.URL)
+
+	server.Flush(t, mainDir)
+	bats(t, ctx, batsDir)
 }
 
-func testIntegration(pkgPath string) func(*testing.T) {
-	return func(t *testing.T) {
-		ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
-		defer cancel()
-
-		binPath := compile(t, ctx, pkgPath)
-
-		server := newCollector(t)
-		defer server.Close()
-
-		run(t, ctx, binPath, server.URL)
-
-		server.Flush(t, pkgPath)
-		bats(t, ctx, pkgPath)
-	}
-}
-
-func bats(t *testing.T, ctx context.Context, pkgPath string) {
+func bats(t *testing.T, ctx context.Context, dir string) {
 	cmd := exec.CommandContext(ctx, "bats", batsVerify)
-	cmd.Dir = pkgPath
+	cmd.Dir = dir
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	if err := cmd.Run(); err != nil {
