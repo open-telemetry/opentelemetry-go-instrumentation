@@ -252,7 +252,7 @@ func processFn(e *event) ptrace.SpanSlice {
 	}
 
 	spanName := method
-	if (isPatternPathPublicSupported || isPatternPathSupported) && isValidPatternPath {
+	if isPatternPathSupported && isValidPatternPath {
 		spanName = spanName + " " + patternPath
 		attrs = append(attrs, semconv.HTTPRouteKey.String(patternPath))
 	}
