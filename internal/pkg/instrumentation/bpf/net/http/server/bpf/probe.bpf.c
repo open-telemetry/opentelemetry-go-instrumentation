@@ -87,9 +87,9 @@ volatile const u64 remote_addr_pos;
 volatile const u64 host_pos;
 volatile const u64 proto_pos;
 
-// A flag indicating whether pattern handlers are supported
+// A flag indicating whether the pattern field is public in the http Request struct
 volatile const bool pattern_path_public_supported;
-// A flag indicating whether pattern handlers are supported via the private field
+// A flag indicating whether pattern handlers are supported
 volatile const bool pattern_path_supported;
 // In case pattern handlers are supported the following offsets will be used:
 volatile const u64 req_pattern_pos;
