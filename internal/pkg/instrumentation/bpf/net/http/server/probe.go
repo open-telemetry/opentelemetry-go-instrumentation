@@ -107,6 +107,13 @@ func New(logger *slog.Logger, version string) probe.Probe {
 				},
 				probe.StructFieldConstMinVersion{
 					StructField: probe.StructFieldConst{
+						Key: "req_pattern_pos",
+						ID:  structfield.NewID("std", "net/http", "Request", "Pattern"),
+					},
+					MinVersion: patternPathPublicMinVersion,
+				},
+				probe.StructFieldConstMinVersion{
+					StructField: probe.StructFieldConst{
 						Key: "req_pat_pos",
 						ID:  structfield.NewID("std", "net/http", "Request", "pat"),
 					},
@@ -119,6 +126,7 @@ func New(logger *slog.Logger, version string) probe.Probe {
 					},
 					MinVersion: patternPathMinVersion,
 				},
+				patternPathPublicSupportedConst{},
 				patternPathSupportedConst{},
 				swissMapsUsedConst{},
 			},
@@ -143,6 +151,18 @@ func New(logger *slog.Logger, version string) probe.Probe {
 		SchemaURL: semconv.SchemaURL,
 		ProcessFn: processFn,
 	}
+}
+
+type patternPathPublicSupportedConst struct{}
+
+var (
+	patternPathPublicMinVersion  = semver.New(1, 23, 0, "", "")
+	isPatternPathPublicSupported = false
+)
+
+func (c patternPathPublicSupportedConst) InjectOption(info *process.Info) (inject.Option, error) {
+	isPatternPathPublicSupported = info.GoVersion.GreaterThanEqual(patternPathPublicMinVersion)
+	return inject.WithKeyValue("pattern_path_public_supported", isPatternPathPublicSupported), nil
 }
 
 type patternPathSupportedConst struct{}
