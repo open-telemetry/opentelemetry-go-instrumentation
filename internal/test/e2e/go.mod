@@ -10,8 +10,8 @@ require (
 	github.com/segmentio/kafka-go v0.4.47
 	go.opentelemetry.io/auto v0.21.0
 	go.opentelemetry.io/auto/sdk v1.1.0
-	go.opentelemetry.io/otel v1.35.0
-	go.opentelemetry.io/otel/trace v1.35.0
+	go.opentelemetry.io/otel v1.35.1-0.20250319215043-90a9d1d93604
+	go.opentelemetry.io/otel/trace v1.35.1-0.20250319215043-90a9d1d93604
 	google.golang.org/grpc v1.71.1
 	google.golang.org/grpc/examples v0.0.0-20250418172310-54e7e26a1f32
 )

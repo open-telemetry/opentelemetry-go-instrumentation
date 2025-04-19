@@ -11,7 +11,15 @@
 
 char __license[] SEC("license") = "Dual MIT/GPL";
 
+// Records state of our write to auto-instrumentation flag.
+bool wrote_flag = false;
+
+struct control_t {
+    u64 kind; // Required to be 1.
+};
+
 struct event_t {
+    u64 kind; // Required to be 0.
     u32 size;
     char data[MAX_SIZE];
 };
@@ -53,9 +61,39 @@ static __always_inline long write_span_context(void *go_sc, struct span_context 
     return 0;
 }
 
+// This instrumentation attaches uprobe to the following function:
+// func (noopSpan) tracerProvider(autoEnabled *bool) TracerProvider
+// https://github.com/open-telemetry/opentelemetry-go/blob/2e8d5a99340b1e11ca6b19bcdfcbfe9cd0c2c385/trace/noop.go#L98C1-L98C65
+SEC("uprobe/tracerProvider")
+int uprobe_tracerProvider(struct pt_regs *ctx) {
+    if (wrote_flag) {
+        // Already wrote flag value.
+        return 0;
+    }
+
+    void *flag_ptr = get_argument(ctx, 3);
+    if (flag_ptr == NULL) {
+        bpf_printk("invalid flag_ptr: NULL");
+        return -1;
+    }
+
+    bool true_value = true;
+    long res = bpf_probe_write_user(flag_ptr, &true_value, sizeof(bool));
+    if (res != 0) {
+        bpf_printk("failed to write bool flag value: %ld", res);
+        return -2;
+    }
+
+    wrote_flag = true;
+
+    // Signal this uprobe should be unloaded.
+    struct control_t ctrl = {1};
+    return bpf_perf_event_output(ctx, &events, BPF_F_CURRENT_CPU, (void *)(&ctrl), sizeof(struct control_t));
+}
+
 // This instrumentation attaches a uprobe to the following function:
-// func (t *tracer) start(ctx context.Context, spanPtr *span, parentSpanCtx *trace.SpanContext, sampled *bool, spanCtx *trace.SpanContext) {
-// https://github.com/open-telemetry/opentelemetry-go-instrumentation/blob/effdec9ac23e56e9e9655663d386600e62b10871/sdk/trace.go#L56-L66
+// func (t *autoTracer) start(ctx context.Context, spanPtr *autoSpan, psc *SpanContext, sampled *bool, sc *SpanContext)
+// https://github.com/open-telemetry/opentelemetry-go/blob/2e8d5a99340b1e11ca6b19bcdfcbfe9cd0c2c385/trace/auto.go#L81-L92
 SEC("uprobe/Tracer_start")
 int uprobe_Tracer_start(struct pt_regs *ctx) {
     struct go_iface go_context = {0};
@@ -112,8 +150,8 @@ int uprobe_Tracer_start(struct pt_regs *ctx) {
 }
 
 // This instrumentation attaches a uprobe to the following function:
-// func (*span) ended(buf []byte) {}
-// https://github.com/open-telemetry/opentelemetry-go-instrumentation/blob/effdec9ac23e56e9e9655663d386600e62b10871/sdk/trace.go#L133-L136
+// func (*autoSpan) ended(buf []byte) {}
+// https://github.com/open-telemetry/opentelemetry-go/blob/2e8d5a99340b1e11ca6b19bcdfcbfe9cd0c2c385/trace/auto.go#L435-L448
 SEC("uprobe/Span_ended")
 int uprobe_Span_ended(struct pt_regs *ctx) {
     void *span_ptr = get_argument(ctx, 1);
@@ -164,7 +202,7 @@ int uprobe_Span_ended(struct pt_regs *ctx) {
     }
 
     // Do not send the whole size.buf if it is not needed.
-    u64 size = sizeof(event->size) + event->size;
+    u64 size = sizeof(event->kind) + sizeof(event->size) + event->size;
     // Make the verifier happy, ensure no unbounded memory access.
     if (size < sizeof(struct event_t)+1) {
         return bpf_perf_event_output(ctx, &events, BPF_F_CURRENT_CPU, event, size);

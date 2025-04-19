@@ -47,6 +47,7 @@ func TestIntegration(t *testing.T) {
 	t.Run("KafkaGo", testIntegration("./internal/test/e2e/kafka-go"))
 	t.Run("NetHTTP", testIntegration("./internal/test/e2e/nethttp"))
 	t.Run("NetHTTPCustom", testIntegration("./internal/test/e2e/nethttp_custom"))
+	t.Run("NonRecording", testIntegration("./internal/test/e2e/nonrecording"))
 	t.Run("OTelGlobal", testIntegration("./internal/test/e2e/otelglobal"))
 }
 
