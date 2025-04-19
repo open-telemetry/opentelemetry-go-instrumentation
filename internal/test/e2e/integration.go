@@ -52,7 +52,7 @@ func TestIntegration(t *testing.T, mainDir string, batsDir string) {
 
 	run(t, ctx, binPath, server.URL)
 
-	server.Flush(t, mainDir)
+	server.Flush(t, batsDir)
 	bats(t, ctx, batsDir)
 }
 
