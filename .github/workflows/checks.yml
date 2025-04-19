@@ -77,7 +77,9 @@ jobs:
       matrix:
         runner: [ubuntu-latest, ubuntu-22.04-arm]
     runs-on: ${{ matrix.runner }}
-    container: golang:1.24.2-bookworm@sha256:00eccd446e023d3cd9566c25a6e6a02b90db3e1e0bbe26a48fc29cd96e800901
+    container:
+      image: golang:1.24.2-bookworm@sha256:00eccd446e023d3cd9566c25a6e6a02b90db3e1e0bbe26a48fc29cd96e800901
+      options: --user root --privileged
     steps:
       - id: go-cache-paths
         run: |
@@ -100,7 +102,26 @@ jobs:
       - name: Initialize
         run: make go-mod-tidy generate
       - name: Run tests
-        run: sudo env "PATH=$PATH" go test -v -run=TestIntegration
+        shell: bash
+        run: |
+          # Create a temp file to store the JSON output
+          tmpfile=$(mktemp)
+          
+          # Stream test output to stdout and save to file for jq
+          go test -v -run='^TestIntegration' . | tee "$tmpfile"
+          
+          # Fail if any "skip" action occurs under TestIntegration/
+          go tool test2json < "$tmpfile" | jq -e '
+            select(
+              .Action == "skip" and
+              .Test == "TestIntegration"
+            )' >/dev/null && {
+                rm "$tmpfile"
+                echo "❌ TestIntegration was skipped!"
+                exit 1
+            }
+          rm "$tmpfile"
+          
   compatibility-test:
     strategy:
       matrix:
