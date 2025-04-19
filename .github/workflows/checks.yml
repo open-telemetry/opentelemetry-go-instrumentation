@@ -106,9 +106,11 @@ jobs:
         run: |
           # Create a temp file to store the JSON output
           tmpfile=$(mktemp)
-          
+
+          cd internal/test/e2e
+
           # Stream test output to stdout and save to file for jq
-          go test -v -run='^TestIntegration' . | tee "$tmpfile"
+          go test -v -run='^TestIntegration' ./... | tee "$tmpfile"
           
           # Fail if any "skip" action occurs under TestIntegration/
           go tool test2json < "$tmpfile" | jq -e '
