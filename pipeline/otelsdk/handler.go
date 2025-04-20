@@ -53,12 +53,11 @@ func NewTraceHandler(ctx context.Context, options ...Option) (*TraceHandler, err
 		return nil, err
 	}
 
-	tp, err := c.TracerProvider(ctx)
-	if err != nil {
-		return nil, err
-	}
+	return newTraceHandler(c), nil
+}
 
-	return &TraceHandler{logger: c.Logger(), tracerProvider: tp}, nil
+func newTraceHandler(c config) *TraceHandler {
+	return &TraceHandler{logger: c.Logger(), tracerProvider: c.TracerProvider()}
 }
 
 // HandleTrace the passed telemetry using the default OpenTelemetry Go SDK.

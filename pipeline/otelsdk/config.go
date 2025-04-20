@@ -172,6 +172,9 @@ type config struct {
 	logger   *slog.Logger
 	exporter sdk.SpanExporter
 	resAttrs []attribute.KeyValue
+
+	spanProcessor sdk.SpanProcessor
+	idGenerator   *idGenerator
 }
 
 func newConfig(ctx context.Context, options []Option) (config, error) {
@@ -179,6 +182,7 @@ func newConfig(ctx context.Context, options []Option) (config, error) {
 		resAttrs: []attribute.KeyValue{
 			semconv.ServiceName(defaultServiceName()),
 		},
+		idGenerator: newIDGenerator(),
 	}
 
 	var err error
@@ -187,6 +191,15 @@ func newConfig(ctx context.Context, options []Option) (config, error) {
 		c, e = opt.apply(ctx, c)
 		err = errors.Join(err, e)
 	}
+
+	if c.exporter == nil {
+		var e error
+		c.exporter, e = otlptracehttp.New(ctx)
+		if e != nil {
+			err = errors.Join(err, e)
+		}
+	}
+	c.spanProcessor = sdk.NewBatchSpanProcessor(c.exporter)
 
 	return c, err
 }
@@ -206,24 +219,15 @@ func (c config) Logger() *slog.Logger {
 	return newLogger(nil)
 }
 
-func (c config) TracerProvider(ctx context.Context) (*sdk.TracerProvider, error) {
-	exp := c.exporter
-	if exp == nil {
-		var err error
-		exp, err = otlptracehttp.New(ctx)
-		if err != nil {
-			return nil, err
-		}
-	}
-
+func (c config) TracerProvider() *sdk.TracerProvider {
 	return sdk.NewTracerProvider(
 		// Sample everything. The actual sampling is done in the eBPF probes
 		// before it reaches this tracerProvider.
 		sdk.WithSampler(sdk.AlwaysSample()),
 		sdk.WithResource(c.resource()),
-		sdk.WithBatcher(exp),
-		sdk.WithIDGenerator(newIDGenerator()),
-	), nil
+		sdk.WithSpanProcessor(c.spanProcessor),
+		sdk.WithIDGenerator(c.idGenerator),
+	)
 }
 
 func (c config) resource() *resource.Resource {
