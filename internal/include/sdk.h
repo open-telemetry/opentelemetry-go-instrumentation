@@ -30,7 +30,35 @@ struct {
     __uint(max_entries, MAX_CONCURRENT);
 } active_spans_by_span_ptr SEC(".maps");
 
-// Function declaration
-static __always_inline long write_span_context(void *go_sc, struct span_context *sc);
+static __always_inline long write_span_context(void *go_sc, struct span_context *sc) {
+    if (go_sc == NULL) {
+        bpf_printk("write_span_context: NULL go_sc");
+        return -1;
+    }
+
+    void *tid = (void *)(go_sc + span_context_trace_id_pos);
+    long ret = bpf_probe_write_user(tid, &sc->TraceID, TRACE_ID_SIZE);
+    if (ret != 0) {
+        bpf_printk("write_span_context: failed to write trace ID: %ld", ret);
+        return -2;
+    }
+
+    void *sid = (void *)(go_sc + span_context_span_id_pos);
+    ret = bpf_probe_write_user(sid, &sc->SpanID, SPAN_ID_SIZE);
+    if (ret != 0) {
+        bpf_printk("write_span_context: failed to write span ID: %ld", ret);
+        return -3;
+    }
+
+    void *flags = (void *)(go_sc + span_context_trace_flags_pos);
+    ret = bpf_probe_write_user(flags, &sc->TraceFlags, TRACE_FLAGS_SIZE);
+    if (ret != 0) {
+        bpf_printk("write_span_context: failed to write trace flags: %ld", ret);
+        return -4;
+    }
+
+    return 0;
+}
+
 
 #endif // SDK_H
