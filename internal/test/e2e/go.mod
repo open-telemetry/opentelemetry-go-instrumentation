@@ -12,8 +12,8 @@ require (
 	go.opentelemetry.io/auto v0.21.0
 	go.opentelemetry.io/auto/sdk v1.1.0
 	go.opentelemetry.io/collector/pdata v1.30.0
-	go.opentelemetry.io/otel v1.35.0
-	go.opentelemetry.io/otel/trace v1.35.0
+	go.opentelemetry.io/otel v1.35.1-0.20250319215043-90a9d1d93604
+	go.opentelemetry.io/otel/trace v1.35.1-0.20250319215043-90a9d1d93604
 	go.uber.org/goleak v1.3.0
 	google.golang.org/grpc v1.72.0
 	google.golang.org/grpc/examples v0.0.0-20250421233052-f7d488de751d
