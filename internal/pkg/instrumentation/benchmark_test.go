@@ -59,14 +59,14 @@ func benchmarkValidateProbeDependents(b *testing.B, count int) {
 	}
 }
 
-func Benchmark_validateProbeDependents10(t *testing.B) {
+func BenchmarkValidateProbeDependents10(t *testing.B) {
 	benchmarkValidateProbeDependents(t, 10)
 }
 
-func Benchmark_validateProbeDependents100(b *testing.B) {
+func BenchmarkValidateProbeDependents100(b *testing.B) {
 	benchmarkValidateProbeDependents(b, 100)
 }
 
-func Benchmark_validateProbeDependents1000(b *testing.B) {
+func BenchmarkValidateProbeDependents1000(b *testing.B) {
 	benchmarkValidateProbeDependents(b, 1000)
 }
