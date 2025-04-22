@@ -40,7 +40,7 @@ const (
 
 	// Minimum version of go.opentelemetry.io/otel that supports using the
 	// go.opentelemetry.io/auto/sdk in the global API.
-	minAutoSDK = "1.33.0"
+	minAutoSDK = "1.33.0-0"
 )
 
 func must(c *semver.Constraints, err error) *semver.Constraints {
@@ -51,7 +51,7 @@ func must(c *semver.Constraints, err error) *semver.Constraints {
 }
 
 var (
-	goMapsVersion = semver.New(1, 24, 0, "", "")
+	goMapsVersion = semver.New(1, 24, 0, "", "0")
 
 	otelWithAutoSDK = probe.PackageConstraints{
 		Package:     "go.opentelemetry.io/otel",
