@@ -32,6 +32,9 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 - Cache offsets for Go `1.24.2`. ([#2081](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/2081))
 - Cache offsets for `google.golang.org/grpc` `1.73.0-dev`. ([#2091](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/2091))
 - Cache offsets for `golang.org/x/net` `0.39.0`. ([#2107](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/2107))
+- The new `Multiplexer` type is added to `go.opentelemetry.io/auto/pipeline/otelsdk`.
+  This type is used to support multiple process instrumentation using the same telemetry pipeline. ([#2016](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/2016))
+- Cache offsets for `google.golang.org/grpc` `1.72.0`. ([#2190](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/2190))
 
 ### Changed
 
