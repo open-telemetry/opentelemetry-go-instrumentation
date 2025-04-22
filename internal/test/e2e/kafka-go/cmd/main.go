@@ -16,6 +16,7 @@ import (
 	"log/slog"
 	"os"
 	"os/signal"
+	"regexp"
 	"strings"
 	"time"
 
@@ -29,10 +30,8 @@ import (
 )
 
 const (
-	imgName       = "kafka"
-	containerName = "kafka_server"
-	addr          = "127.0.0.1"
-	port          = "9092"
+	imgName = "kafka"
+	port    = "9092"
 )
 
 var topics = []string{"topic1", "topic2"}
@@ -90,25 +89,27 @@ func run(ctx context.Context) error {
 		return fmt.Errorf("failed to create Docker client: %w", err)
 	}
 
+	const containerName = "kafka"
+
 	if err := pullKafkaImage(ctx, cli); err != nil {
 		return fmt.Errorf("failed to pull image: %w", err)
 	}
 
-	if err := runKafkaContainer(ctx, cli); err != nil {
+	broker, err := runKafkaContainer(ctx, cli, containerName)
+	if err != nil {
 		return fmt.Errorf("failed to run container: %w", err)
 	}
 
 	defer func() {
-		if err := cleanupContainer(cli); err != nil {
+		if err := cleanupContainer(cli, containerName); err != nil {
 			slog.Error("Failed to clean container", "error", err)
 		}
 	}()
 
-	if err := streamContainerLogs(ctx, cli); err != nil {
+	if err := streamContainerLogs(ctx, cli, containerName); err != nil {
 		return fmt.Errorf("failed to stream logs: %w", err)
 	}
 
-	broker := addr + ":" + port
 	if err = initKafka(ctx, broker, topics); err != nil {
 		return fmt.Errorf("failed to initialize Kafka: %w", err)
 	}
@@ -212,9 +213,34 @@ func pullKafkaImage(ctx context.Context, cli *client.Client) (err error) {
 	return err
 }
 
-func runKafkaContainer(ctx context.Context, cli *client.Client) error {
+func runKafkaContainer(
+	ctx context.Context,
+	cli *client.Client,
+	containerName string,
+) (broker string, err error) {
+	hostname := containerName
+	broker = containerName + ":" + port
+	hc := &container.HostConfig{
+		PortBindings: nat.PortMap{
+			nat.Port(port + "/tcp"): []nat.PortBinding{
+				{HostIP: "0.0.0.0", HostPort: port},
+			},
+		},
+	}
+
+	if n := getNetwork(ctx, cli); n != "" {
+		slog.Info("Using parent container's network", "network", n)
+		hc.NetworkMode = n
+		// This is a hack to get the container to use the same network as the host.
+
+		if n == "host" {
+			hostname = "127.0.0.1"
+			broker = "127.0.0.1:" + port
+		}
+	}
+
 	resp, err := cli.ContainerCreate(ctx, &container.Config{
-		Hostname: addr, // Hacky, but works.
+		Hostname: hostname,
 		User:     "root",
 		Image:    kafkaImage,
 		Env: []string{
@@ -222,32 +248,92 @@ func runKafkaContainer(ctx context.Context, cli *client.Client) error {
 			"KAFKA_CFG_PROCESS_ROLES=controller,broker",
 			"KAFKA_CFG_LISTENERS=PLAINTEXT://:9092,CONTROLLER://:9093",
 			"KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT",
-			"KAFKA_CFG_CONTROLLER_QUORUM_VOTERS=0@" + addr + ":9093",
+			"KAFKA_CFG_CONTROLLER_QUORUM_VOTERS=0@" + hostname + ":9093",
 			"KAFKA_CFG_CONTROLLER_LISTENER_NAMES=CONTROLLER",
 			"KAFKA_AUTO_CREATE_TOPICS_ENABLE=true",
 		},
 		ExposedPorts: nat.PortSet{
 			nat.Port(port + "/tcp"): struct{}{},
 		},
-	}, &container.HostConfig{
-		PortBindings: nat.PortMap{
-			nat.Port(port + "/tcp"): []nat.PortBinding{
-				{HostIP: addr, HostPort: port},
-			},
-		},
-	}, nil, nil, containerName)
+	}, hc, nil, nil, containerName)
 	if err != nil {
-		return err
+		return broker, fmt.Errorf("failed to create container: %w", err)
 	}
+	slog.Info("Container created", "image", kafkaImage, "name", containerName)
 
 	if err := cli.ContainerStart(ctx, resp.ID, container.StartOptions{}); err != nil {
-		return err
+		return broker, err
 	}
 	slog.Info("Container started", "image", kafkaImage, "name", containerName)
-	return nil
+	return broker, nil
 }
 
-func streamContainerLogs(ctx context.Context, cli *client.Client) error {
+func isRunningInContainer() bool {
+	_, err := os.ReadFile("/.dockerenv")
+	if err == nil {
+		fmt.Println("Running inside a Docker container.")
+		return true
+	}
+	// fallback check using cgroup
+	data, err := os.ReadFile("/proc/1/cgroup")
+	if err != nil {
+		return false
+	}
+	fmt.Println("Cgroup data:", string(data))
+	return strings.Contains(string(data), "docker")
+}
+
+func getContainerID() string {
+	// fallback: hostname is usually container ID
+	data, _ := os.ReadFile("/etc/hostname")
+	hostname := strings.TrimSpace(string(data))
+
+	file, err := os.Open("/proc/self/mountinfo")
+	if err != nil {
+		return hostname
+	}
+	defer file.Close()
+
+	scanner := bufio.NewScanner(file)
+
+	// Regex to match the path pattern
+	dockerPath := regexp.MustCompile(`/docker/containers/`)
+	stripPrefix := regexp.MustCompile(`.*/docker/containers/`)
+	stripSuffix := regexp.MustCompile(`/.*`)
+
+	for scanner.Scan() {
+		line := scanner.Text()
+		fields := strings.Fields(line)
+		if len(fields) < 5 {
+			continue
+		}
+		path := fields[3]
+		if dockerPath.MatchString(path) {
+			id := stripPrefix.ReplaceAllString(path, "")
+			id = stripSuffix.ReplaceAllString(id, "")
+			return id
+		}
+	}
+
+	return hostname
+}
+
+func getNetwork(ctx context.Context, cli *client.Client) container.NetworkMode {
+	if !isRunningInContainer() {
+		return ""
+	}
+
+	containerJSON, err := cli.ContainerInspect(ctx, getContainerID())
+	if err != nil {
+		return ""
+	}
+	for name := range containerJSON.NetworkSettings.Networks {
+		return container.NetworkMode(name)
+	}
+	return ""
+}
+
+func streamContainerLogs(ctx context.Context, cli *client.Client, containerName string) error {
 	out, err := cli.ContainerLogs(
 		ctx,
 		containerName,
@@ -310,7 +396,7 @@ func initKafka(ctx context.Context, address string, topics []string) error {
 	return errors.New("failed to initialize Kafka")
 }
 
-func cleanupContainer(cli *client.Client) error {
+func cleanupContainer(cli *client.Client, containerName string) error {
 	// Use our own context as the parent is likely already canceled.
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer stop()
