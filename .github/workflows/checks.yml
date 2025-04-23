@@ -107,12 +107,12 @@ jobs:
         uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684 # v4
         with:
           path: ${{ steps.go-cache-paths.outputs.go-build }}
-          key: ${{ runner.os }}-go-build-${{ hashFiles('**/go.sum') }}
+          key: ${{ runner.os }}-${{ matrix.test}}-go-build-${{ hashFiles('**/go.sum') }}
       - name: Go Mod Cache
         uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684 # v4
         with:
           path: ${{ steps.go-cache-paths.outputs.go-mod }}
-          key: ${{ runner.os }}-go-mod-${{ hashFiles('**/go.sum') }}
+          key: ${{ runner.os }}-${{ matrix.test}}-go-mod-${{ hashFiles('**/go.sum') }}
       - name: Install dependencies
         run: apt-get update && apt-get install -y sudo clang llvm bats jq
       - name: Initialize
