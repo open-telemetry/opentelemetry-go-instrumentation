@@ -4,10 +4,11 @@
 package instrumentation
 
 import (
-	"github.com/stretchr/testify/require"
-	"go.opentelemetry.io/auto/internal/pkg/instrumentation/probe"
 	"strconv"
 	"testing"
+
+	"github.com/stretchr/testify/require"
+	"go.opentelemetry.io/auto/internal/pkg/instrumentation/probe"
 )
 
 func benchmarkFilterUnusedProbes(b *testing.B, count int) {
