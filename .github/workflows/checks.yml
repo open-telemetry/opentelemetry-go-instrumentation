@@ -72,9 +72,25 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y clang llvm
       - name: Run tests
         run: make test-race
+  detect-integration-tests:
+    runs-on: ubuntu-latest
+    outputs:
+      tests: ${{ steps.set-tests.outputs.tests }}
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+      - id: set-tests
+        run: |
+          tests=$( \
+            find ./internal/test/e2e -depth -maxdepth 1 -mindepth 1 -type d -exec basename {} \; \
+            | jq -R -s -c 'split("\n")[:-1]' \
+          )
+          echo "tests=$tests"
+          echo "tests=$tests" >> $GITHUB_OUTPUT
   integration-test:
+    needs: detect-integration-tests
     strategy:
       matrix:
+        test: ${{ fromJSON(needs.detect-integration-tests.outputs.tests) }}
         runner: [ubuntu-latest, ubuntu-22.04-arm]
     runs-on: ${{ matrix.runner }}
     container:
@@ -91,26 +107,28 @@ jobs:
         uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684 # v4
         with:
           path: ${{ steps.go-cache-paths.outputs.go-build }}
-          key: ${{ runner.os }}-go-build-${{ hashFiles('**/go.sum') }}
+          key: ${{ runner.os }}-${{ matrix.test}}-go-build-${{ hashFiles('**/go.sum') }}
       - name: Go Mod Cache
         uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684 # v4
         with:
           path: ${{ steps.go-cache-paths.outputs.go-mod }}
-          key: ${{ runner.os }}-go-mod-${{ hashFiles('**/go.sum') }}
+          key: ${{ runner.os }}-${{ matrix.test}}-go-mod-${{ hashFiles('**/go.sum') }}
       - name: Install dependencies
         run: apt-get update && apt-get install -y sudo clang llvm bats jq
       - name: Initialize
         run: make go-mod-tidy generate
-      - name: Run tests
+      - name: Test ${{ matrix.test }}
         shell: bash
+        env:
+          TEST: ${{ matrix.test }}
         run: |
           # Create a temp file to store the JSON output
           tmpfile=$(mktemp)
 
-          cd internal/test/e2e
+          cd "internal/test/e2e/$TEST"
 
           # Stream test output to stdout and save to file for jq
-          go test -v -run='^TestIntegration' ./... | tee "$tmpfile"
+          go test -v -run='^TestIntegration' | tee "$tmpfile"
           
           # Fail if any "skip" action occurs under TestIntegration/
           go tool test2json < "$tmpfile" | jq -e '
