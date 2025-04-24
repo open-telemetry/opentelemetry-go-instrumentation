@@ -97,9 +97,9 @@ func NewManager(
 
 func (m *Manager) validateProbeDependents(id probe.ID, symbols []probe.FunctionSymbol) error {
 	// Validate that dependent probes point to real standalone probes.
-	funcsMap := make(map[string]interface{})
+	funcsMap := make(map[string]struct{}, len(symbols))
 	for _, s := range symbols {
-		funcsMap[s.Symbol] = nil
+		funcsMap[s.Symbol] = struct{}{}
 	}
 
 	for _, s := range symbols {
@@ -135,9 +135,9 @@ func (m *Manager) registerProbe(p probe.Probe) error {
 // filterUnusedProbes filterers probes whose functions are already instrumented
 // out of the Manager.
 func (m *Manager) filterUnusedProbes() {
-	existingFuncMap := make(map[string]interface{})
+	existingFuncMap := make(map[string]struct{}, len(m.proc.Functions))
 	for _, f := range m.proc.Functions {
-		existingFuncMap[f.Name] = nil
+		existingFuncMap[f.Name] = struct{}{}
 	}
 
 	for name, inst := range m.probes {
