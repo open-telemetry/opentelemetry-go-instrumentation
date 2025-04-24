@@ -54,7 +54,8 @@ func main() {
 }
 
 func run(ctx context.Context) error {
-	ctx, span := otel.GetTracerProvider().Tracer("e2e/database").Start(ctx, "run")
+	const scopeName = "go.opentelemetry.io/auto/database/sql"
+	ctx, span := otel.GetTracerProvider().Tracer(scopeName).Start(ctx, "run")
 	defer span.End()
 
 	tmpDir := os.TempDir()

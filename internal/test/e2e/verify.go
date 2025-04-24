@@ -53,6 +53,24 @@ func ScopeSpansByName(td ptrace.Traces, name string) []ptrace.ScopeSpans {
 	return result
 }
 
+// SelectSpan returns the first span matching the selector from a set of scope
+// spans.
+func SelectSpan(
+	scopeSpans []ptrace.ScopeSpans,
+	selector func(ptrace.Span) bool,
+) (ptrace.Span, error) {
+	for _, ss := range scopeSpans {
+		spans := ss.Spans()
+		for i := range spans.Len() {
+			span := spans.At(i)
+			if selector(span) {
+				return span, nil
+			}
+		}
+	}
+	return ptrace.NewSpan(), errors.New("span not found")
+}
+
 // SpanByName returns the first span with the specified name from a
 // set of scope spans.
 func SpanByName(scopeSpans []ptrace.ScopeSpans, name string) (ptrace.Span, error) {
