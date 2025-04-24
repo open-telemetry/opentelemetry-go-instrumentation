@@ -17,12 +17,6 @@ excluded-modules:
   - go.opentelemetry.io/auto/examples/kafka-go/consumer
   - go.opentelemetry.io/auto/examples/rolldice/frontend
   - go.opentelemetry.io/auto/examples/rolldice/user
-  - go.opentelemetry.io/auto/internal/test/e2e/autosdk
-  - go.opentelemetry.io/auto/internal/test/e2e/databasesql
-  - go.opentelemetry.io/auto/internal/test/e2e/gin
-  - go.opentelemetry.io/auto/internal/test/e2e/grpc
-  - go.opentelemetry.io/auto/internal/test/e2e/kafka-go
-  - go.opentelemetry.io/auto/internal/test/e2e/nethttp
-  - go.opentelemetry.io/auto/internal/test/e2e/otelglobal
+  - go.opentelemetry.io/auto/internal/test/e2e
   - go.opentelemetry.io/auto/internal/tools
   - go.opentelemetry.io/auto/sdk/internal/telemetry/test

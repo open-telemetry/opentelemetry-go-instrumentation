@@ -19,8 +19,8 @@ import (
 
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/bpffs"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/probe"
-	"go.opentelemetry.io/auto/internal/pkg/opentelemetry"
 	"go.opentelemetry.io/auto/internal/pkg/process"
+	"go.opentelemetry.io/auto/pipeline"
 )
 
 // Function variables overridden in testing.
@@ -44,7 +44,7 @@ const (
 type Manager struct {
 	logger          *slog.Logger
 	probes          map[probe.ID]probe.Probe
-	otelController  *opentelemetry.Controller
+	handler         *pipeline.Handler
 	cp              ConfigProvider
 	exe             *link.Executable
 	proc            *process.Info
@@ -59,16 +59,16 @@ type Manager struct {
 // NewManager returns a new [Manager].
 func NewManager(
 	logger *slog.Logger,
-	otelController *opentelemetry.Controller,
+	h *pipeline.Handler,
 	pid process.ID,
 	cp ConfigProvider,
 	probes ...probe.Probe,
 ) (*Manager, error) {
 	m := &Manager{
-		logger:         logger,
-		probes:         make(map[probe.ID]probe.Probe),
-		otelController: otelController,
-		cp:             cp,
+		logger:  logger,
+		probes:  make(map[probe.ID]probe.Probe),
+		handler: h,
+		cp:      cp,
 	}
 
 	funcs := make(map[string]any)
@@ -97,9 +97,9 @@ func NewManager(
 
 func (m *Manager) validateProbeDependents(id probe.ID, symbols []probe.FunctionSymbol) error {
 	// Validate that dependent probes point to real standalone probes.
-	funcsMap := make(map[string]interface{})
+	funcsMap := make(map[string]struct{}, len(symbols))
 	for _, s := range symbols {
-		funcsMap[s.Symbol] = nil
+		funcsMap[s.Symbol] = struct{}{}
 	}
 
 	for _, s := range symbols {
@@ -135,9 +135,9 @@ func (m *Manager) registerProbe(p probe.Probe) error {
 // filterUnusedProbes filterers probes whose functions are already instrumented
 // out of the Manager.
 func (m *Manager) filterUnusedProbes() {
-	existingFuncMap := make(map[string]interface{})
+	existingFuncMap := make(map[string]struct{}, len(m.proc.Functions))
 	for _, f := range m.proc.Functions {
-		existingFuncMap[f.Name] = nil
+		existingFuncMap[f.Name] = struct{}{}
 	}
 
 	for name, inst := range m.probes {
@@ -230,7 +230,7 @@ func (m *Manager) runProbe(p probe.Probe) {
 	m.runningProbesWG.Add(1)
 	go func(ap probe.Probe) {
 		defer m.runningProbesWG.Done()
-		ap.Run(m.otelController.Trace)
+		ap.Run(m.handler)
 	}(p)
 }
 
@@ -399,16 +399,9 @@ func (m *Manager) loadProbes() error {
 }
 
 func (m *Manager) cleanup() error {
-	ctx := context.Background()
 	err := m.cp.Shutdown(context.Background())
 	for _, i := range m.probes {
 		err = errors.Join(err, i.Close())
-	}
-
-	// Wait for all probes to close so we know there is no more telemetry being
-	// generated before stopping (and flushing) the Controller.
-	if m.otelController != nil {
-		err = errors.Join(err, m.otelController.Shutdown(ctx))
 	}
 
 	m.logger.Debug("Cleaning bpffs")

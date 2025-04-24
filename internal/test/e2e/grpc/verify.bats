@@ -163,13 +163,8 @@ SCOPE="go.opentelemetry.io/auto/google.golang.org/grpc"
   ' | sort -u)
   
   expected_result=$(printf "%s\n" \
-    "connection error: desc = \"transport: Error while dialing: dial tcp 127.0.0.1:1701: connect: connection refused\"" \
+    "connection error: desc = \"transport: Error while dialing: dial tcp [::1]:1701: connect: connection refused\"" \
     "unimplmented")
 
   assert_equal "$result" "$expected_result"
-}
-
-@test "server :: expected (redacted) trace output" {
-  redact_json
-  assert_equal "$(git --no-pager diff ${BATS_TEST_DIRNAME}/traces.json)" ""
 }

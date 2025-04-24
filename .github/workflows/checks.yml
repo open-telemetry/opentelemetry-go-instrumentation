@@ -65,23 +65,88 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@0aaccfd150d50ccaeb58ebd88d36e91967a5f35b # v5
         with:
-          go-version: ${{ matrix.go-version }}
+          go-version: ${{ env.GO_VERSION }}
           check-latest: true
           cache-dependency-path: "**/go.sum"
       - name: Install build dependencies
         run: sudo apt-get update && sudo apt-get install -y clang llvm
       - name: Run tests
         run: make test-race
+  detect-integration-tests:
+    runs-on: ubuntu-latest
+    outputs:
+      tests: ${{ steps.set-tests.outputs.tests }}
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+      - id: set-tests
+        run: |
+          tests=$( \
+            find ./internal/test/e2e -depth -maxdepth 1 -mindepth 1 -type d -exec basename {} \; \
+            | jq -R -s -c 'split("\n")[:-1]' \
+          )
+          echo "tests=$tests"
+          echo "tests=$tests" >> $GITHUB_OUTPUT
+  integration-test:
+    needs: detect-integration-tests
+    strategy:
+      matrix:
+        test: ${{ fromJSON(needs.detect-integration-tests.outputs.tests) }}
+        runner: [ubuntu-latest, ubuntu-22.04-arm]
+    runs-on: ${{ matrix.runner }}
+    container:
+      image: golang:1.24.2-bookworm@sha256:00eccd446e023d3cd9566c25a6e6a02b90db3e1e0bbe26a48fc29cd96e800901
+      options: --user root --privileged
+    steps:
+      - id: go-cache-paths
+        run: |
+          echo "go-build=$(go env GOCACHE)" >> $GITHUB_OUTPUT
+          echo "go-mod=$(go env GOMODCACHE)" >> $GITHUB_OUTPUT
+      - name: Checkout Repo
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+      - name: Go Build Cache
+        uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684 # v4
+        with:
+          path: ${{ steps.go-cache-paths.outputs.go-build }}
+          key: ${{ runner.os }}-${{ matrix.test}}-go-build-${{ hashFiles('**/go.sum') }}
+      - name: Go Mod Cache
+        uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684 # v4
+        with:
+          path: ${{ steps.go-cache-paths.outputs.go-mod }}
+          key: ${{ runner.os }}-${{ matrix.test}}-go-mod-${{ hashFiles('**/go.sum') }}
+      - name: Install dependencies
+        run: apt-get update && apt-get install -y sudo clang llvm bats jq
+      - name: Initialize
+        run: make go-mod-tidy generate
+      - name: Test ${{ matrix.test }}
+        shell: bash
+        env:
+          TEST: ${{ matrix.test }}
+        run: |
+          # Create a temp file to store the JSON output
+          tmpfile=$(mktemp)
+
+          cd "internal/test/e2e/$TEST"
+
+          # Stream test output to stdout and save to file for jq
+          go test -v -run='^TestIntegration' | tee "$tmpfile"
+          
+          # Fail if any "skip" action occurs under TestIntegration/
+          go tool test2json < "$tmpfile" | jq -e '
+            select(
+              .Action == "skip" and
+              .Test == "TestIntegration"
+            )' >/dev/null && {
+                rm "$tmpfile"
+                echo "❌ TestIntegration was skipped!"
+                exit 1
+            }
+          rm "$tmpfile"
+          
   compatibility-test:
     strategy:
       matrix:
-        go-version: ["~1.24.0", "~1.23.1"]
-        os: [ubuntu-latest]
-        # GitHub Actions does not support arm* architectures on default
-        # runners. It is possible to accomplish this with a self-hosted runner
-        # if we want to add this in the future:
-        # https://docs.github.com/en/actions/hosting-your-own-runners/using-self-hosted-runners-in-a-workflow
-        arch: [amd64]
+        go-version: ["stable", "oldstable"]
+        os: [ubuntu-latest, ubuntu-22.04-arm]
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout Repo
@@ -95,9 +160,11 @@ jobs:
       - name: Install build dependencies
         run: sudo apt-get update && sudo apt-get install -y clang llvm
       - name: Run tests
-        env:
-          GOARCH: ${{ matrix.arch }}
         run: make test
+      - name: Run eBPF verification tests
+        run: sudo --preserve-env=PATH make test-ebpf
+      - name: Check repository unmodified
+        run: make check-clean-work-tree
   verify-licenses:
     runs-on: ubuntu-24.04
     steps:
@@ -112,3 +179,25 @@ jobs:
       - name: Install build dependencies
         run: sudo apt-get update && sudo apt-get install -y clang llvm libbpf-dev
       - run: make verify-licenses
+  docker-build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+      - name: Build auto-instrumentation
+        run: make docker-build
+  offsets:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+      - name: Setup Go
+        uses: actions/setup-go@0aaccfd150d50ccaeb58ebd88d36e91967a5f35b # v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          check-latest: true
+          cache-dependency-path: "**/go.sum"
+      - name: Update offsets
+        run: make offsets
+      - name: Check diff
+        run: make check-clean-work-tree

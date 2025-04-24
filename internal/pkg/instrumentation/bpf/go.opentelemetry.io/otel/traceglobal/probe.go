@@ -40,7 +40,7 @@ const (
 
 	// Minimum version of go.opentelemetry.io/otel that supports using the
 	// go.opentelemetry.io/auto/sdk in the global API.
-	minAutoSDK = "1.33.0"
+	minAutoSDK = "1.33.0-0"
 )
 
 func must(c *semver.Constraints, err error) *semver.Constraints {
@@ -51,7 +51,7 @@ func must(c *semver.Constraints, err error) *semver.Constraints {
 }
 
 var (
-	goMapsVersion = semver.New(1, 24, 0, "", "")
+	goMapsVersion = semver.New(1, 24, 0, "", "0")
 
 	otelWithAutoSDK = probe.PackageConstraints{
 		Package:     "go.opentelemetry.io/otel",
@@ -342,15 +342,15 @@ type event struct {
 	TracerID   tracerID
 }
 
-func processFn(e *event) ptrace.ScopeSpans {
-	ss := ptrace.NewScopeSpans()
-
-	scope := ss.Scope()
+func processFn(e *event) (pcommon.InstrumentationScope, string, ptrace.SpanSlice) {
+	scope := pcommon.NewInstrumentationScope()
 	scope.SetName(unix.ByteSliceToString(e.TracerID.Name[:]))
 	scope.SetVersion(unix.ByteSliceToString(e.TracerID.Version[:]))
-	ss.SetSchemaUrl(unix.ByteSliceToString(e.TracerID.SchemaURL[:]))
 
-	span := ss.Spans().AppendEmpty()
+	schemaURL := unix.ByteSliceToString(e.TracerID.SchemaURL[:])
+
+	spans := ptrace.NewSpanSlice()
+	span := spans.AppendEmpty()
 	span.SetName(unix.ByteSliceToString(e.SpanName[:]))
 	span.SetKind(ptrace.SpanKindClient)
 	span.SetStartTimestamp(utils.BootOffsetToTimestamp(e.StartTime))
@@ -366,7 +366,7 @@ func processFn(e *event) ptrace.ScopeSpans {
 	setAttributes(span.Attributes(), e.Attributes)
 	setStatus(span.Status(), e.Status)
 
-	return ss
+	return scope, schemaURL, spans
 }
 
 func setStatus(dest ptrace.Status, stat status) {

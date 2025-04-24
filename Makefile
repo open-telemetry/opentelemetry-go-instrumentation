@@ -98,7 +98,16 @@ docker-generate: docker-build-base
 
 .PHONY: docker-test
 docker-test: docker-build-base
-	docker run --rm -v $(shell pwd):/app $(IMG_NAME_BASE) /bin/sh -c "cd /app && make test"
+	@docker run \
+		--rm \
+		--privileged \
+		--network=host \
+		--user=root \
+		-v /var/run/docker.sock:/var/run/docker.sock \
+		-v "$(REPODIR)":/usr/src/go.opentelemetry.io/auto \
+		-w /usr/src/go.opentelemetry.io/auto \
+		$(IMG_NAME_BASE) \
+		/bin/sh -c "make test"
 
 .PHONY: docker-precommit
 docker-precommit: docker-build-base
@@ -144,6 +153,10 @@ docker-dev: docker-build-base
 	@docker run \
 		-it \
 		--rm \
+		--privileged \
+		--network=host \
+		--user=root \
+		-v /var/run/docker.sock:/var/run/docker.sock \
 		-v "$(REPODIR)":/usr/src/go.opentelemetry.io/auto \
 		-w /usr/src/go.opentelemetry.io/auto \
 		$(IMG_NAME_BASE) \
@@ -193,49 +206,6 @@ license-header-check:
 	           echo "license header checking failed:"; echo "$${licRes}"; \
 	           exit 1; \
 	   fi
-
-.PHONY: fixture-nethttp fixture-gin fixture-databasesql fixture-nethttp-custom fixture-otelglobal fixture-autosdk fixture-kafka-go
-fixture-nethttp-custom: fixtures/nethttp_custom
-fixture-nethttp: fixtures/nethttp
-fixture-gin: fixtures/gin
-fixture-databasesql: fixtures/databasesql
-fixture-grpc: fixtures/grpc
-fixture-otelglobal: fixtures/otelglobal
-fixture-autosdk: fixtures/autosdk
-fixture-kafka-go: fixtures/kafka-go
-fixtures/%: LIBRARY=$*
-fixtures/%: docker-build
-	if [ -f ./internal/test/e2e/$(LIBRARY)/build.sh ]; then \
-		./internal/test/e2e/$(LIBRARY)/build.sh; \
-	else \
-		cd internal/test/e2e/$(LIBRARY) && docker build -t sample-app . ;\
-	fi
-	kind create cluster
-	kind load docker-image otel-go-instrumentation sample-app
-	helm repo add open-telemetry https://open-telemetry.github.io/opentelemetry-helm-charts
-	if [ ! -d "opentelemetry-helm-charts" ]; then \
-		git clone https://github.com/open-telemetry/opentelemetry-helm-charts.git; \
-	fi
-	if [ -f ./internal/test/e2e/$(LIBRARY)/collector-helm-values.yml ]; then \
-		helm install test -f ./internal/test/e2e/$(LIBRARY)/collector-helm-values.yml opentelemetry-helm-charts/charts/opentelemetry-collector; \
-	else \
-		helm install test -f .github/workflows/e2e/k8s/collector-helm-values.yml opentelemetry-helm-charts/charts/opentelemetry-collector; \
-	fi
-	while : ; do \
-		kubectl get pod/test-opentelemetry-collector-0 && break; \
-		sleep 5; \
-	done
-	kubectl wait --for=condition=Ready --timeout=60s pod/test-opentelemetry-collector-0
-	kubectl -n default create -f .github/workflows/e2e/k8s/sample-job.yml
-	if kubectl wait --for=condition=Complete --timeout=60s job/sample-job; then \
-		rm -f ./internal/test/e2e/$(LIBRARY)/traces-orig.json; \
-		kubectl cp -c filecp default/test-opentelemetry-collector-0:tmp/trace.json ./internal/test/e2e/$(LIBRARY)/traces-orig.json; \
-		rm -f ./internal/test/e2e/$(LIBRARY)/traces.json; \
-		bats ./internal/test/e2e/$(LIBRARY)/verify.bats; \
-	else \
-		kubectl logs -l app=sample -c auto-instrumentation; \
-	fi
-	kind delete cluster
 
 .PHONY: prerelease
 prerelease: | $(MULTIMOD)

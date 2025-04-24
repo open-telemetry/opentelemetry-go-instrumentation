@@ -11,6 +11,7 @@ import (
 	"log/slog"
 
 	"github.com/cilium/ebpf/perf"
+	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/ptrace"
 	"go.opentelemetry.io/otel/trace"
 
@@ -108,25 +109,34 @@ func (c *converter) decodeEvent(record perf.Record) (*event, error) {
 	return &e, nil
 }
 
-func (c *converter) processFn(e *event) ptrace.ScopeSpans {
+func (c *converter) processFn(
+	e *event,
+) (scope pcommon.InstrumentationScope, url string, spans ptrace.SpanSlice) {
+	// Ensure correct initialization of return values.
+	scope = pcommon.NewInstrumentationScope()
+	spans = ptrace.NewSpanSlice()
+
 	var m ptrace.JSONUnmarshaler
 	traces, err := m.UnmarshalTraces(e.SpanData[:e.Size])
 	if err != nil {
 		c.logger.Error("failed to unmarshal span data", "error", err)
-		return ptrace.NewScopeSpans()
+		return
 	}
 
 	rs := traces.ResourceSpans()
 	if rs.Len() == 0 {
 		c.logger.Error("empty ResourceSpans")
-		return ptrace.NewScopeSpans()
+		return
 	}
 
 	ss := rs.At(0).ScopeSpans()
 	if ss.Len() == 0 {
 		c.logger.Error("empty ScopeSpans")
-		return ptrace.NewScopeSpans()
+		return
 	}
+	s := ss.At(0)
 
-	return ss.At(0)
+	s.Scope().MoveTo(scope)
+	s.Spans().MoveAndAppendTo(spans)
+	return scope, s.SchemaUrl(), spans
 }
