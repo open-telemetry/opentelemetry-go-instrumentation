@@ -9,20 +9,17 @@ import (
 	"database/sql"
 	"flag"
 	"fmt"
-	"io"
 	"log/slog"
-	"net/http"
 	"os"
 	"os/signal"
 
 	_ "github.com/mattn/go-sqlite3"
+	"go.opentelemetry.io/otel"
 
 	"go.opentelemetry.io/auto/internal/test/trigger"
 )
 
 const (
-	dbName = "test.db"
-
 	tableDefinition = `CREATE TABLE contacts (
 							contact_id INTEGER PRIMARY KEY,
 							first_name TEXT NOT NULL,
@@ -35,107 +32,6 @@ const (
 						('Moshe', 'Levi', 'moshe@gmail.com', '052-1234567');`
 )
 
-// Server is Http server that exposes multiple endpoints.
-type Server struct {
-	db *sql.DB
-}
-
-// CreateDb creates the db file.
-func CreateDb() {
-	file, err := os.Create(dbName)
-	if err != nil {
-		panic(err)
-	}
-	err = file.Close()
-	if err != nil {
-		panic(err)
-	}
-}
-
-// NewServer creates a server struct after initialing rand.
-func NewServer() *Server {
-	CreateDb()
-
-	database, err := sql.Open("sqlite3", dbName)
-	if err != nil {
-		panic(err)
-	}
-
-	_, err = database.Exec(tableDefinition)
-	if err != nil {
-		panic(err)
-	}
-
-	_, err = database.Exec(tableInsertion)
-	if err != nil {
-		panic(err)
-	}
-
-	return &Server{
-		db: database,
-	}
-}
-
-func (s *Server) query(w http.ResponseWriter, req *http.Request, query string) {
-	ctx := req.Context()
-	conn, err := s.db.Conn(ctx)
-	if err != nil {
-		panic(err)
-	}
-
-	rows, err := conn.QueryContext(req.Context(), query)
-	if err != nil {
-		slog.Error("query failed", "query", query, "error", err)
-		return
-	}
-
-	slog.Info("queryDB called", "query", query)
-	for rows.Next() {
-		var id int
-		var firstName string
-		var lastName string
-		var email string
-		var phone string
-		err := rows.Scan(&id, &firstName, &lastName, &email, &phone)
-		if err != nil {
-			panic(err)
-		}
-		fmt.Fprintf(
-			w,
-			"ID: %d, firstName: %s, lastName: %s, email: %s, phone: %s\n",
-			id,
-			firstName,
-			lastName,
-			email,
-			phone,
-		)
-	}
-}
-
-func (s *Server) selectDb(w http.ResponseWriter, req *http.Request) {
-	s.query(w, req, "SELECT * FROM contacts")
-}
-
-func (s *Server) insert(w http.ResponseWriter, req *http.Request) {
-	s.query(w, req, "INSERT INTO contacts (first_name) VALUES ('Mike')")
-}
-
-func (s *Server) update(w http.ResponseWriter, req *http.Request) {
-	s.query(w, req, "UPDATE contacts SET last_name = 'Santa' WHERE first_name = 'Mike'")
-}
-
-func (s *Server) delete(w http.ResponseWriter, req *http.Request) {
-	s.query(w, req, "DELETE FROM contacts WHERE first_name = 'Mike'")
-}
-
-func (s *Server) drop(w http.ResponseWriter, req *http.Request) {
-	s.query(w, req, "DROP TABLE contacts")
-}
-
-func (s *Server) invalid(w http.ResponseWriter, req *http.Request) {
-	s.query(w, req, "syntax error")
-}
-
 func main() {
 	var trig trigger.Flag
 	flag.Var(&trig, "trigger", trig.Docs())
@@ -144,32 +40,6 @@ func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer stop()
 
-	port := fmt.Sprintf(":%d", 8080)
-	slog.Info("starting http server", "port", port)
-
-	s := NewServer()
-
-	http.HandleFunc("/query_db", s.selectDb)
-	http.HandleFunc("/insert", s.insert)
-	http.HandleFunc("/update", s.update)
-	http.HandleFunc("/delete", s.delete)
-	http.HandleFunc("/drop", s.drop)
-	http.HandleFunc("/invalid", s.invalid)
-	go func() {
-		_ = http.ListenAndServe(":8080", nil) // nolint: gosec  // Testing HTTP server
-	}()
-
-	tests := []struct {
-		url string
-	}{
-		{url: "http://localhost:8080/query_db"},
-		{url: "http://localhost:8080/insert"},
-		{url: "http://localhost:8080/update"},
-		{url: "http://localhost:8080/delete"},
-		{url: "http://localhost:8080/drop"},
-		{url: "http://localhost:8080/invalid"},
-	}
-
 	// Wait for auto-instrumentation.
 	err := trig.Wait(ctx)
 	if err != nil {
@@ -177,18 +47,97 @@ func main() {
 		os.Exit(1)
 	}
 
-	for _, t := range tests {
-		resp, err := http.Get(t.url)
+	err = run(ctx)
+	if err != nil {
+		slog.Error("Error running database workflow", "error", err)
+	}
+}
+
+func run(ctx context.Context) error {
+	ctx, span := otel.GetTracerProvider().Tracer("e2e/database").Start(ctx, "run")
+	defer span.End()
+
+	tmpDir := os.TempDir()
+	tmpFile, err := os.CreateTemp(tmpDir, "test-*.db")
+	if err != nil {
+		return fmt.Errorf("failed to create temporary file: %w", err)
+	}
+
+	dbName := tmpFile.Name()
+	defer os.Remove(dbName)
+
+	if err = tmpFile.Close(); err != nil {
+		return fmt.Errorf("failed to close temporary file: %w", err)
+	}
+
+	db, err := sql.Open("sqlite3", dbName)
+	if err != nil {
+		return fmt.Errorf("failed to open database: %w", err)
+	}
+
+	_, err = db.Exec(tableDefinition)
+	if err != nil {
+		return fmt.Errorf("failed to create table: %w", err)
+	}
+
+	_, err = db.Exec(tableInsertion)
+	if err != nil {
+		return fmt.Errorf("failed to insert data: %w", err)
+	}
+
+	for _, p := range []string{
+		"SELECT * FROM contacts",
+		"INSERT INTO contacts (first_name) VALUES ('Mike')",
+		"UPDATE contacts SET last_name = 'Santa' WHERE first_name = 'Mike'",
+		"DELETE FROM contacts WHERE first_name = 'Mike'",
+		"DROP TABLE contacts",
+		"syntax error",
+	} {
+		rows, err := query(ctx, db, p)
 		if err != nil {
-			slog.Error("failed GET", "error", err)
-		}
-		if resp != nil {
-			body, err := io.ReadAll(resp.Body)
-			if err != nil {
-				slog.Error("failed to read HTTP body", "error", err)
-			}
-			slog.Info("request successful", "body", string(body[:]))
-			_ = resp.Body.Close()
+			slog.Info("failed to query database", "error", err)
+		} else {
+			slog.Info("query result", "rows", rows)
 		}
 	}
+	return nil
+}
+
+type Row struct {
+	ID        int
+	FirstName string
+	LastName  string
+	Email     string
+	Phone     string
+}
+
+func query(ctx context.Context, db *sql.DB, query string) ([]Row, error) {
+	slog.Info("querying database", "query", query)
+
+	conn, err := db.Conn(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get connection: %w", err)
+	}
+
+	result, err := conn.QueryContext(ctx, query)
+	if err != nil {
+		return nil, fmt.Errorf("failed to execute query: %w", err)
+	}
+
+	var rows []Row
+	for result.Next() {
+		var row Row
+		err := result.Scan(
+			&row.ID,
+			&row.FirstName,
+			&row.LastName,
+			&row.Email,
+			&row.Phone,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan row: %w", err)
+		}
+		rows = append(rows, row)
+	}
+	return rows, nil
 }
