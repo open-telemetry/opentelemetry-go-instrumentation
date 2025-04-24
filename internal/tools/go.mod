@@ -5,7 +5,7 @@ go 1.23.0
 require (
 	github.com/Masterminds/semver/v3 v3.3.1
 	github.com/docker/docker v28.1.1+incompatible
-	github.com/golangci/golangci-lint/v2 v2.1.2
+	github.com/golangci/golangci-lint/v2 v2.1.5
 	github.com/google/go-licenses/v2 v2.0.0-alpha.1
 	go.opentelemetry.io/auto v0.21.0
 	go.opentelemetry.io/build-tools/crosslink v0.22.0
@@ -24,7 +24,6 @@ require (
 	github.com/Antonboom/nilnil v1.1.0 // indirect
 	github.com/Antonboom/testifylint v1.6.1 // indirect
 	github.com/BurntSushi/toml v1.5.0 // indirect
-	github.com/Crocmagnon/fatcontext v0.7.2 // indirect
 	github.com/Djarvur/go-err113 v0.1.0 // indirect
 	github.com/GaijinEntertainment/go-exhaustruct/v3 v3.3.1 // indirect
 	github.com/Microsoft/go-winio v0.6.2 // indirect
@@ -225,6 +224,7 @@ require (
 	gitlab.com/bosi/decorder v0.4.2 // indirect
 	go-simpler.org/musttag v0.13.1 // indirect
 	go-simpler.org/sloglint v0.11.0 // indirect
+	go.augendre.info/fatcontext v0.8.0 // indirect
 	go.opencensus.io v0.24.0 // indirect
 	go.opentelemetry.io/auto/sdk v1.1.0 // indirect
 	go.opentelemetry.io/build-tools v0.22.0 // indirect
