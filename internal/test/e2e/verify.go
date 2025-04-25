@@ -15,6 +15,9 @@ import (
 	"go.opentelemetry.io/collector/pdata/ptrace"
 )
 
+// PortRE is a regular expression that matches valid port numbers.
+var PortRE = regexp.MustCompile(`^[1-9]\d{1,4}$`)
+
 // ResourceSpans returns all resource spans in the given trace data.
 func ResourceSpans(td ptrace.Traces) []ptrace.ResourceSpans {
 	var spans []ptrace.ResourceSpans
