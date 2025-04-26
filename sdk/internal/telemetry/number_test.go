@@ -50,7 +50,7 @@ func TestProtoUint64(t *testing.T) {
 			Expect: protoUint64(1),
 		},
 		{
-			Name:   "string uint64",
+			Name:   "uint64",
 			Input:  []byte(`1`),
 			Expect: protoUint64(1),
 		},
