@@ -38,7 +38,7 @@ func TestProtoInt64Encoding(t *testing.T) {
 	}
 }
 
-func TestProtoUInt64(t *testing.T) {
+func TestProtoUint64(t *testing.T) {
 	testCases := []struct {
 		Name   string
 		Input  []byte
