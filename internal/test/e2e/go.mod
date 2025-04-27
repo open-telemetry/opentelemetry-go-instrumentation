@@ -13,11 +13,11 @@ require (
 	go.opentelemetry.io/auto v0.21.0
 	go.opentelemetry.io/auto/sdk v1.1.0
 	go.opentelemetry.io/collector/pdata v1.30.0
-	go.opentelemetry.io/otel v1.35.1-0.20250424205537-ebbd5dc347cd
-	go.opentelemetry.io/otel/trace v1.35.1-0.20250424205537-ebbd5dc347cd
+	go.opentelemetry.io/otel v1.35.1-0.20250426141954-f1fa85a4eb48
+	go.opentelemetry.io/otel/trace v1.35.1-0.20250426141954-f1fa85a4eb48
 	go.uber.org/goleak v1.3.0
 	google.golang.org/grpc v1.72.0
-	google.golang.org/grpc/examples v0.0.0-20250424093719-030938e543b4
+	google.golang.org/grpc/examples v0.0.0-20250425073652-4cedec40eb2c
 )
 
 require (
@@ -96,8 +96,8 @@ require (
 	golang.org/x/net v0.39.0 // indirect
 	golang.org/x/sys v0.32.0 // indirect
 	golang.org/x/text v0.24.0 // indirect
-	google.golang.org/genproto/googleapis/api v0.0.0-20250422160041-2d3770c4ea7f // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20250422160041-2d3770c4ea7f // indirect
+	google.golang.org/genproto/googleapis/api v0.0.0-20250425173222-7b384671a197 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20250425173222-7b384671a197 // indirect
 	google.golang.org/protobuf v1.36.6 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	gotest.tools/v3 v3.5.2 // indirect
