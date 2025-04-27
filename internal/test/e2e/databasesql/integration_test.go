@@ -1,8 +1,8 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-// Package autosdk provides an integration test for the autosdk probe.
-package autosdk
+// Package databasesql provides an integration test for the database/sql probe.
+package databasesql
 
 import (
 	"testing"

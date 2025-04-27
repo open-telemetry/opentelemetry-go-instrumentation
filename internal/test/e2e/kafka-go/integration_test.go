@@ -1,8 +1,8 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-// Package autosdk provides an integration test for the autosdk probe.
-package autosdk
+// Package kafka provides an integration test for the Kafka probe.
+package kafka
 
 import (
 	"encoding/hex"
