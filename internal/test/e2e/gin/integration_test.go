@@ -1,8 +1,8 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-// Package autosdk provides an integration test for the autosdk probe.
-package autosdk
+// Package gin provides an integration test for the Gin probe.
+package gin
 
 import (
 	"encoding/hex"
