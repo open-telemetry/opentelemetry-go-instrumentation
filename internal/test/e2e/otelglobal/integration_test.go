@@ -61,7 +61,6 @@ func TestIntegration(t *testing.T) {
 		assert.Equal(t, "forty-two", attrs["string_key"].Str(), "string_key")
 		assert.True(t, attrs["bool_key"].Bool(), "bool_key")
 		assert.Equal(t, 42.3, attrs["float_key"].Double(), "float_key")
-		assert.Equal(t, 42.3, attrs["float_key"].Double(), "float_key")
 	})
 
 	childSpan, err := e2e.SpanByName(scopes, "child override")
