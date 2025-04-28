@@ -123,25 +123,25 @@ func pSpan(span ptrace.Span) func(t *testing.T) {
 		assert.Equal(
 			t,
 			"kafka",
-			attrs[string(semconv.MessagingSystemKey)].Str(),
+			attrs[string(semconv.MessagingSystemKey)],
 			"messaging.system",
 		)
 		assert.Regexp(
 			t,
 			topicRe,
-			attrs[string(semconv.MessagingDestinationNameKey)].Str(),
+			attrs[string(semconv.MessagingDestinationNameKey)],
 			"messaging.destination.name",
 		)
 		assert.Regexp(
 			t,
 			keyRe,
-			attrs[string(semconv.MessagingKafkaMessageKeyKey)].Str(),
+			attrs[string(semconv.MessagingKafkaMessageKeyKey)],
 			"messaging.kafka.message.key",
 		)
 		assert.Equal(
 			t,
 			int64(2),
-			attrs[string(semconv.MessagingBatchMessageCountKey)].Int(),
+			attrs[string(semconv.MessagingBatchMessageCountKey)],
 			"messaging.batch.message.count",
 		)
 	}
@@ -161,31 +161,31 @@ func cSpan(span ptrace.Span) func(t *testing.T) {
 		assert.Equal(
 			t,
 			"kafka",
-			attrs[string(semconv.MessagingSystemKey)].Str(),
+			attrs[string(semconv.MessagingSystemKey)],
 			"messaging.system",
 		)
 		assert.Equal(
 			t,
 			"topic1",
-			attrs[string(semconv.MessagingDestinationNameKey)].Str(),
+			attrs[string(semconv.MessagingDestinationNameKey)],
 			"messaging.destination.name",
 		)
 		assert.Equal(
 			t,
 			"key1",
-			attrs[string(semconv.MessagingKafkaMessageKeyKey)].Str(),
+			attrs[string(semconv.MessagingKafkaMessageKeyKey)],
 			"messaging.kafka.message.key",
 		)
 		assert.Equal(
 			t,
 			"0",
-			attrs[string(semconv.MessagingDestinationPartitionIDKey)].Str(),
+			attrs[string(semconv.MessagingDestinationPartitionIDKey)],
 			"messaging.destination.partition.id",
 		)
 		assert.Equal(
 			t,
 			"some group id",
-			attrs[string(semconv.MessagingConsumerGroupNameKey)].Str(),
+			attrs[string(semconv.MessagingConsumerGroupNameKey)],
 			"messaging.consumer.group.name",
 		)
 	}

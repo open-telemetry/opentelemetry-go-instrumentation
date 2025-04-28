@@ -71,22 +71,22 @@ func TestIntegration(t *testing.T) {
 			assert.Equal(t, y2k.Add(2*time.Second), event.Timestamp().AsTime(), "event time")
 
 			attrs := e2e.AttributesMap(event.Attributes())
-			assert.Equal(t, int64(11), attrs["impact"].Int(), "event attribute impact")
+			assert.Equal(t, int64(11), attrs["impact"], "event attribute impact")
 			assert.Equal(
 				t,
 				"*errors.errorString",
-				attrs["exception.type"].Str(),
+				attrs["exception.type"],
 				"event attribute exception type",
 			)
 			assert.Equal(
 				t,
 				"broken",
-				attrs["exception.message"].Str(),
+				attrs["exception.message"],
 				"event attribute exception message",
 			)
 			assert.NotEmpty(
 				t,
-				attrs["exception.stacktrace"].Str(),
+				attrs["exception.stacktrace"],
 				"event attribute exception stacktrace",
 			)
 		})
@@ -132,8 +132,8 @@ func TestIntegration(t *testing.T) {
 		assert.Equal(t, ptrace.SpanKindServer, runSpan.Kind(), "span kind")
 
 		attrs := e2e.AttributesMap(runSpan.Attributes())
-		assert.Equal(t, "Alice", attrs["user"].Str(), "user attribute")
-		assert.True(t, attrs["admin"].Bool(), "admin attribute")
+		assert.Equal(t, "Alice", attrs["user"], "user attribute")
+		assert.Equal(t, true, attrs["admin"], "admin attribute")
 
 		t.Run("Link", func(t *testing.T) {
 			if !assert.Equal(t, 1, runSpan.Links().Len(), "number of links") {
@@ -145,7 +145,7 @@ func TestIntegration(t *testing.T) {
 			assert.Equal(t, sigSpan.SpanID(), link.SpanID(), "link span ID")
 
 			attrs := e2e.AttributesMap(link.Attributes())
-			assert.Equal(t, "Hello World", attrs["data"].Str(), "link attribute data")
+			assert.Equal(t, "Hello World", attrs["data"], "link attribute data")
 		})
 	})
 }

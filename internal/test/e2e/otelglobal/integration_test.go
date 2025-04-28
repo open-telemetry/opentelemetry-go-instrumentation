@@ -58,10 +58,10 @@ func TestIntegration(t *testing.T) {
 		assert.Equal(t, ptrace.StatusCodeOk, status.Code(), "status code")
 
 		attrs := e2e.AttributesMap(parentSpan.Attributes())
-		assert.Equal(t, int64(42), attrs["int_key"].Int(), "int_key")
-		assert.Equal(t, "forty-two", attrs["string_key"].Str(), "string_key")
-		assert.True(t, attrs["bool_key"].Bool(), "bool_key")
-		assert.Equal(t, 42.3, attrs["float_key"].Double(), "float_key")
+		assert.Equal(t, int64(42), attrs["int_key"], "int_key")
+		assert.Equal(t, "forty-two", attrs["string_key"], "string_key")
+		assert.Equal(t, true, attrs["bool_key"], "bool_key")
+		assert.Equal(t, 42.3, attrs["float_key"], "float_key")
 	})
 
 	childSpan, err := e2e.SpanByName(scopes, "child override")
@@ -78,8 +78,8 @@ func TestIntegration(t *testing.T) {
 		assert.Equal(t, "i deleted the prod db sry", status.Message(), "status message")
 
 		attrs := e2e.AttributesMap(childSpan.Attributes())
-		assert.Equal(t, "inner.value", attrs["inner.key"].Str(), "inner.key")
-		assert.True(t, attrs["cat.on_keyboard"].Bool(), "cat.on_keyboard")
+		assert.Equal(t, "inner.value", attrs["inner.key"], "inner.key")
+		assert.Equal(t, true, attrs["cat.on_keyboard"], "cat.on_keyboard")
 
 		t.Run("Event", func(t *testing.T) {
 			event, err := e2e.EventByName(childSpan, "exception")
@@ -89,13 +89,13 @@ func TestIntegration(t *testing.T) {
 			assert.Equal(
 				t,
 				"*errors.errorString",
-				attrs["exception.type"].Str(),
+				attrs["exception.type"],
 				"event attribute exception type",
 			)
 			assert.Equal(
 				t,
 				"i deleted the prod db sry",
-				attrs["exception.message"].Str(),
+				attrs["exception.message"],
 				"event attribute exception message",
 			)
 		})
