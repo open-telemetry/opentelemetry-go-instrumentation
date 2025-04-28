@@ -1,8 +1,9 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-// Package autosdk provides an integration test for the autosdk probe.
-package autosdk
+// Package otelglobal provides an integration test for the global OTel trace
+// probe.
+package otelglobal
 
 import (
 	"testing"
