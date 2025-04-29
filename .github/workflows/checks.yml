@@ -114,7 +114,7 @@ jobs:
           path: ${{ steps.go-cache-paths.outputs.go-mod }}
           key: ${{ runner.os }}-${{ matrix.test}}-go-mod-${{ hashFiles('**/go.sum') }}
       - name: Install dependencies
-        run: apt-get update && apt-get install -y sudo clang llvm bats jq
+        run: apt-get update && apt-get install -y sudo clang llvm
       - name: Initialize
         run: make go-mod-tidy generate
       - name: Test ${{ matrix.test }}
