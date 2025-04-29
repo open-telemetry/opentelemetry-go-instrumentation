@@ -58,39 +58,39 @@ func TestIntegration(t *testing.T) {
 		assert.Equal(t, ptrace.SpanKindServer, serverSpan.Kind(), "span kind")
 
 		attrs := e2e.AttributesMap(serverSpan.Attributes())
-		assert.Equal(t, "GET", attrs[string(semconv.HTTPRequestMethodKey)].Str(), "HTTP method")
-		assert.Equal(t, "/hello/42", attrs[string(semconv.URLPathKey)].Str(), "URL path")
+		assert.Equal(t, "GET", attrs[string(semconv.HTTPRequestMethodKey)], "HTTP method")
+		assert.Equal(t, "/hello/42", attrs[string(semconv.URLPathKey)], "URL path")
 		assert.Equal(
 			t,
 			int64(200),
-			attrs[string(semconv.HTTPResponseStatusCodeKey)].Int(),
+			attrs[string(semconv.HTTPResponseStatusCodeKey)],
 			"HTTP status code",
 		)
 		assert.Regexp(
 			t,
 			e2e.PortRE,
-			attrs[string(semconv.NetworkPeerPortKey)].AsString(),
+			attrs[string(semconv.NetworkPeerPortKey)],
 			"network peer port",
 		)
 		assert.Equal(
 			t,
 			"localhost",
-			attrs[string(semconv.ServerAddressKey)].Str(),
+			attrs[string(semconv.ServerAddressKey)],
 			"server address",
 		)
 		assert.Equal(
 			t,
 			"1.1",
-			attrs[string(semconv.NetworkProtocolVersionKey)].Str(),
+			attrs[string(semconv.NetworkProtocolVersionKey)],
 			"network protocol version",
 		)
 		assert.Equal(
 			t,
 			"::1",
-			attrs[string(semconv.NetworkPeerAddressKey)].Str(),
+			attrs[string(semconv.NetworkPeerAddressKey)],
 			"network peer address",
 		)
-		assert.Equal(t, "/hello/{id}", attrs[string(semconv.HTTPRouteKey)].Str(), "HTTP route")
+		assert.Equal(t, "/hello/{id}", attrs[string(semconv.HTTPRouteKey)], "HTTP route")
 	})
 
 	clientSpan, err := e2e.SpanByName(scopes, "GET")
@@ -105,28 +105,28 @@ func TestIntegration(t *testing.T) {
 		assert.Equal(t, ptrace.SpanKindClient, clientSpan.Kind(), "span kind")
 
 		attrs := e2e.AttributesMap(clientSpan.Attributes())
-		assert.Equal(t, "/hello/42", attrs[string(semconv.URLPathKey)].Str(), "URL path")
+		assert.Equal(t, "/hello/42", attrs[string(semconv.URLPathKey)], "URL path")
 		assert.Equal(
 			t,
 			int64(200),
-			attrs[string(semconv.HTTPResponseStatusCodeKey)].Int(),
+			attrs[string(semconv.HTTPResponseStatusCodeKey)],
 			"HTTP status code",
 		)
 		assert.Equal(
 			t,
 			"localhost",
-			attrs[string(semconv.ServerAddressKey)].Str(),
+			attrs[string(semconv.ServerAddressKey)],
 			"server address",
 		)
-		assert.Equal(t, int64(8080), attrs[string(semconv.ServerPortKey)].Int(), "server port")
+		assert.Equal(t, int64(8080), attrs[string(semconv.ServerPortKey)], "server port")
 		assert.Equal(
 			t,
 			"1.1",
-			attrs[string(semconv.NetworkProtocolVersionKey)].Str(),
+			attrs[string(semconv.NetworkProtocolVersionKey)],
 			"network protocol version",
 		)
 		url := "http://user@localhost:8080/hello/42?query=true#fragment"
-		assert.Equal(t, url, attrs[string(semconv.URLFullKey)].Str(), "full URL")
+		assert.Equal(t, url, attrs[string(semconv.URLFullKey)], "full URL")
 	})
 
 	tIDByte := [16]byte(serverSpan.TraceID())

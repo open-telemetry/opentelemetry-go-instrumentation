@@ -177,8 +177,8 @@ go.opentelemetry.io/contrib/exporters/autoexport v0.60.0 h1:GuQXpvSXNjpswpweIem8
 go.opentelemetry.io/contrib/exporters/autoexport v0.60.0/go.mod h1:CkmxekdHco4d7thFJNPQ7Mby4jMBgZUclnrxT4e+ryk=
 go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.60.0 h1:sbiXRNDSWJOTobXh5HyQKjq6wUC5tNybqjIqDpAY4CU=
 go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.60.0/go.mod h1:69uWxva0WgAA/4bu2Yy70SLDBwZXuQ6PbBpbsa5iZrQ=
-go.opentelemetry.io/otel v1.35.1-0.20250428134849-0c13d8681db0 h1:1u6CXKHtARu7QSeu26orJ4/AGRD9rEtC63mGEqvPrAM=
-go.opentelemetry.io/otel v1.35.1-0.20250428134849-0c13d8681db0/go.mod h1:dytzy8H+Ym99GtJtLWMBV2+l9Ida7zqNuFDJ+CGRQ20=
+go.opentelemetry.io/otel v1.35.1-0.20250429073216-d8f73ce6793f h1:fnU+aNZYyZf5yNN4O3ZOcHIkup0RXLPZ2nEO42SJmTQ=
+go.opentelemetry.io/otel v1.35.1-0.20250429073216-d8f73ce6793f/go.mod h1:dytzy8H+Ym99GtJtLWMBV2+l9Ida7zqNuFDJ+CGRQ20=
 go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc v0.11.0 h1:HMUytBT3uGhPKYY/u/G5MR9itrlSO2SMOsSD3Tk3k7A=
 go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc v0.11.0/go.mod h1:hdDXsiNLmdW/9BF2jQpnHHlhFajpWCEYfM6e5m2OAZg=
 go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp v0.11.0 h1:C/Wi2F8wEmbxJ9Kuzw/nhP+Z9XaHYMkyDmXy6yR2cjw=
@@ -211,8 +211,8 @@ go.opentelemetry.io/otel/sdk/log v0.11.0 h1:7bAOpjpGglWhdEzP8z0VXc4jObOiDEwr3IYb
 go.opentelemetry.io/otel/sdk/log v0.11.0/go.mod h1:dndLTxZbwBstZoqsJB3kGsRPkpAgaJrWfQg3lhlHFFY=
 go.opentelemetry.io/otel/sdk/metric v1.35.0 h1:1RriWBmCKgkeHEhM7a2uMjMUfP7MsOF5JpUCaEqEI9o=
 go.opentelemetry.io/otel/sdk/metric v1.35.0/go.mod h1:is6XYCUMpcKi+ZsOvfluY5YstFnhW0BidkR+gL+qN+w=
-go.opentelemetry.io/otel/trace v1.35.1-0.20250428134849-0c13d8681db0 h1:yoNU909wdTIe8YBTzQM1OF3P16e9VLJXneaQAB2DEEQ=
-go.opentelemetry.io/otel/trace v1.35.1-0.20250428134849-0c13d8681db0/go.mod h1:v525kGRZc7GDmy0BwoFtoPfYvyWKsB54mdPNeKwkBBM=
+go.opentelemetry.io/otel/trace v1.35.1-0.20250429073216-d8f73ce6793f h1:6miLr6ROOE3sAQ6GCCsOKv3r9M75oX7NXNYpCqhjP5g=
+go.opentelemetry.io/otel/trace v1.35.1-0.20250429073216-d8f73ce6793f/go.mod h1:v525kGRZc7GDmy0BwoFtoPfYvyWKsB54mdPNeKwkBBM=
 go.opentelemetry.io/proto/otlp v1.5.0 h1:xJvq7gMzB31/d406fB8U5CBdyQGw4P399D1aQWU/3i4=
 go.opentelemetry.io/proto/otlp v1.5.0/go.mod h1:keN8WnHxOy8PG0rQZjJJ5A2ebUoafqWp0eVQ4yIXvJ4=
 go.uber.org/goleak v1.3.0 h1:2K3zAYmnTNqV73imy9J1T3WC+gmCePx2hEGkimedGto=
@@ -295,8 +295,8 @@ google.golang.org/genproto/googleapis/rpc v0.0.0-20250428153025-10db94c68c34 h1:
 google.golang.org/genproto/googleapis/rpc v0.0.0-20250428153025-10db94c68c34/go.mod h1:qQ0YXyHHx3XkvlzUtpXDkS29lDSafHMZBAZDc03LQ3A=
 google.golang.org/grpc v1.72.0 h1:S7UkcVa60b5AAQTaO6ZKamFp1zMZSU0fGDK2WZLbBnM=
 google.golang.org/grpc v1.72.0/go.mod h1:wH5Aktxcg25y1I3w7H69nHfXdOG3UiadoBtjh3izSDM=
-google.golang.org/grpc/examples v0.0.0-20250425073652-4cedec40eb2c h1:R32q3kycEU2LEMYLCgWSacRhYVP7RqbHF6582LkRbPg=
-google.golang.org/grpc/examples v0.0.0-20250425073652-4cedec40eb2c/go.mod h1:WPWnet+nYurNGpV0rVYHI1YuOJwVHeM3t8f76m410XM=
+google.golang.org/grpc/examples v0.0.0-20250429112906-6821606f3517 h1:6dG3RbmoarAev7wgSFj5VsY+doQCh7xy9uJffZfpVsw=
+google.golang.org/grpc/examples v0.0.0-20250429112906-6821606f3517/go.mod h1:WPWnet+nYurNGpV0rVYHI1YuOJwVHeM3t8f76m410XM=
 google.golang.org/protobuf v1.36.6 h1:z1NpPI8ku2WgiWnf+t9wTPsn6eP1L7ksHUlkfLvd9xY=
 google.golang.org/protobuf v1.36.6/go.mod h1:jduwjTPXsFjZGTmRluh+L6NjiWu7pchiJ2/5YcXBHnY=
 gopkg.in/check.v1 v0.0.0-20161208181325-20d25e280405/go.mod h1:Co6ibVJAznAaIkqp8huTwlJQCZ016jof/cbN4VW5Yz0=
