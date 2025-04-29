@@ -57,19 +57,19 @@ func TestIntegration(t *testing.T) {
 				e2e.AssertSpanID(t, span.ParentSpanID(), "parent span ID")
 
 				attrs := e2e.AttributesMap(span.Attributes())
-				assert.Equal(t, "grpc", attrs["rpc.system"].Str(), "rpc.system")
+				assert.Equal(t, "grpc", attrs["rpc.system"], "rpc.system")
 				assert.Equal(
 					t,
 					"/helloworld.Greeter/SayHello",
-					attrs["rpc.service"].Str(),
+					attrs["rpc.service"],
 					"rpc.service",
 				)
-				assert.Equal(t, "127.0.0.1", attrs["server.address"].Str(), "server.address")
-				assert.Equal(t, int64(1701), attrs["server.port"].Int(), "server.port")
+				assert.Equal(t, "127.0.0.1", attrs["server.address"], "server.address")
+				assert.Equal(t, int64(1701), attrs["server.port"], "server.port")
 
 				code, ok := attrs["rpc.grpc.status_code"]
 				assert.True(t, ok, "has rpc.grpc.status_code attribute")
-				if v := code.Int(); v != 0 {
+				if v, ok := code.(int64); ok && v != 0 {
 					assert.Equal(t, int64(12), v, "error code value")
 				}
 			})
@@ -113,18 +113,18 @@ func TestIntegration(t *testing.T) {
 				e2e.AssertSpanID(t, span.ParentSpanID(), "parent span ID")
 
 				attrs := e2e.AttributesMap(span.Attributes())
-				assert.Equal(t, "grpc", attrs["rpc.system"].Str(), "rpc.system")
+				assert.Equal(t, "grpc", attrs["rpc.system"], "rpc.system")
 				assert.Equal(
 					t,
 					"/helloworld.Greeter/SayHello",
-					attrs["rpc.service"].Str(),
+					attrs["rpc.service"],
 					"rpc.service",
 				)
-				assert.Equal(t, int64(1701), attrs["server.port"].Int(), "server.port")
+				assert.Equal(t, int64(1701), attrs["server.port"], "server.port")
 
 				code, ok := attrs["rpc.grpc.status_code"]
 				assert.True(t, ok, "has rpc.grpc.status_code attribute")
-				if v := code.Int(); v != 0 && v != 12 && v != 14 {
+				if v, ok := code.(int64); ok && v != 0 && v != 12 && v != 14 {
 					t.Errorf("unexpected rpc.grpc.status_code value: %d", v)
 				}
 

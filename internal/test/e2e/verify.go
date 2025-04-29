@@ -90,10 +90,10 @@ func SpanByName(scopeSpans []ptrace.ScopeSpans, name string) (ptrace.Span, error
 }
 
 // AttributesMap converts the given attribute map to a native Go map.
-func AttributesMap(attrs pcommon.Map) map[string]pcommon.Value {
-	result := make(map[string]pcommon.Value)
+func AttributesMap(attrs pcommon.Map) map[string]any {
+	result := make(map[string]any)
 	attrs.Range(func(k string, v pcommon.Value) bool {
-		result[k] = v
+		result[k] = v.AsRaw()
 		return true
 	})
 	return result
