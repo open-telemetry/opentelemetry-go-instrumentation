@@ -50,18 +50,18 @@ func TestIntegration(t *testing.T) {
 		e2e.AssertSpanID(t, serverS.SpanID(), "span ID")
 
 		attrs := e2e.AttributesMap(serverS.Attributes())
-		assert.Equal(t, "GET", attrs["http.request.method"].Str(), "http.request.method")
-		assert.Equal(t, "/hello-gin", attrs["url.path"].Str(), "http.url")
+		assert.Equal(t, "GET", attrs["http.request.method"], "http.request.method")
+		assert.Equal(t, "/hello-gin", attrs["url.path"], "http.url")
 		assert.Equal(
 			t,
 			int64(200),
-			attrs["http.response.status_code"].Int(),
+			attrs["http.response.status_code"],
 			"http.response.status_code",
 		)
-		assert.Regexp(t, e2e.PortRE, attrs["network.peer.port"].AsString(), "network.protocol")
-		assert.Equal(t, "localhost", attrs["server.address"].Str(), "server.address")
-		assert.Equal(t, "1.1", attrs["network.protocol.version"].Str(), "network.protocol_version")
-		assert.Equal(t, "::1", attrs["network.peer.address"].Str(), "network.peer.address")
+		assert.Regexp(t, e2e.PortRE, attrs["network.peer.port"], "network.protocol")
+		assert.Equal(t, "localhost", attrs["server.address"], "server.address")
+		assert.Equal(t, "1.1", attrs["network.protocol.version"], "network.protocol_version")
+		assert.Equal(t, "::1", attrs["network.peer.address"], "network.peer.address")
 	})
 
 	clientS, err := e2e.SelectSpan(scopes, func(s ptrace.Span) bool {
@@ -74,17 +74,17 @@ func TestIntegration(t *testing.T) {
 		e2e.AssertSpanID(t, clientS.SpanID(), "span ID")
 
 		attrs := e2e.AttributesMap(clientS.Attributes())
-		assert.Equal(t, "GET", attrs["http.request.method"].Str(), "http.request.method")
-		assert.Equal(t, "/hello-gin", attrs["url.path"].Str(), "http.url")
+		assert.Equal(t, "GET", attrs["http.request.method"], "http.request.method")
+		assert.Equal(t, "/hello-gin", attrs["url.path"], "http.url")
 		assert.Equal(
 			t,
 			int64(200),
-			attrs["http.response.status_code"].Int(),
+			attrs["http.response.status_code"],
 			"http.response.status_code",
 		)
-		assert.Equal(t, "localhost", attrs["server.address"].Str(), "client.address")
-		assert.Equal(t, int64(8080), attrs["server.port"].Int(), "server.port")
-		assert.Equal(t, "1.1", attrs["network.protocol.version"].Str(), "network.protocol_version")
+		assert.Equal(t, "localhost", attrs["server.address"], "client.address")
+		assert.Equal(t, int64(8080), attrs["server.port"], "server.port")
+		assert.Equal(t, "1.1", attrs["network.protocol.version"], "network.protocol_version")
 	})
 
 	var clientSpanID [8]byte = clientS.SpanID()
