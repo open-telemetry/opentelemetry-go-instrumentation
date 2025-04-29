@@ -1,6 +1,6 @@
 FROM --platform=$BUILDPLATFORM golang:1.24.2-bookworm@sha256:a642a07319c67a15d52049a16acd16e1da85e735a7b4647f3da51aebe2a277d2 AS base
 
-RUN apt-get update && apt-get install -y curl clang gcc llvm make libbpf-dev bats jq
+RUN apt-get update && apt-get install -y curl clang gcc llvm make libbpf-dev
 
 FROM --platform=$BUILDPLATFORM base AS builder
 
