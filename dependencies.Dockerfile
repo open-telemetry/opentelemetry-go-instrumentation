@@ -1,2 +1,2 @@
 # This is a renovate-friendly source of Docker images.
-FROM python:3.13.3-slim-bullseye@sha256:d344f2c688d711f411b1dd677d144481dd10570259363ec97332c4ce1410db1b AS python
+FROM python:3.13.3-slim-bullseye@sha256:d3f1e48b3e62e0e24b8ed20937d052662906c16e53013f32be88e2eb4f1b3532 AS python
