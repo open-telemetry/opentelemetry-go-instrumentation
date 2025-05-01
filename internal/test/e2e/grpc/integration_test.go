@@ -5,6 +5,7 @@
 package grpc
 
 import (
+	"encoding/hex"
 	"strconv"
 	"testing"
 
@@ -82,14 +83,35 @@ func TestIntegration(t *testing.T) {
 			otelScope := "go.opentelemetry.io/auto/internal/test/e2e/grpc"
 			otelScopes := e2e.ScopeSpansByName(traces, otelScope)
 			otelS, err := e2e.SelectSpan(otelScopes, nameN("SayHello", i))
+
+			tid := [16]byte(otelS.TraceID())
+			otelTID := hex.EncodeToString(tid[:])
+
+			// Received order of the spans is not guaranteed. Find the related
+			// client and server spans by their expected trace ID instead.
+
 			require.NoError(t, err)
-			cS, err := e2e.SelectSpan(scopes, kindN(ptrace.SpanKindClient, i))
-			require.NoError(t, err)
-			sS, err := e2e.SelectSpan(scopes, kindN(ptrace.SpanKindServer, i))
+			cS, err := e2e.SelectSpan(scopes, func(s ptrace.Span) bool {
+				if s.Kind() != ptrace.SpanKindClient {
+					return false
+				}
+
+				b := [16]byte(s.TraceID())
+				tid := hex.EncodeToString(b[:])
+				return tid == otelTID
+			})
 			require.NoError(t, err)
 
-			assert.Equal(t, otelS.TraceID(), sS.TraceID(), "otel-server trace ID")
-			assert.Equal(t, sS.TraceID(), cS.TraceID(), "server-client trace ID")
+			sS, err := e2e.SelectSpan(scopes, func(s ptrace.Span) bool {
+				if s.Kind() != ptrace.SpanKindServer {
+					return false
+				}
+
+				b := [16]byte(s.TraceID())
+				tid := hex.EncodeToString(b[:])
+				return tid == otelTID
+			})
+			require.NoError(t, err)
 
 			assert.Equal(t, sS.SpanID(), otelS.ParentSpanID(), "server-otel parent span ID")
 			assert.Equal(t, cS.SpanID(), sS.ParentSpanID(), "client-server parent span ID")
@@ -144,19 +166,6 @@ func nameN(name string, n int) func(ptrace.Span) bool {
 	var count int
 	return func(span ptrace.Span) bool {
 		if span.Name() == name {
-			if count == n {
-				return true
-			}
-			count++
-		}
-		return false
-	}
-}
-
-func kindN(kind ptrace.SpanKind, n int) func(ptrace.Span) bool {
-	var count int
-	return func(span ptrace.Span) bool {
-		if span.Kind() == kind {
 			if count == n {
 				return true
 			}
