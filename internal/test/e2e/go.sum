@@ -211,8 +211,8 @@ go.opentelemetry.io/otel/sdk/log v0.11.0 h1:7bAOpjpGglWhdEzP8z0VXc4jObOiDEwr3IYb
 go.opentelemetry.io/otel/sdk/log v0.11.0/go.mod h1:dndLTxZbwBstZoqsJB3kGsRPkpAgaJrWfQg3lhlHFFY=
 go.opentelemetry.io/otel/sdk/metric v1.35.0 h1:1RriWBmCKgkeHEhM7a2uMjMUfP7MsOF5JpUCaEqEI9o=
 go.opentelemetry.io/otel/sdk/metric v1.35.0/go.mod h1:is6XYCUMpcKi+ZsOvfluY5YstFnhW0BidkR+gL+qN+w=
-go.opentelemetry.io/otel/trace v1.35.1-0.20250502143624-ec57cf49d574 h1:Tp9ArOAZMJdcgvDhg4U6IHSfdsiw1EGcQXduThIHHwU=
-go.opentelemetry.io/otel/trace v1.35.1-0.20250502143624-ec57cf49d574/go.mod h1:v525kGRZc7GDmy0BwoFtoPfYvyWKsB54mdPNeKwkBBM=
+go.opentelemetry.io/otel/trace v1.35.1-0.20250502150034-5679db3d8680 h1:plbvzCD8p8YdRZ99SYPL9G36X/9SgSzh3AHJDh7t54M=
+go.opentelemetry.io/otel/trace v1.35.1-0.20250502150034-5679db3d8680/go.mod h1:v525kGRZc7GDmy0BwoFtoPfYvyWKsB54mdPNeKwkBBM=
 go.opentelemetry.io/proto/otlp v1.6.0 h1:jQjP+AQyTf+Fe7OKj/MfkDrmK4MNVtw2NpXsf9fefDI=
 go.opentelemetry.io/proto/otlp v1.6.0/go.mod h1:cicgGehlFuNdgZkcALOCh3VE6K/u2tAjzlRhDwmVpZc=
 go.uber.org/goleak v1.3.0 h1:2K3zAYmnTNqV73imy9J1T3WC+gmCePx2hEGkimedGto=
