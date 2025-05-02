@@ -130,6 +130,7 @@ func run(t *testing.T, ctx context.Context, binPath string, endpoint string) {
 
 	t.Setenv("OTEL_SERVICE_NAME", "sample-app")
 	t.Setenv("OTEL_EXPORTER_OTLP_ENDPOINT", endpoint)
+	t.Setenv("OTEL_GO_AUTO_SHOW_VERIFIER_LOG", "true")
 	t.Setenv("OTEL_GO_AUTO_INCLUDE_DB_STATEMENT", "true")
 	t.Setenv("OTEL_GO_AUTO_PARSE_DB_STATEMENT", "true")
 
