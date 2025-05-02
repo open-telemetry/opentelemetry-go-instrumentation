@@ -87,21 +87,22 @@ func TestIntegration(t *testing.T) {
 		return
 	}
 
-	cCnt = 0
-	for j := range spans.Len() {
-		span := spans.At(j)
-		if span.Kind() == ptrace.SpanKindConsumer {
-			t.Run(
-				"ConsumerSpan/"+strconv.Itoa(cCnt)+"/ParentSpanID",
-				func(t *testing.T) {
-					b := [8]byte(span.ParentSpanID())
-					sID := hex.EncodeToString(b[:])
-					assert.Contains(t, producerSpanIDs, sID)
-				},
-			)
-			cCnt++
+	// Only the first consumer span is guarnteed to have a parent span ID from
+	// our producers. This selcets the first consumer span.
+	var cSpan *ptrace.Span
+	for i := range spans.Len() {
+		if spans.At(i).Kind() == ptrace.SpanKindConsumer {
+			s := spans.At(i)
+			cSpan = &s
+			break
 		}
 	}
+	if cSpan == nil {
+		t.Fatal("no consumer span found")
+	}
+	b := [8]byte(cSpan.ParentSpanID())
+	sID := hex.EncodeToString(b[:])
+	assert.Contains(t, producerSpanIDs, sID)
 }
 
 var (
