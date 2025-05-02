@@ -8,12 +8,14 @@ package instrumentation
 import (
 	"context"
 	"errors"
+	"io"
 	"log/slog"
 	"sync/atomic"
 	"testing"
 	"time"
 
 	"github.com/Masterminds/semver/v3"
+	"github.com/cilium/ebpf"
 	"github.com/cilium/ebpf/link"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -71,13 +73,13 @@ func TestDependencyChecks(t *testing.T) {
 	m := fakeManager()
 
 	t.Run("Dependent probes match", func(t *testing.T) {
-		syms := []probe.FunctionSymbol{
+		syms := []*probe.Uprobe{
 			{
-				Symbol:    "A",
+				Sym:       "A",
 				DependsOn: nil,
 			},
 			{
-				Symbol:    "B",
+				Sym:       "B",
 				DependsOn: []string{"A"},
 			},
 		}
@@ -86,13 +88,13 @@ func TestDependencyChecks(t *testing.T) {
 	})
 
 	t.Run("Second dependent missing", func(t *testing.T) {
-		syms := []probe.FunctionSymbol{
+		syms := []*probe.Uprobe{
 			{
-				Symbol:    "A",
+				Sym:       "A",
 				DependsOn: nil,
 			},
 			{
-				Symbol:    "B",
+				Sym:       "B",
 				DependsOn: []string{"A", "C"},
 			},
 		}
@@ -101,17 +103,17 @@ func TestDependencyChecks(t *testing.T) {
 	})
 
 	t.Run("Second dependent present", func(t *testing.T) {
-		syms := []probe.FunctionSymbol{
+		syms := []*probe.Uprobe{
 			{
-				Symbol:    "A",
+				Sym:       "A",
 				DependsOn: nil,
 			},
 			{
-				Symbol:    "B",
+				Sym:       "B",
 				DependsOn: []string{"A", "C"},
 			},
 			{
-				Symbol:    "C",
+				Sym:       "C",
 				DependsOn: []string{"A"},
 			},
 		}
@@ -120,13 +122,13 @@ func TestDependencyChecks(t *testing.T) {
 	})
 
 	t.Run("Dependent wrong", func(t *testing.T) {
-		syms := []probe.FunctionSymbol{
+		syms := []*probe.Uprobe{
 			{
-				Symbol:    "A",
+				Sym:       "A",
 				DependsOn: nil,
 			},
 			{
-				Symbol:    "B",
+				Sym:       "B",
 				DependsOn: []string{"A1"},
 			},
 		}
@@ -135,13 +137,13 @@ func TestDependencyChecks(t *testing.T) {
 	})
 
 	t.Run("Two probes without dependents", func(t *testing.T) {
-		syms := []probe.FunctionSymbol{
+		syms := []*probe.Uprobe{
 			{
-				Symbol:    "A",
+				Sym:       "A",
 				DependsOn: nil,
 			},
 			{
-				Symbol:    "B",
+				Sym:       "B",
 				DependsOn: []string{},
 			},
 		}
@@ -171,7 +173,7 @@ func fakeManager(fnNames ...string) *Manager {
 	m := &Manager{
 		logger: slog.Default(),
 		cp:     NewNoopConfigProvider(nil),
-		probes: make(map[probe.ID]probe.Probe),
+		probes: make(map[probe.ID]*probeReference),
 		proc: &process.Info{
 			ID:        1,
 			Functions: fn,
@@ -180,7 +182,7 @@ func fakeManager(fnNames ...string) *Manager {
 		},
 	}
 	for _, p := range probes {
-		m.probes[p.Manifest().ID] = p
+		m.probes[p.GetID()] = &probeReference{probe: p}
 	}
 	m.filterUnusedProbes()
 
@@ -235,7 +237,7 @@ func TestRunStoppingByContext(t *testing.T) {
 	m := &Manager{
 		handler: newNoopHandler(),
 		logger:  slog.Default(),
-		probes:  map[probe.ID]probe.Probe{{}: p},
+		probes:  map[probe.ID]*probeReference{p.GetID(): {probe: p}},
 		cp:      NewNoopConfigProvider(nil),
 		proc:    new(process.Info),
 	}
@@ -280,7 +282,7 @@ func TestRunStoppingByStop(t *testing.T) {
 	m := &Manager{
 		handler: newNoopHandler(),
 		logger:  slog.Default(),
-		probes:  map[probe.ID]probe.Probe{{}: &p},
+		probes:  map[probe.ID]*probeReference{{}: {probe: &p}},
 		cp:      NewNoopConfigProvider(nil),
 		proc:    new(process.Info),
 	}
@@ -325,16 +327,36 @@ func newSlowProbe(stop chan struct{}) slowProbe {
 	}
 }
 
-func (p slowProbe) Load(*link.Executable, *process.Info, *sampling.Config) error {
-	return nil
+func (p slowProbe) Run(*pipeline.Handler) {
 }
-
-func (p slowProbe) Run(*pipeline.Handler) {}
 
 func (p slowProbe) Close() error {
 	p.closeSignal <- struct{}{}
 	<-p.stop
 	return nil
+}
+
+func (p slowProbe) Spec() (*ebpf.CollectionSpec, error) {
+	return &ebpf.CollectionSpec{
+		Maps:     make(map[string]*ebpf.MapSpec),
+		Programs: make(map[string]*ebpf.ProgramSpec),
+	}, nil
+}
+
+func (p slowProbe) GetConsts() probe.ConstList {
+	return []probe.Const{}
+}
+
+func (p slowProbe) GetUprobes() []*probe.Uprobe {
+	return []*probe.Uprobe{}
+}
+
+func (p slowProbe) InitStartupConfig(*ebpf.Collection, *sampling.Config) (io.Closer, error) {
+	return p, nil
+}
+
+func (p slowProbe) GetID() probe.ID {
+	return probe.ID{SpanKind: trace.SpanKindClient, InstrumentedPkg: "slowProbe"}
 }
 
 type noopProbe struct {
@@ -343,9 +365,28 @@ type noopProbe struct {
 
 var _ probe.Probe = (*noopProbe)(nil)
 
-func (p *noopProbe) Load(*link.Executable, *process.Info, *sampling.Config) error {
-	p.loaded.Store(true)
+func (p *noopProbe) Spec() (*ebpf.CollectionSpec, error) {
+	return &ebpf.CollectionSpec{
+		Maps:     make(map[string]*ebpf.MapSpec),
+		Programs: make(map[string]*ebpf.ProgramSpec),
+	}, nil
+}
+
+func (p *noopProbe) GetConsts() probe.ConstList {
 	return nil
+}
+
+func (p *noopProbe) GetUprobes() []*probe.Uprobe {
+	return nil
+}
+
+func (p *noopProbe) GetID() probe.ID {
+	return probe.ID{SpanKind: trace.SpanKindClient, InstrumentedPkg: "noopProbe"}
+}
+
+func (p *noopProbe) InitStartupConfig(*ebpf.Collection, *sampling.Config) (io.Closer, error) {
+	p.loaded.Store(true)
+	return p, nil
 }
 
 func (p *noopProbe) Run(*pipeline.Handler) {
@@ -357,10 +398,6 @@ func (p *noopProbe) Close() error {
 	p.loaded.Store(false)
 	p.running.Store(false)
 	return nil
-}
-
-func (p *noopProbe) Manifest() probe.Manifest {
-	return probe.Manifest{}
 }
 
 type dummyProvider struct {
@@ -406,10 +443,10 @@ func TestConfigProvider(t *testing.T) {
 
 	m := &Manager{
 		logger: slog.Default(),
-		probes: map[probe.ID]probe.Probe{
-			netHTTPClientProbeID:       &noopProbe{},
-			netHTTPServerProbeID:       &noopProbe{},
-			somePackageProducerProbeID: &noopProbe{},
+		probes: map[probe.ID]*probeReference{
+			netHTTPClientProbeID:       {probe: &noopProbe{}},
+			netHTTPServerProbeID:       {probe: &noopProbe{}},
+			somePackageProducerProbeID: {probe: &noopProbe{}},
 		},
 		cp: newDummyProvider(Config{
 			InstrumentationLibraryConfigs: map[LibraryID]Library{
@@ -430,17 +467,17 @@ func TestConfigProvider(t *testing.T) {
 	go func() { runErr <- m.Run(runCtx) }()
 
 	probeRunning := func(id probe.ID) bool {
-		p := m.probes[id].(*noopProbe)
+		p := m.probes[id].probe.(*noopProbe)
 		return p.loaded.Load() && p.running.Load()
 	}
 
 	probePending := func(id probe.ID) bool {
-		p := m.probes[id].(*noopProbe)
+		p := m.probes[id].probe.(*noopProbe)
 		return !p.loaded.Load() && !p.running.Load()
 	}
 
 	probeClosed := func(id probe.ID) bool {
-		p := m.probes[id].(*noopProbe)
+		p := m.probes[id].probe.(*noopProbe)
 		return p.closed.Load()
 	}
 
@@ -521,14 +558,33 @@ func newHangingProbe() *hangingProbe {
 	return &hangingProbe{closeReturned: make(chan struct{})}
 }
 
-func (p *hangingProbe) Load(*link.Executable, *process.Info, *sampling.Config) error {
-	return nil
-}
-
 func (p *hangingProbe) Run(h *pipeline.Handler) {
 	<-p.closeReturned
 	// Write after Close has returned.
 	h.Trace(ptrace.NewSpanSlice())
+}
+
+func (p *hangingProbe) Spec() (*ebpf.CollectionSpec, error) {
+	return &ebpf.CollectionSpec{
+		Maps:     make(map[string]*ebpf.MapSpec),
+		Programs: make(map[string]*ebpf.ProgramSpec),
+	}, nil
+}
+
+func (p *hangingProbe) GetID() probe.ID {
+	return probe.ID{SpanKind: trace.SpanKindClient, InstrumentedPkg: "hangingProbe"}
+}
+
+func (p *hangingProbe) GetConsts() probe.ConstList {
+	return nil
+}
+
+func (p *hangingProbe) GetUprobes() []*probe.Uprobe {
+	return nil
+}
+
+func (p *hangingProbe) InitStartupConfig(*ebpf.Collection, *sampling.Config) (io.Closer, error) {
+	return p, nil
 }
 
 func (p *hangingProbe) Close() error {
@@ -543,7 +599,7 @@ func TestRunStopDeadlock(t *testing.T) {
 	m := &Manager{
 		handler: newNoopHandler(),
 		logger:  slog.Default(),
-		probes:  map[probe.ID]probe.Probe{{}: p},
+		probes:  map[probe.ID]*probeReference{{}: {probe: p}},
 		cp:      NewNoopConfigProvider(nil),
 		proc:    new(process.Info),
 	}
@@ -587,7 +643,7 @@ func TestStopBeforeLoad(t *testing.T) {
 	m := &Manager{
 		handler: newNoopHandler(),
 		logger:  slog.Default(),
-		probes:  map[probe.ID]probe.Probe{{}: &p},
+		probes:  map[probe.ID]*probeReference{{}: {probe: &p}},
 		cp:      NewNoopConfigProvider(nil),
 		proc:    new(process.Info),
 	}
@@ -602,7 +658,7 @@ func TestStopBeforeRun(t *testing.T) {
 	m := &Manager{
 		handler: newNoopHandler(),
 		logger:  slog.Default(),
-		probes:  map[probe.ID]probe.Probe{{}: &p},
+		probes:  map[probe.ID]*probeReference{{}: {probe: &p}},
 		cp:      NewNoopConfigProvider(nil),
 		proc:    new(process.Info),
 	}
