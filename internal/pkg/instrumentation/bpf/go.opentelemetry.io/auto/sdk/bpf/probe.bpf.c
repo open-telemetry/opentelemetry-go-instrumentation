@@ -23,11 +23,30 @@ struct {
     __uint(max_entries, 1);
 } new_event SEC(".maps");
 
+struct {
+    __uint(type, BPF_MAP_TYPE_HASH);
+    __type(key, void *);
+    __type(value, __u8);
+    __uint(max_entries, MAX_CONCURRENT);
+} active_uprobes SEC(".maps");
+
 // This instrumentation attaches a uprobe to the following function:
 // func (t *tracer) start(ctx context.Context, spanPtr *span, parentSpanCtx *trace.SpanContext, sampled *bool, spanCtx *trace.SpanContext) {
 // https://github.com/open-telemetry/opentelemetry-go-instrumentation/blob/effdec9ac23e56e9e9655663d386600e62b10871/sdk/trace.go#L56-L66
 SEC("uprobe/Tracer_start")
 int uprobe_Tracer_start(struct pt_regs *ctx) {
+    void *span_ptr_val = get_argument(ctx, 4);
+    if (span_ptr_val == NULL) {
+        bpf_printk("nil span pointer");
+        return -1;
+    }
+
+    void *active = bpf_map_lookup_elem(&active_uprobes, &span_ptr_val);
+    if (active != NULL) {
+        bpf_printk("uprobe/Tracer_start already tracked.");
+        return 0;
+    }
+
     struct go_iface go_context = {0};
     get_Go_context(ctx, 2, 0, true, &go_context);
 
@@ -74,7 +93,8 @@ int uprobe_Tracer_start(struct pt_regs *ctx) {
         bpf_printk("failed to write span context: %ld", rc);
     }
 
-    void *span_ptr_val = get_argument(ctx, 4);
+    __u8 nonce = 0;
+    bpf_map_update_elem(&active_uprobes, &span_ptr_val, &nonce, BPF_ANY);
     bpf_map_update_elem(&active_spans_by_span_ptr, &span_ptr_val, &otel_span, 0);
     start_tracking_span(go_context.data, &otel_span.sc);
 
@@ -92,6 +112,7 @@ int uprobe_Span_ended(struct pt_regs *ctx) {
         return 0;
     }
     bool sampled = is_sampled(&span->sc);
+    bpf_map_delete_elem(&active_uprobes, &span_ptr);
     stop_tracking_span(&span->sc, &span->psc);
     bpf_map_delete_elem(&active_spans_by_span_ptr, &span_ptr);
 

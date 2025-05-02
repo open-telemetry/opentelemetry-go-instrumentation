@@ -77,6 +77,7 @@ type bpfProgramSpecs struct {
 // It can be passed ebpf.CollectionSpec.Assign.
 type bpfMapSpecs struct {
 	ActiveSpansBySpanPtr  *ebpf.MapSpec `ebpf:"active_spans_by_span_ptr"`
+	ActiveUprobes         *ebpf.MapSpec `ebpf:"active_uprobes"`
 	AllocMap              *ebpf.MapSpec `ebpf:"alloc_map"`
 	Events                *ebpf.MapSpec `ebpf:"events"`
 	GoContextToSc         *ebpf.MapSpec `ebpf:"go_context_to_sc"`
@@ -121,6 +122,7 @@ func (o *bpfObjects) Close() error {
 // It can be passed to loadBpfObjects or ebpf.CollectionSpec.LoadAndAssign.
 type bpfMaps struct {
 	ActiveSpansBySpanPtr  *ebpf.Map `ebpf:"active_spans_by_span_ptr"`
+	ActiveUprobes         *ebpf.Map `ebpf:"active_uprobes"`
 	AllocMap              *ebpf.Map `ebpf:"alloc_map"`
 	Events                *ebpf.Map `ebpf:"events"`
 	GoContextToSc         *ebpf.Map `ebpf:"go_context_to_sc"`
@@ -134,6 +136,7 @@ type bpfMaps struct {
 func (m *bpfMaps) Close() error {
 	return _BpfClose(
 		m.ActiveSpansBySpanPtr,
+		m.ActiveUprobes,
 		m.AllocMap,
 		m.Events,
 		m.GoContextToSc,
