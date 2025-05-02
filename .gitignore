@@ -50,3 +50,5 @@ examples/kafka-go/producer/producer
 examples/kafka-go/consumer/consumer
 
 go.work*
+
+opentelemetry-helm-charts

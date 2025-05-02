@@ -17,39 +17,53 @@ import (
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/cilium/ebpf"
-	"github.com/cilium/ebpf/link"
 	"github.com/cilium/ebpf/perf"
 
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/ptrace"
+	"go.opentelemetry.io/otel/trace"
 
 	"go.opentelemetry.io/auto/internal/pkg/inject"
-	"go.opentelemetry.io/auto/internal/pkg/instrumentation/bpffs"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/probe/sampling"
-	"go.opentelemetry.io/auto/internal/pkg/instrumentation/utils"
 	"go.opentelemetry.io/auto/internal/pkg/process"
 	"go.opentelemetry.io/auto/internal/pkg/structfield"
 	"go.opentelemetry.io/auto/pipeline"
 )
 
+// ID is a unique identifier for a probe.
+type ID struct {
+	// SpanKind is the span kind handled by the probe.
+	SpanKind trace.SpanKind
+	// InstrumentedPkg is the package path of the instrumented code.
+	InstrumentedPkg string
+}
+
+func (id ID) String() string {
+	return fmt.Sprintf("%s/%s", id.InstrumentedPkg, id.SpanKind)
+}
+
 // Probe is the instrument used by instrumentation for a Go package to measure
 // and report on the state of that packages operation.
 type Probe interface {
-	// Manifest returns the Probe's instrumentation Manifest. This includes all
-	// the information about the package the Probe instruments.
-	Manifest() Manifest
+	// GetID returns the ID for the Probe.
+	GetID() ID
 
-	// Load loads all the eBPF programs and maps required by the Probe.
-	// It also attaches the eBPF programs to the target process.
-	// TODO: currently passing Sampler as an initial configuration - this will be
-	// updated to a more generic configuration in the future.
-	Load(*link.Executable, *process.Info, *sampling.Config) error
+	// InitStartupConfig sets up initialization config options for the Probe,
+	// such as its sampling config, sets up its BPFObj as a closer, and initializes
+	// the Probe's reader, returning it as an io.Closer.
+	InitStartupConfig(*ebpf.Collection, *sampling.Config) (io.Closer, error)
 
 	// Run runs the events processing loop.
 	Run(*pipeline.Handler)
 
-	// Close stops the Probe.
-	Close() error
+	// Spec returns the *ebpf.CollectionSpec for the Probe.
+	Spec() (*ebpf.CollectionSpec, error)
+
+	// GetUprobes returns a list of *Uprobes for the Probe.
+	GetUprobes() []*Uprobe
+
+	// GetConsts returns a list of Consts for the Probe.
+	GetConsts() ConstList
 }
 
 // Base is a base implementation of [Probe].
@@ -65,7 +79,7 @@ type Base[BPFObj any, BPFEvent any] struct {
 
 	// Consts are the constants that need to be injected into the eBPF program
 	// that is run by this Probe.
-	Consts []Const
+	Consts ConstList
 	// Uprobes is a the collection of eBPF programs that need to be attached to
 	// the target process.
 	Uprobes []*Uprobe
@@ -79,7 +93,6 @@ type Base[BPFObj any, BPFEvent any] struct {
 	ProcessRecord func(perf.Record) (*BPFEvent, error)
 
 	reader          *perf.Reader
-	collection      *ebpf.Collection
 	closers         []io.Closer
 	samplingManager *sampling.Manager
 }
@@ -93,10 +106,12 @@ const (
 	DefaultBufferMapName = "events"
 )
 
-// Manifest returns the Probe's instrumentation Manifest.
-func (i *Base[BPFObj, BPFEvent]) Manifest() Manifest {
+type ConstList []Const
+
+// StructFields returns only the Consts from a ConstList that are a Struct Field.
+func (c ConstList) StructFields() []structfield.ID {
 	var structFieldIDs []structfield.ID
-	for _, cnst := range i.Consts {
+	for _, cnst := range c {
 		if sfc, ok := cnst.(StructFieldConst); ok {
 			structFieldIDs = append(structFieldIDs, sfc.ID)
 		}
@@ -104,175 +119,49 @@ func (i *Base[BPFObj, BPFEvent]) Manifest() Manifest {
 			structFieldIDs = append(structFieldIDs, sfc.StructField.ID)
 		}
 	}
-
-	symbols := make([]FunctionSymbol, 0, len(i.Uprobes))
-	for _, up := range i.Uprobes {
-		symbols = append(symbols, FunctionSymbol{Symbol: up.Sym, DependsOn: up.DependsOn})
-	}
-
-	return NewManifest(i.ID, structFieldIDs, symbols)
+	return structFieldIDs
 }
 
 func (i *Base[BPFObj, BPFEvent]) Spec() (*ebpf.CollectionSpec, error) {
 	return i.SpecFn()
 }
 
-// Load loads all instrumentation offsets.
-func (i *Base[BPFObj, BPFEvent]) Load(
-	exec *link.Executable,
-	info *process.Info,
+func (i *Base[BPFObj, BPFEvent]) InitStartupConfig(
+	c *ebpf.Collection,
 	sampler *sampling.Config,
-) error {
-	spec, err := i.SpecFn()
-	if err != nil {
-		return err
-	}
-
-	err = i.InjectConsts(info, spec)
-	if err != nil {
-		return err
-	}
-
-	i.collection, err = i.buildEBPFCollection(info, spec)
-	if err != nil {
-		return err
-	}
-
-	err = i.loadUprobes(exec, info)
-	if err != nil {
-		return err
-	}
-
-	err = i.initReader()
-	if err != nil {
-		return err
-	}
-
-	i.samplingManager, err = sampling.NewSamplingManager(i.collection, sampler)
-	if err != nil {
-		return err
-	}
-
-	i.closers = append(i.closers, i.reader)
-
-	return nil
-}
-
-func (i *Base[BPFObj, BPFEvent]) InjectConsts(info *process.Info, spec *ebpf.CollectionSpec) error {
-	var err error
-	var opts []inject.Option
-	for _, cnst := range i.Consts {
-		if l, ok := cnst.(setLogger); ok {
-			cnst = l.SetLogger(i.Logger)
-		}
-
-		o, e := cnst.InjectOption(info)
-		err = errors.Join(err, e)
-		if e == nil && o != nil {
-			opts = append(opts, o)
-		}
-	}
-	if err != nil {
-		return err
-	}
-
-	return inject.Constants(spec, opts...)
-}
-
-func (i *Base[BPFObj, BPFEvent]) loadUprobes(exec *link.Executable, info *process.Info) error {
-	for _, up := range i.Uprobes {
-		var skip bool
-		for _, pc := range up.PackageConstraints {
-			if pc.Constraints.Check(info.Modules[pc.Package]) {
-				continue
-			}
-
-			var logFn func(string, ...any)
-			switch pc.FailureMode {
-			case FailureModeIgnore:
-				logFn = i.Logger.Debug
-			case FailureModeWarn:
-				logFn = i.Logger.Warn
-			default:
-				// Unknown and FailureModeError.
-				return fmt.Errorf(
-					"uprobe %s package constraint (%s) not met, version %v",
-					up.Sym,
-					pc.Constraints.String(),
-					info.Modules[pc.Package],
-				)
-			}
-
-			logFn(
-				"package constraint not meet, skipping uprobe",
-				"probe", i.ID,
-				"symbol", up.Sym,
-				"package", pc.Package,
-				"constraint", pc.Constraints.String(),
-				"version", info.Modules[pc.Package],
-			)
-
-			skip = true
-			break
-		}
-		if skip {
-			continue
-		}
-
-		err := up.load(exec, info, i.collection)
-		if err != nil {
-			var logFn func(string, ...any)
-			switch up.FailureMode {
-			case FailureModeIgnore:
-				logFn = i.Logger.Debug
-			case FailureModeWarn:
-				logFn = i.Logger.Warn
-			default:
-				// Unknown and FailureModeError.
-				return err
-			}
-			logFn("failed to load uprobe", "probe", i.ID, "symbol", up.Sym, "error", err)
-			continue
-		}
-		i.closers = append(i.closers, up)
-	}
-	return nil
-}
-
-func (i *Base[BPFObj, BPFEvent]) initReader() error {
-	buf, ok := i.collection.Maps[DefaultBufferMapName]
-	if !ok {
-		return fmt.Errorf("%s map not found", DefaultBufferMapName)
-	}
-	var err error
-	i.reader, err = perf.NewReader(buf, PerfBufferDefaultSizeInPages*os.Getpagesize())
-	if err != nil {
-		return err
-	}
-	i.closers = append(i.closers, i.reader)
-	return nil
-}
-
-func (i *Base[BPFObj, BPFEvent]) buildEBPFCollection(
-	info *process.Info,
-	spec *ebpf.CollectionSpec,
-) (*ebpf.Collection, error) {
+) (io.Closer, error) {
 	obj := new(BPFObj)
 	if c, ok := ((interface{})(obj)).(io.Closer); ok {
 		i.closers = append(i.closers, c)
 	}
 
-	sOpts := &ebpf.CollectionOptions{
-		Maps: ebpf.MapOptions{
-			PinPath: bpffs.PathForTargetApplication(info),
-		},
-	}
-	c, err := utils.InitializeEBPFCollection(spec, sOpts)
+	samplingManager, err := sampling.NewSamplingManager(c, sampler)
 	if err != nil {
 		return nil, err
 	}
+	i.samplingManager = samplingManager
 
-	return c, nil
+	buf, ok := c.Maps[DefaultBufferMapName]
+	if !ok {
+		return nil, fmt.Errorf("%s map not found", DefaultBufferMapName)
+	}
+	i.reader, err = perf.NewReader(buf, PerfBufferDefaultSizeInPages*os.Getpagesize())
+	if err != nil {
+		return nil, err
+	}
+	return i.reader, nil
+}
+
+func (i *Base[BPFObj, BPFEvent]) GetUprobes() []*Uprobe {
+	return i.Uprobes
+}
+
+func (i *Base[BPFObj, BPFEvent]) GetConsts() ConstList {
+	return i.Consts
+}
+
+func (i *Base[BPFObj, BPFEvent]) GetID() ID {
+	return i.ID
 }
 
 // read reads a new BPFEvent from the perf Reader.
@@ -305,20 +194,7 @@ func (i *Base[BPFObj, BPFEvent]) read() (*BPFEvent, error) {
 	return event, nil
 }
 
-// Close stops the Probe.
-func (i *Base[BPFObj, BPFEvent]) Close() error {
-	if i.collection != nil {
-		i.collection.Close()
-	}
-	var err error
-	for _, c := range i.closers {
-		err = errors.Join(err, c.Close())
-	}
-	if err == nil {
-		i.Logger.Debug("Closed", "Probe", i.ID)
-	}
-	return err
-}
+var _ Probe = &SpanProducer[struct{}, struct{}]{}
 
 type SpanProducer[BPFObj any, BPFEvent any] struct {
 	Base[BPFObj, BPFEvent]
@@ -405,65 +281,11 @@ type Uprobe struct {
 	ReturnProbe string
 	DependsOn   []string
 
-	closers atomic.Pointer[[]io.Closer]
-}
-
-func (u *Uprobe) load(exec *link.Executable, info *process.Info, c *ebpf.Collection) error {
-	offset, err := info.GetFunctionOffset(u.Sym)
-	if err != nil {
-		return err
-	}
-
-	var closers []io.Closer
-
-	if u.EntryProbe != "" {
-		entryProg, ok := c.Programs[u.EntryProbe]
-		if !ok {
-			return fmt.Errorf("entry probe %s not found", u.EntryProbe)
-		}
-		opts := &link.UprobeOptions{Address: offset, PID: int(info.ID)}
-		l, err := exec.Uprobe("", entryProg, opts)
-		if err != nil {
-			return err
-		}
-		closers = append(closers, l)
-	}
-
-	if u.ReturnProbe != "" {
-		retProg, ok := c.Programs[u.ReturnProbe]
-		if !ok {
-			return fmt.Errorf("return probe %s not found", u.ReturnProbe)
-		}
-		retOffsets, err := info.GetFunctionReturns(u.Sym)
-		if err != nil {
-			return err
-		}
-
-		for _, ret := range retOffsets {
-			opts := &link.UprobeOptions{Address: ret, PID: int(info.ID)}
-			l, err := exec.Uprobe("", retProg, opts)
-			if err != nil {
-				return err
-			}
-			closers = append(closers, l)
-		}
-	}
-
-	old := u.closers.Swap(&closers)
-	if old != nil {
-		// load called twice without calling Close. Try and handle gracefully.
-		var err error
-		for _, closer := range *old {
-			err = errors.Join(err, closer.Close())
-		}
-		return err
-	}
-
-	return nil
+	Closers atomic.Pointer[[]io.Closer]
 }
 
 func (u *Uprobe) Close() error {
-	closersPtr := u.closers.Swap(nil)
+	closersPtr := u.Closers.Swap(nil)
 	if closersPtr == nil {
 		// No closers.
 		return nil
@@ -483,7 +305,7 @@ type Const interface {
 	InjectOption(*process.Info) (inject.Option, error)
 }
 
-type setLogger interface {
+type SetLogger interface {
 	SetLogger(*slog.Logger) Const
 }
 
@@ -496,7 +318,7 @@ type StructFieldConst struct {
 	logger *slog.Logger
 }
 
-var _ setLogger = StructFieldConst{}
+var _ SetLogger = StructFieldConst{}
 
 // SetLogger sets the Logger for StructFieldConst operations.
 func (c StructFieldConst) SetLogger(l *slog.Logger) Const {
