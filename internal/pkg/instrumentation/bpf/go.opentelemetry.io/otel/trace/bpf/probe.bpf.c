@@ -81,6 +81,8 @@ int uprobe_Tracer_start(struct pt_regs *ctx) {
 
     void *active = bpf_map_lookup_elem(&active_uprobes, &span_ptr_val);
     if (active != NULL) {
+        // This can happen when Go resizes the goroutines stack and the
+        // uprobe is called again.
         bpf_printk("uprobe/Tracer_start already tracked.");
         return 0;
     }
