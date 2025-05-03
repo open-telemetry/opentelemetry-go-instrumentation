@@ -23,13 +23,6 @@ struct {
     __uint(max_entries, 1);
 } new_event SEC(".maps");
 
-struct {
-    __uint(type, BPF_MAP_TYPE_HASH);
-    __type(key, void *);
-    __type(value, __u8);
-    __uint(max_entries, MAX_CONCURRENT);
-} active_uprobes SEC(".maps");
-
 // This instrumentation attaches a uprobe to the following function:
 // func (t *tracer) start(ctx context.Context, spanPtr *span, parentSpanCtx *trace.SpanContext, sampled *bool, spanCtx *trace.SpanContext) {
 // https://github.com/open-telemetry/opentelemetry-go-instrumentation/blob/effdec9ac23e56e9e9655663d386600e62b10871/sdk/trace.go#L56-L66
@@ -41,7 +34,7 @@ int uprobe_Tracer_start(struct pt_regs *ctx) {
         return -1;
     }
 
-    void *active = bpf_map_lookup_elem(&active_uprobes, &span_ptr_val);
+    void *active = bpf_map_lookup_elem(&active_spans_by_span_ptr, &span_ptr_val);
     if (active != NULL) {
         // This can happen when Go resizes the goroutines stack and the
         // uprobe is called again.
@@ -96,7 +89,6 @@ int uprobe_Tracer_start(struct pt_regs *ctx) {
     }
 
     __u8 nonce = 0;
-    bpf_map_update_elem(&active_uprobes, &span_ptr_val, &nonce, BPF_ANY);
     bpf_map_update_elem(&active_spans_by_span_ptr, &span_ptr_val, &otel_span, 0);
     start_tracking_span(go_context.data, &otel_span.sc);
 
@@ -114,7 +106,6 @@ int uprobe_Span_ended(struct pt_regs *ctx) {
         return 0;
     }
     bool sampled = is_sampled(&span->sc);
-    bpf_map_delete_elem(&active_uprobes, &span_ptr);
     stop_tracking_span(&span->sc, &span->psc);
     bpf_map_delete_elem(&active_spans_by_span_ptr, &span_ptr);
 
