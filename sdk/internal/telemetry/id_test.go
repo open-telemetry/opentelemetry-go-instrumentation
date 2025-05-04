@@ -26,7 +26,6 @@ func TestTraceIdEncoding(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.Name, runJSONEncodingTests(tc.Input, tc.Expect))
 	}
-
 }
 
 func TestSpanIdEncoding(t *testing.T) {
