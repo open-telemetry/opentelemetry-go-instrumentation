@@ -1,8 +1,8 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-// Package autosdk provides an integration test for the autosdk probe.
-package autosdk
+// Package databasesql provides an integration test for the database/sql probe.
+package databasesql
 
 import (
 	"testing"
@@ -68,8 +68,12 @@ func TestIntegration(t *testing.T) {
 	query := "DROP TABLE contacts"
 	dropS, err := e2e.SelectSpan(scopes, func(s ptrace.Span) bool {
 		name := s.Name()
-		v, ok := e2e.AttributesMap(s.Attributes())[queryTextKey]
-		return name == "DB" && ok && v.Str() == query
+		vIface, ok := e2e.AttributesMap(s.Attributes())[queryTextKey]
+		if !ok {
+			return false
+		}
+		v, ok := vIface.(string)
+		return name == "DB" && ok && v == query
 	})
 	require.NoError(t, err)
 	t.Run("DROP", verify(dropS, runS, query))
@@ -77,8 +81,12 @@ func TestIntegration(t *testing.T) {
 	query = "syntax error"
 	errS, err := e2e.SelectSpan(scopes, func(s ptrace.Span) bool {
 		name := s.Name()
-		v, ok := e2e.AttributesMap(s.Attributes())[queryTextKey]
-		return name == "DB" && ok && v.Str() == query
+		vIface, ok := e2e.AttributesMap(s.Attributes())[queryTextKey]
+		if !ok {
+			return false
+		}
+		v, ok := vIface.(string)
+		return name == "DB" && ok && v == query
 	})
 	require.NoError(t, err)
 	t.Run("ERROR", verify(errS, runS, query))
@@ -92,6 +100,6 @@ func verify(span, parent ptrace.Span, query string) func(t *testing.T) {
 
 		attrs := e2e.AttributesMap(span.Attributes())
 
-		assert.Equal(t, query, attrs[queryTextKey].Str(), queryTextKey)
+		assert.Equal(t, query, attrs[queryTextKey], queryTextKey)
 	}
 }

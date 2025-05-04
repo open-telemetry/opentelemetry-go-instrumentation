@@ -21,14 +21,8 @@ import (
 
 	"github.com/cilium/ebpf/rlimit"
 	"go.opentelemetry.io/collector/pdata/ptrace"
-	"go.uber.org/goleak"
 
 	"go.opentelemetry.io/auto"
-)
-
-const (
-	batsVerify = "verify.bats"
-	tracesOrig = "traces-orig.json"
 )
 
 // RunInstrumentation runs the auto-instrumentation for an end-to-end test.
@@ -62,41 +56,6 @@ func RunInstrumentation(t *testing.T, mainDir string) ptrace.Traces {
 	run(t, ctx, binPath, server.URL)
 
 	return server.Received
-}
-
-func TestIntegration(t *testing.T, mainDir string, batsDir string) {
-	if testing.Short() {
-		t.Skip("skipping long-running integration test in short mode.")
-	}
-
-	if err := rlimit.RemoveMemlock(); err != nil {
-		t.Skip("cannot manage memory, skipping test.")
-	}
-
-	defer goleak.VerifyNone(t)
-
-	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
-	defer cancel()
-
-	binPath := compile(t, ctx, mainDir)
-
-	server := newCollector(t)
-	defer server.Close()
-
-	run(t, ctx, binPath, server.URL)
-
-	server.Flush(t, batsDir)
-	bats(t, ctx, batsDir)
-}
-
-func bats(t *testing.T, ctx context.Context, dir string) {
-	cmd := exec.CommandContext(ctx, "bats", batsVerify)
-	cmd.Dir = dir
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	if err := cmd.Run(); err != nil {
-		t.Fatalf("Failed to run bats: %v", err)
-	}
 }
 
 func compile(t *testing.T, ctx context.Context, pkgPath string) string {
@@ -155,31 +114,6 @@ func newCollector(t *testing.T) *collector {
 	return c
 }
 
-// Flush flushes all received data to the dest directory.
-func (c *collector) Flush(t *testing.T, dest string) {
-	t.Helper()
-
-	// Create the file in the specified directory
-	filePath := filepath.Join(dest, tracesOrig)
-	file, err := os.Create(filePath)
-	if err != nil {
-		t.Fatalf("Failed to create %s: %v", filePath, err)
-	}
-	defer file.Close()
-
-	// Marshal the data to JSON.
-	var marshaler ptrace.JSONMarshaler
-	data, err := marshaler.MarshalTraces(c.Received)
-	if err != nil {
-		t.Fatalf("Failed to marshal traces: %v", err)
-	}
-
-	// Write JSON data to the file
-	if _, err := file.Write(data); err != nil {
-		t.Fatalf("Failed to write to file: %v", err)
-	}
-}
-
 func run(t *testing.T, ctx context.Context, binPath string, endpoint string) {
 	t.Helper()
 
@@ -196,6 +130,7 @@ func run(t *testing.T, ctx context.Context, binPath string, endpoint string) {
 
 	t.Setenv("OTEL_SERVICE_NAME", "sample-app")
 	t.Setenv("OTEL_EXPORTER_OTLP_ENDPOINT", endpoint)
+	t.Setenv("OTEL_GO_AUTO_SHOW_VERIFIER_LOG", "true")
 	t.Setenv("OTEL_GO_AUTO_INCLUDE_DB_STATEMENT", "true")
 	t.Setenv("OTEL_GO_AUTO_PARSE_DB_STATEMENT", "true")
 
