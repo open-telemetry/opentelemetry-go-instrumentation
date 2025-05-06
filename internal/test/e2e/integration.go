@@ -120,6 +120,9 @@ func run(t *testing.T, ctx context.Context, binPath string, endpoint string) {
 	t.Log("Loading target")
 	cmd := exec.CommandContext(ctx, binPath)
 	cmd.Args = append(cmd.Args, "-trigger=signal:SIGCONT")
+	if testing.Verbose() {
+		cmd.Env = append(os.Environ(), "OTEL_LOG_LEVEL=debug")
+	}
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 

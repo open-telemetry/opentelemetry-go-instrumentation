@@ -12,7 +12,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"log"
+	"log/slog"
 	"net"
 	"os"
 	"os/signal"
@@ -26,12 +26,14 @@ import (
 	pb "google.golang.org/grpc/examples/helloworld/helloworld"
 	"google.golang.org/grpc/status"
 
+	"go.opentelemetry.io/auto/internal/test/getlog"
 	"go.opentelemetry.io/auto/internal/test/trigger"
 )
 
 const port = 1701
 
 type server struct {
+	logger *slog.Logger
 	pb.UnimplementedGreeterServer
 }
 
@@ -41,7 +43,7 @@ func (s *server) SayHello(ctx context.Context, in *pb.HelloRequest) (*pb.HelloRe
 	defer span.End()
 
 	span.SetAttributes(attribute.String("name", in.GetName()))
-	log.Printf("Received: %v", in.GetName())
+	slog.Debug("received", "name", in.GetName())
 	if in.GetName() == "unimplemented" {
 		return nil, status.Error(codes.Unimplemented, "unimplmented")
 	}
@@ -51,39 +53,41 @@ func (s *server) SayHello(ctx context.Context, in *pb.HelloRequest) (*pb.HelloRe
 func main() {
 	var trig trigger.Flag
 	flag.Var(&trig, "trigger", trig.Docs())
+	var logLvl getlog.Flag
+	flag.Var(&logLvl, "log-level", logLvl.Docs())
 	flag.Parse()
+
+	logger := logLvl.Logger()
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer stop()
 
-	// Server.
-	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
+	serverStop, err := setup(logger)
 	if err != nil {
-		log.Fatalf("failed to listen: %v", err)
+		logger.Error("failed to setup server", "error", err)
+		os.Exit(1)
 	}
-	s := grpc.NewServer()
-	pb.RegisterGreeterServer(s, &server{})
-	log.Printf("server listening at %v", lis.Addr())
-
-	done := make(chan struct{}, 1)
-	go func() {
-		if err := s.Serve(lis); err != nil {
-			log.Fatalf("failed to serve: %v", err)
-		}
-		done <- struct{}{}
-	}()
 
 	// Wait for auto-instrumentation.
 	err = trig.Wait(ctx)
 	if err != nil {
-		log.Fatal(err)
+		logger.Error("failed to wait for trigger", "error", err)
+		os.Exit(1)
 	}
 
+	err = run(ctx, serverStop, logger)
+	if err != nil {
+		logger.Error("failed to run client", "error", err)
+		os.Exit(1)
+	}
+}
+
+func run(ctx context.Context, srvStop func(), logger *slog.Logger) error {
 	// Client.
 	addr := fmt.Sprintf("localhost:%d", port)
 	conn, err := grpc.NewClient(addr, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
-		log.Fatalf("did not connect: %v", err)
+		return fmt.Errorf("failed to create client: %w", err)
 	}
 	defer conn.Close()
 	c := pb.NewGreeterClient(conn)
@@ -93,27 +97,52 @@ func main() {
 	defer cancel()
 	r, err := c.SayHello(ctx, &pb.HelloRequest{Name: "world"})
 	if err != nil {
-		log.Fatalf("could not greet: %v", err)
+		return fmt.Errorf("could not greet: %w", err)
 	}
-	log.Printf("Greeting: %s", r.GetMessage())
+	logger.Debug("greeting", "msg", r.GetMessage())
 
 	// Contact the server expecting a server error
 	_, err = c.SayHello(ctx, &pb.HelloRequest{Name: "unimplemented"})
 	if err == nil {
-		log.Fatalf("expected an error but none was received")
+		logger.Error("expected an error but none was returned", "method", "unimplemented")
+	} else {
+		logger.Debug("received expected error", "error", err)
 	}
-	log.Printf("received expected error: %+v", err)
 
-	s.GracefulStop()
-	<-done
+	srvStop()
 
-	// try making a request after the server has stopped to generate an error status
+	// try making a request after the server has stopped to generate an error
+	// status
 	_, err = c.SayHello(ctx, &pb.HelloRequest{Name: "world"})
 	if err == nil {
-		log.Fatalf("expected an error but none was returned")
+		logger.Error("expected an error but none was returned", "server", "stopped")
+	} else {
+		logger.Debug("received expected error", "error", err)
 	}
-	log.Printf("received expected error: %+v", err)
 
-	// Give time for auto-instrumentation to do the dew.
-	time.Sleep(5 * time.Second)
+	return nil
+}
+
+func setup(logger *slog.Logger) (stop func(), err error) {
+	// Server.
+	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
+	if err != nil {
+		return func() {}, fmt.Errorf("failed to listen: %w", err)
+	}
+	s := grpc.NewServer()
+	pb.RegisterGreeterServer(s, &server{logger: logger})
+	logger.Debug("listening", "address", lis.Addr())
+
+	done := make(chan struct{}, 1)
+	go func() {
+		if err := s.Serve(lis); err != nil {
+			logger.Error("server failed", "error", err)
+		}
+		done <- struct{}{}
+	}()
+
+	return func() {
+		s.GracefulStop()
+		<-done
+	}, nil
 }
