@@ -35,6 +35,7 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 - The new `Multiplexer` type is added to `go.opentelemetry.io/auto/pipeline/otelsdk`.
   This type is used to support multiple process instrumentation using the same telemetry pipeline. ([#2016](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/2016))
 - Cache offsets for `google.golang.org/grpc` `1.72.0`. ([#2190](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/2190))
+- Cache offsets for `golang.org/x/net` `0.40.0`. ([#2281](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/2281))
 
 ### Changed
 
@@ -75,6 +76,7 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 - Stop pinning collector image in e2e tests. ([#2072](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/2072))
 - Fallback to avoid context propagation in `kafka-go` instrumentation if the kernel does not support `bpf_probe_write_user`. ([#2105](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/2105))
 - Make sure Go strings being read from eBPF are null terminated. ([#1936](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1936))
+- Handle dynamic goroutine stack resizes in the `autosdk` and `otel/trace` probes. ([#2263](https://githubcom/open-telemetry/opentelemetry-go-instrumentation/pull/2263))
 
 ## [v0.21.0] - 2025-02-18
 
