@@ -35,6 +35,7 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 - The new `Multiplexer` type is added to `go.opentelemetry.io/auto/pipeline/otelsdk`.
   This type is used to support multiple process instrumentation using the same telemetry pipeline. ([#2016](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/2016))
 - Cache offsets for `google.golang.org/grpc` `1.72.0`. ([#2190](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/2190))
+- Cache offsets for `golang.org/x/net` `0.40.0`. ([#2281](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/2281))
 
 ### Changed
 
@@ -75,6 +76,7 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 - Stop pinning collector image in e2e tests. ([#2072](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/2072))
 - Fallback to avoid context propagation in `kafka-go` instrumentation if the kernel does not support `bpf_probe_write_user`. ([#2105](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/2105))
 - Make sure Go strings being read from eBPF are null terminated. ([#1936](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1936))
+- Handle dynamic goroutine stack resizes in the `autosdk` and `otel/trace` probes. ([#2263](https://githubcom/open-telemetry/opentelemetry-go-instrumentation/pull/2263))
 
 ## [v0.21.0] - 2025-02-18
 
@@ -414,8 +416,8 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 ### Added
 
 - The CLI flag `global-impl` is added.
-  This flag, when used, enables the instrumentation of the OpenTelemetry default global implementation (https://pkg.go.dev/go.opentelemetry.io/otel).
-  This means that all trace telemetry from this implementation that would normally be dropped will instead be recorded with the auto-instrumentation pipeline. ([#523]https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/523)
+  This flag, when used, enables the instrumentation of the OpenTelemetry default global implementation (<https://pkg.go.dev/go.opentelemetry.io/otel>).
+  This means that all trace telemetry from this implementation that would normally be dropped will instead be recorded with the auto-instrumentation pipeline. ([#523](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/523))
 - Add `WithResourceAttributes` `InstrumentationOption` to configure `Instrumentation` to add additional resource attributes. ([#522](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/522))
 - Support versions `v0.18.0` and `v0.19.0` of `golang.org/x/net`. ([#524](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/524))
 - Add the status code to HTTP client instrumentation. ([#527](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/527))
@@ -529,17 +531,17 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 ### Changed
 
 - The function signature of `"go.opentelemetry.io/auto/offsets-tracker/downloader".DownloadBinary` has changed.
-  It now has an additional flag indicating whether it'll build a dummy app for Go stdlib packages or not. ([#256]https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/256)
+  It now has an additional flag indicating whether it'll build a dummy app for Go stdlib packages or not. ([#256](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/256))
 - The function signature of `"go.opentelemetry.io/auto/offsets-tracker/target".New` has changed.
-  It now accepts a flag to determine if the returned `Data` is from the Go stdlib or not. ([#256]https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/256)
-- Use UPROBE_RETURN to declare the common uprobe return logic (finding the corresponding context, setting up end time, and sending the event via perf buffer) ([#257]https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/257)
-- BASE_SPAN_PROPERTIES as common fields (start time, end time, SpanContext and ParentSpanContext) for all instrumentations events (consistent between C and Go structs). ([#257]https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/257)
-- Header guards in eBPF code. ([#257]https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/257)
+  It now accepts a flag to determine if the returned `Data` is from the Go stdlib or not. ([#256](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/256))
+- Use UPROBE_RETURN to declare the common uprobe return logic (finding the corresponding context, setting up end time, and sending the event via perf buffer) ([#257](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/257))
+- BASE_SPAN_PROPERTIES as common fields (start time, end time, SpanContext and ParentSpanContext) for all instrumentations events (consistent between C and Go structs). ([#257](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/257))
+- Header guards in eBPF code. ([#257](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/257))
 
 ### Fixed
 
 - Fix context propagation across different goroutines. ([#118](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/118))
-- The offset tracker can once again build binaries for the Go stdlib. ([#256]https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/256)
+- The offset tracker can once again build binaries for the Go stdlib. ([#256](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/256))
 
 ### Deprecated
 
@@ -619,9 +621,6 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 - Only pull docker image if not present for the emojivoto example. ([#149](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/149))
 - Update HTTP span names to include method and route to match semantic conventions. ([#143](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/143))
 - Fix missing spans in gorillamux instrumentation. ([#86](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/86))
-
-### Changed
-
 - Update HTTP span names to include method and route to match semantic conventions. ([#143](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/143))
 - Add DockerHub to release destinations. ([#152](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/152))
 

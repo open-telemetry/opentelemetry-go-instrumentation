@@ -66,6 +66,20 @@ int uprobe_tracerProvider(struct pt_regs *ctx) {
 // https://github.com/open-telemetry/opentelemetry-go/blob/2e8d5a99340b1e11ca6b19bcdfcbfe9cd0c2c385/trace/auto.go#L81-L92
 SEC("uprobe/Tracer_start")
 int uprobe_Tracer_start(struct pt_regs *ctx) {
+    void *span_ptr_val = get_argument(ctx, 4);
+    if (span_ptr_val == NULL) {
+        bpf_printk("nil span pointer");
+        return -1;
+    }
+
+    void *active = bpf_map_lookup_elem(&active_spans_by_span_ptr, &span_ptr_val);
+    if (active != NULL) {
+        // This can happen when Go resizes the goroutines stack and the
+        // uprobe is called again.
+        bpf_printk("uprobe/Tracer_start already tracked.");
+        return 0;
+    }
+
     struct go_iface go_context = {0};
     get_Go_context(ctx, 2, 0, true, &go_context);
 
@@ -112,7 +126,6 @@ int uprobe_Tracer_start(struct pt_regs *ctx) {
         bpf_printk("failed to write span context: %ld", rc);
     }
 
-    void *span_ptr_val = get_argument(ctx, 4);
     bpf_map_update_elem(&active_spans_by_span_ptr, &span_ptr_val, &otel_span, 0);
     start_tracking_span(go_context.data, &otel_span.sc);
 
