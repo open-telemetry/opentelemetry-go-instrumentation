@@ -5,7 +5,7 @@ package telemetry
 
 import "testing"
 
-func TestTraceIdEncoding(t *testing.T) {
+func TestTraceIDEncoding(t *testing.T) {
 	testCases := []struct {
 		Name   string
 		Input  TraceID
@@ -28,7 +28,7 @@ func TestTraceIdEncoding(t *testing.T) {
 	}
 }
 
-func TestSpanIdEncoding(t *testing.T) {
+func TestSpanIDEncoding(t *testing.T) {
 	testCases := []struct {
 		Name   string
 		Input  SpanID
@@ -47,6 +47,6 @@ func TestSpanIdEncoding(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		t.Run(tc.Name, runJSONUnmarshalTest(tc.Input, tc.Expect))
+		t.Run(tc.Name, runJSONEncodingTests(tc.Input, tc.Expect))
 	}
 }
