@@ -29,7 +29,7 @@ DEPENDENCIES_DOCKERFILE=./dependencies.Dockerfile
 .DEFAULT_GOAL := precommit
 
 .PHONY: precommit
-precommit: license-header-check golangci-lint-fix test codespell
+precommit: license-header-check golangci-lint-fix test codespell markdown-lint
 
 # Tools
 $(TOOLS):
