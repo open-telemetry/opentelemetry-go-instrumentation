@@ -63,8 +63,8 @@
   "customManagers": [
     {
       "customType": "regex",
-      "fileMatch": [
-        ".github/workflows/e2e/k8s/.*\\.ya?ml"
+      "managerFilePatterns": [
+        "/.github/workflows/e2e/k8s/.*\\.ya?ml/"
       ],
       "matchStrings": [
         "repository:\\s*(?<depName>otel/opentelemetry-collector-contrib)\\s*tag:\\s*\"?(?<currentValue>[^\"]+)\"?"
