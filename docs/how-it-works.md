@@ -71,16 +71,16 @@ The address of the map data is returned in an [`AllocationDetails` object](https
 
 ### Loading eBPF programs
 
-With all of the initialization steps complete (analyzing the target process, finding relevant instrumentation points, allocating memory), the agent calls [`instrumentation.Load()`](https://pkg.go.dev/go.opentelemetry.io/auto@v0.21.0#Instrumentation.Load) which calls [`manager.Load()`](https://pkg.go.dev/go.opentelemetry.io/auto@v0.21.0/internal/pkg/instrumentation#Manager.Load). The `Manager` mounts the target binary and calls [`bpffs.Mount()`](https://pkg.go.dev/go.opentelemetry.io/auto@v0.21.0/internal/pkg/instrumentation/bpffs#Mount) to create a subdirectory for the target executable under `/sys/fs/bpf`. It then calls [`probe.Load()`](https://pkg.go.dev/go.opentelemetry.io/auto@v0.21.0/internal/pkg/instrumentation/probe#Base.Load) on each registered `Probe`. 
+With all of the initialization steps complete (analyzing the target process, finding relevant instrumentation points, allocating memory), the agent calls [`instrumentation.Load()`](https://pkg.go.dev/go.opentelemetry.io/auto@v0.21.0#Instrumentation.Load) which calls [`manager.Load()`](https://pkg.go.dev/go.opentelemetry.io/auto@v0.21.0/internal/pkg/instrumentation#Manager.Load). The `Manager` mounts the target binary and calls [`bpffs.Mount()`](https://pkg.go.dev/go.opentelemetry.io/auto@v0.21.0/internal/pkg/instrumentation/bpffs#Mount) to create a subdirectory for the target executable under `/sys/fs/bpf`. It then calls [`probe.Load()`](https://pkg.go.dev/go.opentelemetry.io/auto@v0.21.0/internal/pkg/instrumentation/probe#Base.Load) on each registered `Probe`.
 
 At this point the inject options are applied to the target, and this is where offsets are loaded from the embedded JSON file with [`inject.WithOffset()`](https://pkg.go.dev/go.opentelemetry.io/auto@v0.21.0/internal/pkg/inject#WithOffset) (see [Instrumentation Stability](#instrumentation-stability)).
  [`instrumentation.Run()`](https://pkg.go.dev/go.opentelemetry.io/auto@v0.21.0#Instrumentation.Run) to start the `Instrumentation` object. This calls [`manager.Run()`](https://pkg.go.dev/go.opentelemetry.io/auto@v0.21.0/internal/pkg/instrumentation#Manager.Run) and starts the `Manager` object within the `Instrumentation`.
- 
+
  It then builds a [Cilium `CollectionSpec`](https://pkg.go.dev/github.com/cilium/ebpf#CollectionSpec) and calls [`LoadAndAssign()`](https://pkg.go.dev/github.com/cilium/ebpf#CollectionSpec.LoadAndAssign) to load the eBPF map and program into the kernel. It analyzes the relevant Uprobes and stores their links.
 
 ### Processing events
 
-After each `Probe` is loaded, the agent calls now [`instrumentation.Run()`](https://pkg.go.dev/go.opentelemetry.io/auto@v0.21.0#Instrumentation.Run) which calls [`manager.Run()`](https://pkg.go.dev/go.opentelemetry.io/auto@v0.21.0/internal/pkg/instrumentation#Manager.Run). Probes start separate goroutines with [`probe.Run()`](https://pkg.go.dev/go.opentelemetry.io/auto@v0.21.0/internal/pkg/instrumentation/probe#Probe). 
+After each `Probe` is loaded, the agent calls now [`instrumentation.Run()`](https://pkg.go.dev/go.opentelemetry.io/auto@v0.21.0#Instrumentation.Run) which calls [`manager.Run()`](https://pkg.go.dev/go.opentelemetry.io/auto@v0.21.0/internal/pkg/instrumentation#Manager.Run). Probes start separate goroutines with [`probe.Run()`](https://pkg.go.dev/go.opentelemetry.io/auto@v0.21.0/internal/pkg/instrumentation/probe#Probe).
 
 Each goroutine starts an infinite loop that blocks on a call to the [Cilium `reader.Read()` function](https://pkg.go.dev/github.com/cilium/ebpf/perf#Reader.Read). This reads from the perf ring buffer when there are bytes available.
 
@@ -108,6 +108,7 @@ We currently track instrumented structs inside the Go standard library and selec
 The `offsetgen` tool generates the [offset_results.json](../internal/pkg/inject/offset_results.json) file. This file contains the offsets of the fields in the instrumented structs.
 
 From a high level, the tool generates offsets by...
+
 * First checking the cache for the offset
 * If it is not found in the cache building a token Go application is compiled into an executable
   * All applications are built using a Go docker container.
@@ -117,7 +118,6 @@ From a high level, the tool generates offsets by...
     * The latest version of the Go docker image is used to build the application
     * The go.mod file of the application is updated to ensure the 3rd-party package version what the offset was requested for
 * The DWARF symbols of the built executable are inspected for the offset
-
 
 ### Uretprobes
 

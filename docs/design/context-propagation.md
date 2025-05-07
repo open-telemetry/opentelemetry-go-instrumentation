@@ -12,10 +12,9 @@ The context propagation implementation should support the following:
 
 1. **Reading headers**: If the current transaction is a part of an existing distributed trace, the request / response should contain headers according to the chosen format.
 2. **Storing the current span context**: data about the current span should be stored in an eBPF map to be used by the next process. The suggested data structure is a map from goroutine id to an object similar to [trace.SpanContext](https://pkg.go.dev/go.opentelemetry.io/otel/trace#SpanContext). The current span map should always hold the current running span. Entries can be written by one of the following:
-
-- Header propagator (the use case described in this document) - for remote spans created outside of the current process.
-- Automatic instrumentation - for spans created by the automatic instrumentation agent.
-- Manual instrumentation - for spans created manually by the user.
+   - Header propagator (the use case described in this document) - for remote spans created outside of the current process.
+   - Automatic instrumentation - for spans created by the automatic instrumentation agent.
+   - Manual instrumentation - for spans created manually by the user.
 
 3. **Writing headers**: the implementation should get the current span from the eBPF map and propagate it to the next process by adding new headers to the request / response.
 
@@ -34,6 +33,8 @@ graph LR
 ```
 
 The target application is a simple HTTP server. For every request it receives, it sends a gRPC request to another application. The gRPC response is then sent back to the client. We assume that applications A and B are already instrumented.
+
+### Steps
 
 #### Step 1: Read request headers
 

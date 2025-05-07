@@ -87,7 +87,7 @@ First, port forward to the Jaeger UI:
 kubectl port-forward svc/jaeger 16686:16686 -n emojivoto
 ```
 
-Then, open the Jaeger UI in your browser by navigating to http://localhost:16686/
+Then, open the [Jaeger UI](http://localhost:16686) in your browser.
 
 After selecting the `emojivoto-web` service, you should see the following traces:
 ![Traces](jaeger_traces.png)

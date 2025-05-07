@@ -80,6 +80,7 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 
 ## [v0.21.0] - 2025-02-18
 
+<!-- markdownlint-disable MD028 -->
 > [!WARNING]  
 > The `net/http` instrumentation support for versions `< 1.19` has been dropped.
 
@@ -89,6 +90,7 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 > [!NOTE]  
 > This is the last release version that will support building the auto-instrumentation CLI using Go 1.22.
 > The next release will require development to be done using Go >= 1.23.
+<!-- markdownlint-enable MD028 -->
 
 ### Added
 

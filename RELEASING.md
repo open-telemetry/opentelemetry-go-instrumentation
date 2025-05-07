@@ -18,7 +18,7 @@ in `versions.yaml`.  Commit this change to a new branch.
     ```
     make prerelease MODSET=<module set>
     ```
-    
+
     `<module set>` refers to the [set name in `versions.yaml`](https://github.com/open-telemetry/opentelemetry-go-instrumentation/blob/f18c1b2e0702d8ac31699c5e923590d714d0c1dc/versions.yaml#L16)
 
 2. Verify the changes.
@@ -44,7 +44,7 @@ in `versions.yaml`.  Commit this change to a new branch.
 
    - Move all the `Unreleased` changes into a new section following the title scheme (`[<new tag>] - <date of release>`).
    - Update all the appropriate links at the bottom.
-   
+
 4. Update [`CONTRIBUTING.md`](./CONTRIBUTING.md).
    - Ensure all supported instrumentation libraries have the correct versions listed.
      If the integration tests are still succeeding, the upper bound of the supported instrumentation version should be at least that tested version.
@@ -77,6 +77,7 @@ It is critical you make sure the version you push upstream is correct.
     current `HEAD` of your working directory is not the correct commit.
 
 2. Push tags to the upstream remote (not your fork: `github.com/open-telemetry/opentelemetry-go-instrumentation.git`).
+
     ```
     git push upstream <new tag>
     ```
