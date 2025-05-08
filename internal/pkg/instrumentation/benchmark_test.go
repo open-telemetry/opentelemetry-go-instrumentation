@@ -45,11 +45,11 @@ func BenchmarkFilterUnusedProbes1000(b *testing.B) {
 func benchmarkValidateProbeDependents(b *testing.B, count int) {
 	manager := &Manager{}
 
-	syms := make([]probe.FunctionSymbol, count)
+	syms := make([]*probe.Uprobe, count)
 
 	for i := 0; i < count; i++ {
-		syms[i] = probe.FunctionSymbol{
-			Symbol:    strconv.Itoa(i),
+		syms[i] = &probe.Uprobe{
+			Sym:       strconv.Itoa(i),
 			DependsOn: nil,
 		}
 	}
