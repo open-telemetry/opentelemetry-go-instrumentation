@@ -79,6 +79,7 @@ func TestIntegration(t *testing.T) {
 	assert.GreaterOrEqual(t, count, 2, "at least two server span")
 
 	for i := range 2 {
+		i := i
 		t.Run("Heritage/"+strconv.Itoa(i), func(t *testing.T) {
 			otelScope := "go.opentelemetry.io/auto/internal/test/e2e/grpc"
 			otelScopes := e2e.ScopeSpansByName(traces, otelScope)
