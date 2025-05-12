@@ -193,6 +193,7 @@ func reader(ctx context.Context, brokers []string) <-chan struct{} {
 				continue
 			}
 			done <- struct{}{}
+			return
 		}
 	}()
 	return done
