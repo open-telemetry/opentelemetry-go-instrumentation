@@ -72,6 +72,19 @@ Build the Go Automatic Instrumentation binary by running:
 Alternatively, you can create a Linux Docker container:
 `make docker-build`.
 
+#### Generate compile-commands.json
+
+To help with IDE integration (i.e. `clangd`), a [`compile-commands.json`] file can be generated:
+
+```terminal
+make compile_commands.json
+```
+
+This will use the [bear] utility to generate a [`compile_commands.json`] file.
+
+[bear]: https://github.com/rizsotto/Bear
+[`compile-commands.json`]: https://clang.llvm.org/docs/JSONCompilationDatabase.html
+
 ### Issues
 
 Questions, bug reports, and feature requests can all be submitted as [issues](https://github.com/open-telemetry/opentelemetry-go-instrumentation/issues/new) to this repository.
