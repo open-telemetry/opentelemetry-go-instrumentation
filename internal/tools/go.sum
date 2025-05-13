@@ -584,8 +584,8 @@ go.opentelemetry.io/build-tools/dbotconf v0.23.1 h1:bioPUc0kGBQxGtbeV+nyXuiBSbv5
 go.opentelemetry.io/build-tools/dbotconf v0.23.1/go.mod h1:UI4IG8SOdwN9opGGlSQulvhADQgJHMV3kdA/m918o28=
 go.opentelemetry.io/build-tools/multimod v0.23.1 h1:dYaYFQM47L49SvUVHroMkXqtqiHF9tvjfAkFSHDW6KA=
 go.opentelemetry.io/build-tools/multimod v0.23.1/go.mod h1:S4L3dqkdnFiDNir0efNQRXHXMhYySsznl5DZ9g7SpSc=
-go.opentelemetry.io/collector/pdata v1.31.0 h1:P5WuLr1l2JcIvr6Dw2hl01ltp2ZafPnC4Isv+BLTBqU=
-go.opentelemetry.io/collector/pdata v1.31.0/go.mod h1:m41io9nWpy7aCm/uD1L9QcKiZwOP0ldj83JEA34dmlk=
+go.opentelemetry.io/collector/pdata v1.32.0 h1:hBzlJV1rujr1UdD2CBy2gmaIKtC15ysg/z+x8F3McQA=
+go.opentelemetry.io/collector/pdata v1.32.0/go.mod h1:m41io9nWpy7aCm/uD1L9QcKiZwOP0ldj83JEA34dmlk=
 go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.60.0 h1:sbiXRNDSWJOTobXh5HyQKjq6wUC5tNybqjIqDpAY4CU=
 go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.60.0/go.mod h1:69uWxva0WgAA/4bu2Yy70SLDBwZXuQ6PbBpbsa5iZrQ=
 go.opentelemetry.io/otel v1.35.0 h1:xKWKPxrxB6OtMCbmMY021CqC45J+3Onta9MqjhnusiQ=
