@@ -38,7 +38,7 @@ Supported version ranges:
 
 Supported version ranges:
 
-- `v0.4.1` to `v0.4.47`
+- `v0.4.1` to `v0.4.48`
 
 ### google.golang.org/grpc
 
@@ -46,7 +46,7 @@ Supported version ranges:
 
 Supported version ranges:
 
-- `v1.14.0` to `v1.72.0`
+- `v1.14.0` to `v1.72.1`
 
 ### net/http
 
