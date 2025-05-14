@@ -3,7 +3,7 @@ module go.opentelemetry.io/auto/examples/kafka-go/consumer
 go 1.23.0
 
 require (
-	github.com/segmentio/kafka-go v0.4.47
+	github.com/segmentio/kafka-go v0.4.48
 	go.opentelemetry.io/otel v1.35.0
 	go.opentelemetry.io/otel/trace v1.35.0
 )
