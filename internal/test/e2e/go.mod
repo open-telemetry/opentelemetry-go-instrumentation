@@ -16,7 +16,7 @@ require (
 	go.opentelemetry.io/otel v1.35.1-0.20250514125132-8a1b0e7eab76
 	go.opentelemetry.io/otel/trace v1.35.1-0.20250514125132-8a1b0e7eab76
 	go.uber.org/goleak v1.3.0
-	google.golang.org/grpc v1.72.0
+	google.golang.org/grpc v1.72.1
 	google.golang.org/grpc/examples v0.0.0-20250514161145-5c0d55244474
 )
 
