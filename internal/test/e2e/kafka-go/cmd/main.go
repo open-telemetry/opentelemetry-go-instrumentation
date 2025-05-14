@@ -17,7 +17,9 @@ import (
 	"os"
 	"os/signal"
 	"regexp"
+	"slices"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/docker/docker/api/types/container"
@@ -34,7 +36,12 @@ const (
 	port    = "9092"
 )
 
-var topics = []string{"topic1", "topic2"}
+const (
+	topic1 = "topic1"
+	topic2 = "topic2"
+)
+
+var topics = []string{topic1, topic2}
 
 //go:embed dependencies.Dockerfile
 var dockerfile embed.FS
@@ -81,53 +88,23 @@ func main() {
 }
 
 func run(ctx context.Context) error {
-	cli, err := client.NewClientWithOpts(
-		client.FromEnv,
-		client.WithAPIVersionNegotiation(),
-	)
+	broker, clean, err := setup(ctx)
+	if clean != nil {
+		defer func() {
+			if err := clean(); err != nil {
+				slog.Error("Failed to clean up", "error", err)
+			}
+		}()
+	}
 	if err != nil {
-		return fmt.Errorf("failed to create Docker client: %w", err)
+		return fmt.Errorf("failed to setup: %w", err)
 	}
 
-	const containerName = "kafka"
-
-	if err := pullKafkaImage(ctx, cli); err != nil {
-		return fmt.Errorf("failed to pull image: %w", err)
-	}
-
-	broker, err := runKafkaContainer(ctx, cli, containerName)
-	if err != nil {
-		return fmt.Errorf("failed to run container: %w", err)
-	}
-
-	defer func() {
-		if err := cleanupContainer(cli, containerName); err != nil {
-			slog.Error("Failed to clean container", "error", err)
-		}
-	}()
-
-	if err := streamContainerLogs(ctx, cli, containerName); err != nil {
-		return fmt.Errorf("failed to stream logs: %w", err)
-	}
-
-	if err = initKafka(ctx, broker, topics); err != nil {
-		return fmt.Errorf("failed to initialize Kafka: %w", err)
-	}
-	slog.Info("Successfully setup kafka", "address", broker)
-
+	// Start readers before writing.
 	readChan := reader(ctx, []string{broker})
-	if err := produceMessages(ctx, broker); err != nil {
-		return fmt.Errorf("failed to write messages: %w", err)
-	}
-	// Wait for the read of the messages we just wrote.
-	<-readChan
 
-	return nil
-}
-
-func produceMessages(ctx context.Context, address string) error {
 	kafkaWriter := &kafka.Writer{
-		Addr:            kafka.TCP(address),
+		Addr:            kafka.TCP(broker),
 		Balancer:        &kafka.LeastBytes{},
 		Async:           true,
 		RequiredAcks:    1,
@@ -136,66 +113,143 @@ func produceMessages(ctx context.Context, address string) error {
 	}
 	defer kafkaWriter.Close()
 
-	return kafkaWriter.WriteMessages(
-		ctx,
-		kafka.Message{
+	msgs := []kafka.Message{
+		{
 			Key:   []byte("key1"),
 			Value: []byte("value1"),
-			Topic: "topic1",
+			Topic: topic1,
 			Headers: []kafka.Header{
 				{Key: "header1", Value: []byte("value1")},
 			},
 		},
-		kafka.Message{
+		{
 			Key:   []byte("key2"),
 			Value: []byte("value2"),
-			Topic: "topic2",
+			Topic: topic2,
 		},
-	)
+	}
+	if err = kafkaWriter.WriteMessages(ctx, msgs...); err != nil {
+		return fmt.Errorf("failed to write messages: %w", err)
+	}
+
+	// Wait for the read of the messages we just wrote.
+	for len(msgs) > 0 {
+		var msg kafka.Message
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case msg = <-readChan:
+		}
+		slog.Debug(
+			"Read message",
+			"topic", msg.Topic,
+			"key", string(msg.Key),
+			"value", string(msg.Value),
+			"headers", msg.Headers,
+		)
+		for i, m := range msgs {
+			if m.Topic == msg.Topic && string(m.Key) == string(msg.Key) &&
+				string(m.Value) == string(msg.Value) {
+				msgs = slices.Delete(msgs, i, i+1)
+				break
+			}
+		}
+	}
+
+	return nil
 }
 
-func reader(ctx context.Context, brokers []string) <-chan struct{} {
-	done := make(chan struct{}, 1)
-	go func() {
-		defer close(done)
-
-		cfg := kafka.ReaderConfig{
+func reader(ctx context.Context, brokers []string) <-chan kafka.Message {
+	out := make(chan kafka.Message)
+	var wg sync.WaitGroup
+	for _, topic := range topics {
+		o := read(ctx, kafka.ReaderConfig{
 			Brokers:          brokers,
 			GroupID:          "some group id",
-			Topic:            "topic1",
+			Topic:            topic,
 			ReadBatchTimeout: 1 * time.Millisecond,
-		}
+		})
 
-		if err := cfg.Validate(); err != nil {
-			panic(err)
-		}
+		wg.Add(1)
+		go func(c <-chan kafka.Message) {
+			defer wg.Done()
+			for val := range c {
+				out <- val
+			}
+		}(o)
+	}
+
+	// Close output channel once all input channels are drained
+	go func() {
+		wg.Wait()
+		close(out)
+	}()
+
+	return out
+}
+
+func read(ctx context.Context, cfg kafka.ReaderConfig) <-chan kafka.Message {
+	out := make(chan kafka.Message)
+	go func() {
+		defer close(out)
+
 		reader := kafka.NewReader(cfg)
 		defer reader.Close()
 
-		slog.Info("Consuming ...")
-
-		const maxRetries = 10
-		for i := range maxRetries {
-			select {
-			case <-ctx.Done():
-				return
-			default:
-			}
-
+		for {
 			slog.Info(
-				"Attempting read...",
-				"attempt", i+1,
-				"maxAttempts", maxRetries,
+				"Consuming ...",
+				"topic", cfg.Topic,
+				"brokers", cfg.Brokers,
+				"group", cfg.GroupID,
 			)
-			_, err := reader.ReadMessage(ctx)
+
+			msg, err := reader.ReadMessage(ctx)
 			if err != nil {
-				slog.Error("Failed to read message", "error", err)
+				if errors.Is(err, context.Canceled) {
+					return
+				}
+				slog.Error("Failed to read message (skipping)", "error", err)
 				continue
 			}
-			done <- struct{}{}
+			out <- msg
 		}
 	}()
-	return done
+	return out
+}
+
+func setup(ctx context.Context) (string, func() error, error) {
+	cli, err := client.NewClientWithOpts(
+		client.FromEnv,
+		client.WithAPIVersionNegotiation(),
+	)
+	if err != nil {
+		return "", nil, fmt.Errorf("failed to create Docker client: %w", err)
+	}
+
+	const containerName = "kafka"
+
+	if err := pullKafkaImage(ctx, cli); err != nil {
+		return "", nil, fmt.Errorf("failed to pull image: %w", err)
+	}
+
+	broker, err := runKafkaContainer(ctx, cli, containerName)
+	if err != nil {
+		return "", nil, fmt.Errorf("failed to run container: %w", err)
+	}
+
+	cleanup := func() error { return cleanupContainer(cli, containerName) }
+
+	if err := streamContainerLogs(ctx, cli, containerName); err != nil {
+		return "", cleanup, fmt.Errorf("failed to stream logs: %w", err)
+	}
+
+	if err = initKafka(ctx, broker, topics); err != nil {
+		return "", cleanup, fmt.Errorf("failed to initialize Kafka: %w", err)
+	}
+	slog.Info("Successfully setup kafka", "address", broker)
+
+	return broker, cleanup, nil
 }
 
 func pullKafkaImage(ctx context.Context, cli *client.Client) (err error) {
