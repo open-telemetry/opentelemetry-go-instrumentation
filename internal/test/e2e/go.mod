@@ -8,15 +8,15 @@ require (
 	github.com/docker/go-connections v0.5.0
 	github.com/gin-gonic/gin v1.10.0
 	github.com/mattn/go-sqlite3 v1.14.28
-	github.com/segmentio/kafka-go v0.4.47
+	github.com/segmentio/kafka-go v0.4.48
 	github.com/stretchr/testify v1.10.0
 	go.opentelemetry.io/auto v0.21.0
 	go.opentelemetry.io/auto/sdk v1.1.0
 	go.opentelemetry.io/collector/pdata v1.32.0
-	go.opentelemetry.io/otel v1.35.1-0.20250513191359-bf7ffa3900bd
-	go.opentelemetry.io/otel/trace v1.35.1-0.20250513191359-bf7ffa3900bd
+	go.opentelemetry.io/otel v1.35.1-0.20250514125132-8a1b0e7eab76
+	go.opentelemetry.io/otel/trace v1.35.1-0.20250514125132-8a1b0e7eab76
 	go.uber.org/goleak v1.3.0
-	google.golang.org/grpc v1.72.0
+	google.golang.org/grpc v1.72.1
 	google.golang.org/grpc/examples v0.0.0-20250514161145-5c0d55244474
 )
 
