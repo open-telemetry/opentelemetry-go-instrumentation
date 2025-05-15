@@ -54,4 +54,4 @@ Supported version ranges:
 
 Supported version ranges:
 
-- `go1.19` to `go1.24.2`
+- `go1.19` to `go1.24.3`
