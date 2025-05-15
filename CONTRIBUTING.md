@@ -1,6 +1,6 @@
 # Contributing to opentelemetry-go-instrumentation
 
-The Go Instrumnentation special interest group (SIG) meets regularly. See the
+The Go Instrumentation special interest group (SIG) meets regularly. See the
 OpenTelemetry
 [community](https://github.com/open-telemetry/community)
 repo for information on this and other language SIGs.
@@ -66,7 +66,7 @@ In addition, use the latest versions of the following components:
 - `llvm`
 - `make`
 
-Build the Go Automatic Instrumnentation binary by running:
+Build the Go Automatic Instrumentation binary by running:
 `make build`
 
 Alternatively, you can create a Linux Docker container:
@@ -96,12 +96,12 @@ Questions, bug reports, and feature requests can all be submitted as [issues](ht
 > new [instrumentation probe API] is being designed. To avoid excessive churn
 > and development burden, we will not be accepting new instrumentation probes
 > until that API is completed.
-> 
+>
 > Please **do** [open an issue] to track your request for new instrumentation.
 > We would like to know what we are missing and how you plan to use it.
 
 [open an issue]: https://github.com/open-telemetry/opentelemetry-go-instrumentation/issues/new?template=new_instrumentation.yaml
-[instrumentation API]: https://github.com/open-telemetry/opentelemetry-go-instrumentation/issues/1105 
+[instrumentation probe API]: https://github.com/open-telemetry/opentelemetry-go-instrumentation/issues/1105
 
 ### How to Send Pull Requests
 
@@ -170,7 +170,7 @@ request ID to the entry you added to `CHANGELOG.md`.
 
 A PR is considered **ready to merge** when:
 
-* It has received at least one qualified approval[^1].
+* It has received at least one qualified approval[^2].
 
   For complex or sensitive PRs maintainers may require more than one qualified
   approval.
@@ -203,7 +203,7 @@ A PR is considered **ready to merge** when:
 
 Any [Maintainer] can merge the PR once the above criteria have been met.
 
-[^1]: A qualified approval is a GitHub Pull Request review with "Approve"
+[^2]: A qualified approval is a GitHub Pull Request review with "Approve"
   status from an OpenTelemetry Go [Approver] or [Maintainer].
 
 ## Appovers and Maintainers
