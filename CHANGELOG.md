@@ -41,6 +41,7 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 - Cache offsets for `github.com/segmentio/kafka-go` `0.4.48`. ([#2319](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/2319))
 - Cache offsets for `google.golang.org/grpc` `1.71.2`. ([#2319](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/2319))
 - Cache offsets for `google.golang.org/grpc` `1.72.1`. ([#2319](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/2319))
+- Cache offsets for `google.golang.org/grpc` `1.74.0-dev`. ([#2337](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/2337))
 
 ### Changed
 
