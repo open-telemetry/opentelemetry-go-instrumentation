@@ -6,7 +6,7 @@ require (
 	github.com/cilium/ebpf v0.18.0
 	github.com/docker/docker v28.1.1+incompatible
 	github.com/docker/go-connections v0.5.0
-	github.com/gin-gonic/gin v1.10.0
+	github.com/gin-gonic/gin v1.10.1
 	github.com/mattn/go-sqlite3 v1.14.28
 	github.com/segmentio/kafka-go v0.4.48
 	github.com/stretchr/testify v1.10.0
