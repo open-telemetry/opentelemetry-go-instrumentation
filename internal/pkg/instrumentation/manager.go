@@ -22,6 +22,7 @@ import (
 	"go.opentelemetry.io/auto/internal/pkg/inject"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/bpffs"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/probe"
+	"go.opentelemetry.io/auto/internal/pkg/instrumentation/probe/sampling"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/utils"
 	"go.opentelemetry.io/auto/internal/pkg/process"
 	"go.opentelemetry.io/auto/pipeline"
@@ -229,11 +230,21 @@ func (m *Manager) applyConfig(c Config) error {
 
 		if !currentlyEnabled && newEnabled {
 			m.logger.Info("Enabling probe", "id", id)
-			err = errors.Join(err, m.loadProbe(p, id, c))
-			if err == nil {
-				m.runProbe(p.probe)
+			collection, loadErr := m.loadProbeCollection(p.probe, c)
+			if loadErr != nil {
+				err = errors.Join(err, loadErr)
+				continue
 			}
-			continue
+			p.collection = collection
+
+			closers, upErr := m.loadAndConfigureUprobesFromProbe(p, c.SamplingConfig)
+			if upErr != nil {
+				err = errors.Join(err, upErr)
+				continue
+			}
+			p.closers = append(p.closers, closers...)
+
+			m.runProbe(p.probe)
 		}
 	}
 
@@ -393,17 +404,31 @@ func (m *Manager) loadProbes() error {
 	// Load probes
 	for name, i := range m.probes {
 		if isProbeEnabled(name, m.currentConfig) {
-			err := m.loadProbe(i, name, m.currentConfig)
+			collection, err := m.loadProbeCollection(i.probe, m.currentConfig)
 			if err != nil {
 				m.logger.Error(
-					"error while loading probes, cleaning up",
+					"error while loading probe collection, cleaning up",
 					"error",
 					err,
-					"name",
+					"probe",
 					name,
 				)
 				return errors.Join(err, m.cleanup())
 			}
+			i.collection = collection
+
+			closers, err := m.loadAndConfigureUprobesFromProbe(i, m.currentConfig.SamplingConfig)
+			if err != nil {
+				m.logger.Error(
+					"error while loading uprobes from probe, cleaning up",
+					"error",
+					err,
+					"probe",
+					name,
+				)
+				return errors.Join(err, m.cleanup())
+			}
+			i.closers = append(i.closers, closers...)
 		}
 	}
 
@@ -411,37 +436,25 @@ func (m *Manager) loadProbes() error {
 	return nil
 }
 
-func (m *Manager) loadProbe(i *probeReference, name probe.ID, cfg Config) error {
-	m.logger.Info("loading probe", "name", name)
+func (m *Manager) loadProbeCollection(p probe.Probe, cfg Config) (*ebpf.Collection, error) {
+	m.logger.Info("loading probe", "name", p.GetID())
 
-	spec, err := i.probe.Spec()
+	spec, err := p.Spec()
 	if err != nil {
-		return errors.Join(err, m.cleanup())
+		return nil, err
 	}
 
-	err = m.injectProbeConsts(i.probe, spec)
+	err = m.injectProbeConsts(p, spec)
 	if err != nil {
-		return errors.Join(err, m.cleanup())
+		return nil, err
 	}
 
-	c, err := initializeEBPFCollection(spec, m.proc)
+	collection, err := initializeEBPFCollection(spec, m.proc)
 	if err != nil {
-		return errors.Join(err, m.cleanup())
-	}
-	i.collection = c
-
-	err = m.loadUprobesFromProbe(i)
-	if err != nil {
-		return nil
+		return nil, err
 	}
 
-	reader, err := i.probe.InitStartupConfig(c, cfg.SamplingConfig)
-	if err != nil {
-		return errors.Join(err, m.cleanup())
-	}
-	i.closers = append(i.closers, reader)
-
-	return nil
+	return collection, nil
 }
 
 func (m *Manager) injectProbeConsts(i probe.Probe, spec *ebpf.CollectionSpec) error {
@@ -465,7 +478,8 @@ func (m *Manager) injectProbeConsts(i probe.Probe, spec *ebpf.CollectionSpec) er
 	return inject.Constants(spec, opts...)
 }
 
-func (m *Manager) loadUprobesFromProbe(i *probeReference) error {
+func (m *Manager) loadAndConfigureUprobesFromProbe(i *probeReference, sampler *sampling.Config) ([]io.Closer, error) {
+	var closers []io.Closer
 	for _, up := range i.probe.GetUprobes() {
 		var skip bool
 		for _, pc := range up.PackageConstraints {
@@ -481,7 +495,7 @@ func (m *Manager) loadUprobesFromProbe(i *probeReference) error {
 				logFn = m.logger.Warn
 			default:
 				// Unknown and FailureModeError.
-				return fmt.Errorf(
+				return nil, fmt.Errorf(
 					"uprobe %s package constraint (%s) not met, version %v",
 					up.Sym,
 					pc.Constraints.String(),
@@ -514,15 +528,22 @@ func (m *Manager) loadUprobesFromProbe(i *probeReference) error {
 				logFn = m.logger.Warn
 			default:
 				// Unknown and FailureModeError.
-				return err
+				return nil, err
 			}
 			logFn("failed to load uprobe", "probe", i.probe.GetID(), "symbol", up.Sym, "error", err)
 			continue
 		}
 
-		i.closers = append(i.closers, up)
+		closers = append(closers, up)
 	}
-	return nil
+
+	reader, err := i.probe.InitStartupConfig(i.collection, m.currentConfig.SamplingConfig)
+	if err != nil {
+		return nil, err
+	}
+	closers = append(closers, reader)
+
+	return closers, nil
 }
 
 func (m *Manager) loadUprobe(u *probe.Uprobe, c *ebpf.Collection) error {
