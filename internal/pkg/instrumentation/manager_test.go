@@ -73,13 +73,13 @@ func TestDependencyChecks(t *testing.T) {
 	m := fakeManager()
 
 	t.Run("Dependent probes match", func(t *testing.T) {
-		syms := []*probe.Uprobe{
+		syms := []probe.FunctionSymbol{
 			{
-				Sym:       "A",
+				Symbol:       "A",
 				DependsOn: nil,
 			},
 			{
-				Sym:       "B",
+				Symbol:       "B",
 				DependsOn: []string{"A"},
 			},
 		}
@@ -88,13 +88,13 @@ func TestDependencyChecks(t *testing.T) {
 	})
 
 	t.Run("Second dependent missing", func(t *testing.T) {
-		syms := []*probe.Uprobe{
+		syms := []probe.FunctionSymbol{
 			{
-				Sym:       "A",
+				Symbol:       "A",
 				DependsOn: nil,
 			},
 			{
-				Sym:       "B",
+				Symbol:       "B",
 				DependsOn: []string{"A", "C"},
 			},
 		}
@@ -103,17 +103,17 @@ func TestDependencyChecks(t *testing.T) {
 	})
 
 	t.Run("Second dependent present", func(t *testing.T) {
-		syms := []*probe.Uprobe{
+		syms := []probe.FunctionSymbol{
 			{
-				Sym:       "A",
+				Symbol:       "A",
 				DependsOn: nil,
 			},
 			{
-				Sym:       "B",
+				Symbol:       "B",
 				DependsOn: []string{"A", "C"},
 			},
 			{
-				Sym:       "C",
+				Symbol:       "C",
 				DependsOn: []string{"A"},
 			},
 		}
@@ -122,13 +122,13 @@ func TestDependencyChecks(t *testing.T) {
 	})
 
 	t.Run("Dependent wrong", func(t *testing.T) {
-		syms := []*probe.Uprobe{
+		syms := []probe.FunctionSymbol{
 			{
-				Sym:       "A",
+				Symbol:       "A",
 				DependsOn: nil,
 			},
 			{
-				Sym:       "B",
+				Symbol:       "B",
 				DependsOn: []string{"A1"},
 			},
 		}
@@ -137,13 +137,13 @@ func TestDependencyChecks(t *testing.T) {
 	})
 
 	t.Run("Two probes without dependents", func(t *testing.T) {
-		syms := []*probe.Uprobe{
+		syms := []probe.FunctionSymbol{
 			{
-				Sym:       "A",
+				Symbol:       "A",
 				DependsOn: nil,
 			},
 			{
-				Sym:       "B",
+				Symbol:       "B",
 				DependsOn: []string{},
 			},
 		}
@@ -182,7 +182,7 @@ func fakeManager(fnNames ...string) *Manager {
 		},
 	}
 	for _, p := range probes {
-		m.probes[p.GetID()] = &probeReference{probe: p}
+		m.probes[p.Manifest().ID] = &probeReference{probe: p}
 	}
 	m.filterUnusedProbes()
 
@@ -237,7 +237,7 @@ func TestRunStoppingByContext(t *testing.T) {
 	m := &Manager{
 		handler: newNoopHandler(),
 		logger:  slog.Default(),
-		probes:  map[probe.ID]*probeReference{p.GetID(): {probe: p}},
+		probes:  map[probe.ID]*probeReference{p.Manifest().ID: {probe: p}},
 		cp:      NewNoopConfigProvider(nil),
 		proc:    new(process.Info),
 	}
@@ -343,20 +343,12 @@ func (p slowProbe) Spec() (*ebpf.CollectionSpec, error) {
 	}, nil
 }
 
-func (p slowProbe) GetConsts() probe.ConstList {
-	return []probe.Const{}
-}
-
-func (p slowProbe) GetUprobes() []*probe.Uprobe {
-	return []*probe.Uprobe{}
-}
-
 func (p slowProbe) InitStartupConfig(*ebpf.Collection, *sampling.Config) (io.Closer, error) {
 	return p, nil
 }
 
-func (p slowProbe) GetID() probe.ID {
-	return probe.ID{SpanKind: trace.SpanKindClient, InstrumentedPkg: "slowProbe"}
+func (p slowProbe) Manifest() probe.Manifest {
+	return probe.Manifest{ID: probe.ID{SpanKind: trace.SpanKindClient, InstrumentedPkg: "slowProbe"}}
 }
 
 type noopProbe struct {
@@ -372,16 +364,8 @@ func (p *noopProbe) Spec() (*ebpf.CollectionSpec, error) {
 	}, nil
 }
 
-func (p *noopProbe) GetConsts() probe.ConstList {
-	return nil
-}
-
-func (p *noopProbe) GetUprobes() []*probe.Uprobe {
-	return nil
-}
-
-func (p *noopProbe) GetID() probe.ID {
-	return probe.ID{SpanKind: trace.SpanKindClient, InstrumentedPkg: "noopProbe"}
+func (p *noopProbe) Manifest() probe.Manifest {
+	return probe.Manifest{ID: probe.ID{SpanKind: trace.SpanKindClient, InstrumentedPkg: "noopProbe"}}
 }
 
 func (p *noopProbe) InitStartupConfig(*ebpf.Collection, *sampling.Config) (io.Closer, error) {
@@ -571,16 +555,8 @@ func (p *hangingProbe) Spec() (*ebpf.CollectionSpec, error) {
 	}, nil
 }
 
-func (p *hangingProbe) GetID() probe.ID {
-	return probe.ID{SpanKind: trace.SpanKindClient, InstrumentedPkg: "hangingProbe"}
-}
-
-func (p *hangingProbe) GetConsts() probe.ConstList {
-	return nil
-}
-
-func (p *hangingProbe) GetUprobes() []*probe.Uprobe {
-	return nil
+func (p *hangingProbe) Manifest() probe.Manifest {
+	return probe.Manifest{ID: probe.ID{SpanKind: trace.SpanKindClient, InstrumentedPkg: "hangingProbe"}}
 }
 
 func (p *hangingProbe) InitStartupConfig(*ebpf.Collection, *sampling.Config) (io.Closer, error) {

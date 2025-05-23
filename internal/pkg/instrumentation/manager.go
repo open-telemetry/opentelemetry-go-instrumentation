@@ -90,8 +90,8 @@ func NewManager(
 			return nil, err
 		}
 
-		for _, u := range p.GetUprobes() {
-			funcs[u.Sym] = nil
+		for _, u := range p.Manifest().Symbols {
+			funcs[u.Symbol] = nil
 		}
 	}
 
@@ -108,21 +108,21 @@ func NewManager(
 	return m, nil
 }
 
-func (m *Manager) validateProbeDependents(id probe.ID, uprobes []*probe.Uprobe) error {
+func (m *Manager) validateProbeDependents(id probe.ID, symbols []probe.FunctionSymbol) error {
 	// Validate that dependent probes point to real standalone probes.
-	funcsMap := make(map[string]struct{}, len(uprobes))
-	for _, u := range uprobes {
-		funcsMap[u.Sym] = struct{}{}
+	funcsMap := make(map[string]struct{}, len(symbols))
+	for _, s := range symbols {
+		funcsMap[s.Symbol] = struct{}{}
 	}
 
-	for _, u := range uprobes {
-		for _, d := range u.DependsOn {
+	for _, s := range symbols {
+		for _, d := range s.DependsOn {
 			if _, exists := funcsMap[d]; !exists {
 				return fmt.Errorf(
 					"library %s has declared a dependent function %s for probe %s which does not exist, aborting",
 					id,
 					d,
-					u.Sym,
+					s.Symbol,
 				)
 			}
 		}
@@ -132,12 +132,12 @@ func (m *Manager) validateProbeDependents(id probe.ID, uprobes []*probe.Uprobe) 
 }
 
 func (m *Manager) registerProbe(p probe.Probe) error {
-	id := p.GetID()
+	id := p.Manifest().ID
 	if _, exists := m.probes[id]; exists {
 		return fmt.Errorf("library %s registered twice, aborting", id)
 	}
 
-	if err := m.validateProbeDependents(id, p.GetUprobes()); err != nil {
+	if err := m.validateProbeDependents(id, p.Manifest().Symbols); err != nil {
 		return err
 	}
 
@@ -157,9 +157,9 @@ func (m *Manager) filterUnusedProbes() {
 
 	for name, inst := range m.probes {
 		funcsFound := false
-		for _, u := range inst.probe.GetUprobes() {
-			if len(u.DependsOn) == 0 {
-				if _, exists := existingFuncMap[u.Sym]; exists {
+		for _, s := range inst.probe.Manifest().Symbols {
+			if len(s.DependsOn) == 0 {
+				if _, exists := existingFuncMap[s.Symbol]; exists {
 					funcsFound = true
 					break
 				}
@@ -437,7 +437,7 @@ func (m *Manager) loadProbes() error {
 }
 
 func (m *Manager) loadProbeCollection(p probe.Probe, cfg Config) (*ebpf.Collection, error) {
-	m.logger.Info("loading probe", "name", p.GetID())
+	m.logger.Info("loading probe", "name", p.Manifest().ID)
 
 	spec, err := p.Spec()
 	if err != nil {
@@ -460,7 +460,7 @@ func (m *Manager) loadProbeCollection(p probe.Probe, cfg Config) (*ebpf.Collecti
 func (m *Manager) injectProbeConsts(i probe.Probe, spec *ebpf.CollectionSpec) error {
 	var err error
 	var opts []inject.Option
-	for _, cnst := range i.GetConsts() {
+	for _, cnst := range i.Manifest().Consts {
 		if l, ok := cnst.(probe.SetLogger); ok {
 			cnst = l.SetLogger(m.logger)
 		}
@@ -480,7 +480,7 @@ func (m *Manager) injectProbeConsts(i probe.Probe, spec *ebpf.CollectionSpec) er
 
 func (m *Manager) loadAndConfigureUprobesFromProbe(i *probeReference, sampler *sampling.Config) ([]io.Closer, error) {
 	var closers []io.Closer
-	for _, up := range i.probe.GetUprobes() {
+	for _, up := range i.probe.Manifest().Uprobes {
 		var skip bool
 		for _, pc := range up.PackageConstraints {
 			if pc.Constraints.Check(m.proc.Modules[pc.Package]) {
@@ -504,7 +504,7 @@ func (m *Manager) loadAndConfigureUprobesFromProbe(i *probeReference, sampler *s
 
 			logFn(
 				"package constraint not meet, skipping uprobe",
-				"probe", i.probe.GetID(),
+				"probe", i.probe.Manifest().ID,
 				"symbol", up.Sym,
 				"package", pc.Package,
 				"constraint", pc.Constraints.String(),
@@ -530,7 +530,7 @@ func (m *Manager) loadAndConfigureUprobesFromProbe(i *probeReference, sampler *s
 				// Unknown and FailureModeError.
 				return nil, err
 			}
-			logFn("failed to load uprobe", "probe", i.probe.GetID(), "symbol", up.Sym, "error", err)
+			logFn("failed to load uprobe", "probe", i.probe.Manifest().ID, "symbol", up.Sym, "error", err)
 			continue
 		}
 
@@ -610,7 +610,7 @@ func (m *Manager) closeProbe(p *probeReference) error {
 		err = errors.Join(err, c.Close())
 	}
 	if err == nil {
-		m.logger.Debug("Closed", "Probe", p.probe.GetID())
+		m.logger.Debug("Closed", "Probe", p.probe.Manifest().ID)
 	}
 	return err
 }

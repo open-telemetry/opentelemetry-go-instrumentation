@@ -68,7 +68,8 @@ func TestLoadProbes(t *testing.T) {
 	}
 
 	for _, p := range probes {
-		fields := p.GetConsts().StructFields()
+		manifest := p.Manifest()
+		fields := manifest.StructFields
 		for _, f := range fields {
 			_, ver := inject.GetLatestOffset(f)
 			if ver != nil {
@@ -76,7 +77,7 @@ func TestLoadProbes(t *testing.T) {
 				info.Modules[f.ModPath] = ver
 			}
 		}
-		t.Run(p.GetID().String(), func(t *testing.T) {
+		t.Run(p.Manifest().ID.String(), func(t *testing.T) {
 			require.Implements(t, (*TestProbe)(nil), p)
 			ProbesLoad(t, info, p.(TestProbe))
 		})
@@ -147,6 +148,8 @@ func setupTestModule(t *testing.T) int {
 }
 
 type TestProbe interface {
+	Manifest() probe.Manifest
+
 	GetID() probe.ID
 
 	// InitStartupConfig sets up initialization config options for the Probe,
@@ -158,11 +161,6 @@ type TestProbe interface {
 	Run(*pipeline.Handler)
 
 	Spec() (*ebpf.CollectionSpec, error)
-
-	GetConsts() probe.ConstList
-
-	// GetUprobes returns a list of *Uprobes for the Probe.
-	GetUprobes() []*probe.Uprobe
 }
 
 func ProbesLoad(t *testing.T, info *process.Info, p TestProbe) {

@@ -21,7 +21,6 @@ import (
 
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/ptrace"
-	"go.opentelemetry.io/otel/trace"
 
 	"go.opentelemetry.io/auto/internal/pkg/inject"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/probe/sampling"
@@ -30,23 +29,12 @@ import (
 	"go.opentelemetry.io/auto/pipeline"
 )
 
-// ID is a unique identifier for a probe.
-type ID struct {
-	// SpanKind is the span kind handled by the probe.
-	SpanKind trace.SpanKind
-	// InstrumentedPkg is the package path of the instrumented code.
-	InstrumentedPkg string
-}
-
-func (id ID) String() string {
-	return fmt.Sprintf("%s/%s", id.InstrumentedPkg, id.SpanKind)
-}
-
 // Probe is the instrument used by instrumentation for a Go package to measure
 // and report on the state of that packages operation.
 type Probe interface {
-	// GetID returns the ID for the Probe.
-	GetID() ID
+	// Manifest returns the Probe's instrumentation Manifest. This includes all
+	// the information about the package the Probe instruments.
+	Manifest() Manifest
 
 	// InitStartupConfig sets up initialization config options for the Probe,
 	// such as its sampling config, sets up its BPFObj as a closer, and initializes
@@ -58,12 +46,6 @@ type Probe interface {
 
 	// Spec returns the *ebpf.CollectionSpec for the Probe.
 	Spec() (*ebpf.CollectionSpec, error)
-
-	// GetUprobes returns a list of *Uprobes for the Probe.
-	GetUprobes() []*Uprobe
-
-	// GetConsts returns a list of Consts for the Probe.
-	GetConsts() ConstList
 }
 
 // Base is a base implementation of [Probe].
@@ -79,7 +61,7 @@ type Base[BPFObj any, BPFEvent any] struct {
 
 	// Consts are the constants that need to be injected into the eBPF program
 	// that is run by this Probe.
-	Consts ConstList
+	Consts []Const
 	// Uprobes is a the collection of eBPF programs that need to be attached to
 	// the target process.
 	Uprobes []*Uprobe
@@ -106,12 +88,10 @@ const (
 	DefaultBufferMapName = "events"
 )
 
-type ConstList []Const
-
-// StructFields returns only the Consts from a ConstList that are a Struct Field.
-func (c ConstList) StructFields() []structfield.ID {
+// Manifest returns the Probe's instrumentation Manifest.
+func (i *Base[BPFObj, BPFEvent]) Manifest() Manifest {
 	var structFieldIDs []structfield.ID
-	for _, cnst := range c {
+	for _, cnst := range i.Consts {
 		if sfc, ok := cnst.(StructFieldConst); ok {
 			structFieldIDs = append(structFieldIDs, sfc.ID)
 		}
@@ -119,7 +99,13 @@ func (c ConstList) StructFields() []structfield.ID {
 			structFieldIDs = append(structFieldIDs, sfc.StructField.ID)
 		}
 	}
-	return structFieldIDs
+
+	symbols := make([]FunctionSymbol, 0, len(i.Uprobes))
+	for _, up := range i.Uprobes {
+		symbols = append(symbols, FunctionSymbol{Symbol: up.Sym, DependsOn: up.DependsOn})
+	}
+
+	return NewManifest(i.ID, structFieldIDs, symbols, i.Consts, i.Uprobes)
 }
 
 func (i *Base[BPFObj, BPFEvent]) Spec() (*ebpf.CollectionSpec, error) {
@@ -150,18 +136,6 @@ func (i *Base[BPFObj, BPFEvent]) InitStartupConfig(
 		return nil, err
 	}
 	return i.reader, nil
-}
-
-func (i *Base[BPFObj, BPFEvent]) GetUprobes() []*Uprobe {
-	return i.Uprobes
-}
-
-func (i *Base[BPFObj, BPFEvent]) GetConsts() ConstList {
-	return i.Consts
-}
-
-func (i *Base[BPFObj, BPFEvent]) GetID() ID {
-	return i.ID
 }
 
 // read reads a new BPFEvent from the perf Reader.
