@@ -8,6 +8,8 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 
 ## [Unreleased]
 
+## [v0.22.0] - 2025-05-23
+
 ### Added
 
 - Cache offsets for `google.golang.org/grpc` `1.72.0-dev`. ([#1849](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1849))
@@ -24,7 +26,7 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 - Cache offsets for `google.golang.org/grpc` `1.71.0`. ([#1940](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1940))
 - Cache offsets for Go `1.23.7`. ([#1940](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1940))
 - Cache offsets for Go `1.24.1`. ([#1940](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1940))
-- Cache offsets for `go.opentelemetry.io/otel@v1.35.0`. ([#1948](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1948))
+- Cache offsets for `go.opentelemetry.io/otel` `v1.35.0`. ([#1948](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1948))
 - Cache offsets for `golang.org/x/net` `0.37.0`. ([#1948](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1948))
 - Cache offsets for `golang.org/x/net` `0.38.0`. ([#2063](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/2063))
 - Cache offsets for `google.golang.org/grpc` `1.71.1`. ([#2078](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/2078))
@@ -42,7 +44,7 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 - Cache offsets for `google.golang.org/grpc` `1.71.2`. ([#2319](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/2319))
 - Cache offsets for `google.golang.org/grpc` `1.72.1`. ([#2319](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/2319))
 - Cache offsets for `google.golang.org/grpc` `1.74.0-dev`. ([#2337](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/2337))
-- Cache offsets for `go.opentelemetry.io/otel@v1.36.0`. ([#2352](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/2352))
+- Cache offsets for `go.opentelemetry.io/otel` `v1.36.0`. ([#2352](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/2352))
 
 ### Changed
 
@@ -59,13 +61,13 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 
 - Build support for Go 1.22 has been removed.
   Use Go >= 1.23 to develop and build the project. ([#1841](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1841))
-- The `WithGlobal` function is removed from `go.opentelemtry.io/auto`
+- The `WithGlobal` function is removed from `go.opentelemtry.io/auto`.
   This option is on by default. ([#1859](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1859))
-- The `WithServiceName` function is removed from `go.opentelemtry.io/auto`
+- The `WithServiceName` function is removed from `go.opentelemtry.io/auto`.
   Use `WithServiceName` in `go.opentelemtry.io/auto/pipeline/otelsdk` along with `WithHandler` to replace functionality. ([#1859](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1859))
-- The `WithTraceExporter` function is removed from `go.opentelemtry.io/auto`
+- The `WithTraceExporter` function is removed from `go.opentelemtry.io/auto`.
   Use `WithTraceExporter` in `go.opentelemtry.io/auto/pipeline/otelsdk` along with `WithHandler` to replace functionality. ([#1859](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1859))
-- The `WithResourceAttributes` function is removed from `go.opentelemtry.io/auto`
+- The `WithResourceAttributes` function is removed from `go.opentelemtry.io/auto`.
   Use `WithResourceAttributes` in `go.opentelemtry.io/auto/pipeline/otelsdk` along with `WithHandler` to replace functionality. ([#1859](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/1859))
 - Resolution of the environment variable `"OTEL_GO_AUTO_TARGET_EXE"` has been removed from `WithEnv`.
   Note, the built binary (`auto/cli`) still supports resolution and use of this value.
@@ -652,7 +654,8 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 
 This is the first release of OpenTelemetry Go Automatic Instrumentation.
 
-[Unreleased]: https://github.com/open-telemetry/opentelemetry-go-instrumentation/compare/v0.21.0...HEAD
+[Unreleased]: https://github.com/open-telemetry/opentelemetry-go-instrumentation/compare/v0.22.0...HEAD
+[v0.22.0]: https://github.com/open-telemetry/opentelemetry-go-instrumentation/releases/tag/v0.22.0
 [v0.21.0]: https://github.com/open-telemetry/opentelemetry-go-instrumentation/releases/tag/v0.21.0
 [v0.20.0]: https://github.com/open-telemetry/opentelemetry-go-instrumentation/releases/tag/v0.20.0
 [v0.19.0-alpha]: https://github.com/open-telemetry/opentelemetry-go-instrumentation/releases/tag/v0.19.0-alpha
