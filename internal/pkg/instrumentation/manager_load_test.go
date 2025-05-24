@@ -4,7 +4,7 @@
 package instrumentation
 
 import (
-	"errors"
+	"io"
 	"log/slog"
 	"os"
 	"os/exec"
@@ -29,8 +29,10 @@ import (
 	httpServer "go.opentelemetry.io/auto/internal/pkg/instrumentation/bpf/net/http/server"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/bpffs"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/probe"
+	"go.opentelemetry.io/auto/internal/pkg/instrumentation/probe/sampling"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/utils"
 	"go.opentelemetry.io/auto/internal/pkg/process"
+	"go.opentelemetry.io/auto/pipeline"
 )
 
 func TestLoadProbes(t *testing.T) {
@@ -146,8 +148,19 @@ func setupTestModule(t *testing.T) int {
 }
 
 type TestProbe interface {
+	Manifest() probe.Manifest
+
+	GetID() probe.ID
+
+	// InitStartupConfig sets up initialization config options for the Probe,
+	// such as its sampling config, sets up its BPFObj as a closer, and initializes
+	// the Probe's reader, returning it as an io.Closer.
+	InitStartupConfig(*ebpf.Collection, *sampling.Config) (io.Closer, error)
+
+	// Run runs the events processing loop.
+	Run(*pipeline.Handler)
+
 	Spec() (*ebpf.CollectionSpec, error)
-	InjectConsts(*process.Info, *ebpf.CollectionSpec) error
 }
 
 func ProbesLoad(t *testing.T, info *process.Info, p TestProbe) {
@@ -159,29 +172,15 @@ func ProbesLoad(t *testing.T, info *process.Info, p TestProbe) {
 	spec, err := p.Spec()
 	require.NoError(t, err)
 
+	mgr := &Manager{proc: info}
+
 	// Inject the same constants as the BPF program. It is important to inject
 	// the same constants as those that will be used in the actual run, since
 	// From Linux 5.5 the verifier will use constants to eliminate dead code.
-	require.NoError(t, p.InjectConsts(info, spec))
+	require.NoError(t, mgr.injectProbeConsts(p, spec))
 
-	opts := ebpf.CollectionOptions{
-		Maps: ebpf.MapOptions{
-			PinPath: bpffs.PathForTargetApplication(info),
-		},
-	}
-
-	collectVerifierLogs := utils.ShouldShowVerifierLogs()
-	if collectVerifierLogs {
-		opts.Programs.LogLevel = ebpf.LogLevelStats | ebpf.LogLevelInstruction
-	}
-
-	c, err := ebpf.NewCollectionWithOptions(spec, opts)
-	if !assert.NoError(t, err) {
-		var ve *ebpf.VerifierError
-		if errors.As(err, &ve) && collectVerifierLogs {
-			t.Logf("Verifier log: %-100v\n", ve)
-		}
-	}
+	c, err := initializeEBPFCollection(spec, mgr.proc)
+	require.NoError(t, err)
 
 	if c != nil {
 		t.Cleanup(c.Close)

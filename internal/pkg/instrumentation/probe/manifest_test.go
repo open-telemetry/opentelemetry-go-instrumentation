@@ -42,6 +42,8 @@ func TestNewManifest(t *testing.T) {
 		ID{spanKind, pkg},
 		[]structfield.ID{sAABB, sABAA, sAAAA, sAAAC, sBAAA, sAAAB, sAABA, sAABC},
 		[]FunctionSymbol{fs(d), fs(a), fs(c), fs(b)},
+		nil,
+		nil,
 	)
 	want := Manifest{
 		ID:           ID{spanKind, pkg},
