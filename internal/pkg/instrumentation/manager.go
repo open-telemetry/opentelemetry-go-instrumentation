@@ -90,7 +90,7 @@ func NewManager(
 			return nil, err
 		}
 
-		for _, u := range p.Manifest().Symbols {
+		for _, u := range p.Manifest().Symbols() {
 			funcs[u.Symbol] = nil
 		}
 	}
@@ -137,7 +137,7 @@ func (m *Manager) registerProbe(p probe.Probe) error {
 		return fmt.Errorf("library %s registered twice, aborting", id)
 	}
 
-	if err := m.validateProbeDependents(id, p.Manifest().Symbols); err != nil {
+	if err := m.validateProbeDependents(id, p.Manifest().Symbols()); err != nil {
 		return err
 	}
 
@@ -157,7 +157,7 @@ func (m *Manager) filterUnusedProbes() {
 
 	for name, inst := range m.probes {
 		funcsFound := false
-		for _, s := range inst.probe.Manifest().Symbols {
+		for _, s := range inst.probe.Manifest().Symbols() {
 			if len(s.DependsOn) == 0 {
 				if _, exists := existingFuncMap[s.Symbol]; exists {
 					funcsFound = true

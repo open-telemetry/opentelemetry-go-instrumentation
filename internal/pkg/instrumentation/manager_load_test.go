@@ -69,7 +69,7 @@ func TestLoadProbes(t *testing.T) {
 
 	for _, p := range probes {
 		manifest := p.Manifest()
-		fields := manifest.StructFields
+		fields := manifest.StructFields()
 		for _, f := range fields {
 			_, ver := inject.GetLatestOffset(f)
 			if ver != nil {
@@ -149,8 +149,6 @@ func setupTestModule(t *testing.T) int {
 
 type TestProbe interface {
 	Manifest() probe.Manifest
-
-	GetID() probe.ID
 
 	// InitStartupConfig sets up initialization config options for the Probe,
 	// such as its sampling config, sets up its BPFObj as a closer, and initializes

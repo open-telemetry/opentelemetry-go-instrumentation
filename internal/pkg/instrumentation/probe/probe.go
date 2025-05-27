@@ -105,7 +105,7 @@ func (i *Base[BPFObj, BPFEvent]) Manifest() Manifest {
 		symbols = append(symbols, FunctionSymbol{Symbol: up.Sym, DependsOn: up.DependsOn})
 	}
 
-	return NewManifest(i.ID, structFieldIDs, symbols, i.Consts, i.Uprobes)
+	return NewManifest(i.ID, i.Consts, i.Uprobes)
 }
 
 func (i *Base[BPFObj, BPFEvent]) Spec() (*ebpf.CollectionSpec, error) {

@@ -38,17 +38,59 @@ func TestNewManifest(t *testing.T) {
 		sBAAA = structfield.NewID("b", "a/a", "A", "A")
 	)
 
-	got := NewManifest(
-		ID{spanKind, pkg},
-		[]structfield.ID{sAABB, sABAA, sAAAA, sAAAC, sBAAA, sAAAB, sAABA, sAABC},
-		[]FunctionSymbol{fs(d), fs(a), fs(c), fs(b)},
-		nil,
-		nil,
-	)
+	consts := []Const{
+		StructFieldConst{
+			Key: "saaaa",
+			ID:  structfield.NewID("a", "a/a", "A", "A"),
+		},
+		StructFieldConst{
+			Key: "saaab",
+			ID:  structfield.NewID("a", "a/a", "A", "B"),
+		},
+		StructFieldConst{
+			Key: "saaac",
+			ID:  structfield.NewID("a", "a/a", "A", "C"),
+		},
+		StructFieldConst{
+			Key: "saaba",
+			ID:  structfield.NewID("a", "a/a", "B", "A"),
+		},
+		StructFieldConst{
+			Key: "saabb",
+			ID:  structfield.NewID("a", "a/a", "B", "B"),
+		},
+		StructFieldConst{
+			Key: "saabc",
+			ID:  structfield.NewID("a", "a/a", "B", "C"),
+		},
+		StructFieldConst{
+			Key: "sabaa",
+			ID:  structfield.NewID("a", "a/b", "A", "A"),
+		},
+		StructFieldConst{
+			Key: "sbaaa",
+			ID:  structfield.NewID("b", "a/a", "A", "A"),
+		},
+	}
+
+	uprobes := []*Uprobe{
+		&Uprobe{Sym: d},
+		&Uprobe{Sym: a},
+		&Uprobe{Sym: c},
+		&Uprobe{Sym: b},
+	}
+
+	got := NewManifest(ID{spanKind, pkg}, consts, uprobes)
 	want := Manifest{
-		ID:           ID{spanKind, pkg},
-		StructFields: []structfield.ID{sAAAA, sAAAB, sAAAC, sAABA, sAABB, sAABC, sABAA, sBAAA},
-		Symbols:      []FunctionSymbol{fs(a), fs(b), fs(c), fs(d)},
+		ID:      ID{spanKind, pkg},
+		Consts:  consts,
+		Uprobes: uprobes,
 	}
 	assert.Equal(t, want, got)
+
+	expectedStructFields := []structfield.ID{sAAAA, sAAAB, sAAAC, sAABA, sAABB, sAABC, sABAA, sBAAA}
+	assert.Equal(t, expectedStructFields, got.StructFields())
+
+	expectedSymbols := []FunctionSymbol{fs(a), fs(b), fs(c), fs(d)}
+	assert.Equal(t, expectedSymbols, got.Symbols())
 }
