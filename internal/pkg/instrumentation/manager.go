@@ -230,7 +230,7 @@ func (m *Manager) applyConfig(c Config) error {
 
 		if !currentlyEnabled && newEnabled {
 			m.logger.Info("Enabling probe", "id", id)
-			collection, loadErr := m.loadProbeCollection(p.probe, c)
+			collection, loadErr := m.loadProbeCollection(p.probe)
 			if loadErr != nil {
 				err = errors.Join(err, loadErr)
 				continue
@@ -404,7 +404,7 @@ func (m *Manager) loadProbes() error {
 	// Load probes
 	for name, i := range m.probes {
 		if isProbeEnabled(name, m.currentConfig) {
-			collection, err := m.loadProbeCollection(i.probe, m.currentConfig)
+			collection, err := m.loadProbeCollection(i.probe)
 			if err != nil {
 				m.logger.Error(
 					"error while loading probe collection, cleaning up",
@@ -436,7 +436,7 @@ func (m *Manager) loadProbes() error {
 	return nil
 }
 
-func (m *Manager) loadProbeCollection(p probe.Probe, cfg Config) (*ebpf.Collection, error) {
+func (m *Manager) loadProbeCollection(p probe.Probe) (*ebpf.Collection, error) {
 	m.logger.Info("loading probe", "name", p.Manifest().ID)
 
 	spec, err := p.Spec()
@@ -478,7 +478,10 @@ func (m *Manager) injectProbeConsts(i probe.Probe, spec *ebpf.CollectionSpec) er
 	return inject.Constants(spec, opts...)
 }
 
-func (m *Manager) loadAndConfigureUprobesFromProbe(i *probeReference, sampler *sampling.Config) ([]io.Closer, error) {
+func (m *Manager) loadAndConfigureUprobesFromProbe(
+	i *probeReference,
+	sampler *sampling.Config,
+) ([]io.Closer, error) {
 	var closers []io.Closer
 	for _, up := range i.probe.Manifest().Uprobes {
 		var skip bool
@@ -530,14 +533,22 @@ func (m *Manager) loadAndConfigureUprobesFromProbe(i *probeReference, sampler *s
 				// Unknown and FailureModeError.
 				return nil, err
 			}
-			logFn("failed to load uprobe", "probe", i.probe.Manifest().ID, "symbol", up.Sym, "error", err)
+			logFn(
+				"failed to load uprobe",
+				"probe",
+				i.probe.Manifest().ID,
+				"symbol",
+				up.Sym,
+				"error",
+				err,
+			)
 			continue
 		}
 
 		closers = append(closers, up)
 	}
 
-	reader, err := i.probe.InitStartupConfig(i.collection, m.currentConfig.SamplingConfig)
+	reader, err := i.probe.InitStartupConfig(i.collection, sampler)
 	if err != nil {
 		return nil, err
 	}

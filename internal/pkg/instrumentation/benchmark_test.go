@@ -49,7 +49,7 @@ func benchmarkValidateProbeDependents(b *testing.B, count int) {
 
 	for i := 0; i < count; i++ {
 		syms[i] = probe.FunctionSymbol{
-			Symbol:       strconv.Itoa(i),
+			Symbol:    strconv.Itoa(i),
 			DependsOn: nil,
 		}
 	}

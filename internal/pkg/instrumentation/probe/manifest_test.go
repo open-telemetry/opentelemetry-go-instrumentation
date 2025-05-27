@@ -74,10 +74,10 @@ func TestNewManifest(t *testing.T) {
 	}
 
 	uprobes := []*Uprobe{
-		&Uprobe{Sym: d},
-		&Uprobe{Sym: a},
-		&Uprobe{Sym: c},
-		&Uprobe{Sym: b},
+		{Sym: d},
+		{Sym: a},
+		{Sym: c},
+		{Sym: b},
 	}
 
 	got := NewManifest(ID{spanKind, pkg}, consts, uprobes)

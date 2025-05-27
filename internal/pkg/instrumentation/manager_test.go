@@ -75,11 +75,11 @@ func TestDependencyChecks(t *testing.T) {
 	t.Run("Dependent probes match", func(t *testing.T) {
 		syms := []probe.FunctionSymbol{
 			{
-				Symbol:       "A",
+				Symbol:    "A",
 				DependsOn: nil,
 			},
 			{
-				Symbol:       "B",
+				Symbol:    "B",
 				DependsOn: []string{"A"},
 			},
 		}
@@ -90,11 +90,11 @@ func TestDependencyChecks(t *testing.T) {
 	t.Run("Second dependent missing", func(t *testing.T) {
 		syms := []probe.FunctionSymbol{
 			{
-				Symbol:       "A",
+				Symbol:    "A",
 				DependsOn: nil,
 			},
 			{
-				Symbol:       "B",
+				Symbol:    "B",
 				DependsOn: []string{"A", "C"},
 			},
 		}
@@ -105,15 +105,15 @@ func TestDependencyChecks(t *testing.T) {
 	t.Run("Second dependent present", func(t *testing.T) {
 		syms := []probe.FunctionSymbol{
 			{
-				Symbol:       "A",
+				Symbol:    "A",
 				DependsOn: nil,
 			},
 			{
-				Symbol:       "B",
+				Symbol:    "B",
 				DependsOn: []string{"A", "C"},
 			},
 			{
-				Symbol:       "C",
+				Symbol:    "C",
 				DependsOn: []string{"A"},
 			},
 		}
@@ -124,11 +124,11 @@ func TestDependencyChecks(t *testing.T) {
 	t.Run("Dependent wrong", func(t *testing.T) {
 		syms := []probe.FunctionSymbol{
 			{
-				Symbol:       "A",
+				Symbol:    "A",
 				DependsOn: nil,
 			},
 			{
-				Symbol:       "B",
+				Symbol:    "B",
 				DependsOn: []string{"A1"},
 			},
 		}
@@ -139,11 +139,11 @@ func TestDependencyChecks(t *testing.T) {
 	t.Run("Two probes without dependents", func(t *testing.T) {
 		syms := []probe.FunctionSymbol{
 			{
-				Symbol:       "A",
+				Symbol:    "A",
 				DependsOn: nil,
 			},
 			{
-				Symbol:       "B",
+				Symbol:    "B",
 				DependsOn: []string{},
 			},
 		}
@@ -348,7 +348,9 @@ func (p slowProbe) InitStartupConfig(*ebpf.Collection, *sampling.Config) (io.Clo
 }
 
 func (p slowProbe) Manifest() probe.Manifest {
-	return probe.Manifest{ID: probe.ID{SpanKind: trace.SpanKindClient, InstrumentedPkg: "slowProbe"}}
+	return probe.Manifest{
+		ID: probe.ID{SpanKind: trace.SpanKindClient, InstrumentedPkg: "slowProbe"},
+	}
 }
 
 type noopProbe struct {
@@ -365,7 +367,9 @@ func (p *noopProbe) Spec() (*ebpf.CollectionSpec, error) {
 }
 
 func (p *noopProbe) Manifest() probe.Manifest {
-	return probe.Manifest{ID: probe.ID{SpanKind: trace.SpanKindClient, InstrumentedPkg: "noopProbe"}}
+	return probe.Manifest{
+		ID: probe.ID{SpanKind: trace.SpanKindClient, InstrumentedPkg: "noopProbe"},
+	}
 }
 
 func (p *noopProbe) InitStartupConfig(*ebpf.Collection, *sampling.Config) (io.Closer, error) {
@@ -556,7 +560,9 @@ func (p *hangingProbe) Spec() (*ebpf.CollectionSpec, error) {
 }
 
 func (p *hangingProbe) Manifest() probe.Manifest {
-	return probe.Manifest{ID: probe.ID{SpanKind: trace.SpanKindClient, InstrumentedPkg: "hangingProbe"}}
+	return probe.Manifest{
+		ID: probe.ID{SpanKind: trace.SpanKindClient, InstrumentedPkg: "hangingProbe"},
+	}
 }
 
 func (p *hangingProbe) InitStartupConfig(*ebpf.Collection, *sampling.Config) (io.Closer, error) {
