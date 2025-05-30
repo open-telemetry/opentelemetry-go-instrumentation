@@ -4,7 +4,7 @@ go 1.23.0
 
 require (
 	github.com/cilium/ebpf v0.18.0
-	github.com/docker/docker v28.2.1+incompatible
+	github.com/docker/docker v28.2.2+incompatible
 	github.com/docker/go-connections v0.5.0
 	github.com/gin-gonic/gin v1.10.1
 	github.com/mattn/go-sqlite3 v1.14.28
