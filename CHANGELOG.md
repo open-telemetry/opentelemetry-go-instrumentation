@@ -61,6 +61,7 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 - Upgrade OpenTelemetry semantic conventions to `v1.30.0`. ([#2032](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/2032))
 - Modify how the pattern is fetch from `net/http.Request`.
   Now it uses `Request.Pattern` instead of `Request.pat.str` unless using go1.22, which continue using `Request.pat.str`. ([#2090](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/2090))
+- Process management has shifted from Probe methods to the Manager, internal Manifest type removed. ([#2029](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/2029))
 
 ### Removed
 
