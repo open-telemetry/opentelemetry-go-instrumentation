@@ -137,6 +137,9 @@ func findModules(goVer *semver.Version, deps []*debug.Module) (map[string]*semve
 	var err error
 	out := make(map[string]*semver.Version, len(deps)+1)
 	for _, dep := range deps {
+		if strings.Contains(dep.Version, "(devel)") {
+			continue
+		}
 		depVersion, e := semver.NewVersion(dep.Version)
 		if e != nil {
 			err = errors.Join(
