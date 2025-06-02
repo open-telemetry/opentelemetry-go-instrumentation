@@ -173,7 +173,7 @@ golangci-lint/%: | $(GOLANGCI_LINT)
 		&& $(GOLANGCI_LINT) run --allow-serial-runners --timeout=2m0s $(ARGS)
 
 .PHONY: build
-build: go-mod-tidy generate
+build: generate
 	CGO_ENABLED=$(CGO_ENABLED) $(GOCMD) build -o otel-go-instrumentation ./cli/...
 
 .PHONY: docker-build

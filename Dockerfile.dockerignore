@@ -3,6 +3,7 @@
 # must-have toplevel files
 !/go.sum
 !/go.mod
+!/Makefile
 !*.go
 !/LICENSE
 
