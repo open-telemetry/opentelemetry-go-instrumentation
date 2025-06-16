@@ -49,7 +49,7 @@ func TestInvalidTraceID(t *testing.T) {
 		{
 			Name:      "invalid hex id",
 			Input:     []byte(`"234567890abcdefgh1234567890abcdef"`),
-			ExpectErr: fmt.Errorf("cannot unmarshal ID from string"),
+			ExpectErr: errors.New("cannot unmarshal ID from string"),
 		},
 	}
 
@@ -98,7 +98,7 @@ func TestInvalidSpanID(t *testing.T) {
 			ExpectErr: errors.New("invalid length for ID"),
 		},
 		{
-			Name:      "invalid hex",
+			Name:      "invalid hex id",
 			Input:     []byte(`"234abcacgfdfgrty"`),
 			ExpectErr: fmt.Errorf("cannot unmarshal ID from string"),
 		},
