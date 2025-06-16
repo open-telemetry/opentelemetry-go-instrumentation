@@ -3,7 +3,14 @@
 
 package telemetry
 
-import "testing"
+import (
+	"encoding/json"
+	"errors"
+	"fmt"
+	"testing"
+
+	"github.com/stretchr/testify/require"
+)
 
 func TestTraceIDEncoding(t *testing.T) {
 	testCases := []struct {
@@ -28,6 +35,34 @@ func TestTraceIDEncoding(t *testing.T) {
 	}
 }
 
+func TestInvalidTraceID(t *testing.T) {
+	testCases := []struct {
+		Name      string
+		Input     []byte
+		ExpectErr error
+	}{
+		{
+			Name:      "invalid length",
+			Input:     []byte(`"0102030405060708090a0b0c0d0e0f1011"`),
+			ExpectErr: errors.New("invalid length for ID"),
+		},
+		{
+			Name:      "invalid hex id",
+			Input:     []byte(`"234567890abcdefgh1234567890abcdef"`),
+			ExpectErr: fmt.Errorf("cannot unmarshal ID from string"),
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.Name, func(t *testing.T) {
+			var id TraceID
+			err := json.Unmarshal(tc.Input, &id)
+			require.Error(t, err)
+			require.ErrorContains(t, err, tc.ExpectErr.Error())
+		})
+	}
+}
+
 func TestSpanIDEncoding(t *testing.T) {
 	testCases := []struct {
 		Name   string
@@ -48,5 +83,33 @@ func TestSpanIDEncoding(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.Name, runJSONEncodingTests(tc.Input, tc.Expect))
+	}
+}
+
+func TestInvalidSpanID(t *testing.T) {
+	testCases := []struct {
+		Name      string
+		Input     []byte
+		ExpectErr error
+	}{
+		{
+			Name:      "invalid length",
+			Input:     []byte(`"0102030405060708090a0b0c0d0e0f1011"`),
+			ExpectErr: errors.New("invalid length for ID"),
+		},
+		{
+			Name:      "invalid hex",
+			Input:     []byte(`"234abcacgfdfgrty"`),
+			ExpectErr: fmt.Errorf("cannot unmarshal ID from string"),
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.Name, func(t *testing.T) {
+			var id SpanID
+			err := json.Unmarshal(tc.Input, &id)
+			require.Error(t, err)
+			require.ErrorContains(t, err, tc.ExpectErr.Error())
+		})
 	}
 }
