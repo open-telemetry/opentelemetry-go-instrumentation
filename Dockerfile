@@ -18,13 +18,16 @@ RUN --mount=type=cache,target=/go/pkg \
 COPY . .
 
 ARG TARGETARCH
+ENV GOARCH=$TARGETARCH
+
 ARG CGO_ENABLED=0
+ENV CGO_ENABLED=$CGO_ENABLED
+
 ARG BPF2GO_CFLAGS="-I/usr/src/go.opentelemetry.io/auto/internal/include/libbpf -I/usr/src/go.opentelemetry.io/auto/internal/include"
+ENV BPF2GO_CFLAGS=$BPF2GO_CFLAGS
+
 RUN --mount=type=cache,target=/root/.cache/go-build \
     --mount=type=cache,target=/go/pkg \
-    GOARCH=$TARGETARCH \
-	CGO_ENABLED=$CGO_ENABLED \
-	BPF2GO_CFLAGS=$BPF2GO_CFLAGS \
 	go generate ./... \
 	&& go build -o otel-go-instrumentation ./cli/...
 
