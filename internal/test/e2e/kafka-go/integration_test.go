@@ -6,7 +6,6 @@ package kafka
 
 import (
 	"encoding/hex"
-	"regexp"
 	"strconv"
 	"testing"
 
@@ -39,86 +38,56 @@ func TestIntegration(t *testing.T) {
 		assert.Equal(t, "sample-app", val.AsString())
 	})
 
-	spans := ptrace.NewSpanSlice()
-	for i, scope := range scopes {
-		t.Run("Scope/"+strconv.Itoa(i), func(t *testing.T) {
-			assert.Equal(t, scopeName, scope.Scope().Name(), "scope name")
-			assert.Equal(t, semconv.SchemaURL, scope.SchemaUrl(), "schema URL")
-
-			scope.Spans().MoveAndAppendTo(spans)
-		})
-	}
-
 	// All trace ID should be the same.
-	tIDBytes := [16]byte(spans.At(0).TraceID())
+	tIDBytes := [16]byte(scopes[0].Spans().At(0).TraceID())
 	tID := hex.EncodeToString(tIDBytes[:])
 
 	var producerSpanIDs []string
-	var cCnt int
-	for j := range spans.Len() {
-		b := [16]byte(spans.At(j).TraceID())
-		assert.Equalf(t, tID, hex.EncodeToString(b[:]), "Span %d: trace ID", j)
+	s, err := e2e.SelectSpan(scopes, func(span ptrace.Span) bool {
+		return span.Kind() == ptrace.SpanKindProducer && span.Name() == "topic1 publish"
+	})
+	require.NoError(t, err, "producer span 'topic1 publish' not found")
 
-		span := spans.At(j)
-		switch span.Kind() {
-		case ptrace.SpanKindProducer:
-			n := len(producerSpanIDs)
-
-			b := [8]byte(span.SpanID())
-			sID := hex.EncodeToString(b[:])
-			producerSpanIDs = append(producerSpanIDs, sID)
-
-			t.Run("ProducerSpan/"+strconv.Itoa(n), pSpan(span))
-		case ptrace.SpanKindConsumer:
-			t.Run("ConsumerSpan/"+strconv.Itoa(cCnt), cSpan(span))
-			cCnt++
-		default:
-			t.Errorf("unexpected span kind: %v", span.Kind())
-		}
-	}
-
-	if cCnt == 0 {
-		t.Error("no consumer span found")
-		return
-	}
-
-	if len(producerSpanIDs) == 0 {
-		t.Error("no producer span found")
-		return
-	}
-
-	// Only the first consumer span is guarnteed to have a parent span ID from
-	// our producers. This selcets the first consumer span.
-	var cSpan *ptrace.Span
-	for i := range spans.Len() {
-		if spans.At(i).Kind() == ptrace.SpanKindConsumer {
-			s := spans.At(i)
-			cSpan = &s
-			break
-		}
-	}
-	if cSpan == nil {
-		t.Fatal("no consumer span found")
-	}
-	b := [8]byte(cSpan.ParentSpanID())
+	b := [8]byte(s.SpanID())
 	sID := hex.EncodeToString(b[:])
+	producerSpanIDs = append(producerSpanIDs, sID)
+	t.Run("ProducerSpan/topic1", pSpan(1, tID, s))
+
+	s, err = e2e.SelectSpan(scopes, func(span ptrace.Span) bool {
+		return span.Kind() == ptrace.SpanKindProducer && span.Name() == "topic2 publish"
+	})
+	require.NoError(t, err, "producer span 'topic2 publish' not found")
+
+	b = [8]byte(s.SpanID())
+	sID = hex.EncodeToString(b[:])
+	producerSpanIDs = append(producerSpanIDs, sID)
+	t.Run("ProducerSpan/topic2", pSpan(2, tID, s))
+
+	s, err = e2e.SelectSpan(scopes, func(span ptrace.Span) bool {
+		return span.Kind() == ptrace.SpanKindConsumer && span.Name() == "topic1 receive"
+	})
+	require.NoError(t, err, "consumer span 'topic1 receive' not found")
+	t.Run("ConsumerSpan/topic1", cSpan(1, tID, s))
+	b = [8]byte(s.ParentSpanID())
+	sID = hex.EncodeToString(b[:])
+	assert.Contains(t, producerSpanIDs, sID)
+
+	s, err = e2e.SelectSpan(scopes, func(span ptrace.Span) bool {
+		return span.Kind() == ptrace.SpanKindConsumer && span.Name() == "topic2 receive"
+	})
+	require.NoError(t, err, "consumer span 'topic2 receive' not found")
+	t.Run("ConsumerSpan/topic2", cSpan(2, tID, s))
+	b = [8]byte(s.ParentSpanID())
+	sID = hex.EncodeToString(b[:])
 	assert.Contains(t, producerSpanIDs, sID)
 }
 
-var (
-	producerNameRE = regexp.MustCompile(`^topic\d publish$`)
-	topicRe        = regexp.MustCompile(`^topic\d$`)
-	keyRe          = regexp.MustCompile(`^key\d$`)
-)
-
-func pSpan(span ptrace.Span) func(t *testing.T) {
+func pSpan(n int, tID string, span ptrace.Span) func(t *testing.T) {
 	return func(t *testing.T) {
+		b := [16]byte(span.TraceID())
+		assert.Equalf(t, tID, hex.EncodeToString(b[:]), "trace ID")
 		e2e.AssertTraceID(t, span.TraceID(), "trace ID")
 		e2e.AssertSpanID(t, span.SpanID(), "span ID")
-
-		assert.Equal(t, ptrace.SpanKindProducer, span.Kind(), "span kind")
-
-		assert.Regexp(t, producerNameRE, span.Name(), "span name")
 
 		attrs := e2e.AttributesMap(span.Attributes())
 		assert.Equal(
@@ -127,15 +96,15 @@ func pSpan(span ptrace.Span) func(t *testing.T) {
 			attrs[string(semconv.MessagingSystemKey)],
 			"messaging.system",
 		)
-		assert.Regexp(
+		assert.Equal(
 			t,
-			topicRe,
+			"topic"+strconv.Itoa(n),
 			attrs[string(semconv.MessagingDestinationNameKey)],
 			"messaging.destination.name",
 		)
-		assert.Regexp(
+		assert.Equal(
 			t,
-			keyRe,
+			"key"+strconv.Itoa(n),
 			attrs[string(semconv.MessagingKafkaMessageKeyKey)],
 			"messaging.kafka.message.key",
 		)
@@ -148,15 +117,12 @@ func pSpan(span ptrace.Span) func(t *testing.T) {
 	}
 }
 
-func cSpan(span ptrace.Span) func(t *testing.T) {
+func cSpan(n int, tID string, span ptrace.Span) func(t *testing.T) {
 	return func(t *testing.T) {
-		e2e.AssertTraceID(t, span.TraceID(), "trace ID")
+		b := [16]byte(span.TraceID())
+		assert.Equalf(t, tID, hex.EncodeToString(b[:]), "trace ID")
 		e2e.AssertSpanID(t, span.SpanID(), "span ID")
 		e2e.AssertSpanID(t, span.ParentSpanID(), "parent span ID")
-
-		assert.Equal(t, ptrace.SpanKindConsumer, span.Kind(), "span kind")
-
-		assert.Equal(t, "topic1 receive", span.Name(), "span name")
 
 		attrs := e2e.AttributesMap(span.Attributes())
 		assert.Equal(
@@ -167,13 +133,13 @@ func cSpan(span ptrace.Span) func(t *testing.T) {
 		)
 		assert.Equal(
 			t,
-			"topic1",
+			"topic"+strconv.Itoa(n),
 			attrs[string(semconv.MessagingDestinationNameKey)],
 			"messaging.destination.name",
 		)
 		assert.Equal(
 			t,
-			"key1",
+			"key"+strconv.Itoa(n),
 			attrs[string(semconv.MessagingKafkaMessageKeyKey)],
 			"messaging.kafka.message.key",
 		)

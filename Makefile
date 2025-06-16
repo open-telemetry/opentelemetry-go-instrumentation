@@ -29,7 +29,7 @@ DEPENDENCIES_DOCKERFILE=./dependencies.Dockerfile
 .DEFAULT_GOAL := precommit
 
 .PHONY: precommit
-precommit: license-header-check golangci-lint-fix test codespell
+precommit: license-header-check golangci-lint-fix test codespell markdown-lint
 
 # Tools
 $(TOOLS):
@@ -62,8 +62,35 @@ $(TOOLS)/synclibbpf: PACKAGE=go.opentelemetry.io/auto/$(TOOLS_MOD_DIR)/synclibbp
 CROSSLINK = $(TOOLS)/crosslink
 $(TOOLS)/crosslink: PACKAGE=go.opentelemetry.io/build-tools/crosslink
 
+BEAR := $(TOOLS)/bear
+$(BEAR): $(TOOLS)
+	@if command -v bear >/dev/null 2>&1; then \
+		echo "Found system-wide Bear, linking to $(BEAR)"; \
+		ln -sf $$(command -v bear) $(BEAR); \
+	elif command -v apt-get >/dev/null 2>&1; then \
+		echo "Installing Bear using apt-get..."; \
+		sudo apt-get update && sudo apt-get install -y bear && \
+		ln -sf $$(command -v bear) $(BEAR); \
+	elif command -v pacman >/dev/null 2>&1; then \
+		echo "Installing Bear using pacman..."; \
+		sudo pacman -Sy --noconfirm bear && \
+		ln -sf $$(command -v bear) $(BEAR); \
+	elif command -v brew >/dev/null 2>&1; then \
+		echo "Installing Bear using Homebrew..."; \
+		brew install bear && \
+		ln -sf $$(command -v bear) $(BEAR); \
+	else \
+		echo "No supported package manager found. Installing Bear from source..."; \
+		git clone --depth 1 https://github.com/rizsotto/Bear.git /tmp/Bear && \
+		cd /tmp/Bear && cmake -S . -B build -DCMAKE_BUILD_TYPE=Release && \
+		cmake --build build --config Release && \
+		cmake --install build --prefix "$$(pwd)/install" && \
+		cp /tmp/Bear/install/bin/bear $(BEAR) && \
+		rm -rf /tmp/Bear; \
+	fi
+
 .PHONY: tools
-tools: $(GOLICENSES) $(MULTIMOD) $(GOLANGCI_LINT) $(DBOTCONF) $(OFFSETGEN) $(SYNCLIBBPF) $(CROSSLINK)
+tools: $(GOLICENSES) $(MULTIMOD) $(GOLANGCI_LINT) $(DBOTCONF) $(OFFSETGEN) $(SYNCLIBBPF) $(CROSSLINK) $(BEAR)
 
 TEST_TARGETS := test-verbose test-ebpf test-race
 .PHONY: $(TEST_TARGETS) test
@@ -91,6 +118,14 @@ $(PROBE_GEN_ALL):
 
 generate/all:
 	$(GOCMD) generate ./...
+
+.PHONY: clean
+clean:
+	@rm -f $(PROBE_GEN_OBJ)
+	@find $(PROBE_ROOT) -type f -name "*.d" -delete
+
+compile_commands.json: $(BEAR) clean
+	@$(BEAR) --force-wrapper -- $(GOCMD) generate ./...
 
 .PHONY: docker-generate
 docker-generate: docker-build-base
@@ -263,3 +298,8 @@ $(CODESPELL): PACKAGE=codespell
 .PHONY: codespell
 codespell: $(CODESPELL)
 	@$(DOCKERPY) $(CODESPELL)
+
+MARKDOWNIMAGE := $(shell awk '$$4=="markdown" {print $$2}' $(DEPENDENCIES_DOCKERFILE))
+.PHONY: markdown-lint
+markdown-lint:
+	docker run --rm -u $(DOCKER_USER) -v "$(CURDIR):$(WORKDIR)" $(MARKDOWNIMAGE) -c $(WORKDIR)/.markdownlint.yaml $(WORKDIR)/**/*.md
