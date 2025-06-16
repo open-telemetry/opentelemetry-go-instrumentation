@@ -6,7 +6,6 @@ package telemetry
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -100,7 +99,7 @@ func TestInvalidSpanID(t *testing.T) {
 		{
 			Name:      "invalid hex id",
 			Input:     []byte(`"234abcacgfdfgrty"`),
-			ExpectErr: fmt.Errorf("cannot unmarshal ID from string"),
+			ExpectErr: errors.New("cannot unmarshal ID from string"),
 		},
 	}
 
