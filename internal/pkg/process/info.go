@@ -75,7 +75,7 @@ func (i *Info) alloc(logger *slog.Logger) (*Allocation, error) {
 //
 // A partial Info and error may be returned for dependencies that cannot be
 // parsed.
-func NewInfo(id ID, relevantFuncs map[string]interface{}) (*Info, error) {
+func NewInfo(logger *slog.Logger, id ID, relevantFuncs map[string]interface{}) (*Info, error) {
 	elfF, err := elf.Open(id.ExePath())
 	if err != nil {
 		return nil, err
@@ -99,7 +99,7 @@ func NewInfo(id ID, relevantFuncs map[string]interface{}) (*Info, error) {
 		return result, err
 	}
 
-	result.Modules, err = findModules(result.GoVersion, bi.Deps)
+	result.Modules, err = findModules(logger, result.GoVersion, bi.Deps)
 	return result, err
 }
 
@@ -133,11 +133,16 @@ func goDevVer(raw string) (*semver.Version, error) {
 	return nil, errors.New("non-devel version")
 }
 
-func findModules(goVer *semver.Version, deps []*debug.Module) (map[string]*semver.Version, error) {
+func findModules(
+	logger *slog.Logger,
+	goVer *semver.Version,
+	deps []*debug.Module,
+) (map[string]*semver.Version, error) {
 	var err error
 	out := make(map[string]*semver.Version, len(deps)+1)
 	for _, dep := range deps {
 		if strings.Contains(dep.Version, "(devel)") {
+			logger.Info("skipping (devel) dependency", "dep", dep.Path, "version", dep.Version)
 			continue
 		}
 		depVersion, e := semver.NewVersion(dep.Version)

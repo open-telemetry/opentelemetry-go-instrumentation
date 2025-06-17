@@ -83,7 +83,7 @@ func NewManager(
 	}
 
 	var err error
-	m.proc, err = process.NewInfo(pid, funcs)
+	m.proc, err = process.NewInfo(logger, pid, funcs)
 	if err != nil {
 		return nil, err
 	}
