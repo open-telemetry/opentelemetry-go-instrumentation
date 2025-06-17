@@ -12,12 +12,12 @@ require (
 	github.com/stretchr/testify v1.10.0
 	go.opentelemetry.io/auto v0.22.0
 	go.opentelemetry.io/auto/sdk v1.1.0
-	go.opentelemetry.io/collector/pdata v1.33.0
+	go.opentelemetry.io/collector/pdata v1.34.0
 	go.opentelemetry.io/otel v1.36.0
 	go.opentelemetry.io/otel/trace v1.36.0
 	go.uber.org/goleak v1.3.0
-	google.golang.org/grpc v1.72.2
-	google.golang.org/grpc/examples v0.0.0-20250616185257-9c62b1c9f173
+	google.golang.org/grpc v1.73.0
+	google.golang.org/grpc/examples v0.0.0-20250617043242-e5de1e2cac52
 )
 
 require (
@@ -70,7 +70,7 @@ require (
 	github.com/prometheus/common v0.64.0 // indirect
 	github.com/prometheus/procfs v0.16.1 // indirect
 	github.com/twitchyliquid64/golang-asm v0.15.1 // indirect
-	github.com/ugorji/go/codec v1.2.14 // indirect
+	github.com/ugorji/go/codec v1.3.0 // indirect
 	github.com/xwb1989/sqlparser v0.0.0-20180606152119-120387863bf2 // indirect
 	go.opentelemetry.io/contrib/bridges/prometheus v0.61.0 // indirect
 	go.opentelemetry.io/contrib/exporters/autoexport v0.61.0 // indirect
