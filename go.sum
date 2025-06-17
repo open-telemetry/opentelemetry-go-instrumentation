@@ -78,8 +78,8 @@ github.com/xwb1989/sqlparser v0.0.0-20180606152119-120387863bf2 h1:zzrxE1FKn5ryB
 github.com/xwb1989/sqlparser v0.0.0-20180606152119-120387863bf2/go.mod h1:hzfGeIUDq/j97IG+FhNqkowIyEcD88LrW6fyU3K3WqY=
 github.com/yuin/goldmark v1.1.27/go.mod h1:3hX8gzYuyVAZsxl0MRgGTJEmQBFcNTphYh9decYSb74=
 github.com/yuin/goldmark v1.2.1/go.mod h1:3hX8gzYuyVAZsxl0MRgGTJEmQBFcNTphYh9decYSb74=
-go.opentelemetry.io/collector/pdata v1.33.0 h1:PuqiZzdCoBJo9NmMzuYfzazpeFZyLmbDVcRrvb497lg=
-go.opentelemetry.io/collector/pdata v1.33.0/go.mod h1:TDvbHuvIK+g6xqu1gxtz8ti4pB2x1WcBpjFob5KfleU=
+go.opentelemetry.io/collector/pdata v1.34.0 h1:2vwYftckXe7pWxI9mfSo+tw3wqdGNrYpMbDx/5q6rw8=
+go.opentelemetry.io/collector/pdata v1.34.0/go.mod h1:StPHMFkhLBellRWrULq0DNjv4znCDJZP6La4UuC+JHI=
 go.opentelemetry.io/contrib/bridges/prometheus v0.61.0 h1:RyrtJzu5MAmIcbRrwg75b+w3RlZCP0vJByDVzcpAe3M=
 go.opentelemetry.io/contrib/bridges/prometheus v0.61.0/go.mod h1:tirr4p9NXbzjlbruiRGp53IzlYrDk5CO2fdHj0sSSaY=
 go.opentelemetry.io/contrib/exporters/autoexport v0.61.0 h1:XfzKtKSrbtYk9TNCF8dkO0Y9M7IOfb4idCwBOTwGBiI=
