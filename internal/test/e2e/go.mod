@@ -12,7 +12,7 @@ require (
 	github.com/stretchr/testify v1.10.0
 	go.opentelemetry.io/auto v0.22.0
 	go.opentelemetry.io/auto/sdk v1.1.0
-	go.opentelemetry.io/collector/pdata v1.33.0
+	go.opentelemetry.io/collector/pdata v1.34.0
 	go.opentelemetry.io/otel v1.36.0
 	go.opentelemetry.io/otel/trace v1.36.0
 	go.uber.org/goleak v1.3.0
