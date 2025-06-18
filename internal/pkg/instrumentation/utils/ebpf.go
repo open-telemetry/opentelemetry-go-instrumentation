@@ -4,41 +4,15 @@
 package utils
 
 import (
-	"errors"
-	"fmt"
 	"os"
 	"strconv"
 
 	"github.com/Masterminds/semver/v3"
-	"github.com/cilium/ebpf"
 )
 
 const (
 	showVerifierLogEnvVar = "OTEL_GO_AUTO_SHOW_VERIFIER_LOG"
 )
-
-// InitializeEBPFCollection loads eBPF objects from the given spec and returns a collection corresponding to the spec.
-// If the environment variable OTEL_GO_AUTO_SHOW_VERIFIER_LOG is set to true, the verifier log will be printed.
-func InitializeEBPFCollection(
-	spec *ebpf.CollectionSpec,
-	opts *ebpf.CollectionOptions,
-) (*ebpf.Collection, error) {
-	// Getting full verifier log is expensive, so we only do it if the user explicitly asks for it.
-	showVerifierLogs := ShouldShowVerifierLogs()
-	if showVerifierLogs {
-		opts.Programs.LogLevel = ebpf.LogLevelInstruction | ebpf.LogLevelBranch | ebpf.LogLevelStats
-	}
-
-	c, err := ebpf.NewCollectionWithOptions(spec, *opts)
-	if err != nil && showVerifierLogs {
-		var ve *ebpf.VerifierError
-		if errors.As(err, &ve) {
-			fmt.Printf("Verifier log: %-100v\n", ve)
-		}
-	}
-
-	return c, err
-}
 
 // ShouldShowVerifierLogs returns if the user has configured verifier logs to be emitted.
 func ShouldShowVerifierLogs() bool {

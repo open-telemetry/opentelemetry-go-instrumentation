@@ -9,16 +9,21 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"log/slog"
 	"sync"
 
+	"github.com/cilium/ebpf"
 	"github.com/cilium/ebpf/link"
 	"github.com/cilium/ebpf/rlimit"
 
 	"go.opentelemetry.io/otel/trace"
 
+	"go.opentelemetry.io/auto/internal/pkg/inject"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/bpffs"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/probe"
+	"go.opentelemetry.io/auto/internal/pkg/instrumentation/probe/sampling"
+	"go.opentelemetry.io/auto/internal/pkg/instrumentation/utils"
 	"go.opentelemetry.io/auto/internal/pkg/process"
 	"go.opentelemetry.io/auto/pipeline"
 )
@@ -43,7 +48,7 @@ const (
 // Manager handles the management of [probe.Probe] instances.
 type Manager struct {
 	logger          *slog.Logger
-	probes          map[probe.ID]probe.Probe
+	probes          map[probe.ID]*probeReference
 	handler         *pipeline.Handler
 	cp              ConfigProvider
 	exe             *link.Executable
@@ -56,6 +61,14 @@ type Manager struct {
 	stateMu         sync.RWMutex
 }
 
+// probeReference is used by the Manager to track an initialized reference
+// to a Probe and its related resources such as its ebpf.Collection and io.Closers.
+type probeReference struct {
+	probe      probe.Probe
+	collection *ebpf.Collection
+	closers    []io.Closer
+}
+
 // NewManager returns a new [Manager].
 func NewManager(
 	logger *slog.Logger,
@@ -66,7 +79,7 @@ func NewManager(
 ) (*Manager, error) {
 	m := &Manager{
 		logger:  logger,
-		probes:  make(map[probe.ID]probe.Probe),
+		probes:  make(map[probe.ID]*probeReference),
 		handler: h,
 		cp:      cp,
 	}
@@ -77,8 +90,8 @@ func NewManager(
 			return nil, err
 		}
 
-		for _, s := range p.Manifest().Symbols {
-			funcs[s.Symbol] = nil
+		for _, u := range p.Manifest().Symbols() {
+			funcs[u.Symbol] = nil
 		}
 	}
 
@@ -124,11 +137,13 @@ func (m *Manager) registerProbe(p probe.Probe) error {
 		return fmt.Errorf("library %s registered twice, aborting", id)
 	}
 
-	if err := m.validateProbeDependents(id, p.Manifest().Symbols); err != nil {
+	if err := m.validateProbeDependents(id, p.Manifest().Symbols()); err != nil {
 		return err
 	}
 
-	m.probes[id] = p
+	m.probes[id] = &probeReference{
+		probe: p,
+	}
 	return nil
 }
 
@@ -142,7 +157,7 @@ func (m *Manager) filterUnusedProbes() {
 
 	for name, inst := range m.probes {
 		funcsFound := false
-		for _, s := range inst.Manifest().Symbols {
+		for _, s := range inst.probe.Manifest().Symbols() {
 			if len(s.DependsOn) == 0 {
 				if _, exists := existingFuncMap[s.Symbol]; exists {
 					funcsFound = true
@@ -209,17 +224,27 @@ func (m *Manager) applyConfig(c Config) error {
 
 		if currentlyEnabled && !newEnabled {
 			m.logger.Info("Disabling probe", "id", id)
-			err = errors.Join(err, p.Close())
+			err = errors.Join(err, m.closeProbe(p))
 			continue
 		}
 
 		if !currentlyEnabled && newEnabled {
 			m.logger.Info("Enabling probe", "id", id)
-			err = errors.Join(err, p.Load(m.exe, m.proc, c.SamplingConfig))
-			if err == nil {
-				m.runProbe(p)
+			collection, loadErr := m.loadProbeCollection(p.probe)
+			if loadErr != nil {
+				err = errors.Join(err, loadErr)
+				continue
 			}
-			continue
+			p.collection = collection
+
+			closers, upErr := m.loadAndConfigureUprobesFromProbe(p, c.SamplingConfig)
+			if upErr != nil {
+				err = errors.Join(err, upErr)
+				continue
+			}
+			p.closers = append(p.closers, closers...)
+
+			m.runProbe(p.probe)
 		}
 	}
 
@@ -296,7 +321,7 @@ func (m *Manager) runProbes(ctx context.Context) (context.Context, error) {
 
 	for id, p := range m.probes {
 		if isProbeEnabled(id, m.currentConfig) {
-			m.runProbe(p)
+			m.runProbe(p.probe)
 		}
 	}
 
@@ -379,18 +404,31 @@ func (m *Manager) loadProbes() error {
 	// Load probes
 	for name, i := range m.probes {
 		if isProbeEnabled(name, m.currentConfig) {
-			m.logger.Info("loading probe", "name", name)
-			err := i.Load(exe, m.proc, m.currentConfig.SamplingConfig)
+			collection, err := m.loadProbeCollection(i.probe)
 			if err != nil {
 				m.logger.Error(
-					"error while loading probes, cleaning up",
+					"error while loading probe collection, cleaning up",
 					"error",
 					err,
-					"name",
+					"probe",
 					name,
 				)
 				return errors.Join(err, m.cleanup())
 			}
+			i.collection = collection
+
+			closers, err := m.loadAndConfigureUprobesFromProbe(i, m.currentConfig.SamplingConfig)
+			if err != nil {
+				m.logger.Error(
+					"error while loading uprobes from probe, cleaning up",
+					"error",
+					err,
+					"probe",
+					name,
+				)
+				return errors.Join(err, m.cleanup())
+			}
+			i.closers = append(i.closers, closers...)
 		}
 	}
 
@@ -398,12 +436,231 @@ func (m *Manager) loadProbes() error {
 	return nil
 }
 
+func (m *Manager) loadProbeCollection(p probe.Probe) (*ebpf.Collection, error) {
+	m.logger.Info("loading probe", "name", p.Manifest().ID)
+
+	spec, err := p.Spec()
+	if err != nil {
+		return nil, err
+	}
+
+	err = m.injectProbeConsts(p, spec)
+	if err != nil {
+		return nil, err
+	}
+
+	collection, err := initializeEBPFCollection(spec, m.proc)
+	if err != nil {
+		return nil, err
+	}
+
+	return collection, nil
+}
+
+func (m *Manager) injectProbeConsts(i probe.Probe, spec *ebpf.CollectionSpec) error {
+	var err error
+	var opts []inject.Option
+	for _, cnst := range i.Manifest().Consts {
+		if l, ok := cnst.(probe.SetLogger); ok {
+			cnst = l.SetLogger(m.logger)
+		}
+
+		o, e := cnst.InjectOption(m.proc)
+		err = errors.Join(err, e)
+		if e == nil && o != nil {
+			opts = append(opts, o)
+		}
+	}
+	if err != nil {
+		return err
+	}
+
+	return inject.Constants(spec, opts...)
+}
+
+func (m *Manager) loadAndConfigureUprobesFromProbe(
+	i *probeReference,
+	sampler *sampling.Config,
+) ([]io.Closer, error) {
+	var closers []io.Closer
+	for _, up := range i.probe.Manifest().Uprobes {
+		var skip bool
+		for _, pc := range up.PackageConstraints {
+			if pc.Constraints.Check(m.proc.Modules[pc.Package]) {
+				continue
+			}
+
+			var logFn func(string, ...any)
+			switch pc.FailureMode {
+			case probe.FailureModeIgnore:
+				logFn = m.logger.Debug
+			case probe.FailureModeWarn:
+				logFn = m.logger.Warn
+			default:
+				// Unknown and FailureModeError.
+				return nil, fmt.Errorf(
+					"uprobe %s package constraint (%s) not met, version %v",
+					up.Sym,
+					pc.Constraints.String(),
+					m.proc.Modules[pc.Package])
+			}
+
+			logFn(
+				"package constraint not meet, skipping uprobe",
+				"probe", i.probe.Manifest().ID,
+				"symbol", up.Sym,
+				"package", pc.Package,
+				"constraint", pc.Constraints.String(),
+				"version", m.proc.Modules[pc.Package],
+			)
+
+			skip = true
+			break
+		}
+		if skip {
+			continue
+		}
+
+		err := m.loadUprobe(up, i.collection)
+		if err != nil {
+			var logFn func(string, ...any)
+			switch up.FailureMode {
+			case probe.FailureModeIgnore:
+				logFn = m.logger.Debug
+			case probe.FailureModeWarn:
+				logFn = m.logger.Warn
+			default:
+				// Unknown and FailureModeError.
+				return nil, err
+			}
+			logFn(
+				"failed to load uprobe",
+				"probe",
+				i.probe.Manifest().ID,
+				"symbol",
+				up.Sym,
+				"error",
+				err,
+			)
+			continue
+		}
+
+		closers = append(closers, up)
+	}
+
+	reader, err := i.probe.InitStartupConfig(i.collection, sampler)
+	if err != nil {
+		return nil, err
+	}
+	closers = append(closers, reader)
+
+	return closers, nil
+}
+
+func (m *Manager) loadUprobe(u *probe.Uprobe, c *ebpf.Collection) error {
+	offset, err := m.proc.GetFunctionOffset(u.Sym)
+	if err != nil {
+		return err
+	}
+
+	var closers []io.Closer
+
+	if u.EntryProbe != "" {
+		entryProg, ok := c.Programs[u.EntryProbe]
+		if !ok {
+			return fmt.Errorf("entry probe %s not found", u.EntryProbe)
+		}
+		opts := &link.UprobeOptions{Address: offset, PID: int(m.proc.ID)}
+		l, err := m.exe.Uprobe("", entryProg, opts)
+		if err != nil {
+			return err
+		}
+		closers = append(closers, l)
+	}
+
+	if u.ReturnProbe != "" {
+		retProg, ok := c.Programs[u.ReturnProbe]
+		if !ok {
+			return fmt.Errorf("return probe %s not found", u.ReturnProbe)
+		}
+		retOffsets, err := m.proc.GetFunctionReturns(u.Sym)
+		if err != nil {
+			return err
+		}
+
+		for _, ret := range retOffsets {
+			opts := &link.UprobeOptions{Address: ret, PID: int(m.proc.ID)}
+			l, err := m.exe.Uprobe("", retProg, opts)
+			if err != nil {
+				return err
+			}
+			closers = append(closers, l)
+		}
+	}
+
+	old := u.Closers.Swap(&closers)
+	if old != nil {
+		// load called twice without calling Close. Try and handle gracefully.
+		var err error
+		for _, closer := range *old {
+			err = errors.Join(err, closer.Close())
+		}
+		return err
+	}
+
+	return nil
+}
+
+func (m *Manager) closeProbe(p *probeReference) error {
+	if p.collection != nil {
+		p.collection.Close()
+	}
+
+	var err error
+	for _, c := range p.closers {
+		err = errors.Join(err, c.Close())
+	}
+	if err == nil {
+		m.logger.Debug("Closed", "Probe", p.probe.Manifest().ID)
+	}
+	return err
+}
+
 func (m *Manager) cleanup() error {
 	err := m.cp.Shutdown(context.Background())
 	for _, i := range m.probes {
-		err = errors.Join(err, i.Close())
+		err = errors.Join(err, m.closeProbe(i))
 	}
 
 	m.logger.Debug("Cleaning bpffs")
 	return errors.Join(err, bpffsCleanup(m.proc))
+}
+
+// initializeEBPFCollection loads eBPF objects from the given spec and returns a collection corresponding to the spec.
+// If the environment variable OTEL_GO_AUTO_SHOW_VERIFIER_LOG is set to true, the verifier log will be printed.
+func initializeEBPFCollection(
+	spec *ebpf.CollectionSpec,
+	proc *process.Info,
+) (*ebpf.Collection, error) {
+	collectionOpts := &ebpf.CollectionOptions{
+		Maps: ebpf.MapOptions{
+			PinPath: bpffs.PathForTargetApplication(proc),
+		},
+	}
+
+	// Getting full verifier log is expensive, so we only do it if the user explicitly asks for it.
+	showVerifierLogs := utils.ShouldShowVerifierLogs()
+	if showVerifierLogs {
+		collectionOpts.Programs.LogLevel = ebpf.LogLevelInstruction | ebpf.LogLevelBranch | ebpf.LogLevelStats
+	}
+
+	c, err := ebpf.NewCollectionWithOptions(spec, *collectionOpts)
+	if err != nil && showVerifierLogs {
+		var ve *ebpf.VerifierError
+		if errors.As(err, &ve) {
+			fmt.Printf("Verifier log: %-100v\n", ve)
+		}
+	}
+
+	return c, err
 }
