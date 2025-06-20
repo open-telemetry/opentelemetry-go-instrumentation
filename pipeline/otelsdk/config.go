@@ -13,6 +13,9 @@ import (
 	"strings"
 
 	"go.opentelemetry.io/contrib/detectors/aws/ec2"
+	"go.opentelemetry.io/contrib/detectors/aws/ecs"
+	"go.opentelemetry.io/contrib/detectors/aws/eks"
+	"go.opentelemetry.io/contrib/detectors/aws/lambda"
 	"go.opentelemetry.io/contrib/exporters/autoexport"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp"
@@ -255,6 +258,12 @@ func (c config) resource() *resource.Resource {
 		switch strings.TrimSpace(strings.ToLower(item)) {
 		case "ec2":
 			detectors = append(detectors, ec2.NewResourceDetector())
+		case "ecs":
+			detectors = append(detectors, ecs.NewResourceDetector())
+		case "eks":
+			detectors = append(detectors, eks.NewResourceDetector())
+		case "lambda":
+			detectors = append(detectors, lambda.NewResourceDetector())
 		}
 	}
 
