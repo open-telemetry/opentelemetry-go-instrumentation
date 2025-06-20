@@ -41,7 +41,8 @@ func TestLoadProbes(t *testing.T) {
 	id := setupTestModule(t)
 	pid := process.ID(id)
 
-	info, err := process.NewInfo(pid, make(map[string]interface{}))
+	logger := slog.Default()
+	info, err := process.NewInfo(logger, pid, make(map[string]interface{}))
 	if info == nil {
 		t.Fatalf("failed to create process.Info: %v", err)
 	}
@@ -52,7 +53,6 @@ func TestLoadProbes(t *testing.T) {
 	require.NotNil(t, ver)
 	t.Logf("Running on kernel %s", ver.String())
 
-	logger := slog.Default()
 	probes := []probe.Probe{
 		grpcClient.New(logger, ""),
 		grpcServer.New(logger, ""),

@@ -22,6 +22,10 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 - Build go binaries using the provided `TARGETARCH` of the Dockerfile.
   This fixes the bug where images for alternate architectures (e.g. `arm64`) were built using the `amd64` architecture. ([#2411](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/2411))
 
+### Fixed
+
+- Skip modules with `(devel)` version. ([#2401](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/2401))
+
 ## [v0.22.0] - 2025-05-23
 
 ### Added
