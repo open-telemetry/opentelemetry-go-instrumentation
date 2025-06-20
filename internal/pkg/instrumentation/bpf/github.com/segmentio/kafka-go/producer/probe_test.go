@@ -15,16 +15,16 @@ import (
 	"go.opentelemetry.io/otel/trace"
 
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/context"
+	"go.opentelemetry.io/auto/internal/pkg/instrumentation/kernel"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/pdataconv"
-	"go.opentelemetry.io/auto/internal/pkg/instrumentation/utils"
 )
 
 func TestProbeConvertEvent(t *testing.T) {
 	start := time.Unix(0, time.Now().UnixNano()) // No wall clock.
 	end := start.Add(1 * time.Second)
 
-	startOffset := utils.TimeToBootOffset(start)
-	endOffset := utils.TimeToBootOffset(end)
+	startOffset := kernel.TimeToBootOffset(start)
+	endOffset := kernel.TimeToBootOffset(end)
 
 	traceID := trace.TraceID{1}
 
@@ -61,8 +61,8 @@ func TestProbeConvertEvent(t *testing.T) {
 		span := spans.AppendEmpty()
 		span.SetName(kafkaProducerSpanName("topic1"))
 		span.SetKind(ptrace.SpanKindProducer)
-		span.SetStartTimestamp(utils.BootOffsetToTimestamp(startOffset))
-		span.SetEndTimestamp(utils.BootOffsetToTimestamp(endOffset))
+		span.SetStartTimestamp(kernel.BootOffsetToTimestamp(startOffset))
+		span.SetEndTimestamp(kernel.BootOffsetToTimestamp(endOffset))
 		span.SetTraceID(pcommon.TraceID(traceID))
 		span.SetSpanID(pcommon.SpanID{1})
 		span.SetFlags(uint32(trace.FlagsSampled))
@@ -78,8 +78,8 @@ func TestProbeConvertEvent(t *testing.T) {
 		span = spans.AppendEmpty()
 		span.SetName(kafkaProducerSpanName("topic2"))
 		span.SetKind(ptrace.SpanKindProducer)
-		span.SetStartTimestamp(utils.BootOffsetToTimestamp(startOffset))
-		span.SetEndTimestamp(utils.BootOffsetToTimestamp(endOffset))
+		span.SetStartTimestamp(kernel.BootOffsetToTimestamp(startOffset))
+		span.SetEndTimestamp(kernel.BootOffsetToTimestamp(endOffset))
 		span.SetTraceID(pcommon.TraceID(traceID))
 		span.SetSpanID(pcommon.SpanID{2})
 		span.SetFlags(uint32(trace.FlagsSampled))

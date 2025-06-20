@@ -19,9 +19,9 @@ import (
 	"go.opentelemetry.io/auto/internal/pkg/inject"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/bpf/net/http"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/context"
+	"go.opentelemetry.io/auto/internal/pkg/instrumentation/kernel"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/pdataconv"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/probe"
-	"go.opentelemetry.io/auto/internal/pkg/instrumentation/utils"
 	"go.opentelemetry.io/auto/internal/pkg/process"
 	"go.opentelemetry.io/auto/internal/pkg/structfield"
 )
@@ -262,8 +262,8 @@ func processFn(e *event) ptrace.SpanSlice {
 	span := spans.AppendEmpty()
 	span.SetName(spanName)
 	span.SetKind(ptrace.SpanKindServer)
-	span.SetStartTimestamp(utils.BootOffsetToTimestamp(e.StartTime))
-	span.SetEndTimestamp(utils.BootOffsetToTimestamp(e.EndTime))
+	span.SetStartTimestamp(kernel.BootOffsetToTimestamp(e.StartTime))
+	span.SetEndTimestamp(kernel.BootOffsetToTimestamp(e.EndTime))
 	span.SetTraceID(pcommon.TraceID(e.SpanContext.TraceID))
 	span.SetSpanID(pcommon.SpanID(e.SpanContext.SpanID))
 	span.SetFlags(uint32(trace.FlagsSampled))
