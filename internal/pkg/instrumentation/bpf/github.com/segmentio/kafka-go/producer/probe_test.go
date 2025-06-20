@@ -15,6 +15,7 @@ import (
 	"go.opentelemetry.io/otel/trace"
 
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/context"
+	"go.opentelemetry.io/auto/internal/pkg/instrumentation/pdataconv"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/utils"
 )
 
@@ -65,7 +66,7 @@ func TestProbeConvertEvent(t *testing.T) {
 		span.SetTraceID(pcommon.TraceID(traceID))
 		span.SetSpanID(pcommon.SpanID{1})
 		span.SetFlags(uint32(trace.FlagsSampled))
-		utils.Attributes(
+		pdataconv.Attributes(
 			span.Attributes(),
 			semconv.MessagingKafkaMessageKey("key1"),
 			semconv.MessagingDestinationName("topic1"),
@@ -82,7 +83,7 @@ func TestProbeConvertEvent(t *testing.T) {
 		span.SetTraceID(pcommon.TraceID(traceID))
 		span.SetSpanID(pcommon.SpanID{2})
 		span.SetFlags(uint32(trace.FlagsSampled))
-		utils.Attributes(
+		pdataconv.Attributes(
 			span.Attributes(),
 			semconv.MessagingKafkaMessageKey("key2"),
 			semconv.MessagingDestinationName("topic2"),

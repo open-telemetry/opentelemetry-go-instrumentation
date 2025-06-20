@@ -15,6 +15,7 @@ import (
 	"go.opentelemetry.io/otel/trace"
 
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/context"
+	"go.opentelemetry.io/auto/internal/pkg/instrumentation/pdataconv"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/utils"
 )
 
@@ -69,7 +70,7 @@ func TestProbeConvertEvent(t *testing.T) {
 				span.SetTraceID(pcommon.TraceID(traceID))
 				span.SetSpanID(pcommon.SpanID(spanID))
 				span.SetFlags(uint32(trace.FlagsSampled))
-				utils.Attributes(
+				pdataconv.Attributes(
 					span.Attributes(),
 					semconv.HTTPRequestMethodKey.String("GET"),
 					semconv.URLPath("/foo/bar"),
@@ -120,7 +121,7 @@ func TestProbeConvertEvent(t *testing.T) {
 				span.SetTraceID(pcommon.TraceID(traceID))
 				span.SetSpanID(pcommon.SpanID(spanID))
 				span.SetFlags(uint32(trace.FlagsSampled))
-				utils.Attributes(
+				pdataconv.Attributes(
 					span.Attributes(),
 					semconv.HTTPRequestMethodKey.String("GET"),
 					semconv.URLPath("/foo/bar"),
@@ -172,7 +173,7 @@ func TestProbeConvertEvent(t *testing.T) {
 				span.SetTraceID(pcommon.TraceID(traceID))
 				span.SetSpanID(pcommon.SpanID(spanID))
 				span.SetFlags(uint32(trace.FlagsSampled))
-				utils.Attributes(
+				pdataconv.Attributes(
 					span.Attributes(),
 					semconv.HTTPRequestMethodKey.String("GET"),
 					semconv.URLPath("/foo/bar"),
@@ -224,7 +225,7 @@ func TestProbeConvertEvent(t *testing.T) {
 				span.SetSpanID(pcommon.SpanID(spanID))
 				span.SetFlags(uint32(trace.FlagsSampled))
 				span.Status().SetCode(ptrace.StatusCodeError)
-				utils.Attributes(
+				pdataconv.Attributes(
 					span.Attributes(),
 					semconv.HTTPRequestMethodKey.String("GET"),
 					semconv.URLPath("/foo/bar"),

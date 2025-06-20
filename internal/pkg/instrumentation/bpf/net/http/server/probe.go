@@ -19,6 +19,7 @@ import (
 	"go.opentelemetry.io/auto/internal/pkg/inject"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/bpf/net/http"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/context"
+	"go.opentelemetry.io/auto/internal/pkg/instrumentation/pdataconv"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/probe"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/utils"
 	"go.opentelemetry.io/auto/internal/pkg/process"
@@ -271,7 +272,7 @@ func processFn(e *event) ptrace.SpanSlice {
 		span.SetParentSpanID(pcommon.SpanID(e.ParentSpanContext.SpanID))
 	}
 
-	utils.Attributes(span.Attributes(), attrs...)
+	pdataconv.Attributes(span.Attributes(), attrs...)
 
 	if e.StatusCode >= 500 && e.StatusCode < 600 {
 		span.Status().SetCode(ptrace.StatusCodeError)

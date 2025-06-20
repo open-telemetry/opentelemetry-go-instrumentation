@@ -20,6 +20,7 @@ import (
 	"golang.org/x/sys/unix"
 
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/context"
+	"go.opentelemetry.io/auto/internal/pkg/instrumentation/pdataconv"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/probe"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/utils"
 	"go.opentelemetry.io/auto/internal/pkg/structfield"
@@ -179,7 +180,7 @@ func processFn(e *event) ptrace.SpanSlice {
 			span.SetParentSpanID(pcommon.SpanID(e.ParentSpanContext.SpanID))
 		}
 
-		utils.Attributes(span.Attributes(), msgAttrs...)
+		pdataconv.Attributes(span.Attributes(), msgAttrs...)
 	}
 
 	return spans

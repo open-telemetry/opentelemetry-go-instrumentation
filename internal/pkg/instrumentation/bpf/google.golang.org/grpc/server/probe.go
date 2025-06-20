@@ -21,6 +21,7 @@ import (
 
 	"go.opentelemetry.io/auto/internal/pkg/inject"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/context"
+	"go.opentelemetry.io/auto/internal/pkg/instrumentation/pdataconv"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/probe"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/utils"
 	"go.opentelemetry.io/auto/internal/pkg/process"
@@ -347,7 +348,7 @@ func (p *processor) processFn(e *event) ptrace.SpanSlice {
 		attrs = append(attrs, semconv.ServerPort(int(e.LocalAddr.Port)))
 	}
 
-	utils.Attributes(span.Attributes(), attrs...)
+	pdataconv.Attributes(span.Attributes(), attrs...)
 
 	return spans
 }

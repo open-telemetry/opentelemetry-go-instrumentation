@@ -17,6 +17,7 @@ import (
 	"go.opentelemetry.io/otel/trace"
 
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/context"
+	"go.opentelemetry.io/auto/internal/pkg/instrumentation/pdataconv"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/utils"
 )
 
@@ -124,7 +125,7 @@ func TestProbeConvertEvent(t *testing.T) {
 	span.SetTraceID(pcommon.TraceID(traceID))
 	span.SetSpanID(pcommon.SpanID(spanID))
 	span.SetFlags(uint32(trace.FlagsSampled))
-	utils.Attributes(
+	pdataconv.Attributes(
 		span.Attributes(),
 		attribute.Bool("bool_key", true),
 		attribute.String("string_key1", "string value 1"),
