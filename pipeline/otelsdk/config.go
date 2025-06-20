@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"go.opentelemetry.io/contrib/detectors/aws/ec2"
 	"go.opentelemetry.io/contrib/exporters/autoexport"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp"
@@ -30,6 +31,9 @@ const (
 	// envLogLevelKey is the key for the environment variable value containing
 	// the log level.
 	envLogLevelKey = "OTEL_LOG_LEVEL"
+	// envGoDetectorsKey is the key for the environment variable value
+	// containing the resource detectors to use.
+	envGoDetectorsKey = "OTEL_GO_DETECTORS"
 )
 
 // Option configures a [traceHandler] via [NewHandler].
@@ -231,8 +235,7 @@ func (c config) TracerProvider() *sdk.TracerProvider {
 }
 
 func (c config) resource() *resource.Resource {
-	return resource.NewWithAttributes(
-		semconv.SchemaURL,
+	base := resource.NewSchemaless(
 		append(
 			[]attribute.KeyValue{
 				semconv.TelemetrySDKLanguageGo,
@@ -241,4 +244,32 @@ func (c config) resource() *resource.Resource {
 			c.resAttrs...,
 		)...,
 	)
+
+	v, ok := lookupEnv(envGoDetectorsKey)
+	if !ok {
+		return base
+	}
+
+	var detectors []resource.Detector
+	for _, item := range strings.Split(v, ",") {
+		switch strings.TrimSpace(strings.ToLower(item)) {
+		case "ec2":
+			detectors = append(detectors, ec2.NewResourceDetector())
+		}
+	}
+
+	ctx := context.Background()
+	detected, err := resource.New(ctx, resource.WithDetectors(detectors...))
+	if err != nil {
+		c.logger.Error("EC2 detector failed", "err", err)
+		return base
+	}
+
+	merged, err := resource.Merge(base, detected)
+	if err != nil {
+		c.logger.Error("Merge failed", "err", err)
+		return base
+	}
+
+	return merged
 }
