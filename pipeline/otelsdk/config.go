@@ -248,14 +248,36 @@ func (c config) resource() *resource.Resource {
 		)...,
 	)
 
+	ctx := context.Background()
+	detected, err := resourceDetectors(ctx, c.Logger())
+	if err != nil {
+		return base
+	}
+
+	merged, err := resource.Merge(base, detected)
+	if err != nil {
+		return base
+	}
+
+	return merged
+}
+
+func resourceDetectors(ctx context.Context, logger *slog.Logger) (*resource.Resource, error) {
 	v, ok := lookupEnv(envGoDetectorsKey)
 	if !ok {
-		return base
+		return nil, nil
 	}
 
 	var detectors []resource.Detector
 	for _, item := range strings.Split(v, ",") {
-		switch strings.TrimSpace(strings.ToLower(item)) {
+		switch item {
+		case "all":
+			return resource.New(ctx, resource.WithDetectors(
+				ec2.NewResourceDetector(),
+				ecs.NewResourceDetector(),
+				eks.NewResourceDetector(),
+				lambda.NewResourceDetector(),
+			))
 		case "ec2":
 			detectors = append(detectors, ec2.NewResourceDetector())
 		case "ecs":
@@ -264,21 +286,14 @@ func (c config) resource() *resource.Resource {
 			detectors = append(detectors, eks.NewResourceDetector())
 		case "lambda":
 			detectors = append(detectors, lambda.NewResourceDetector())
+		default:
+			logger.Warn("Unknown resource detector", "detector", item)
 		}
 	}
 
-	ctx := context.Background()
-	detected, err := resource.New(ctx, resource.WithDetectors(detectors...))
-	if err != nil {
-		c.logger.Error("EC2 detector failed", "err", err)
-		return base
+	if len(detectors) == 0 {
+		return nil, nil
 	}
 
-	merged, err := resource.Merge(base, detected)
-	if err != nil {
-		c.logger.Error("Merge failed", "err", err)
-		return base
-	}
-
-	return merged
+	return resource.New(ctx, resource.WithDetectors(detectors...))
 }
