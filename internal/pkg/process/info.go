@@ -133,10 +133,29 @@ func goDevVer(raw string) (*semver.Version, error) {
 	return nil, errors.New("non-devel version")
 }
 
+// develModVer is the version string used for development versions of modules.
+// It is used to indicate that the module is not a released version, but rather
+// a development version that may include uncommitted changes or is in an
+// unstable state.
+//
+// https://github.com/open-telemetry/opentelemetry-go-instrumentation/issues/2388
+const develModVer = "(devel)"
+
+// VerDevel is the placeholder version used for modules that use the
+// development version "(devel)".
+var VerDevel = semver.MustParse("0.0.0-dev")
+
 func findModules(goVer *semver.Version, deps []*debug.Module) (map[string]*semver.Version, error) {
 	var err error
 	out := make(map[string]*semver.Version, len(deps)+1)
 	for _, dep := range deps {
+		if dep.Version == develModVer {
+			// dep.Version is not a parsable semantic version. Do not error.
+			// Instead, use VerDevel to signal this development version state.
+			out[dep.Path] = VerDevel
+			continue
+		}
+
 		depVersion, e := semver.NewVersion(dep.Version)
 		if e != nil {
 			err = errors.Join(
