@@ -1,19 +1,15 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-// Package utils is an overly-generic utility package that provides a catch-all
-// for instrumentation utilities.
-//
-// New functionality should not be added to this package. Instead it should be
-// added to an appropriately named and scoped package for the functionality
-// being added to follow Go programming best practices.
-package utils
+// Package pdataconv provides conversion functions for the pdata format.
+package pdataconv
 
 import (
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/otel/attribute"
 )
 
+// Attributes sets the attrs in the provided pcommon.Map dest.
 func Attributes(dest pcommon.Map, attrs ...attribute.KeyValue) {
 	for _, attr := range attrs {
 		setAttr(dest, attr)

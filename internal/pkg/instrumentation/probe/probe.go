@@ -25,8 +25,8 @@ import (
 
 	"go.opentelemetry.io/auto/internal/pkg/inject"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/bpffs"
+	"go.opentelemetry.io/auto/internal/pkg/instrumentation/debug"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/probe/sampling"
-	"go.opentelemetry.io/auto/internal/pkg/instrumentation/utils"
 	"go.opentelemetry.io/auto/internal/pkg/process"
 	"go.opentelemetry.io/auto/internal/pkg/structfield"
 	"go.opentelemetry.io/auto/pipeline"
@@ -267,12 +267,21 @@ func (i *Base[BPFObj, BPFEvent]) buildEBPFCollection(
 			PinPath: bpffs.PathForTargetApplication(info),
 		},
 	}
-	c, err := utils.InitializeEBPFCollection(spec, sOpts)
-	if err != nil {
-		return nil, err
+
+	v := debug.VerifierLogEnabled()
+	if v {
+		sOpts.Programs.LogLevel = ebpf.LogLevelInstruction | ebpf.LogLevelBranch | ebpf.LogLevelStats
 	}
 
-	return c, nil
+	c, err := ebpf.NewCollectionWithOptions(spec, *sOpts)
+	if err != nil && v {
+		var ve *ebpf.VerifierError
+		if errors.As(err, &ve) {
+			fmt.Printf("Verifier log: %-100v\n", ve)
+		}
+	}
+
+	return c, err
 }
 
 // read reads a new BPFEvent from the perf Reader.

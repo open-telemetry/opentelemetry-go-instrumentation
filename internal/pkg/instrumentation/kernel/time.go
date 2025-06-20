@@ -1,7 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package utils
+package kernel
 
 import (
 	"math"
@@ -21,12 +21,12 @@ var bootTimeOffset = func() int64 {
 // BootOffsetToTimestamp returns the [pcommon.Timestamp] that is nsec number of
 // nanoseconds after the estimated boot time of the system.
 func BootOffsetToTimestamp(nsec uint64) pcommon.Timestamp {
-	return pcommon.NewTimestampFromTime(BootOffsetToTime(nsec))
+	return pcommon.NewTimestampFromTime(bootOffsetToTime(nsec))
 }
 
-// BootOffsetToTime returns the timestamp that is nsec number of nanoseconds
+// bootOffsetToTime returns the timestamp that is nsec number of nanoseconds
 // after the estimated boot time of the system.
-func BootOffsetToTime(nsec uint64) time.Time {
+func bootOffsetToTime(nsec uint64) time.Time {
 	if nsec > math.MaxInt64 {
 		nsec = math.MaxInt64
 	}
