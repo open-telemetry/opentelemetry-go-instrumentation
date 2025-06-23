@@ -29,7 +29,7 @@ DEPENDENCIES_DOCKERFILE=./dependencies.Dockerfile
 .DEFAULT_GOAL := precommit
 
 .PHONY: precommit
-precommit: license-header-check golangci-lint-fix test codespell
+precommit: license-header-check golangci-lint-fix test codespell markdown-lint
 
 # Tools
 $(TOOLS):
@@ -298,3 +298,8 @@ $(CODESPELL): PACKAGE=codespell
 .PHONY: codespell
 codespell: $(CODESPELL)
 	@$(DOCKERPY) $(CODESPELL)
+
+MARKDOWNIMAGE := $(shell awk '$$4=="markdown" {print $$2}' $(DEPENDENCIES_DOCKERFILE))
+.PHONY: markdown-lint
+markdown-lint:
+	docker run --rm -u $(DOCKER_USER) -v "$(CURDIR):$(WORKDIR)" $(MARKDOWNIMAGE) -c $(WORKDIR)/.markdownlint.yaml $(WORKDIR)/**/*.md

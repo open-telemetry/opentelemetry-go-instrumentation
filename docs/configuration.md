@@ -17,7 +17,6 @@ Alternatively, you can add support for additional or different configurations by
 
 [^1]: One of `OTEL_GO_AUTO_TARGET_EXE` or `OTEL_GO_AUTO_TARGET_PID` are required to be set, unless this information is passed directly as CLI arguments.
 
-
 ## Resources
 
 | Environment variable        | Description                                                                                                                                                                            | Default value |

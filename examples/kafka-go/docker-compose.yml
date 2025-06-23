@@ -13,7 +13,7 @@ volumes:
 
 services:
   broker:
-    image: apache/kafka:3.9.0@sha256:fbc7d7c428e3755cf36518d4976596002477e4c052d1f80b5b9eafd06d0fff2f
+    image: apache/kafka:3.9.1@sha256:4ceccc577f03f51f6af8dbfda55194d0d892f4fa7913ffbded567ce3895622ed
     container_name: broker
     restart: on-failure:3
     environment:
@@ -123,7 +123,7 @@ services:
     container_name: auto-consumer
 
   jaeger:
-    image: jaegertracing/all-in-one:1.69.0@sha256:82505210a99b18f587c94f40120c2e13ef3a6ac3095eebdb9e9cba9bf5839efd
+    image: jaegertracing/all-in-one:1.70.0@sha256:c73bec5e6220b91eeda2574ec6aabbb8232f531e6b0bd11819f53548eefa6424
     ports:
       - "16686:16686"
       - "14268:14268"

@@ -48,7 +48,6 @@ Looking at one of the traces within Jaeger we can see spans from both the `front
 
 ![Jaeger trace](./images/jaeger_trace.png)
 
-From this 
 Both services have independently been instrumented with OpenTelemetry Go auto-instrumentation.
 Even though the instrumentation for each service is run in a unique process, the trace though them is correctly shown.
 Meaning, the trace context is correctly propagated by the auto-instrumentation.
