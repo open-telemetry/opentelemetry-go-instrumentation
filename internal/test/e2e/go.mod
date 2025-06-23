@@ -17,7 +17,7 @@ require (
 	go.opentelemetry.io/otel/trace v1.36.0
 	go.uber.org/goleak v1.3.0
 	google.golang.org/grpc v1.73.0
-	google.golang.org/grpc/examples v0.0.0-20250619055035-0100d21c8f9b
+	google.golang.org/grpc/examples v0.0.0-20250623054635-bdbe6a2b5d8d
 )
 
 require (
@@ -67,7 +67,7 @@ require (
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/prometheus/client_golang v1.22.0 // indirect
 	github.com/prometheus/client_model v0.6.2 // indirect
-	github.com/prometheus/common v0.64.0 // indirect
+	github.com/prometheus/common v0.65.0 // indirect
 	github.com/prometheus/procfs v0.16.1 // indirect
 	github.com/twitchyliquid64/golang-asm v0.15.1 // indirect
 	github.com/ugorji/go/codec v1.3.0 // indirect
