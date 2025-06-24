@@ -1,7 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package utils
+package kernel
 
 import (
 	"testing"
@@ -24,5 +24,5 @@ func TestBootOffsetConversion(t *testing.T) {
 	t.Logf("offset: %d", offset)
 
 	assert.Equal(t, offset, TimeToBootOffset(timestamp), "TimeToBootOffset")
-	assert.Equal(t, timestamp, BootOffsetToTime(offset), "BootOffsetToTime")
+	assert.Equal(t, timestamp, bootOffsetToTime(offset), "BootOffsetToTime")
 }

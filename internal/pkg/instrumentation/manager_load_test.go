@@ -28,8 +28,9 @@ import (
 	httpClient "go.opentelemetry.io/auto/internal/pkg/instrumentation/bpf/net/http/client"
 	httpServer "go.opentelemetry.io/auto/internal/pkg/instrumentation/bpf/net/http/server"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/bpffs"
+	"go.opentelemetry.io/auto/internal/pkg/instrumentation/debug"
+	"go.opentelemetry.io/auto/internal/pkg/instrumentation/kernel"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/probe"
-	"go.opentelemetry.io/auto/internal/pkg/instrumentation/utils"
 	"go.opentelemetry.io/auto/internal/pkg/process"
 )
 
@@ -48,7 +49,7 @@ func TestLoadProbes(t *testing.T) {
 	// Reset Info module information.
 	info.Modules = make(map[string]*semver.Version)
 
-	ver := utils.GetLinuxKernelVersion()
+	ver := kernel.Version()
 	require.NotNil(t, ver)
 	t.Logf("Running on kernel %s", ver.String())
 
@@ -170,15 +171,15 @@ func ProbesLoad(t *testing.T, info *process.Info, p TestProbe) {
 		},
 	}
 
-	collectVerifierLogs := utils.ShouldShowVerifierLogs()
-	if collectVerifierLogs {
+	v := debug.VerifierLogEnabled()
+	if v {
 		opts.Programs.LogLevel = ebpf.LogLevelStats | ebpf.LogLevelInstruction
 	}
 
 	c, err := ebpf.NewCollectionWithOptions(spec, opts)
 	if !assert.NoError(t, err) {
 		var ve *ebpf.VerifierError
-		if errors.As(err, &ve) && collectVerifierLogs {
+		if errors.As(err, &ve) && v {
 			t.Logf("Verifier log: %-100v\n", ve)
 		}
 	}
