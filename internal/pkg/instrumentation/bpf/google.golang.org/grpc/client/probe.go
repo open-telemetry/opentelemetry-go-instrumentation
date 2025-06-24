@@ -23,8 +23,9 @@ import (
 
 	"go.opentelemetry.io/auto/internal/pkg/inject"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/context"
+	"go.opentelemetry.io/auto/internal/pkg/instrumentation/kernel"
+	"go.opentelemetry.io/auto/internal/pkg/instrumentation/pdataconv"
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/probe"
-	"go.opentelemetry.io/auto/internal/pkg/instrumentation/utils"
 	"go.opentelemetry.io/auto/internal/pkg/process"
 	"go.opentelemetry.io/auto/internal/pkg/structfield"
 )
@@ -176,7 +177,7 @@ func New(logger *slog.Logger, version string) probe.Probe {
 }
 
 func verifyAndLoadBpf() (*ebpf.CollectionSpec, error) {
-	if !utils.SupportsContextPropagation() {
+	if !kernel.SupportsContextPropagation() {
 		return nil, errors.New(
 			"the Linux Kernel doesn't support context propagation, please check if the kernel is in lockdown mode (/sys/kernel/security/lockdown)",
 		)
@@ -222,8 +223,8 @@ func processFn(e *event) ptrace.SpanSlice {
 	span := spans.AppendEmpty()
 	span.SetName(method)
 	span.SetKind(ptrace.SpanKindClient)
-	span.SetStartTimestamp(utils.BootOffsetToTimestamp(e.StartTime))
-	span.SetEndTimestamp(utils.BootOffsetToTimestamp(e.EndTime))
+	span.SetStartTimestamp(kernel.BootOffsetToTimestamp(e.StartTime))
+	span.SetEndTimestamp(kernel.BootOffsetToTimestamp(e.EndTime))
 	span.SetTraceID(pcommon.TraceID(e.SpanContext.TraceID))
 	span.SetSpanID(pcommon.SpanID(e.SpanContext.SpanID))
 	span.SetFlags(uint32(trace.FlagsSampled))
@@ -232,7 +233,7 @@ func processFn(e *event) ptrace.SpanSlice {
 		span.SetParentSpanID(pcommon.SpanID(e.ParentSpanContext.SpanID))
 	}
 
-	utils.Attributes(span.Attributes(), attrs...)
+	pdataconv.Attributes(span.Attributes(), attrs...)
 
 	if writeStatus && e.StatusCode > 0 {
 		span.Status().SetCode(ptrace.StatusCodeError)
