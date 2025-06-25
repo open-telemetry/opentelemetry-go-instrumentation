@@ -208,11 +208,6 @@ Any [Maintainer] can merge the PR once the above criteria have been met.
 
 ## Appovers and Maintainers
 
-### Approvers
-
-- [Nikola Grcevski](https://github.com/grcevski), Grafana Labs
-- [Robert Pająk](https://github.com/pellared), Splunk
-
 ### Maintainers
 
 - [Eden Federman](https://github.com/edeNFed), Odigos
@@ -220,11 +215,22 @@ Any [Maintainer] can merge the PR once the above criteria have been met.
 - [Ron Federman](https://github.com/RonFed), Odigos
 - [Tyler Yahn](https://github.com/MrAlias), Splunk
 
+For more information about the maintainer role, see the [community repository](https://github.com/open-telemetry/community/blob/main/community-membership.md#maintainer).
+
+### Approvers
+
+- [Nikola Grcevski](https://github.com/grcevski), Grafana Labs
+- [Robert Pająk](https://github.com/pellared), Splunk
+
+For more information about the approver role, see the [community repository](https://github.com/open-telemetry/community/blob/main/community-membership.md#approver).
+
 ### Emeritus
 
 - [Dinesh Gurumurthy](https://github.com/dineshg13), DataDog
 - [Mike Goldsmith](https://github.com/MikeGoldsmith), Honeycomb
 - [Przemyslaw Delewski](https://github.com/pdelewski), Quesma
+
+For more information about the emeritus role, see the [community repository](https://github.com/open-telemetry/community/blob/main/guides/contributor/membership.md#emeritus-maintainerapprovertriager).
 
 ### Become an Approver or a Maintainer
 
