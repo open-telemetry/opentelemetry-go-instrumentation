@@ -8,11 +8,13 @@ import (
 	_ "embed"
 	"fmt"
 	"io"
+	"structs"
 
 	"github.com/cilium/ebpf"
 )
 
 type bpf_no_tpHttpRequestT struct {
+	_           structs.HostLayout
 	StartTime   uint64
 	EndTime     uint64
 	Sc          bpf_no_tpSpanContext
@@ -34,9 +36,13 @@ type bpf_no_tpHttpRequestT struct {
 	_           [6]byte
 }
 
-type bpf_no_tpSliceArrayBuff struct{ Buff [1024]uint8 }
+type bpf_no_tpSliceArrayBuff struct {
+	_    structs.HostLayout
+	Buff [1024]uint8
+}
 
 type bpf_no_tpSpanContext struct {
+	_          structs.HostLayout
 	TraceID    [16]uint8
 	SpanID     [8]uint8
 	TraceFlags uint8
