@@ -3,7 +3,7 @@ module go.opentelemetry.io/auto/internal/tools
 go 1.23.0
 
 require (
-	github.com/Masterminds/semver/v3 v3.3.1
+	github.com/Masterminds/semver/v3 v3.4.0
 	github.com/docker/docker v28.3.0+incompatible
 	github.com/golangci/golangci-lint/v2 v2.1.6
 	github.com/google/go-licenses/v2 v2.0.0-alpha.1
