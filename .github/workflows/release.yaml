@@ -3,6 +3,8 @@ on:
   push:
     tags:
       - 'v*.*.*'
+permissions:
+  contents: read
 jobs:
   build-and-push-image:
     runs-on: ubuntu-latest
