@@ -14,15 +14,16 @@ import (
 	"go.opentelemetry.io/otel/trace"
 
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/context"
-	"go.opentelemetry.io/auto/internal/pkg/instrumentation/utils"
+	"go.opentelemetry.io/auto/internal/pkg/instrumentation/kernel"
+	"go.opentelemetry.io/auto/internal/pkg/instrumentation/pdataconv"
 )
 
 func TestConvertEvent(t *testing.T) {
 	startTime := time.Unix(0, time.Now().UnixNano()) // No wall clock.
 	endTime := startTime.Add(1 * time.Second)
 
-	startTimeOffset := utils.TimeToBootOffset(startTime)
-	endTimeOffset := utils.TimeToBootOffset(endTime)
+	startTimeOffset := kernel.TimeToBootOffset(startTime)
+	endTimeOffset := kernel.TimeToBootOffset(endTime)
 
 	hostString := "google.com"
 	protoString := "HTTP/1.1"
@@ -101,7 +102,7 @@ func TestConvertEvent(t *testing.T) {
 				span.SetStartTimestamp(pcommon.NewTimestampFromTime(startTime))
 				span.SetEndTimestamp(pcommon.NewTimestampFromTime(endTime))
 
-				utils.Attributes(
+				pdataconv.Attributes(
 					span.Attributes(),
 					semconv.HTTPRequestMethodKey.String(methodString),
 					semconv.HTTPResponseStatusCodeKey.Int(200),
@@ -142,7 +143,7 @@ func TestConvertEvent(t *testing.T) {
 				span.SetEndTimestamp(pcommon.NewTimestampFromTime(endTime))
 				span.Status().SetCode(ptrace.StatusCodeError)
 
-				utils.Attributes(
+				pdataconv.Attributes(
 					span.Attributes(),
 					semconv.HTTPRequestMethodKey.String(methodString),
 					semconv.HTTPResponseStatusCodeKey.Int(400),
@@ -183,7 +184,7 @@ func TestConvertEvent(t *testing.T) {
 				span.SetEndTimestamp(pcommon.NewTimestampFromTime(endTime))
 				span.Status().SetCode(ptrace.StatusCodeError)
 
-				utils.Attributes(
+				pdataconv.Attributes(
 					span.Attributes(),
 					semconv.HTTPRequestMethodKey.String(methodString),
 					semconv.HTTPResponseStatusCodeKey.Int(500),
@@ -223,7 +224,7 @@ func TestConvertEvent(t *testing.T) {
 				span.SetStartTimestamp(pcommon.NewTimestampFromTime(startTime))
 				span.SetEndTimestamp(pcommon.NewTimestampFromTime(endTime))
 
-				utils.Attributes(
+				pdataconv.Attributes(
 					span.Attributes(),
 					semconv.HTTPRequestMethodKey.String(methodString),
 					semconv.HTTPResponseStatusCodeKey.Int(200),
@@ -267,7 +268,7 @@ func TestConvertEvent(t *testing.T) {
 				span.SetStartTimestamp(pcommon.NewTimestampFromTime(startTime))
 				span.SetEndTimestamp(pcommon.NewTimestampFromTime(endTime))
 
-				utils.Attributes(
+				pdataconv.Attributes(
 					span.Attributes(),
 					semconv.HTTPRequestMethodKey.String(methodString),
 					semconv.HTTPResponseStatusCodeKey.Int(200),
@@ -311,7 +312,7 @@ func TestConvertEvent(t *testing.T) {
 				span.SetStartTimestamp(pcommon.NewTimestampFromTime(startTime))
 				span.SetEndTimestamp(pcommon.NewTimestampFromTime(endTime))
 
-				utils.Attributes(
+				pdataconv.Attributes(
 					span.Attributes(),
 					semconv.HTTPRequestMethodKey.String(methodString),
 					semconv.HTTPResponseStatusCodeKey.Int(200),

@@ -8,15 +8,18 @@ import (
 	_ "embed"
 	"fmt"
 	"io"
+	"structs"
 
 	"github.com/cilium/ebpf"
 )
 
 type bpfKafkaRequestT struct {
+	_         structs.HostLayout
 	StartTime uint64
 	EndTime   uint64
 	Psc       bpfSpanContext
 	Msgs      [10]struct {
+		_     structs.HostLayout
 		Sc    bpfSpanContext
 		Topic [256]int8
 		Key   [256]int8
@@ -25,9 +28,13 @@ type bpfKafkaRequestT struct {
 	ValidMessages uint64
 }
 
-type bpfSliceArrayBuff struct{ Buff [1024]uint8 }
+type bpfSliceArrayBuff struct {
+	_    structs.HostLayout
+	Buff [1024]uint8
+}
 
 type bpfSpanContext struct {
+	_          structs.HostLayout
 	TraceID    [16]uint8
 	SpanID     [8]uint8
 	TraceFlags uint8

@@ -12,7 +12,7 @@ import (
 	"os"
 	"runtime"
 
-	"go.opentelemetry.io/auto/internal/pkg/instrumentation/utils"
+	"go.opentelemetry.io/auto/internal/pkg/instrumentation/kernel"
 )
 
 // Allocation represent memory that has been allocated for a process.
@@ -29,7 +29,7 @@ func allocate(logger *slog.Logger, id ID) (*Allocation, error) {
 	// Go's implementation of runtime.NumCPU (https://github.com/golang/go/blob/48d899dcdbed4534ed942f7ec2917cf86b18af22/src/runtime/os_linux.go#L97)
 	// uses sched_getaffinity to count the number of CPUs the process is allowed to run on.
 	// We are interested in the number of CPUs available to the system.
-	nCPU, err := utils.GetCPUCount()
+	nCPU, err := kernel.GetCPUCount()
 	if err != nil {
 		return nil, err
 	}
