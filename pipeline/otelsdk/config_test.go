@@ -7,10 +7,15 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"reflect"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.opentelemetry.io/contrib/detectors/aws/ec2"
+	"go.opentelemetry.io/contrib/detectors/aws/ecs"
+	"go.opentelemetry.io/contrib/detectors/aws/eks"
+	"go.opentelemetry.io/contrib/detectors/aws/lambda"
 	"go.opentelemetry.io/otel/attribute"
 	semconv "go.opentelemetry.io/otel/semconv/v1.30.0"
 )
@@ -133,4 +138,41 @@ func TestWithLogger(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.Same(t, l, c.logger)
+}
+
+func TestResourceDetectors(t *testing.T) {
+	logger := slog.New(slog.Default().Handler())
+	t.Run("None", func(t *testing.T) {
+		t.Setenv(envGoDetectorsKey, "")
+		detectors := resourceDetectors(logger)
+		assert.Empty(t, detectors)
+	})
+
+	t.Run("EC2", func(t *testing.T) {
+		t.Setenv(envGoDetectorsKey, "ec2")
+		detectors := resourceDetectors(logger)
+		assert.Len(t, detectors, 1)
+		assert.Equal(t, reflect.TypeOf(ec2.NewResourceDetector()), reflect.TypeOf(detectors[0]))
+	})
+
+	t.Run("ECS", func(t *testing.T) {
+		t.Setenv(envGoDetectorsKey, "ecs")
+		detectors := resourceDetectors(logger)
+		assert.Len(t, detectors, 1)
+		assert.Equal(t, reflect.TypeOf(ecs.NewResourceDetector()), reflect.TypeOf(detectors[0]))
+	})
+
+	t.Run("EKS", func(t *testing.T) {
+		t.Setenv(envGoDetectorsKey, "eks")
+		detectors := resourceDetectors(logger)
+		assert.Len(t, detectors, 1)
+		assert.Equal(t, reflect.TypeOf(eks.NewResourceDetector()), reflect.TypeOf(detectors[0]))
+	})
+
+	t.Run("Lambda", func(t *testing.T) {
+		t.Setenv(envGoDetectorsKey, "lambda")
+		detectors := resourceDetectors(logger)
+		assert.Len(t, detectors, 1)
+		assert.Equal(t, reflect.TypeOf(lambda.NewResourceDetector()), reflect.TypeOf(detectors[0]))
+	})
 }

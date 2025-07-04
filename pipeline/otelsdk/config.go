@@ -12,6 +12,10 @@ import (
 	"path/filepath"
 	"strings"
 
+	"go.opentelemetry.io/contrib/detectors/aws/ec2"
+	"go.opentelemetry.io/contrib/detectors/aws/ecs"
+	"go.opentelemetry.io/contrib/detectors/aws/eks"
+	"go.opentelemetry.io/contrib/detectors/aws/lambda"
 	"go.opentelemetry.io/contrib/exporters/autoexport"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp"
@@ -30,6 +34,9 @@ const (
 	// envLogLevelKey is the key for the environment variable value containing
 	// the log level.
 	envLogLevelKey = "OTEL_LOG_LEVEL"
+	// envGoDetectorsKey is the key for the environment variable value
+	// containing the resource detectors to use.
+	envGoDetectorsKey = "OTEL_GO_DETECTORS"
 )
 
 // Option configures a [traceHandler] via [NewHandler].
@@ -231,8 +238,7 @@ func (c config) TracerProvider() *sdk.TracerProvider {
 }
 
 func (c config) resource() *resource.Resource {
-	return resource.NewWithAttributes(
-		semconv.SchemaURL,
+	base := resource.NewSchemaless(
 		append(
 			[]attribute.KeyValue{
 				semconv.TelemetrySDKLanguageGo,
@@ -241,4 +247,59 @@ func (c config) resource() *resource.Resource {
 			c.resAttrs...,
 		)...,
 	)
+
+	ctx := context.Background()
+	detectorsList := resourceDetectors(c.Logger())
+	if detectorsList == nil {
+		return base
+	}
+
+	detectors, err := resource.New(ctx, resource.WithDetectors(detectorsList...))
+	if err != nil {
+		c.Logger().Error("Failed to create resource detectors", "error", err)
+	}
+
+	merged, err := resource.Merge(base, detectors)
+	if err != nil {
+		c.Logger().Error("Failed to merge resource detectors", "error", err)
+		return base
+	}
+
+	return merged
+}
+
+func resourceDetectors(logger *slog.Logger) []resource.Detector {
+	v, ok := lookupEnv(envGoDetectorsKey)
+	if !ok {
+		return nil
+	}
+
+	var detectors []resource.Detector
+	for _, item := range strings.Split(v, ",") {
+		switch item {
+		case "all":
+			return []resource.Detector{
+				ec2.NewResourceDetector(),
+				ecs.NewResourceDetector(),
+				eks.NewResourceDetector(),
+				lambda.NewResourceDetector(),
+			}
+		case "ec2":
+			detectors = append(detectors, ec2.NewResourceDetector())
+		case "ecs":
+			detectors = append(detectors, ecs.NewResourceDetector())
+		case "eks":
+			detectors = append(detectors, eks.NewResourceDetector())
+		case "lambda":
+			detectors = append(detectors, lambda.NewResourceDetector())
+		default:
+			logger.Warn("Unknown resource detector", "detector", item)
+		}
+	}
+
+	if len(detectors) == 0 {
+		return nil
+	}
+
+	return detectors
 }
