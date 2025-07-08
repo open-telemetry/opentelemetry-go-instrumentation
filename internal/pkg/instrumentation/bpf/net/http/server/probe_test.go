@@ -15,15 +15,16 @@ import (
 	"go.opentelemetry.io/otel/trace"
 
 	"go.opentelemetry.io/auto/internal/pkg/instrumentation/context"
-	"go.opentelemetry.io/auto/internal/pkg/instrumentation/utils"
+	"go.opentelemetry.io/auto/internal/pkg/instrumentation/kernel"
+	"go.opentelemetry.io/auto/internal/pkg/instrumentation/pdataconv"
 )
 
 func TestProbeConvertEvent(t *testing.T) {
 	start := time.Unix(0, time.Now().UnixNano()) // No wall clock.
 	end := start.Add(1 * time.Second)
 
-	startOffset := utils.TimeToBootOffset(start)
-	endOffset := utils.TimeToBootOffset(end)
+	startOffset := kernel.TimeToBootOffset(start)
+	endOffset := kernel.TimeToBootOffset(end)
 
 	traceID := trace.TraceID{1}
 	spanID := trace.SpanID{1}
@@ -64,12 +65,12 @@ func TestProbeConvertEvent(t *testing.T) {
 				span := spans.AppendEmpty()
 				span.SetName("GET")
 				span.SetKind(ptrace.SpanKindServer)
-				span.SetStartTimestamp(utils.BootOffsetToTimestamp(startOffset))
-				span.SetEndTimestamp(utils.BootOffsetToTimestamp(endOffset))
+				span.SetStartTimestamp(kernel.BootOffsetToTimestamp(startOffset))
+				span.SetEndTimestamp(kernel.BootOffsetToTimestamp(endOffset))
 				span.SetTraceID(pcommon.TraceID(traceID))
 				span.SetSpanID(pcommon.SpanID(spanID))
 				span.SetFlags(uint32(trace.FlagsSampled))
-				utils.Attributes(
+				pdataconv.Attributes(
 					span.Attributes(),
 					semconv.HTTPRequestMethodKey.String("GET"),
 					semconv.URLPath("/foo/bar"),
@@ -115,12 +116,12 @@ func TestProbeConvertEvent(t *testing.T) {
 				span := spans.AppendEmpty()
 				span.SetName("GET")
 				span.SetKind(ptrace.SpanKindServer)
-				span.SetStartTimestamp(utils.BootOffsetToTimestamp(startOffset))
-				span.SetEndTimestamp(utils.BootOffsetToTimestamp(endOffset))
+				span.SetStartTimestamp(kernel.BootOffsetToTimestamp(startOffset))
+				span.SetEndTimestamp(kernel.BootOffsetToTimestamp(endOffset))
 				span.SetTraceID(pcommon.TraceID(traceID))
 				span.SetSpanID(pcommon.SpanID(spanID))
 				span.SetFlags(uint32(trace.FlagsSampled))
-				utils.Attributes(
+				pdataconv.Attributes(
 					span.Attributes(),
 					semconv.HTTPRequestMethodKey.String("GET"),
 					semconv.URLPath("/foo/bar"),
@@ -167,12 +168,12 @@ func TestProbeConvertEvent(t *testing.T) {
 				span := spans.AppendEmpty()
 				span.SetName("GET")
 				span.SetKind(ptrace.SpanKindServer)
-				span.SetStartTimestamp(utils.BootOffsetToTimestamp(startOffset))
-				span.SetEndTimestamp(utils.BootOffsetToTimestamp(endOffset))
+				span.SetStartTimestamp(kernel.BootOffsetToTimestamp(startOffset))
+				span.SetEndTimestamp(kernel.BootOffsetToTimestamp(endOffset))
 				span.SetTraceID(pcommon.TraceID(traceID))
 				span.SetSpanID(pcommon.SpanID(spanID))
 				span.SetFlags(uint32(trace.FlagsSampled))
-				utils.Attributes(
+				pdataconv.Attributes(
 					span.Attributes(),
 					semconv.HTTPRequestMethodKey.String("GET"),
 					semconv.URLPath("/foo/bar"),
@@ -218,13 +219,13 @@ func TestProbeConvertEvent(t *testing.T) {
 				span := spans.AppendEmpty()
 				span.SetName("GET")
 				span.SetKind(ptrace.SpanKindServer)
-				span.SetStartTimestamp(utils.BootOffsetToTimestamp(startOffset))
-				span.SetEndTimestamp(utils.BootOffsetToTimestamp(endOffset))
+				span.SetStartTimestamp(kernel.BootOffsetToTimestamp(startOffset))
+				span.SetEndTimestamp(kernel.BootOffsetToTimestamp(endOffset))
 				span.SetTraceID(pcommon.TraceID(traceID))
 				span.SetSpanID(pcommon.SpanID(spanID))
 				span.SetFlags(uint32(trace.FlagsSampled))
 				span.Status().SetCode(ptrace.StatusCodeError)
-				utils.Attributes(
+				pdataconv.Attributes(
 					span.Attributes(),
 					semconv.HTTPRequestMethodKey.String("GET"),
 					semconv.URLPath("/foo/bar"),

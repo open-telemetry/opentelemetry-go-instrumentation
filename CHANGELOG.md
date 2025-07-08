@@ -8,10 +8,24 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 
 ## [Unreleased]
 
+## [v0.22.1] - 2025-07-01
+
 ### Added
 
 - Cache offsets for `google.golang.org/grpc` `1.71.3`. ([#2374](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/2374))
 - Cache offsets for `google.golang.org/grpc` `1.72.2`. ([#2374](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/2374))
+- Cache offsets for `golang.org/x/net` `0.41.0`. ([#2402](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/2402))
+- Cache offsets for `google.golang.org/grpc` `1.73.0`. ([#2402](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/2402))
+- Cache offsets for Go `1.23.10`. ([#2402](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/2402))
+- Cache offsets for Go `1.24.4`. ([#2402](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/2402))
+- Cache offsets for `go.opentelemetry.io/otel` `v1.37.0`. ([#2450](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/2450))
+- Cache offsets for `google.golang.org/grpc` `1.75.0-dev`. ([#2450](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/2450))
+
+### Fixed
+
+- Build go binaries using the provided `TARGETARCH` of the Dockerfile.
+  This fixes the bug where images for alternate architectures (e.g. `arm64`) were built using the `amd64` architecture. ([#2411](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/2411))
+- Do not fail run when a module has a version of `(devel)`. ([#2437](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/2437))
 
 # Fixed
 
@@ -663,7 +677,8 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 
 This is the first release of OpenTelemetry Go Automatic Instrumentation.
 
-[Unreleased]: https://github.com/open-telemetry/opentelemetry-go-instrumentation/compare/v0.22.0...HEAD
+[Unreleased]: https://github.com/open-telemetry/opentelemetry-go-instrumentation/compare/v0.22.1...HEAD
+[v0.22.1]: https://github.com/open-telemetry/opentelemetry-go-instrumentation/releases/tag/v0.22.1
 [v0.22.0]: https://github.com/open-telemetry/opentelemetry-go-instrumentation/releases/tag/v0.22.0
 [v0.21.0]: https://github.com/open-telemetry/opentelemetry-go-instrumentation/releases/tag/v0.21.0
 [v0.20.0]: https://github.com/open-telemetry/opentelemetry-go-instrumentation/releases/tag/v0.20.0

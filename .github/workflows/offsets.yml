@@ -5,8 +5,14 @@ on:
   schedule:
     - cron: '0 0 * * *'
 
+permissions:
+  contents: read
+
 jobs:
   updateOffsets:
+    permissions:
+      contents: write # required for pushing changes
+      pull-requests: write # required for creating pull requests
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4

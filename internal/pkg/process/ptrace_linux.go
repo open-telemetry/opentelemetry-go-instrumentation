@@ -15,7 +15,7 @@ import (
 	"github.com/Masterminds/semver/v3"
 	"github.com/pkg/errors"
 
-	"go.opentelemetry.io/auto/internal/pkg/instrumentation/utils"
+	"go.opentelemetry.io/auto/internal/pkg/instrumentation/kernel"
 )
 
 const waitPidErrorMessage = "waitpid ret value: %d"
@@ -243,7 +243,7 @@ func (p *tracedProgram) Mmap(length uint64, fd uint64) (uint64, error) {
 // Madvise runs madvise syscall.
 func (p *tracedProgram) Madvise(addr uint64, length uint64) error {
 	advice := uint64(syscall.MADV_WILLNEED)
-	ver := utils.GetLinuxKernelVersion()
+	ver := kernel.Version()
 	if ver == nil {
 		return errors.WithStack(errors.New("unknown Linux version"))
 	}

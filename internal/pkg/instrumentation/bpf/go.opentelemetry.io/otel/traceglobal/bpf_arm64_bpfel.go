@@ -8,11 +8,13 @@ import (
 	_ "embed"
 	"fmt"
 	"io"
+	"structs"
 
 	"github.com/cilium/ebpf"
 )
 
 type bpfOtelSpanT struct {
+	_         structs.HostLayout
 	Kind      uint64
 	StartTime uint64
 	EndTime   uint64
@@ -20,11 +22,17 @@ type bpfOtelSpanT struct {
 	Psc       bpfSpanContext
 	SpanName  bpfSpanNameT
 	Status    struct {
+		_           structs.HostLayout
 		Code        uint32
-		Description struct{ Buf [64]int8 }
+		Description struct {
+			_   structs.HostLayout
+			Buf [64]int8
+		}
 	}
 	Attributes struct {
+		_     structs.HostLayout
 		Attrs [16]struct {
+			_         structs.HostLayout
 			ValLength uint16
 			Vtype     uint8
 			Reserved  uint8
@@ -37,18 +45,26 @@ type bpfOtelSpanT struct {
 	_        [3]byte
 }
 
-type bpfSliceArrayBuff struct{ Buff [1024]uint8 }
+type bpfSliceArrayBuff struct {
+	_    structs.HostLayout
+	Buff [1024]uint8
+}
 
 type bpfSpanContext struct {
+	_          structs.HostLayout
 	TraceID    [16]uint8
 	SpanID     [8]uint8
 	TraceFlags uint8
 	Padding    [7]uint8
 }
 
-type bpfSpanNameT struct{ Buf [64]int8 }
+type bpfSpanNameT struct {
+	_   structs.HostLayout
+	Buf [64]int8
+}
 
 type bpfTracerIdT struct {
+	_         structs.HostLayout
 	Name      [128]int8
 	Version   [32]int8
 	SchemaUrl [128]int8
