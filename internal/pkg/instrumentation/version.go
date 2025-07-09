@@ -6,8 +6,8 @@
 package instrumentation
 
 const (
-	// DistributionName is used for `telemetry.distro.name` resource attribute.
-	DistributionName = "opentelemetry-go-instrumentation"
-	// DistributionVersion is the current release version of OpenTelemetry Go auto-instrumentation in use.
-	DistributionVersion = "v0.22.1"
+	// Name is used for `telemetry.distro.name` resource attribute.
+	Name = "opentelemetry-go-instrumentation"
+	// Version is the current release version of OpenTelemetry Go auto-instrumentation in use.
+	Version = "v0.22.1"
 )

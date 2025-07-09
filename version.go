@@ -7,5 +7,5 @@ import "go.opentelemetry.io/auto/internal/pkg/instrumentation"
 
 // Version is the current release version of OpenTelemetry Go auto-instrumentation in use.
 func Version() string {
-	return instrumentation.DistributionVersion
+	return instrumentation.Version
 }

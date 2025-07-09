@@ -238,8 +238,8 @@ func (c config) resource() *resource.Resource {
 		append(
 			[]attribute.KeyValue{
 				semconv.TelemetrySDKLanguageGo,
-				semconv.TelemetryDistroVersion(instrumentation.DistributionVersion),
-				semconv.TelemetryDistroName(instrumentation.DistributionName),
+				semconv.TelemetryDistroVersion(instrumentation.Version),
+				semconv.TelemetryDistroName(instrumentation.Name),
 			},
 			c.resAttrs...,
 		)...,
