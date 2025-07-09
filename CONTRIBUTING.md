@@ -226,9 +226,9 @@ For more information about the approver role, see the [community repository](htt
 
 ### Emeritus
 
-- [Dinesh Gurumurthy](https://github.com/dineshg13), DataDog
-- [Mike Goldsmith](https://github.com/MikeGoldsmith), Honeycomb
-- [Przemyslaw Delewski](https://github.com/pdelewski), Quesma
+- [Dinesh Gurumurthy](https://github.com/dineshg13)
+- [Mike Goldsmith](https://github.com/MikeGoldsmith)
+- [Przemyslaw Delewski](https://github.com/pdelewski)
 
 For more information about the emeritus role, see the [community repository](https://github.com/open-telemetry/community/blob/main/guides/contributor/membership.md#emeritus-maintainerapprovertriager).
 
