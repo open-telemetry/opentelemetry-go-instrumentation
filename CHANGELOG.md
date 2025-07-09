@@ -13,6 +13,10 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 - Cache offsets for Go `1.23.11`. ([#2493](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/2493))
 - Cache offsets for Go `1.24.5`. ([#2493](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/2493))
 
+### Fixed
+
+- Add `telemetry.distro.version` resource attribute to the `otelsdk` handler. ([#2383](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/2383))
+
 ## [v0.22.1] - 2025-07-01
 
 ### Added

@@ -18,6 +18,8 @@ import (
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdk "go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.30.0"
+
+	"go.opentelemetry.io/auto/internal/pkg/instrumentation"
 )
 
 const (
@@ -236,7 +238,8 @@ func (c config) resource() *resource.Resource {
 		append(
 			[]attribute.KeyValue{
 				semconv.TelemetrySDKLanguageGo,
-				semconv.TelemetryDistroNameKey.String("opentelemetry-go-instrumentation"),
+				semconv.TelemetryDistroVersion(instrumentation.Version),
+				semconv.TelemetryDistroName(instrumentation.Name),
 			},
 			c.resAttrs...,
 		)...,
