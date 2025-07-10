@@ -8,7 +8,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/stretchr/testify/require"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestTraceIDEncoding(t *testing.T) {
@@ -56,8 +56,7 @@ func TestInvalidTraceID(t *testing.T) {
 		t.Run(tc.Name, func(t *testing.T) {
 			var id TraceID
 			err := json.Unmarshal(tc.Input, &id)
-			require.Error(t, err)
-			require.ErrorContains(t, err, tc.ExpectErr.Error())
+			assert.ErrorContains(t, err, tc.ExpectErr.Error())
 		})
 	}
 }
@@ -107,8 +106,7 @@ func TestInvalidSpanID(t *testing.T) {
 		t.Run(tc.Name, func(t *testing.T) {
 			var id SpanID
 			err := json.Unmarshal(tc.Input, &id)
-			require.Error(t, err)
-			require.ErrorContains(t, err, tc.ExpectErr.Error())
+			assert.ErrorContains(t, err, tc.ExpectErr.Error())
 		})
 	}
 }
