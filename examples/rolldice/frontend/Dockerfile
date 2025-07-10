@@ -1,4 +1,4 @@
-FROM golang:1.24.3@sha256:4c0a1814a7c6c65ece28b3bfea14ee3cf83b5e80b81418453f0e9d5255a5d7b8
+FROM golang:1.24.5@sha256:14fd8a55e59a560704e5fc44970b301d00d344e45d6b914dda228e09f359a088
 WORKDIR /usr/src/user
 COPY user/ ./
 WORKDIR /usr/src/frontend

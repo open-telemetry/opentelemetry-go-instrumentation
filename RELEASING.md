@@ -49,7 +49,7 @@ in `versions.yaml`.  Commit this change to a new branch.
    - Ensure all supported instrumentation libraries have the correct versions listed.
      If the integration tests are still succeeding, the upper bound of the supported instrumentation version should be at least that tested version.
 
-5. Update [`version.go`](version.go) with the latest release version.
+5. Update [`version.go`](internal/pkg/instrumentation/version.go) with the latest release version.
 
 6. Push the changes to your branch and create a Pull Request on GitHub.
     Be sure to include the curated changes from the [Changelog](./CHANGELOG.md) in the description.

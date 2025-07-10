@@ -6,6 +6,9 @@ on:
   pull_request:
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 env:
   GO_VERSION: "~1.24.0"
 
@@ -82,7 +85,7 @@ jobs:
         runner: [ubuntu-latest, ubuntu-22.04-arm]
     runs-on: ${{ matrix.runner }}
     container:
-      image: golang:1.24.3-bookworm@sha256:29d97266c1d341b7424e2f5085440b74654ae0b61ecdba206bc12d6264844e21
+      image: golang:1.24.5-bookworm@sha256:69adc37c19ac6ef724b561b0dc675b27d8c719dfe848db7dd1092a7c9ac24bc6
       options: --user root --privileged
     steps:
       - id: go-cache-paths

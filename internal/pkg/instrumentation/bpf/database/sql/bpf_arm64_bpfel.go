@@ -8,13 +8,18 @@ import (
 	_ "embed"
 	"fmt"
 	"io"
+	"structs"
 
 	"github.com/cilium/ebpf"
 )
 
-type bpfSliceArrayBuff struct{ Buff [1024]uint8 }
+type bpfSliceArrayBuff struct {
+	_    structs.HostLayout
+	Buff [1024]uint8
+}
 
 type bpfSpanContext struct {
+	_          structs.HostLayout
 	TraceID    [16]uint8
 	SpanID     [8]uint8
 	TraceFlags uint8
@@ -22,6 +27,7 @@ type bpfSpanContext struct {
 }
 
 type bpfSqlRequestT struct {
+	_         structs.HostLayout
 	StartTime uint64
 	EndTime   uint64
 	Sc        bpfSpanContext
