@@ -5,7 +5,7 @@ go 1.23.0
 require (
 	github.com/Masterminds/semver/v3 v3.4.0
 	github.com/docker/docker v28.3.2+incompatible
-	github.com/golangci/golangci-lint/v2 v2.2.1
+	github.com/golangci/golangci-lint/v2 v2.2.2
 	github.com/google/go-licenses/v2 v2.0.0-alpha.1
 	go.opentelemetry.io/auto v0.22.1
 	go.opentelemetry.io/build-tools/crosslink v0.24.0
