@@ -85,7 +85,7 @@ MAP_BUCKET_DEFINITION(go_tracer_with_schema_t, go_tracer_ptr)
 MAP_BUCKET_DEFINITION(go_tracer_with_scope_attributes_t, go_tracer_ptr)
 
 struct {
-	__uint(type, BPF_MAP_TYPE_HASH);
+	__uint(type, BPF_MAP_TYPE_LRU_HASH);
 	__type(key, void*);
 	__type(value, struct otel_span_t);
 	__uint(max_entries, MAX_CONCURRENT);
