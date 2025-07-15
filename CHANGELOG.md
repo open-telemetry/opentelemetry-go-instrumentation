@@ -17,6 +17,7 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 ### Fixed
 
 - Add `telemetry.distro.version` resource attribute to the `otelsdk` handler. ([#2383](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/2383))
+- `active_spans_by_span_ptr` eBPF map used in the traceglobal probe changed to LRU. ([#2509](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/2509))
 
 ## [v0.22.1] - 2025-07-01
 
