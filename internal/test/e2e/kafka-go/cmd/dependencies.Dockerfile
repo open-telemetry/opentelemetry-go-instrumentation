@@ -1,1 +1,1 @@
-FROM bitnami/kafka:latest@sha256:6cd4f5e8822e5b649f37bbfca86649e6832b320430e9dd5cd1367b0974f4911d AS kafka
+FROM bitnami/kafka:latest@sha256:f45d5b813412e1ef7ce67b467309a84e4c6dc03d7626a0b6da867db9b69bd107 AS kafka
