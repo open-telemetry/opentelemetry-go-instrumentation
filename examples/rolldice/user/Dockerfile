@@ -1,4 +1,4 @@
-FROM golang:1.24.5@sha256:fdcd2e5a34587bd5426c90e1531fd5ba448c89bb738df0f33860dfc69439a1f5
+FROM golang:1.24.5@sha256:a3bb6cd5f068b34961d60dcd7fc51fb70df7b74b4aa89ac480fc38a6ccba265e
 WORKDIR /usr/src/user
 # Copy go.mod for better layer caching
 COPY ./go.mod ./go.sum ./
