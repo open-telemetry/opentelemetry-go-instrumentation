@@ -7,7 +7,7 @@ require (
 	github.com/docker/docker v28.3.2+incompatible
 	github.com/docker/go-connections v0.5.0
 	github.com/gin-gonic/gin v1.10.1
-	github.com/mattn/go-sqlite3 v1.14.28
+	github.com/mattn/go-sqlite3 v1.14.29
 	github.com/segmentio/kafka-go v0.4.48
 	github.com/stretchr/testify v1.10.0
 	go.opentelemetry.io/auto v0.22.1
