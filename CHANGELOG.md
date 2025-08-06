@@ -13,9 +13,16 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 - Cache offsets for `golang.org/x/net` `0.42.0`. ([#2503](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/2503))
 - Cache offsets for `google.golang.org/grpc` `1.74.2`. ([#2546](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/2546))
 - Cache offsets for `google.golang.org/grpc` `1.76.0-dev`. ([#2596](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/2596))
+- Allow configuration of the resource using a [resource.Detector]. ([#2598](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/2598))
+  - The `WithResourceDetector` function is added to `go.opentelemetry.io/auto/pipeline/otelsdk`.
+  - The `WithEnv` function is updated to parse the `OTEL_RESOURCE_DETECTOR` environment variable.
+    Values are expected to be a comma-separated list of resource detector IDs registered with the [`autodetect` package].
 - Cache offsets for Go `1.23.12`. ([#2603](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/2603))
 - Cache offsets for Go `1.24.6`. ([#2603](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/2603))
 - Cache offsets for `golang.org/x/net` `0.43.0`. ([#2615](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/2615))
+
+[resource.Detector]: https://pkg.go.dev/go.opentelemetry.io/otel/sdk/resource#Detector
+[`autodetect` package]: https://pkg.go.dev/go.opentelemetry.io/contrib/detectors/autodetect
 
 ### Fixed
 
