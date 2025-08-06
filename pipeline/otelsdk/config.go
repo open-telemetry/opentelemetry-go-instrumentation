@@ -82,6 +82,24 @@ func WithResourceAttributes(attrs ...attribute.KeyValue) Option {
 	})
 }
 
+// WithResourceDetector returns an [Option] that will configure a resource
+// detector to use when resolving a [resource.Resource].
+//
+// Multiple WithResourceDetector options can be provided and all detected
+// resources will be merged together along with resources from WithEnv and
+// other configuration options.
+func WithResourceDetector(detector resource.Detector) Option {
+	return fnOpt(func(ctx context.Context, c config) (config, error) {
+		detectedRes, err := detector.Detect(ctx)
+		if err != nil {
+			return c, fmt.Errorf("failed to detect resource: %w", err)
+		}
+
+		c.detectorResources = append(c.detectorResources, detectedRes)
+		return c, nil
+	})
+}
+
 // WithTraceExporter returns an [Option] that will configure exp as the
 // OpenTelemetry tracing exporter used.
 //
@@ -171,9 +189,10 @@ func newLoggerFunc(level slog.Leveler) *slog.Logger {
 }
 
 type config struct {
-	logger   *slog.Logger
-	exporter sdk.SpanExporter
-	resAttrs []attribute.KeyValue
+	logger            *slog.Logger
+	exporter          sdk.SpanExporter
+	resAttrs          []attribute.KeyValue
+	detectorResources []*resource.Resource
 
 	spanProcessor sdk.SpanProcessor
 	idGenerator   *idGenerator
@@ -233,6 +252,31 @@ func (c config) TracerProvider() *sdk.TracerProvider {
 }
 
 func (c config) resource() *resource.Resource {
+	r := c.baseResource()
+
+	for i, detectorRes := range c.detectorResources {
+		var err error
+		r, err = resource.Merge(r, detectorRes)
+		if err != nil {
+			// Most likely a schema URL conflict, which means that the detector
+			// returned a resource with a schema URL that conflicts with the
+			// one already in the resource.
+			//
+			// This is not a fatal error, so we log it and continue merging the
+			// resources. The final resource will still contain the attributes
+			// from the detector, but the schema URL will be empty.
+			c.Logger().Error(
+				"failed to merge detector resource",
+				"error", err,
+				"detector", i,
+			)
+		}
+	}
+
+	return r
+}
+
+func (c config) baseResource() *resource.Resource {
 	return resource.NewWithAttributes(
 		semconv.SchemaURL,
 		append(

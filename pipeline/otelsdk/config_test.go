@@ -5,6 +5,7 @@ package otelsdk
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"testing"
@@ -12,6 +13,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/sdk/resource"
 	semconv "go.opentelemetry.io/otel/semconv/v1.30.0"
 )
 
@@ -133,4 +135,38 @@ func TestWithLogger(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.Same(t, l, c.logger)
+}
+
+type detector struct {
+	res *resource.Resource
+	err error
+}
+
+func (d *detector) Detect(ctx context.Context) (*resource.Resource, error) {
+	if d.res == nil {
+		return resource.Empty(), d.err
+	}
+	return d.res, d.err
+}
+
+func TestWithResourceDetector(t *testing.T) {
+	want := resource.Empty()
+	d := &detector{res: want}
+
+	opts := []Option{WithResourceDetector(d)}
+	c, err := newConfig(context.Background(), opts)
+	require.NoError(t, err)
+
+	// Check that the detector resource was created (not empty).
+	require.Len(t, c.detectorResources, 1)
+	assert.Equal(t, want, c.detectorResources[0])
+}
+
+func TestWithResourceDetectorError(t *testing.T) {
+	wantErr := errors.New("test detector error")
+	errorDetector := &detector{err: wantErr}
+
+	opts := []Option{WithResourceDetector(errorDetector)}
+	_, err := newConfig(context.Background(), opts)
+	assert.ErrorIs(t, err, wantErr)
 }
