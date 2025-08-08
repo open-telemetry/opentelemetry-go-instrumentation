@@ -23,6 +23,7 @@ Alternatively, you can add support for additional or different configurations by
 |-----------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|---------------|
 | `OTEL_SERVICE_NAME`         | Sets the value of the [service.name](https://github.com/open-telemetry/semantic-conventions/blob/main/docs/resource/README.md#service) resource attribute. If `service.name` is provided in `OTEL_RESOURCE_ATTRIBUTES`, the value of `OTEL_SERVICE_NAME` takes precedence. |               |
 | `OTEL_RESOURCE_ATTRIBUTES`  | Key-value pairs to be used as resource attributes. See [Resource SDK](https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/resource/sdk.md#specifying-resource-information-via-an-environment-variable) for details. | See [Resource semantic conventions](https://github.com/open-telemetry/semantic-conventions/blob/main/docs/resource/README.md#semantic-attributes-with-sdk-provided-default-value) for details. |
+| `OTEL_GO_AUTO_RESOURCE_DETECTORS` | Comma-separated list of resource detector IDs to enable. See the [`autodetect` package](https://pkg.go.dev/go.opentelemetry.io/contrib/detectors/autodetect) for available detectors IDs and how to register your own. | Unset |
 
 ## Instrumentation options
 

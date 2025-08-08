@@ -9,6 +9,8 @@ import (
 	"sync"
 	"syscall"
 
+	"go.opentelemetry.io/otel/sdk/resource"
+
 	"go.opentelemetry.io/auto"
 	"go.opentelemetry.io/auto/pipeline/otelsdk"
 )
@@ -58,4 +60,32 @@ func Example_multiplex() {
 
 	// Shut down the multiplexer, cleaning up any remaining resources.
 	_ = m.Shutdown(ctx)
+}
+
+type detector struct{}
+
+func (d *detector) Detect(ctx context.Context) (*resource.Resource, error) {
+	// Implement your custom resource detection logic here.
+	// This is a placeholder implementation.
+	return resource.Empty(), nil
+}
+
+// This example show how to configure resource detectors that are used to generate
+// the resource associated with the telemetry data.
+func Example_resourceDetectors() {
+	handler, err := otelsdk.NewHandler(
+		context.Background(),
+		// Explicitly included custom detectors using WithResourceDetector.
+		otelsdk.WithResourceDetector(&detector{}),
+		// WithEnv will automatically include resource detectors defined in the
+		// OTEL_GO_AUTO_RESOURCE_DETECTORS environment variable if set.
+		otelsdk.WithEnv(),
+	)
+	if err != nil {
+		panic(err)
+	}
+	// Use the handler to create an instrumentation and have the detected
+	// Resource associated with the generated telemetry.
+
+	_ = handler
 }

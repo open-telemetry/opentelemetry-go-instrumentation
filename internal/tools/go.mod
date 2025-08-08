@@ -1,6 +1,6 @@
 module go.opentelemetry.io/auto/internal/tools
 
-go 1.23.0
+go 1.23.8
 
 require (
 	github.com/Masterminds/semver/v3 v3.4.0
