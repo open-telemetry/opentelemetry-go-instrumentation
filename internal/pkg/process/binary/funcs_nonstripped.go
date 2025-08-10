@@ -21,25 +21,27 @@ func FindFunctionsUnStripped(
 
 	var result []*Func
 	for _, f := range symbols {
-		if _, exists := relevantFuncs[f.Name]; exists {
-			offset, err := getFuncOffsetUnstripped(elfF, f)
-			if err != nil {
-				return nil, err
-			}
-
-			returns, err := findFuncReturnsUnstripped(elfF, f, offset)
-			if err != nil {
-				return nil, err
-			}
-
-			function := &Func{
-				Name:          f.Name,
-				Offset:        offset,
-				ReturnOffsets: returns,
-			}
-
-			result = append(result, function)
+		_, exists := relevantFuncs[f.Name]
+		if !exists {
+			continue
 		}
+		offset, err := getFuncOffsetUnstripped(elfF, f)
+		if err != nil {
+			return nil, err
+		}
+
+		returns, err := findFuncReturnsUnstripped(elfF, f, offset)
+		if err != nil {
+			return nil, err
+		}
+
+		function := &Func{
+			Name:          f.Name,
+			Offset:        offset,
+			ReturnOffsets: returns,
+		}
+
+		result = append(result, function)
 	}
 
 	return result, nil
