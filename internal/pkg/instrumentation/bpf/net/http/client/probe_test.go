@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/ptrace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.30.0"
@@ -66,9 +67,9 @@ func TestConvertEvent(t *testing.T) {
 	copy(rawFragment[:], []byte(rawFragmentString))
 
 	spId, err := trace.SpanIDFromHex("00f067aa0ba902b7")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	trId, err := trace.TraceIDFromHex("00f067aa0ba902b700f067aa0ba902b7")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	testCases := []struct {
 		name     string

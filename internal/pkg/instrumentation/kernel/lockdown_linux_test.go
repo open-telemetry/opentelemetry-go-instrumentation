@@ -11,11 +11,12 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestGetLockdownMode(t *testing.T) {
 	noFile, err := os.CreateTemp(t.TempDir(), "not_existent_fake_lockdown")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	notPath, err := filepath.Abs(noFile.Name())
 	assert.NoError(t, err)
 	assert.NoError(t, noFile.Close())
@@ -26,7 +27,7 @@ func TestGetLockdownMode(t *testing.T) {
 	assert.Equal(t, LockdownModeNone, getLockdownMode())
 
 	tempFile, err := os.CreateTemp(t.TempDir(), "fake_lockdown")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	path, err := filepath.Abs(tempFile.Name())
 	assert.NoError(t, err)
 	assert.NoError(t, tempFile.Close())

@@ -262,7 +262,7 @@ func TestTraceHandlerShutdown(t *testing.T) {
 
 func TestControllerTraceConcurrentSafe(t *testing.T) {
 	handler, err := NewTraceHandler(context.Background())
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	const goroutines = 10
 

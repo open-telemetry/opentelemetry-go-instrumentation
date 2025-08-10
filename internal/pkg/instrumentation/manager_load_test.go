@@ -43,9 +43,7 @@ func TestLoadProbes(t *testing.T) {
 	pid := process.ID(id)
 
 	info, err := process.NewInfo(pid, make(map[string]interface{}))
-	if info == nil {
-		t.Fatalf("failed to create process.Info: %v", err)
-	}
+	require.NotNil(t, info, "failed to create process.Info: %v", err)
 	// Reset Info module information.
 	info.Modules = make(map[string]*semver.Version)
 
@@ -110,31 +108,27 @@ func setupTestModule(t *testing.T) int {
 	// Initialize a Go module
 	cmd := exec.Command("go", "mod", "init", "example.com/testmodule")
 	cmd.Dir = tempDir
-	if err := cmd.Run(); err != nil {
-		t.Fatalf("failed to initialize Go module: %v", err)
-	}
+	require.NoError(t, cmd.Run(), "failed to initialize Go module")
 
 	mainGoPath := filepath.Join(tempDir, "main.go")
-	if err := os.WriteFile(mainGoPath, []byte(mainGoContent), 0o600); err != nil {
-		t.Fatalf("failed to write main.go: %v", err)
-	}
+	require.NoError(
+		t,
+		os.WriteFile(mainGoPath, []byte(mainGoContent), 0o600),
+		"failed to write main.go",
+	)
 
 	// Compile the Go program
 	binaryPath := filepath.Join(tempDir, "testbinary")
 	cmd = exec.Command("go", "build", "-o", binaryPath, mainGoPath)
 	cmd.Dir = tempDir
-	if err := cmd.Run(); err != nil {
-		t.Fatalf("failed to compile binary: %v", err)
-	}
+	require.NoError(t, cmd.Run(), "failed to compile binary")
 
 	// Run the compiled binary
 	cmd = exec.Command(binaryPath)
 	cmd.Dir = tempDir
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
-	if err := cmd.Start(); err != nil {
-		t.Fatalf("failed to start binary: %v", err)
-	}
+	require.NoError(t, cmd.Start(), "failed to start binary")
 
 	// Ensure the process is killed when the test ends
 	t.Cleanup(func() {
@@ -177,7 +171,7 @@ func ProbesLoad(t *testing.T, info *process.Info, p TestProbe) {
 	}
 
 	c, err := ebpf.NewCollectionWithOptions(spec, opts)
-	if !assert.NoError(t, err) {
+	if !assert.NoError(t, err) { //nolint:testifylint // Cannot use require here
 		var ve *ebpf.VerifierError
 		if errors.As(err, &ve) && v {
 			t.Logf("Verifier log: %-100v\n", ve)
