@@ -141,7 +141,7 @@ func processFn(e *event) ptrace.SpanSlice {
 		e.ValidMessages = min(e.ValidMessages, math.MaxInt)
 		attrs = append(
 			attrs,
-			semconv.MessagingBatchMessageCount(int(e.ValidMessages)), // nolint: gosec  // Bounded.
+			semconv.MessagingBatchMessageCount(int(e.ValidMessages)), //nolint:gosec  // Bounded.
 		)
 	}
 

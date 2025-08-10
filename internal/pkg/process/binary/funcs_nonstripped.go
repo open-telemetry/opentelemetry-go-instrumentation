@@ -103,7 +103,7 @@ func findFuncReturnsUnstripped(
 	highPC := lowPC + sym.Size
 	buf := make([]byte, highPC-lowPC)
 
-	readBytes, err := textSection.ReadAt(buf, int64(offset)) // nolint: gosec  // Bounds checked.
+	readBytes, err := textSection.ReadAt(buf, int64(offset)) //nolint:gosec  // Bounds checked.
 	if err != nil {
 		return nil, fmt.Errorf("could not read text section: %w", err)
 	}

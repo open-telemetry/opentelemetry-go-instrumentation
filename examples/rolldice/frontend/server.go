@@ -61,6 +61,6 @@ func rolldice(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	roll := 1 + rand.Intn(6) // nolint: gosec  // Weak random number generator is fine.
+	roll := 1 + rand.Intn(6) //nolint:gosec  // Weak random number generator is fine.
 	_, _ = io.WriteString(w, strconv.Itoa(roll)+"\n")
 }
