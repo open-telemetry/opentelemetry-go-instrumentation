@@ -54,7 +54,7 @@ func BenchmarkProcessFn(b *testing.B) {
 	for _, t := range tests {
 		b.Run(t.name, func(b *testing.B) {
 			var byteQuery [256]byte
-			copy(byteQuery[:], []byte(t.query))
+			copy(byteQuery[:], t.query)
 			b.ReportAllocs()
 			b.ResetTimer()
 			for i := 0; i < b.N; i++ {

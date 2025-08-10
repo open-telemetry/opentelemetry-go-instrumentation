@@ -55,15 +55,15 @@ func TestConvertEvent(t *testing.T) {
 	var opaque [8]byte
 	copy(opaque[:], opaqueString)
 	var rawPath [8]byte
-	copy(rawPath[:], []byte(rawPathString))
+	copy(rawPath[:], rawPathString)
 	var username [8]byte
-	copy(username[:], []byte(usernameString))
+	copy(username[:], usernameString)
 	var rawQuery [128]byte
-	copy(rawQuery[:], []byte(rawQueryString))
+	copy(rawQuery[:], rawQueryString)
 	var fragment [56]byte
-	copy(fragment[:], []byte(fragmentString))
+	copy(fragment[:], fragmentString)
 	var rawFragment [56]byte
-	copy(rawFragment[:], []byte(rawFragmentString))
+	copy(rawFragment[:], rawFragmentString)
 
 	spId, err := trace.SpanIDFromHex("00f067aa0ba902b7")
 	assert.NoError(t, err)

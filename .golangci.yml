@@ -56,7 +56,6 @@ linters:
         - exitAfterDefer
         - hugeParam
         - rangeValCopy
-        - stringXbytes
         - typeDefFirst
         - typeUnparen
         - unnamedResult
