@@ -57,7 +57,6 @@ linters:
         - hugeParam
         - rangeValCopy
         - unnamedResult
-        - unnecessaryDefer
         - whyNoLint
       enable-all: true
     godot:
@@ -255,6 +254,10 @@ linters:
           - revive
         path: example.*_test\.go
         text: calls to (.+) only in main[(][)] or init[(][)] functions
+      - linters:
+          - gocritic
+        path: example.*_test\.go
+        text: "unnecessaryDefer:"
 issues:
   # Setting to unlimited so the linter only is run once to debug all issues.
   max-issues-per-linter: 0
