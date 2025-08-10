@@ -55,7 +55,6 @@ linters:
       disabled-checks:
         - exitAfterDefer
         - hugeParam
-        - paramTypeCombine
         - rangeValCopy
         - sloppyReassign
         - stringXbytes
@@ -270,6 +269,8 @@ formatters:
     - goimports
     - golines
   settings:
+    gofumpt:
+      extra-rules: true
     goimports:
       local-prefixes:
         - go.opentelemetry.io/auto

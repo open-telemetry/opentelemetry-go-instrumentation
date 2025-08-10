@@ -19,7 +19,7 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-func ServerAddressPortAttributes(host []byte) (addr attribute.KeyValue, port attribute.KeyValue) {
+func ServerAddressPortAttributes(host []byte) (addr, port attribute.KeyValue) {
 	var portString string
 	var e error
 	hostString := unix.ByteSliceToString(host)
@@ -38,7 +38,7 @@ func ServerAddressPortAttributes(host []byte) (addr attribute.KeyValue, port att
 	return
 }
 
-func NetPeerAddressPortAttributes(host []byte) (addr attribute.KeyValue, port attribute.KeyValue) {
+func NetPeerAddressPortAttributes(host []byte) (addr, port attribute.KeyValue) {
 	var portString string
 	var e error
 	hostString := unix.ByteSliceToString(host)

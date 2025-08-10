@@ -228,7 +228,7 @@ func (p *tracedProgram) SetMemLockInfinity() error {
 }
 
 // Mmap runs mmap syscall.
-func (p *tracedProgram) Mmap(length uint64, fd uint64) (uint64, error) {
+func (p *tracedProgram) Mmap(length, fd uint64) (uint64, error) {
 	return p.Syscall(
 		syscall.SYS_MMAP,
 		0,
@@ -241,7 +241,7 @@ func (p *tracedProgram) Mmap(length uint64, fd uint64) (uint64, error) {
 }
 
 // Madvise runs madvise syscall.
-func (p *tracedProgram) Madvise(addr uint64, length uint64) error {
+func (p *tracedProgram) Madvise(addr, length uint64) error {
 	advice := uint64(syscall.MADV_WILLNEED)
 	ver := kernel.Version()
 	if ver == nil {
@@ -259,7 +259,7 @@ func (p *tracedProgram) Madvise(addr uint64, length uint64) error {
 }
 
 // Mlock runs mlock syscall.
-func (p *tracedProgram) Mlock(addr uint64, length uint64) error {
+func (p *tracedProgram) Mlock(addr, length uint64) error {
 	ret, err := p.Syscall(syscall.SYS_MLOCK, addr, length, 0, 0, 0, 0)
 	p.logger.Debug("mlock ret", "ret", ret)
 	return err
