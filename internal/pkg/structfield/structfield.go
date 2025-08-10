@@ -14,6 +14,43 @@ import (
 	"github.com/Masterminds/semver/v3"
 )
 
+// OffsetKey is the offset of a specific struct field in a specific version.
+// If Valid is false, the offset is not known for the struct field at the
+// specified version.
+type OffsetKey struct {
+	Offset uint64
+	Valid  bool
+}
+
+type offsetVersion struct {
+	offset  OffsetKey
+	version *semver.Version
+}
+
+// Offsets are the byte offsets for a struct field at specific versions of the
+// package containing struct.
+type Offsets struct {
+	// mu ensures synchronous access to all Offsets fields.
+	mu sync.RWMutex
+
+	// values is a map between version and offset value.
+	values map[verKey]offsetVersion
+
+	// uo is the single offset in the values map.
+	// If there is only one offset, this will be that offset and valid will be true.
+	// Otherwise, valid is false
+	uo uniqueOffset
+}
+
+type uniqueOffset struct {
+	value uint64
+	valid bool
+}
+
+type verKey struct {
+	semver.Version
+}
+
 // Index holds all struct field offsets.
 type Index struct {
 	dataMu sync.RWMutex
@@ -227,26 +264,6 @@ func (i ID) String() string {
 	return fmt.Sprintf("%s.%s:%s", i.PkgPath, i.Struct, i.Field)
 }
 
-// Offsets are the byte offsets for a struct field at specific versions of the
-// package containing struct.
-type Offsets struct {
-	// mu ensures synchronous access to all Offsets fields.
-	mu sync.RWMutex
-
-	// values is a map between version and offset value.
-	values map[verKey]offsetVersion
-
-	// uo is the single offset in the values map.
-	// If there is only one offset, this will be that offset and valid will be true.
-	// Otherwise, valid is false
-	uo uniqueOffset
-}
-
-type uniqueOffset struct {
-	value uint64
-	valid bool
-}
-
 // NewOffsets returns a new empty *Offsets.
 func NewOffsets() *Offsets {
 	return &Offsets{values: make(map[verKey]offsetVersion)}
@@ -338,18 +355,6 @@ func (o *Offsets) index() map[OffsetKey][]*semver.Version {
 	return out
 }
 
-type verKey struct {
-	semver.Version
-}
-
-// OffsetKey is the offset of a specific struct field in a specific version.
-// If Valid is false, the offset is not known for the struct field at the
-// specified version.
-type OffsetKey struct {
-	Offset uint64
-	Valid  bool
-}
-
 func newVerKey(v *semver.Version) verKey {
 	// Strip out v.original to prevent ambiguity.
 	stripped := semver.New(
@@ -360,9 +365,4 @@ func newVerKey(v *semver.Version) verKey {
 		v.Metadata(),
 	)
 	return verKey{Version: *stripped}
-}
-
-type offsetVersion struct {
-	offset  OffsetKey
-	version *semver.Version
 }
