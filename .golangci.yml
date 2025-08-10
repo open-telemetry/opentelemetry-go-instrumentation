@@ -56,7 +56,6 @@ linters:
         - exitAfterDefer
         - hugeParam
         - rangeValCopy
-        - typeUnparen
         - unnamedResult
         - unnecessaryDefer
         - whyNoLint
