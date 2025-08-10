@@ -72,7 +72,7 @@ var (
 //
 // https://cs.opensource.google/go/go/+/master:src/net/http/pattern.go;l=84;drc=b47f2febea5c570fef4a5c27a46473f511fbdaa3?q=PATTERN%20STRUCT&ss=go%2Fgo
 func ParsePattern(s string) (path string, err error) {
-	if len(s) == 0 {
+	if s == "" {
 		return "", ErrEmptyPattern
 	}
 
