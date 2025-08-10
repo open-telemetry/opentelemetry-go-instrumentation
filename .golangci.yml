@@ -13,6 +13,7 @@ linters:
     - depguard
     - errcheck
     - errorlint
+    - gocritic
     - godot
     - gosec
     - govet
@@ -50,6 +51,25 @@ linters:
           deny:
             - pkg: testing
             - pkg: github.com/stretchr/testify
+    gocritic:
+      disabled-checks:
+        - appendCombine
+        - assignOp
+        - emptyStringTest
+        - exitAfterDefer
+        - hugeParam
+        - ifElseChain
+        - nestingReduce
+        - paramTypeCombine
+        - rangeValCopy
+        - sloppyReassign
+        - stringXbytes
+        - typeDefFirst
+        - typeUnparen
+        - unnamedResult
+        - unnecessaryDefer
+        - whyNoLint
+      enable-all: true
     godot:
       exclude:
         # Exclude links.
@@ -245,10 +265,6 @@ linters:
           - revive
         path: example.*_test\.go
         text: calls to (.+) only in main[(][)] or init[(][)] functions
-    paths:
-      - third_party$
-      - builtin$
-      - examples$
 issues:
   # Setting to unlimited so the linter only is run once to debug all issues.
   max-issues-per-linter: 0
@@ -262,9 +278,3 @@ formatters:
     goimports:
       local-prefixes:
         - go.opentelemetry.io/auto
-  exclusions:
-    generated: lax
-    paths:
-      - third_party$
-      - builtin$
-      - examples$
