@@ -55,7 +55,6 @@ linters:
       disabled-checks:
         - exitAfterDefer
         - hugeParam
-        - ifElseChain
         - nestingReduce
         - paramTypeCombine
         - rangeValCopy
