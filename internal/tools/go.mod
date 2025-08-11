@@ -250,8 +250,8 @@ require (
 	go.uber.org/zap v1.27.0 // indirect
 	golang.org/x/arch v0.20.0 // indirect
 	golang.org/x/crypto v0.41.0 // indirect
-	golang.org/x/exp v0.0.0-20250808145144-a408d31f581a // indirect
-	golang.org/x/exp/typeparams v0.0.0-20250808145144-a408d31f581a // indirect
+	golang.org/x/exp v0.0.0-20250811191247-51f88131bc50 // indirect
+	golang.org/x/exp/typeparams v0.0.0-20250811191247-51f88131bc50 // indirect
 	golang.org/x/mod v0.27.0 // indirect
 	golang.org/x/net v0.43.0 // indirect
 	golang.org/x/sys v0.35.0 // indirect
