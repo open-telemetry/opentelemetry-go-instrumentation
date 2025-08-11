@@ -21,25 +21,27 @@ func FindFunctionsUnStripped(
 
 	var result []*Func
 	for _, f := range symbols {
-		if _, exists := relevantFuncs[f.Name]; exists {
-			offset, err := getFuncOffsetUnstripped(elfF, f)
-			if err != nil {
-				return nil, err
-			}
-
-			returns, err := findFuncReturnsUnstripped(elfF, f, offset)
-			if err != nil {
-				return nil, err
-			}
-
-			function := &Func{
-				Name:          f.Name,
-				Offset:        offset,
-				ReturnOffsets: returns,
-			}
-
-			result = append(result, function)
+		_, exists := relevantFuncs[f.Name]
+		if !exists {
+			continue
 		}
+		offset, err := getFuncOffsetUnstripped(elfF, f)
+		if err != nil {
+			return nil, err
+		}
+
+		returns, err := findFuncReturnsUnstripped(elfF, f, offset)
+		if err != nil {
+			return nil, err
+		}
+
+		function := &Func{
+			Name:          f.Name,
+			Offset:        offset,
+			ReturnOffsets: returns,
+		}
+
+		result = append(result, function)
 	}
 
 	return result, nil
@@ -101,7 +103,7 @@ func findFuncReturnsUnstripped(
 	highPC := lowPC + sym.Size
 	buf := make([]byte, highPC-lowPC)
 
-	readBytes, err := textSection.ReadAt(buf, int64(offset)) // nolint: gosec  // Bounds checked.
+	readBytes, err := textSection.ReadAt(buf, int64(offset)) //nolint:gosec  // Bounds checked.
 	if err != nil {
 		return nil, fmt.Errorf("could not read text section: %w", err)
 	}

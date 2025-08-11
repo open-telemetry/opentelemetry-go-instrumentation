@@ -344,8 +344,11 @@ func (p *processor) processFn(e *event) ptrace.SpanSlice {
 	}
 
 	if serverAddr {
-		attrs = append(attrs, semconv.ServerAddress(net.IP(e.LocalAddr.IP[:]).String()))
-		attrs = append(attrs, semconv.ServerPort(int(e.LocalAddr.Port)))
+		attrs = append(
+			attrs,
+			semconv.ServerAddress(net.IP(e.LocalAddr.IP[:]).String()),
+			semconv.ServerPort(int(e.LocalAddr.Port)),
+		)
 	}
 
 	pdataconv.Attributes(span.Attributes(), attrs...)

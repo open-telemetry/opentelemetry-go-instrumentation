@@ -202,12 +202,12 @@ func (s *Span) UnmarshalJSON(data []byte) error {
 		case "startTimeUnixNano", "start_time_unix_nano":
 			var val protoUint64
 			err = decoder.Decode(&val)
-			v := int64(min(val.Uint64(), math.MaxInt64)) // nolint: gosec  // Overflow checked.
+			v := int64(min(val.Uint64(), math.MaxInt64)) //nolint:gosec  // Overflow checked.
 			s.StartTime = time.Unix(0, v)
 		case "endTimeUnixNano", "end_time_unix_nano":
 			var val protoUint64
 			err = decoder.Decode(&val)
-			v := int64(min(val.Uint64(), math.MaxInt64)) // nolint: gosec  // Overflow checked.
+			v := int64(min(val.Uint64(), math.MaxInt64)) //nolint:gosec  // Overflow checked.
 			s.EndTime = time.Unix(0, v)
 		case "attributes":
 			err = decoder.Decode(&s.Attrs)
@@ -326,7 +326,7 @@ func (e SpanEvent) MarshalJSON() ([]byte, error) {
 		Time uint64 `json:"timeUnixNano,omitempty"`
 	}{
 		Alias: Alias(e),
-		Time:  uint64(t), // nolint: gosec  // >0 checked above
+		Time:  uint64(t), //nolint:gosec  // >0 checked above
 	})
 }
 
@@ -361,7 +361,7 @@ func (se *SpanEvent) UnmarshalJSON(data []byte) error {
 		case "timeUnixNano", "time_unix_nano":
 			var val protoUint64
 			err = decoder.Decode(&val)
-			v := int64(min(val.Uint64(), math.MaxInt64)) // nolint: gosec  // Overflow checked.
+			v := int64(min(val.Uint64(), math.MaxInt64)) //nolint:gosec  // Overflow checked.
 			se.Time = time.Unix(0, v)
 		case "name":
 			err = decoder.Decode(&se.Name)

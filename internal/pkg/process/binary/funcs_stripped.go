@@ -87,7 +87,7 @@ func findFuncOffsetStripped(f *gosym.Func, elfF *elf.File) (uint64, []uint64, er
 		return 0, nil, fmt.Errorf("overflow in offset to read in the text section: %d", offInText)
 	}
 
-	_, err := text.ReadAt(data, int64(offInText)) // nolint: gosec // Overflow handled.
+	_, err := text.ReadAt(data, int64(offInText)) //nolint:gosec // Overflow handled.
 	if err != nil {
 		return 0, nil, err
 	}

@@ -392,7 +392,7 @@ func TestSpanAddLinkLimit(t *testing.T) {
 func TestSpanLinkAttrLimit(t *testing.T) {
 	nInt := len(tAttrs)
 	require.GreaterOrEqual(t, nInt, 0)
-	n := uint32(nInt) // nolint: gosec  // Bound checked.
+	n := uint32(nInt) //nolint:gosec  // Bound checked.
 
 	tests := []struct {
 		limit   int
@@ -524,7 +524,7 @@ func TestAddEventLimit(t *testing.T) {
 func TestAddEventAttrLimit(t *testing.T) {
 	nInt := len(tAttrs)
 	require.GreaterOrEqual(t, nInt, 0)
-	n := uint32(nInt) // nolint: gosec  // Bound checked.
+	n := uint32(nInt) //nolint:gosec  // Bound checked.
 
 	tests := []struct {
 		limit   int
@@ -613,7 +613,7 @@ func TestSpanSetAttributes(t *testing.T) {
 func TestSpanAttributeLimits(t *testing.T) {
 	nInt := len(tAttrs)
 	require.GreaterOrEqual(t, nInt, 0)
-	n := uint32(nInt) // nolint: gosec  // Bound checked.
+	n := uint32(nInt) //nolint:gosec  // Bound checked.
 
 	tests := []struct {
 		limit   int

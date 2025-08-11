@@ -107,7 +107,7 @@ func latestRelease(constraint *semver.Constraints) (*Release, error) {
 }
 
 func download(url, dest string) error {
-	resp, err := http.Get(url) // nolint: gosec  // Variable URL from GitHub API.
+	resp, err := http.Get(url) //nolint:gosec  // Variable URL from GitHub API.
 	if err != nil {
 		return err
 	}

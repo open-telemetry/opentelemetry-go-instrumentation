@@ -7,6 +7,7 @@ package main
 
 import (
 	"bufio"
+	"bytes"
 	"context"
 	"embed"
 	"errors"
@@ -148,8 +149,8 @@ func run(ctx context.Context) error {
 			"headers", msg.Headers,
 		)
 		for i, m := range msgs {
-			if m.Topic == msg.Topic && string(m.Key) == string(msg.Key) &&
-				string(m.Value) == string(msg.Value) {
+			if m.Topic == msg.Topic && bytes.Equal(m.Key, msg.Key) &&
+				bytes.Equal(m.Value, msg.Value) {
 				msgs = slices.Delete(msgs, i, i+1)
 				break
 			}
