@@ -80,7 +80,7 @@ func TestIDValidate(t *testing.T) {
 		}
 
 		err := ID(1).Validate()
-		require.ErrorIs(t, err, errNoID)
+		assert.ErrorIs(t, err, errNoID) //nolint:testifylint // Continue on failure.
 		assert.ErrorIs(t, err, assert.AnError, "original error dropped")
 	})
 
@@ -99,7 +99,7 @@ func TestIDValidate(t *testing.T) {
 		}(sig))
 
 		err := ID(1).Validate()
-		require.ErrorIs(t, err, errNoRunID)
+		assert.ErrorIs(t, err, errNoRunID) //nolint:testifylint // Continue on failure.
 		assert.ErrorIs(t, err, assert.AnError, "original error dropped")
 	})
 

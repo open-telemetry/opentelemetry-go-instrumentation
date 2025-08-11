@@ -94,6 +94,6 @@ func TestProcessPollerPoll(t *testing.T) {
 	ctx, cancel := context.WithTimeout(ctx, time.Second)
 	defer cancel()
 	pid, err = pp.Poll(ctx)
-	require.ErrorIs(t, err, context.DeadlineExceeded)
+	assert.ErrorIs(t, err, context.DeadlineExceeded) //nolint:testifylint // Continue on failure.
 	assert.Zero(t, pid)
 }
