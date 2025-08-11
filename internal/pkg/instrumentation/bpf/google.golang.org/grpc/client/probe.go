@@ -215,7 +215,8 @@ func processFn(e *event) ptrace.SpanSlice {
 	}
 
 	if port > 0 {
-		attrs = append(attrs,
+		attrs = append(
+			attrs,
 			semconv.NetworkPeerPort(port),
 			semconv.ServerPort(port),
 		)
