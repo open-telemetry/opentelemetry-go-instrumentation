@@ -8,9 +8,9 @@ require (
 	github.com/golangci/golangci-lint/v2 v2.3.1
 	github.com/google/go-licenses/v2 v2.0.0-alpha.1
 	go.opentelemetry.io/auto v0.22.1
-	go.opentelemetry.io/build-tools/crosslink v0.26.0
-	go.opentelemetry.io/build-tools/dbotconf v0.26.0
-	go.opentelemetry.io/build-tools/multimod v0.26.0
+	go.opentelemetry.io/build-tools/crosslink v0.26.1
+	go.opentelemetry.io/build-tools/dbotconf v0.26.1
+	go.opentelemetry.io/build-tools/multimod v0.26.1
 	golang.org/x/sync v0.16.0
 )
 
