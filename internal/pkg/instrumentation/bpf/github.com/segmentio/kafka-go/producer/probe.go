@@ -133,7 +133,7 @@ func processFn(e *event) ptrace.SpanSlice {
 	globalTopic := unix.ByteSliceToString(e.GlobalTopic[:])
 
 	attrs := []attribute.KeyValue{semconv.MessagingSystemKafka, semconv.MessagingOperationTypeSend}
-	if len(globalTopic) > 0 {
+	if globalTopic != "" {
 		attrs = append(attrs, semconv.MessagingDestinationName(globalTopic))
 	}
 
@@ -141,7 +141,7 @@ func processFn(e *event) ptrace.SpanSlice {
 		e.ValidMessages = min(e.ValidMessages, math.MaxInt)
 		attrs = append(
 			attrs,
-			semconv.MessagingBatchMessageCount(int(e.ValidMessages)), // nolint: gosec  // Bounded.
+			semconv.MessagingBatchMessageCount(int(e.ValidMessages)), //nolint:gosec  // Bounded.
 		)
 	}
 
@@ -153,12 +153,12 @@ func processFn(e *event) ptrace.SpanSlice {
 	for i := uint64(0); i < e.ValidMessages; i++ {
 		key := unix.ByteSliceToString(e.Messages[i].Key[:])
 		var msgAttrs []attribute.KeyValue
-		if len(key) > 0 {
+		if key != "" {
 			msgAttrs = append(msgAttrs, semconv.MessagingKafkaMessageKey(key))
 		}
 
 		// Topic is either the global topic or the message specific topic
-		if len(globalTopic) == 0 {
+		if globalTopic == "" {
 			msgTopic = unix.ByteSliceToString(e.Messages[i].Topic[:])
 		} else {
 			msgTopic = globalTopic

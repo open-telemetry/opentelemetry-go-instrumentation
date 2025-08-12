@@ -124,7 +124,7 @@ func (b *builder) pullImage(ctx context.Context) error {
 	pullOpts := image.PullOptions{}
 	username := os.Getenv("DOCKER_USERNAME")
 	password := os.Getenv("DOCKER_PASSWORD")
-	if len(username) > 0 && len(password) > 0 {
+	if username != "" && password != "" {
 		authConfig := registry.AuthConfig{
 			Username: username,
 			Password: password,

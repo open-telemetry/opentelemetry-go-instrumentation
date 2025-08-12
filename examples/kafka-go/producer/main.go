@@ -93,5 +93,5 @@ func main() {
 
 	// Run the web server.
 	fmt.Println("start producer-api ... !!")
-	log.Fatal(http.ListenAndServe(":8080", nil)) // nolint: gosec // Non-timeout HTTP server.
+	log.Fatal(http.ListenAndServe(":8080", nil)) //nolint:gosec // Non-timeout HTTP server.
 }

@@ -30,7 +30,7 @@ func bootOffsetToTime(nsec uint64) time.Time {
 	if nsec > math.MaxInt64 {
 		nsec = math.MaxInt64
 	}
-	return time.Unix(0, bootTimeOffset+int64(nsec)) // nolint: gosec  // Bound checked.
+	return time.Unix(0, bootTimeOffset+int64(nsec)) //nolint:gosec  // Bound checked.
 }
 
 // TimeToBootOffset returns the number of nanoseconds after the estimated boot

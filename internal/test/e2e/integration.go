@@ -114,7 +114,7 @@ func newCollector(t *testing.T) *collector {
 	return c
 }
 
-func run(t *testing.T, ctx context.Context, binPath string, endpoint string) {
+func run(t *testing.T, ctx context.Context, binPath, endpoint string) {
 	t.Helper()
 
 	t.Log("Loading target")

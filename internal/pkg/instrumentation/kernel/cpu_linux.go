@@ -39,7 +39,7 @@ func parseCPUList(raw string) (uint64, error) {
 			if err != nil {
 				return 0, fmt.Errorf("error parsing line %s: %w", v, err)
 			}
-			count = count + rangeC
+			count += rangeC
 		} else {
 			count++
 		}

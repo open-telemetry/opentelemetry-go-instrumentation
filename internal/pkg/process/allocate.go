@@ -38,7 +38,7 @@ func allocate(logger *slog.Logger, id ID) (*Allocation, error) {
 	if n < 0 {
 		return nil, fmt.Errorf("invalid page size: %d", n)
 	}
-	pagesize := uint64(n) // nolint: gosec  // Bound checked.
+	pagesize := uint64(n) //nolint:gosec  // Bound checked.
 
 	mapSize := pagesize * nCPU * 8
 	logger.Debug(

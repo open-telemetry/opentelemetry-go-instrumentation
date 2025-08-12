@@ -258,7 +258,7 @@ func (i *Base[BPFObj, BPFEvent]) buildEBPFCollection(
 	spec *ebpf.CollectionSpec,
 ) (*ebpf.Collection, error) {
 	obj := new(BPFObj)
-	if c, ok := ((interface{})(obj)).(io.Closer); ok {
+	if c, ok := (interface{}(obj)).(io.Closer); ok {
 		i.closers = append(i.closers, c)
 	}
 

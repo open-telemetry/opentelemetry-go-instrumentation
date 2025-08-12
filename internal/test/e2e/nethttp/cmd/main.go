@@ -31,7 +31,7 @@ func main() {
 
 	http.HandleFunc("/hello/{id}", hello)
 	go func() {
-		_ = http.ListenAndServe(":8080", nil) // nolint: gosec  // Testing server.
+		_ = http.ListenAndServe(":8080", nil) //nolint:gosec  // Testing server.
 	}()
 
 	// Wait for auto-instrumentation.

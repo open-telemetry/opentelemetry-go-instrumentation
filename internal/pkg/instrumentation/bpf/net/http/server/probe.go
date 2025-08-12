@@ -221,7 +221,7 @@ func processFn(e *event) ptrace.SpanSlice {
 		semconv.URLPath(path),
 		semconv.HTTPResponseStatusCodeKey.Int(
 			int(e.StatusCode),
-		), // nolint: gosec  // Bound checked.
+		), //nolint:gosec  // Bound checked.
 	}
 
 	// Client address and port

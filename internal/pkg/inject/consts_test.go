@@ -66,7 +66,7 @@ func TestWithOffset(t *testing.T) {
 	assert.Equal(t, off, v.(uint64))
 
 	// Failed look-ups need to be returned as an error.
-	id.Struct = id.Struct + "Alt"
+	id.Struct += "Alt"
 	opts = []Option{WithOffset(name, id, v10)}
 	_, err = newConsts(opts)
 	assert.ErrorIs(t, err, errNotFound)

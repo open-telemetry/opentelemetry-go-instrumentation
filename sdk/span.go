@@ -88,7 +88,7 @@ func (s *span) SetAttributes(attrs ...attribute.KeyValue) {
 		// No attributes allowed.
 		n := int64(len(attrs))
 		if n > 0 {
-			s.span.DroppedAttrs += uint32( // nolint: gosec  // Bounds checked.
+			s.span.DroppedAttrs += uint32( //nolint:gosec  // Bounds checked.
 				min(n, math.MaxUint32),
 			)
 		}
@@ -131,7 +131,7 @@ func convCappedAttrs(limit int, attrs []attribute.KeyValue) ([]telemetry.Attr, u
 	if limit == 0 {
 		var out uint32
 		if n > 0 {
-			out = uint32(min(int64(n), math.MaxUint32)) // nolint: gosec  // Bounds checked.
+			out = uint32(min(int64(n), math.MaxUint32)) //nolint:gosec  // Bounds checked.
 		}
 		return nil, out
 	}
@@ -146,7 +146,7 @@ func convCappedAttrs(limit int, attrs []attribute.KeyValue) ([]telemetry.Attr, u
 	}
 
 	limit = min(n, limit)
-	return convAttrs(attrs[:limit]), uint32(n - limit) // nolint: gosec  // Bounds checked.
+	return convAttrs(attrs[:limit]), uint32(n - limit) //nolint:gosec  // Bounds checked.
 }
 
 func convAttrs(attrs []attribute.KeyValue) []telemetry.Attr {

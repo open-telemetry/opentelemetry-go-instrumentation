@@ -31,7 +31,7 @@ func findRetInstructions(data []byte) ([]uint64, error) {
 			returnOffsets = append(returnOffsets, index)
 		}
 
-		index += uint64(max(0, instruction.Len)) // nolint: gosec  // Underflow handled.
+		index += uint64(max(0, instruction.Len)) //nolint:gosec  // Underflow handled.
 	}
 
 	return returnOffsets, nil

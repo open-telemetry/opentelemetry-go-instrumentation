@@ -209,7 +209,7 @@ func processFn(e *event) ptrace.SpanSlice {
 	forceQuery := e.ForceQuery != 0
 	omitHost := e.OmitHost != 0
 	var user *url.Userinfo
-	if len(username) > 0 {
+	if username != "" {
 		// check that username!="", otherwise url.User will instantiate
 		// an empty, non-nil *Userinfo object which url.String() will parse
 		// to just "@" in the final fullUrl
@@ -225,7 +225,7 @@ func processFn(e *event) ptrace.SpanSlice {
 		semconv.HTTPRequestMethodKey.String(method),
 		semconv.HTTPResponseStatusCodeKey.Int(
 			int(e.StatusCode),
-		), // nolint: gosec  // Bound checked.
+		), //nolint:gosec  // Bound checked.
 	}
 
 	if path != "" {

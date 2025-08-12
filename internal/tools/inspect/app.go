@@ -55,7 +55,8 @@ func newApp(ctx context.Context, l *slog.Logger, j job) (*app, error) {
 	data := struct{ Version string }{
 		Version: "v" + a.AppVer.String(),
 	}
-	if err = j.Renderer.Render(a.tmpDir, data); err != nil {
+	err = j.Renderer.Render(a.tmpDir, data)
+	if err != nil {
 		return nil, err
 	}
 

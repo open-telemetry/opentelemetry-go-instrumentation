@@ -220,7 +220,7 @@ func (e *shutdownExporter) ExportSpans(_ context.Context, spans []sdktrace.ReadO
 	if n < 0 || n > math.MaxUint32 {
 		return fmt.Errorf("invalid span length: %d", n)
 	}
-	e.exported.Add(uint32(n)) // nolint: gosec  // Bound checked
+	e.exported.Add(uint32(n)) //nolint:gosec  // Bound checked
 	return nil
 }
 
