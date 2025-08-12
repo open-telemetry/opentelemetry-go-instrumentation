@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"go.opentelemetry.io/contrib/detectors/autodetect"
 	"go.opentelemetry.io/contrib/exporters/autoexport"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp"
@@ -29,6 +30,9 @@ const (
 	// envResourceAttrKey is the key for the environment variable value
 	// containing OpenTelemetry Resource attributes.
 	envResourceAttrKey = "OTEL_RESOURCE_ATTRIBUTES"
+	// envResourceDetectorsKey is the key for the environment variable value
+	// containing comma-separated list of resource detector IDs to enable.
+	envResourceDetectorsKey = "OTEL_GO_AUTO_RESOURCE_DETECTORS"
 	// envLogLevelKey is the key for the environment variable value containing
 	// the log level.
 	envLogLevelKey = "OTEL_LOG_LEVEL"
@@ -82,6 +86,24 @@ func WithResourceAttributes(attrs ...attribute.KeyValue) Option {
 	})
 }
 
+// WithResourceDetector returns an [Option] that will configure a resource
+// detector to use when resolving a [resource.Resource].
+//
+// Multiple WithResourceDetector options can be provided and all detected
+// resources will be merged together along with resources from WithEnv and
+// other configuration options.
+func WithResourceDetector(detector resource.Detector) Option {
+	return fnOpt(func(ctx context.Context, c config) (config, error) {
+		detectedRes, err := detector.Detect(ctx)
+		if err != nil {
+			return c, fmt.Errorf("failed to detect resource: %w", err)
+		}
+
+		c.detectorResources = append(c.detectorResources, detectedRes)
+		return c, nil
+	})
+}
+
 // WithTraceExporter returns an [Option] that will configure exp as the
 // OpenTelemetry tracing exporter used.
 //
@@ -103,11 +125,15 @@ var (
 // defined by the following environment variables:
 //
 //   - OTEL_SERVICE_NAME (or OTEL_RESOURCE_ATTRIBUTES): sets the service name
+//   - OTEL_GO_AUTO_RESOURCE_DETECTORS: sets the resource detectors to enable
 //   - OTEL_TRACES_EXPORTER: sets the trace exporter
 //   - OTEL_LOG_LEVEL: sets the default logger's minimum logging level
 //
 // This option will conflict with [WithTraceExporter] and [WithServiceName].
 // The last [Option] provided will be used.
+//
+// Resources detected from OTEL_GO_AUTO_RESOURCE_DETECTORS will be merged with
+// resources from any [WithResourceDetector] options provided.
 //
 // If [WithLogger] is used, OTEL_LOG_LEVEL will not be used. Instead, the
 // [slog.Logger] passed to that option will be used as-is.
@@ -118,6 +144,14 @@ var (
 // The OTEL_TRACES_EXPORTER environment variable value is resolved using the
 // [autoexport] package. See that package's documentation for information on
 // supported values and registration of custom exporters.
+//
+// The OTEL_GO_AUTO_RESOURCE_DETECTORS environment variable value should be a
+// comma-separated list of resource detector IDs registered with
+// [autodetect.Register]. See the [autodetect] package for details. If not set,
+// no additional resource detectors will be enabled.
+//
+// If OTEL_RESOURCE_ATTRIBUTES is defined, it will be used to merge attributes
+// into any attributes defined by OTEL_RESOURCE_ATTRIBUTES.
 func WithEnv() Option {
 	return fnOpt(func(ctx context.Context, c config) (config, error) {
 		var err error
@@ -126,6 +160,12 @@ func WithEnv() Option {
 		c.exporter, err = autoexport.NewSpanExporter(ctx)
 
 		c.resAttrs = append(c.resAttrs, lookupResourceData()...)
+
+		r, e := lookupDetectors(ctx)
+		err = errors.Join(err, e)
+		if r != nil {
+			c.detectorResources = append(c.detectorResources, r)
+		}
 
 		if val, ok := lookupEnv(envLogLevelKey); c.logger == nil && ok {
 			var level slog.Level
@@ -161,6 +201,31 @@ func lookupResourceData() []attribute.KeyValue {
 	return attrs
 }
 
+// lookupDetectors parses resource detectors from environment variable and
+// returns the detected resource.
+func lookupDetectors(ctx context.Context) (*resource.Resource, error) {
+	detectorsStr := getEnv(envResourceDetectorsKey)
+	detectorsStr = strings.TrimSpace(detectorsStr)
+	if detectorsStr == "" {
+		return nil, nil // No detectors configured
+	}
+
+	detectors := strings.Split(detectorsStr, ",")
+
+	ids := make([]autodetect.ID, 0, len(detectors))
+	for _, d := range detectors {
+		d = strings.TrimSpace(d)
+		ids = append(ids, autodetect.ID(d))
+	}
+
+	detector, err := autodetect.Detector(ids...)
+	if err != nil {
+		return nil, fmt.Errorf("create autodetect detector: %w", err)
+	}
+
+	return detector.Detect(ctx)
+}
+
 // newLogger is used for testing.
 var newLogger = newLoggerFunc
 
@@ -171,9 +236,10 @@ func newLoggerFunc(level slog.Leveler) *slog.Logger {
 }
 
 type config struct {
-	logger   *slog.Logger
-	exporter sdk.SpanExporter
-	resAttrs []attribute.KeyValue
+	logger            *slog.Logger
+	exporter          sdk.SpanExporter
+	resAttrs          []attribute.KeyValue
+	detectorResources []*resource.Resource
 
 	spanProcessor sdk.SpanProcessor
 	idGenerator   *idGenerator
@@ -233,6 +299,31 @@ func (c config) TracerProvider() *sdk.TracerProvider {
 }
 
 func (c config) resource() *resource.Resource {
+	r := c.baseResource()
+
+	for i, detectorRes := range c.detectorResources {
+		var err error
+		r, err = resource.Merge(r, detectorRes)
+		if err != nil {
+			// Most likely a schema URL conflict, which means that the detector
+			// returned a resource with a schema URL that conflicts with the
+			// one already in the resource.
+			//
+			// This is not a fatal error, so we log it and continue merging the
+			// resources. The final resource will still contain the attributes
+			// from the detector, but the schema URL will be empty.
+			c.Logger().Error(
+				"failed to merge detector resource",
+				"error", err,
+				"detector", i,
+			)
+		}
+	}
+
+	return r
+}
+
+func (c config) baseResource() *resource.Resource {
 	return resource.NewWithAttributes(
 		semconv.SchemaURL,
 		append(
