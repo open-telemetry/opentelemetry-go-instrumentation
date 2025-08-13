@@ -55,7 +55,6 @@ linters:
       disabled-checks:
         - exitAfterDefer
         - hugeParam
-        - rangeValCopy
         - unnamedResult
       enable-all: true
     godot:
