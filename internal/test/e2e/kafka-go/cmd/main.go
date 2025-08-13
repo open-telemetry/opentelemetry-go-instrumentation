@@ -148,7 +148,8 @@ func run(ctx context.Context) error {
 			"value", string(msg.Value),
 			"headers", msg.Headers,
 		)
-		for i, m := range msgs {
+		for i := range msgs {
+			m := &msgs[i]
 			if m.Topic == msg.Topic && bytes.Equal(m.Key, msg.Key) &&
 				bytes.Equal(m.Value, msg.Value) {
 				msgs = slices.Delete(msgs, i, i+1)
