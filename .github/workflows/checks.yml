@@ -85,7 +85,7 @@ jobs:
         runner: [ubuntu-latest, ubuntu-22.04-arm]
     runs-on: ${{ matrix.runner }}
     container:
-      image: golang:1.24.6-bookworm@sha256:2679c15c940573aded505b2f2fbbd4e718b5172327aae3ab9f43a10a5c700dfc
+      image: golang:1.24.6-bookworm@sha256:8d6266f37c6941b1a384955e9059d21f0f5d27ee2d43e6216e40f2a6163f88ab
       options: --user root --privileged
     steps:
       - id: go-cache-paths
