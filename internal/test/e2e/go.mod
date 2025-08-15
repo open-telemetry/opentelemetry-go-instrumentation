@@ -103,8 +103,8 @@ require (
 	github.com/x448/float16 v0.8.4 // indirect
 	github.com/xwb1989/sqlparser v0.0.0-20180606152119-120387863bf2 // indirect
 	go.opentelemetry.io/contrib/bridges/prometheus v0.62.0 // indirect
-	go.opentelemetry.io/contrib/detectors/autodetect v0.0.0-20250814115118-e2773b7f1491 // indirect
-	go.opentelemetry.io/contrib/detectors/aws/ec2/v2 v2.0.0-20250814115118-e2773b7f1491 // indirect
+	go.opentelemetry.io/contrib/detectors/autodetect v0.0.0-20250814230210-922f090af55e // indirect
+	go.opentelemetry.io/contrib/detectors/aws/ec2/v2 v2.0.0-20250814230210-922f090af55e // indirect
 	go.opentelemetry.io/contrib/detectors/aws/ecs v1.37.0 // indirect
 	go.opentelemetry.io/contrib/detectors/aws/eks v1.37.0 // indirect
 	go.opentelemetry.io/contrib/detectors/aws/lambda v0.62.0 // indirect
