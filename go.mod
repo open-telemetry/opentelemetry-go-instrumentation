@@ -24,7 +24,7 @@ require (
 	github.com/stretchr/testify v1.10.0
 	github.com/xwb1989/sqlparser v0.0.0-20180606152119-120387863bf2
 	go.opentelemetry.io/collector/pdata v1.38.0
-	go.opentelemetry.io/contrib/detectors/autodetect v0.0.0-20250814230210-922f090af55e
+	go.opentelemetry.io/contrib/detectors/autodetect v0.0.0-20250815150055-9269e92db441
 	go.opentelemetry.io/contrib/exporters/autoexport v0.62.0
 	go.opentelemetry.io/otel v1.37.0
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp v1.37.0
@@ -87,7 +87,7 @@ require (
 	github.com/x448/float16 v0.8.4 // indirect
 	go.opentelemetry.io/auto/sdk v1.1.0 // indirect
 	go.opentelemetry.io/contrib/bridges/prometheus v0.62.0 // indirect
-	go.opentelemetry.io/contrib/detectors/aws/ec2/v2 v2.0.0-20250814230210-922f090af55e // indirect
+	go.opentelemetry.io/contrib/detectors/aws/ec2/v2 v2.0.0-20250815150055-9269e92db441 // indirect
 	go.opentelemetry.io/contrib/detectors/aws/ecs v1.37.0 // indirect
 	go.opentelemetry.io/contrib/detectors/aws/eks v1.37.0 // indirect
 	go.opentelemetry.io/contrib/detectors/aws/lambda v0.62.0 // indirect
