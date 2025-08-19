@@ -43,14 +43,13 @@ struct http_request_t {
 };
 
 struct {
-	__uint(type, BPF_MAP_TYPE_HASH);
-	__type(key, void*);
-	__type(value, struct http_request_t);
-	__uint(max_entries, MAX_CONCURRENT);
+    __uint(type, BPF_MAP_TYPE_HASH);
+    __type(key, void *);
+    __type(value, struct http_request_t);
+    __uint(max_entries, MAX_CONCURRENT);
 } http_events SEC(".maps");
 
-struct
-{
+struct {
     __uint(type, BPF_MAP_TYPE_PERCPU_ARRAY);
     __uint(key_size, sizeof(u32));
     __uint(value_size, sizeof(struct http_request_t));
@@ -58,10 +57,10 @@ struct
 } http_client_uprobe_storage_map SEC(".maps");
 
 struct {
-	__uint(type, BPF_MAP_TYPE_LRU_HASH);
-	__type(key, void*); // the headers ptr
-	__type(value, void*); // request key, goroutine or context ptr
-	__uint(max_entries, MAX_CONCURRENT);
+    __uint(type, BPF_MAP_TYPE_LRU_HASH);
+    __type(key, void *);   // the headers ptr
+    __type(value, void *); // request key, goroutine or context ptr
+    __uint(max_entries, MAX_CONCURRENT);
 } http_headers SEC(".maps");
 
 // Injected in init
@@ -99,16 +98,14 @@ int uprobe_Transport_roundTrip(struct pt_regs *ctx) {
 
     void *key = (void *)GOROUTINE(ctx);
     void *httpReq_ptr = bpf_map_lookup_elem(&http_events, &key);
-    if (httpReq_ptr != NULL)
-    {
+    if (httpReq_ptr != NULL) {
         bpf_printk("uprobe/Transport_RoundTrip already tracked with the current context");
         return 0;
     }
 
     u32 map_id = 0;
     struct http_request_t *httpReq = bpf_map_lookup_elem(&http_client_uprobe_storage_map, &map_id);
-    if (httpReq == NULL)
-    {
+    if (httpReq == NULL) {
         bpf_printk("uprobe/Transport_roundTrip: httpReq is NULL");
         return 0;
     }
@@ -126,77 +123,92 @@ int uprobe_Transport_roundTrip(struct pt_regs *ctx) {
     };
     start_span(&start_span_params);
 
-    if (!get_go_string_from_user_ptr((void *)(req_ptr+method_ptr_pos), httpReq->method, sizeof(httpReq->method))) {
+    if (!get_go_string_from_user_ptr(
+            (void *)(req_ptr + method_ptr_pos), httpReq->method, sizeof(httpReq->method))) {
         bpf_printk("uprobe_Transport_roundTrip: Failed to get method from request");
         return 0;
     }
 
     // get path from Request.URL
     void *url_ptr = 0;
-    bpf_probe_read(&url_ptr, sizeof(url_ptr), (void *)(req_ptr+url_ptr_pos));
-    if (!get_go_string_from_user_ptr((void *)(url_ptr+path_ptr_pos), httpReq->path, sizeof(httpReq->path))) {
+    bpf_probe_read(&url_ptr, sizeof(url_ptr), (void *)(req_ptr + url_ptr_pos));
+    if (!get_go_string_from_user_ptr(
+            (void *)(url_ptr + path_ptr_pos), httpReq->path, sizeof(httpReq->path))) {
         bpf_printk("uprobe_Transport_roundTrip: Failed to get path from Request.URL");
     }
 
     // get scheme from Request.URL
-    if (!get_go_string_from_user_ptr((void *)(url_ptr+scheme_pos), httpReq->scheme, sizeof(httpReq->scheme))) {
+    if (!get_go_string_from_user_ptr(
+            (void *)(url_ptr + scheme_pos), httpReq->scheme, sizeof(httpReq->scheme))) {
         bpf_printk("uprobe_Transport_roundTrip: Failed to get scheme from Request.URL");
     }
 
     // get opaque from Request.URL
-    if (!get_go_string_from_user_ptr((void *)(url_ptr+opaque_pos), httpReq->opaque, sizeof(httpReq->opaque))) {
+    if (!get_go_string_from_user_ptr(
+            (void *)(url_ptr + opaque_pos), httpReq->opaque, sizeof(httpReq->opaque))) {
         bpf_printk("uprobe_Transport_roundTrip: Failed to get opaque from Request.URL");
     }
 
     // get RawPath from Request.URL
-    if (!get_go_string_from_user_ptr((void *)(url_ptr+raw_path_pos), httpReq->raw_path, sizeof(httpReq->raw_path))) {
+    if (!get_go_string_from_user_ptr(
+            (void *)(url_ptr + raw_path_pos), httpReq->raw_path, sizeof(httpReq->raw_path))) {
         bpf_printk("uprobe_Transport_roundTrip: Failed to get RawPath from Request.URL");
     }
 
     // get username from Request.URL.User
     void *user_ptr = 0;
-    bpf_probe_read(&user_ptr, sizeof(user_ptr), (void *)(url_ptr+user_ptr_pos));
-    if (!get_go_string_from_user_ptr((void *)(user_ptr+username_pos), httpReq->username, sizeof(httpReq->username))) {
+    bpf_probe_read(&user_ptr, sizeof(user_ptr), (void *)(url_ptr + user_ptr_pos));
+    if (!get_go_string_from_user_ptr(
+            (void *)(user_ptr + username_pos), httpReq->username, sizeof(httpReq->username))) {
         bpf_printk("uprobe_Transport_roundTrip: Failed to get RawQuery from Request.URL");
     }
 
     // get RawQuery from Request.URL
-    if (!get_go_string_from_user_ptr((void *)(url_ptr+raw_query_pos), httpReq->raw_query, sizeof(httpReq->raw_query))) {
+    if (!get_go_string_from_user_ptr(
+            (void *)(url_ptr + raw_query_pos), httpReq->raw_query, sizeof(httpReq->raw_query))) {
         bpf_printk("uprobe_Transport_roundTrip: Failed to get RawQuery from Request.URL");
     }
 
     // get Fragment from Request.URL
-    if (!get_go_string_from_user_ptr((void *)(url_ptr+fragment_pos), httpReq->fragment, sizeof(httpReq->fragment))) {
+    if (!get_go_string_from_user_ptr(
+            (void *)(url_ptr + fragment_pos), httpReq->fragment, sizeof(httpReq->fragment))) {
         bpf_printk("uprobe_Transport_roundTrip: Failed to get Fragment from Request.URL");
     }
 
     // get RawFragment from Request.URL
-    if (!get_go_string_from_user_ptr((void *)(url_ptr+raw_fragment_pos), httpReq->raw_fragment, sizeof(httpReq->raw_fragment))) {
+    if (!get_go_string_from_user_ptr((void *)(url_ptr + raw_fragment_pos),
+                                     httpReq->raw_fragment,
+                                     sizeof(httpReq->raw_fragment))) {
         bpf_printk("uprobe_Transport_roundTrip: Failed to get RawFragment from Request.URL");
     }
 
     // get ForceQuery from Request.URL
-    bpf_probe_read(&httpReq->force_query, sizeof(httpReq->force_query), (void *)(url_ptr+force_query_pos));
+    bpf_probe_read(
+        &httpReq->force_query, sizeof(httpReq->force_query), (void *)(url_ptr + force_query_pos));
 
     // get OmitHost from Request.URL
-    bpf_probe_read(&httpReq->omit_host, sizeof(httpReq->omit_host), (void *)(url_ptr+omit_host_pos));
+    bpf_probe_read(
+        &httpReq->omit_host, sizeof(httpReq->omit_host), (void *)(url_ptr + omit_host_pos));
 
     // get host from Request
-    if (!get_go_string_from_user_ptr((void *)(req_ptr+request_host_pos), httpReq->host, sizeof(httpReq->host))) {
+    if (!get_go_string_from_user_ptr(
+            (void *)(req_ptr + request_host_pos), httpReq->host, sizeof(httpReq->host))) {
         // If host is not present in Request, get it from URL
-        if (!get_go_string_from_user_ptr((void *)(url_ptr+url_host_pos), httpReq->host, sizeof(httpReq->host))) {
+        if (!get_go_string_from_user_ptr(
+                (void *)(url_ptr + url_host_pos), httpReq->host, sizeof(httpReq->host))) {
             bpf_printk("uprobe_Transport_roundTrip: Failed to get host from Request and URL");
         }
     }
 
     // get proto from Request
-    if (!get_go_string_from_user_ptr((void *)(req_ptr+request_proto_pos), httpReq->proto, sizeof(httpReq->proto))) {
+    if (!get_go_string_from_user_ptr(
+            (void *)(req_ptr + request_proto_pos), httpReq->proto, sizeof(httpReq->proto))) {
         bpf_printk("uprobe_Transport_roundTrip: Failed to get proto from Request");
     }
 
     // get headers from Request
     void *headers_ptr = 0;
-    bpf_probe_read(&headers_ptr, sizeof(headers_ptr), (void *)(req_ptr+headers_ptr_pos));
+    bpf_probe_read(&headers_ptr, sizeof(headers_ptr), (void *)(req_ptr + headers_ptr_pos));
     if (headers_ptr) {
         bpf_map_update_elem(&http_headers, &headers_ptr, &key, 0);
     }
@@ -222,7 +234,9 @@ int uprobe_Transport_roundTrip_Returns(struct pt_regs *ctx) {
     // Getting the returned response
     void *resp_ptr = get_argument(ctx, 1);
     // Get status code from response
-    bpf_probe_read(&http_req_span->status_code, sizeof(http_req_span->status_code), (void *)(resp_ptr + status_code_pos));
+    bpf_probe_read(&http_req_span->status_code,
+                   sizeof(http_req_span->status_code),
+                   (void *)(resp_ptr + status_code_pos));
 
     http_req_span->end_time = end_time;
 
@@ -253,25 +267,32 @@ int uprobe_writeSubset(struct pt_regs *ctx) {
             span_context_to_w3c_string(&http_req_span->sc, tp);
 
             void *buf_ptr = 0;
-            bpf_probe_read(&buf_ptr, sizeof(buf_ptr), (void *)(io_writer_ptr + io_writer_buf_ptr_pos)); // grab buf ptr
+            bpf_probe_read(&buf_ptr,
+                           sizeof(buf_ptr),
+                           (void *)(io_writer_ptr + io_writer_buf_ptr_pos)); // grab buf ptr
             if (!buf_ptr) {
                 bpf_printk("uprobe_writeSubset: Failed to get buf from io writer");
                 goto done;
             }
 
             s64 size = 0;
-            if (bpf_probe_read(&size, sizeof(s64), (void *)(io_writer_ptr + io_writer_buf_ptr_pos + offsetof(struct go_slice, cap)))) { // grab capacity
+            if (bpf_probe_read(&size,
+                               sizeof(s64),
+                               (void *)(io_writer_ptr + io_writer_buf_ptr_pos +
+                                        offsetof(struct go_slice, cap)))) { // grab capacity
                 bpf_printk("uprobe_writeSubset: Failed to get size from io writer");
                 goto done;
             }
 
             s64 len = 0;
-            if (bpf_probe_read(&len, sizeof(s64), (void *)(io_writer_ptr + io_writer_n_pos))) { // grab len
+            if (bpf_probe_read(
+                    &len, sizeof(s64), (void *)(io_writer_ptr + io_writer_n_pos))) { // grab len
                 bpf_printk("uprobe_writeSubset: Failed to get len from io writer");
                 goto done;
             }
 
-            if (len < (size - W3C_VAL_LENGTH - W3C_KEY_LENGTH - 4)) { // 4 = strlen(":_") + strlen("\r\n")
+            if (len <
+                (size - W3C_VAL_LENGTH - W3C_KEY_LENGTH - 4)) { // 4 = strlen(":_") + strlen("\r\n")
                 char tp_str[W3C_KEY_LENGTH + 2 + W3C_VAL_LENGTH + 2] = "Traceparent: ";
                 char end[2] = "\r\n";
                 __builtin_memcpy(&tp_str[W3C_KEY_LENGTH + 2], tp, sizeof(tp));
@@ -281,7 +302,8 @@ int uprobe_writeSubset(struct pt_regs *ctx) {
                     goto done;
                 }
                 len += W3C_KEY_LENGTH + 2 + W3C_VAL_LENGTH + 2;
-                if (bpf_probe_write_user((void *)(io_writer_ptr + io_writer_n_pos), &len, sizeof(len))) {
+                if (bpf_probe_write_user(
+                        (void *)(io_writer_ptr + io_writer_n_pos), &len, sizeof(len))) {
                     bpf_printk("uprobe_writeSubset: Failed to change io writer n");
                     goto done;
                 }

@@ -19,8 +19,7 @@ char __license[] SEC("license") = "Dual MIT/GPL";
 #define HOST_MAX_LEN 256
 #define PROTO_MAX_LEN 8
 
-struct http_server_span_t
-{
+struct http_server_span_t {
     BASE_SPAN_PROPERTIES
     u64 status_code;
     char method[METHOD_MAX_LEN];
@@ -31,8 +30,7 @@ struct http_server_span_t
     char proto[PROTO_MAX_LEN];
 };
 
-struct uprobe_data_t
-{
+struct uprobe_data_t {
     struct http_server_span_t span;
     // bpf2go doesn't support pointers fields
     // saving the response pointer in the entry probe
@@ -42,32 +40,28 @@ struct uprobe_data_t
 
 MAP_BUCKET_DEFINITION(go_string_t, go_slice_t)
 
-struct
-{
+struct {
     __uint(type, BPF_MAP_TYPE_HASH);
     __type(key, void *);
     __type(value, struct uprobe_data_t);
     __uint(max_entries, MAX_CONCURRENT);
 } http_server_uprobes SEC(".maps");
 
-struct
-{
+struct {
     __uint(type, BPF_MAP_TYPE_LRU_HASH);
     __type(key, void *);
     __type(value, struct span_context);
     __uint(max_entries, MAX_CONCURRENT);
 } http_server_context_headers SEC(".maps");
 
-struct
-{
+struct {
     __uint(type, BPF_MAP_TYPE_PERCPU_ARRAY);
     __uint(key_size, sizeof(u32));
     __uint(value_size, sizeof(MAP_BUCKET_TYPE(go_string_t, go_slice_t)));
     __uint(max_entries, 1);
 } golang_mapbucket_storage_map SEC(".maps");
 
-struct
-{
+struct {
     __uint(type, BPF_MAP_TYPE_PERCPU_ARRAY);
     __uint(key_size, sizeof(u32));
     __uint(value_size, sizeof(struct uprobe_data_t));
@@ -101,87 +95,82 @@ volatile const bool swiss_maps_used;
 // Extracts the span context from the request headers by looking for the 'traceparent' header.
 // Fills the parent_span_context with the extracted span context.
 // Returns 0 on success, negative value on error.
-static __always_inline long extract_context_from_req_headers_go_map(void *headers_ptr_ptr, struct span_context *parent_span_context)
-{
+static __always_inline long
+extract_context_from_req_headers_go_map(void *headers_ptr_ptr,
+                                        struct span_context *parent_span_context) {
     void *headers_ptr;
     long res;
     res = bpf_probe_read(&headers_ptr, sizeof(headers_ptr), headers_ptr_ptr);
-    if (res < 0)
-    {
+    if (res < 0) {
         return res;
     }
     u64 headers_count = 0;
     res = bpf_probe_read(&headers_count, sizeof(headers_count), headers_ptr);
-    if (res < 0)
-    {
+    if (res < 0) {
         return res;
     }
-    if (headers_count == 0)
-    {
+    if (headers_count == 0) {
         return -1;
     }
     unsigned char log_2_bucket_count;
     res = bpf_probe_read(&log_2_bucket_count, sizeof(log_2_bucket_count), headers_ptr + 9);
-    if (res < 0)
-    {
+    if (res < 0) {
         return -1;
     }
     u64 bucket_count = 1 << log_2_bucket_count;
     void *header_buckets;
-    res = bpf_probe_read(&header_buckets, sizeof(header_buckets), (void*)(headers_ptr + buckets_ptr_pos));
-    if (res < 0)
-    {
+    res = bpf_probe_read(
+        &header_buckets, sizeof(header_buckets), (void *)(headers_ptr + buckets_ptr_pos));
+    if (res < 0) {
         return -1;
     }
     u32 map_id = 0;
-    MAP_BUCKET_TYPE(go_string_t, go_slice_t) *map_value = bpf_map_lookup_elem(&golang_mapbucket_storage_map, &map_id);
-    if (!map_value)
-    {
+    MAP_BUCKET_TYPE(go_string_t, go_slice_t) *map_value =
+        bpf_map_lookup_elem(&golang_mapbucket_storage_map, &map_id);
+    if (!map_value) {
         return -1;
     }
 
-    for (u64 j = 0; j < MAX_BUCKETS; j++)
-    {
-        if (j >= bucket_count)
-        {
+    for (u64 j = 0; j < MAX_BUCKETS; j++) {
+        if (j >= bucket_count) {
             break;
         }
-        res = bpf_probe_read(map_value, sizeof(MAP_BUCKET_TYPE(go_string_t, go_slice_t)), header_buckets + (j * sizeof(MAP_BUCKET_TYPE(go_string_t, go_slice_t))));
-        if (res < 0)
-        {
+        res =
+            bpf_probe_read(map_value,
+                           sizeof(MAP_BUCKET_TYPE(go_string_t, go_slice_t)),
+                           header_buckets + (j * sizeof(MAP_BUCKET_TYPE(go_string_t, go_slice_t))));
+        if (res < 0) {
             continue;
         }
-        for (u64 i = 0; i < 8; i++)
-        {
-            if (map_value->tophash[i] == 0)
-            {
+        for (u64 i = 0; i < 8; i++) {
+            if (map_value->tophash[i] == 0) {
                 continue;
             }
-            if (map_value->keys[i].len != W3C_KEY_LENGTH)
-            {
+            if (map_value->keys[i].len != W3C_KEY_LENGTH) {
                 continue;
             }
             char current_header_key[W3C_KEY_LENGTH];
             bpf_probe_read(current_header_key, sizeof(current_header_key), map_value->keys[i].str);
-            if (!bpf_memcmp(current_header_key, "traceparent", W3C_KEY_LENGTH) && !bpf_memcmp(current_header_key, "Traceparent", W3C_KEY_LENGTH))
-            {
+            if (!bpf_memcmp(current_header_key, "traceparent", W3C_KEY_LENGTH) &&
+                !bpf_memcmp(current_header_key, "Traceparent", W3C_KEY_LENGTH)) {
                 continue;
             }
             void *traceparent_header_value_ptr = map_value->values[i].array;
             struct go_string traceparent_header_value_go_str;
-            res = bpf_probe_read(&traceparent_header_value_go_str, sizeof(traceparent_header_value_go_str), traceparent_header_value_ptr);
-            if (res < 0)
-            {
+            res = bpf_probe_read(&traceparent_header_value_go_str,
+                                 sizeof(traceparent_header_value_go_str),
+                                 traceparent_header_value_ptr);
+            if (res < 0) {
                 return -1;
             }
-            if (traceparent_header_value_go_str.len != W3C_VAL_LENGTH)
-            {
+            if (traceparent_header_value_go_str.len != W3C_VAL_LENGTH) {
                 continue;
             }
             char traceparent_header_value[W3C_VAL_LENGTH];
-            res = bpf_probe_read(&traceparent_header_value, sizeof(traceparent_header_value), traceparent_header_value_go_str.str);
-            if (res < 0)
-            {
+            res = bpf_probe_read(&traceparent_header_value,
+                                 sizeof(traceparent_header_value),
+                                 traceparent_header_value_go_str.str);
+            if (res < 0) {
                 return res;
             }
             w3c_string_to_span_context(traceparent_header_value, parent_span_context);
@@ -191,8 +180,10 @@ static __always_inline long extract_context_from_req_headers_go_map(void *header
     return -1;
 }
 
-static __always_inline long extract_context_from_req_headers_pre_parsed(void *key, struct span_context *parent_span_context) {
-    struct span_context *parsed_header_context = bpf_map_lookup_elem(&http_server_context_headers, &key);
+static __always_inline long
+extract_context_from_req_headers_pre_parsed(void *key, struct span_context *parent_span_context) {
+    struct span_context *parsed_header_context =
+        bpf_map_lookup_elem(&http_server_context_headers, &key);
     if (!parsed_header_context) {
         return -1;
     }
@@ -201,14 +192,16 @@ static __always_inline long extract_context_from_req_headers_pre_parsed(void *ke
     return 0;
 }
 
-static __always_inline long extract_context_from_req_headers(void *key, struct span_context *parent_span_context) {
+static __always_inline long
+extract_context_from_req_headers(void *key, struct span_context *parent_span_context) {
     if (swiss_maps_used) {
         return extract_context_from_req_headers_pre_parsed(key, parent_span_context);
     }
     return extract_context_from_req_headers_go_map(key, parent_span_context);
 }
 
-static __always_inline void read_go_string(void *base, int offset, char *output, int maxLen, const char *errorMsg) {
+static __always_inline void
+read_go_string(void *base, int offset, char *output, int maxLen, const char *errorMsg) {
     void *ptr = (void *)(base + offset);
     if (!get_go_string_from_user_ptr(ptr, output, maxLen)) {
         bpf_printk("Failed to get %s", errorMsg);
@@ -218,22 +211,20 @@ static __always_inline void read_go_string(void *base, int offset, char *output,
 // This instrumentation attaches uprobe to the following function:
 // func (sh serverHandler) ServeHTTP(rw ResponseWriter, req *Request)
 SEC("uprobe/serverHandler_ServeHTTP")
-int uprobe_serverHandler_ServeHTTP(struct pt_regs *ctx)
-{
+int uprobe_serverHandler_ServeHTTP(struct pt_regs *ctx) {
     struct go_iface go_context = {0};
     get_Go_context(ctx, 4, ctx_ptr_pos, false, &go_context);
     void *key = (void *)GOROUTINE(ctx);
     void *httpReq_ptr = bpf_map_lookup_elem(&http_server_uprobes, &key);
-    if (httpReq_ptr != NULL)
-    {
+    if (httpReq_ptr != NULL) {
         bpf_printk("uprobe/HandlerFunc_ServeHTTP already tracked with the current request");
         return 0;
     }
 
     u32 map_id = 0;
-    struct uprobe_data_t *uprobe_data = bpf_map_lookup_elem(&http_server_uprobe_storage_map, &map_id);
-    if (uprobe_data == NULL)
-    {
+    struct uprobe_data_t *uprobe_data =
+        bpf_map_lookup_elem(&http_server_uprobe_storage_map, &map_id);
+    if (uprobe_data == NULL) {
         bpf_printk("uprobe/HandlerFunc_ServeHTTP: http_server_span is NULL");
         return 0;
     }
@@ -263,7 +254,7 @@ int uprobe_serverHandler_ServeHTTP(struct pt_regs *ctx)
     if (swiss_maps_used) {
         start_span_params.get_parent_span_context_arg = key;
     } else {
-        start_span_params.get_parent_span_context_arg = (void*)(req_ptr + headers_ptr_pos);
+        start_span_params.get_parent_span_context_arg = (void *)(req_ptr + headers_ptr_pos);
     }
 
     start_span(&start_span_params);
@@ -298,25 +289,55 @@ int uprobe_serverHandler_ServeHTTP_Returns(struct pt_regs *ctx) {
     void *url_ptr = 0;
     bpf_probe_read(&url_ptr, sizeof(url_ptr), (void *)(req_ptr + url_ptr_pos));
     // Collect fields from response
-    read_go_string(req_ptr, method_ptr_pos, http_server_span->method, sizeof(http_server_span->method), "method from request");
+    read_go_string(req_ptr,
+                   method_ptr_pos,
+                   http_server_span->method,
+                   sizeof(http_server_span->method),
+                   "method from request");
     if (pattern_path_supported) {
         if (pattern_path_public_supported) {
-            read_go_string(req_ptr, req_pattern_pos, http_server_span->path_pattern, sizeof(http_server_span->path_pattern), "pattern from Request");
+            read_go_string(req_ptr,
+                           req_pattern_pos,
+                           http_server_span->path_pattern,
+                           sizeof(http_server_span->path_pattern),
+                           "pattern from Request");
         } else {
             void *pat_ptr = NULL;
             bpf_probe_read(&pat_ptr, sizeof(pat_ptr), (void *)(req_ptr + req_pat_pos));
             if (pat_ptr != NULL) {
-                read_go_string(pat_ptr, pat_str_pos, http_server_span->path_pattern, sizeof(http_server_span->path), "patterned path from Request");
+                read_go_string(pat_ptr,
+                               pat_str_pos,
+                               http_server_span->path_pattern,
+                               sizeof(http_server_span->path),
+                               "patterned path from Request");
             }
         }
     }
-    read_go_string(url_ptr, path_ptr_pos, http_server_span->path, sizeof(http_server_span->path), "path from Request.URL");
-    read_go_string(req_ptr, remote_addr_pos, http_server_span->remote_addr, sizeof(http_server_span->remote_addr), "remote addr from Request.RemoteAddr");
-    read_go_string(req_ptr, host_pos, http_server_span->host, sizeof(http_server_span->host), "host from Request.Host");
-    read_go_string(req_ptr, proto_pos, http_server_span->proto, sizeof(http_server_span->proto), "proto from Request.Proto");
+    read_go_string(url_ptr,
+                   path_ptr_pos,
+                   http_server_span->path,
+                   sizeof(http_server_span->path),
+                   "path from Request.URL");
+    read_go_string(req_ptr,
+                   remote_addr_pos,
+                   http_server_span->remote_addr,
+                   sizeof(http_server_span->remote_addr),
+                   "remote addr from Request.RemoteAddr");
+    read_go_string(req_ptr,
+                   host_pos,
+                   http_server_span->host,
+                   sizeof(http_server_span->host),
+                   "host from Request.Host");
+    read_go_string(req_ptr,
+                   proto_pos,
+                   http_server_span->proto,
+                   sizeof(http_server_span->proto),
+                   "proto from Request.Proto");
 
     // status code
-    bpf_probe_read(&http_server_span->status_code, sizeof(http_server_span->status_code), (void *)(resp_ptr + status_code_pos));
+    bpf_probe_read(&http_server_span->status_code,
+                   sizeof(http_server_span->status_code),
+                   (void *)(resp_ptr + status_code_pos));
 
     output_span_event(ctx, http_server_span, sizeof(*http_server_span), &http_server_span->sc);
 
@@ -341,7 +362,7 @@ int uprobe_textproto_Reader_readContinuedLineSlice_Returns(struct pt_regs *ctx) 
 
         if (!bpf_memicmp((const char *)temp, "traceparent: ", W3C_KEY_LENGTH + 2)) {
             struct span_context parent_span_context = {};
-            w3c_string_to_span_context((char *)(temp + W3C_KEY_LENGTH + 2), &parent_span_context);            
+            w3c_string_to_span_context((char *)(temp + W3C_KEY_LENGTH + 2), &parent_span_context);
             bpf_map_update_elem(&http_server_context_headers, &key, &parent_span_context, BPF_ANY);
         }
     }

@@ -19,10 +19,10 @@ struct sql_request_t {
 };
 
 struct {
-	__uint(type, BPF_MAP_TYPE_HASH);
-	__type(key, void*);
-	__type(value, struct sql_request_t);
-	__uint(max_entries, MAX_CONCURRENT);
+    __uint(type, BPF_MAP_TYPE_HASH);
+    __type(key, void *);
+    __type(value, struct sql_request_t);
+    __uint(max_entries, MAX_CONCURRENT);
 } sql_events SEC(".maps");
 
 // Injected in init

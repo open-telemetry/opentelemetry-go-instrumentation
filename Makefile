@@ -303,3 +303,8 @@ MARKDOWNIMAGE := $(shell awk '$$4=="markdown" {print $$2}' $(DEPENDENCIES_DOCKER
 .PHONY: markdown-lint
 markdown-lint:
 	docker run --rm -u $(DOCKER_USER) -v "$(CURDIR):$(WORKDIR)" $(MARKDOWNIMAGE) -c $(WORKDIR)/.markdownlint.yaml -p $(WORKDIR)/.markdownlintignore $(WORKDIR)/**/*.md
+
+.PHONY: clang-format
+clang-format:
+	find ./internal -type f -name "*.c" | xargs -P 0 -n 1 clang-format -i
+	find ./internal -type f -name "*.h" | xargs -P 0 -n 1 clang-format -i
