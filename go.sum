@@ -157,10 +157,10 @@ go.opentelemetry.io/collector/pdata v1.38.0 h1:94LzVKMQM8R7RFJ8Z1+sL51IkI90TDfTc
 go.opentelemetry.io/collector/pdata v1.38.0/go.mod h1:DSvnwj37IKyQj2hpB97cGITyauR8tvAauJ6/gsxg8mg=
 go.opentelemetry.io/contrib/bridges/prometheus v0.62.0 h1:0mfk3D3068LMGpIhxwc0BqRlBOBHVgTP9CygmnJM/TI=
 go.opentelemetry.io/contrib/bridges/prometheus v0.62.0/go.mod h1:hStk98NJy1wvlrXIqWsli+uELxRRseBMld+gfm2xPR4=
-go.opentelemetry.io/contrib/detectors/autodetect v0.0.0-20250818160639-c6de4c0d9e0b h1:i9wctePscqq4wPLI91ptrAJJPJB/nyfpJ6idjG12RHI=
-go.opentelemetry.io/contrib/detectors/autodetect v0.0.0-20250818160639-c6de4c0d9e0b/go.mod h1:DtP8A7c9BrPKtQU6IecyGp0I4dRFzi8Ig1is2+HAPys=
-go.opentelemetry.io/contrib/detectors/aws/ec2/v2 v2.0.0-20250818160639-c6de4c0d9e0b h1:S5xG/ekDJ19pqsS57yQOuaXQfhjjzAq9rmKt1U+l/R4=
-go.opentelemetry.io/contrib/detectors/aws/ec2/v2 v2.0.0-20250818160639-c6de4c0d9e0b/go.mod h1:NAqCUz6MmjIi+d8kXSE3ORxNqrz8Tymm4vBZWyoxQSk=
+go.opentelemetry.io/contrib/detectors/autodetect v0.0.0-20250818225315-bdf710db7736 h1:3L5di97Nhu/kVZinRReKqIEOjlnHfFuYBajPJOEh9F0=
+go.opentelemetry.io/contrib/detectors/autodetect v0.0.0-20250818225315-bdf710db7736/go.mod h1:DtP8A7c9BrPKtQU6IecyGp0I4dRFzi8Ig1is2+HAPys=
+go.opentelemetry.io/contrib/detectors/aws/ec2/v2 v2.0.0-20250818225315-bdf710db7736 h1:Ww42o/1Om2U9BP6T/3rRkaLMJVuhv2/0ItOuY4kt274=
+go.opentelemetry.io/contrib/detectors/aws/ec2/v2 v2.0.0-20250818225315-bdf710db7736/go.mod h1:NAqCUz6MmjIi+d8kXSE3ORxNqrz8Tymm4vBZWyoxQSk=
 go.opentelemetry.io/contrib/detectors/aws/ecs v1.37.0 h1:6xeEle8g8uJJlrM2hj7fE/Pk50ipy1BvHnxtmLsUW64=
 go.opentelemetry.io/contrib/detectors/aws/ecs v1.37.0/go.mod h1:SxdZgBsLlO2Poz1FBp6zKgFrvDh+CSqsZMUOUoa2PGw=
 go.opentelemetry.io/contrib/detectors/aws/eks v1.37.0 h1:B2X4KcmwXsFdrS/0MWR+HLaqJDK+VMWqM6Y27Pk8kdo=
