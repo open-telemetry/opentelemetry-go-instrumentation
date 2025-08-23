@@ -54,7 +54,7 @@ int uprobe_Tracer_start(struct pt_regs *ctx) {
         .psc = &otel_span.psc,
         .sc = &otel_span.sc,
         .get_parent_span_context_fn = NULL,
-        .get_parent_span_context_arg = NULL, // Default to new root. 
+        .get_parent_span_context_arg = NULL, // Default to new root.
     };
 
     start_span(&params);
@@ -109,7 +109,8 @@ int uprobe_Span_ended(struct pt_regs *ctx) {
     bpf_map_delete_elem(&active_spans_by_span_ptr, &span_ptr);
 
     // Do not output un-sampled span data.
-    if (!sampled) return 0;
+    if (!sampled)
+        return 0;
 
     u64 len = (u64)get_argument(ctx, 3);
     if (len > MAX_SIZE) {
@@ -149,7 +150,7 @@ int uprobe_Span_ended(struct pt_regs *ctx) {
     // Do not send the whole size.buf if it is not needed.
     u64 size = sizeof(event->size) + event->size;
     // Make the verifier happy, ensure no unbounded memory access.
-    if (size < sizeof(struct event_t)+1) {
+    if (size < sizeof(struct event_t) + 1) {
         return bpf_perf_event_output(ctx, &events, BPF_F_CURRENT_CPU, event, size);
     }
     bpf_printk("write too large: %d", event->size);

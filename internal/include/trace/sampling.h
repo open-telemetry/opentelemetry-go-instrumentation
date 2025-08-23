@@ -46,35 +46,34 @@ typedef struct sampling_parameters {
 } sampling_parameters_t;
 
 struct {
-	__uint(type, BPF_MAP_TYPE_ARRAY);
-	__uint(key_size, sizeof(sampler_id_t));
-	__uint(value_size, sizeof(struct sampling_config));
-	__uint(max_entries, MAX_SAMPLERS);
+    __uint(type, BPF_MAP_TYPE_ARRAY);
+    __uint(key_size, sizeof(sampler_id_t));
+    __uint(value_size, sizeof(struct sampling_config));
+    __uint(max_entries, MAX_SAMPLERS);
 } samplers_config_map SEC(".maps");
 
 struct {
-	__uint(type, BPF_MAP_TYPE_ARRAY);
-	__uint(key_size, sizeof(u32));
-	__uint(value_size, sizeof(sampler_id_t));
-	__uint(max_entries, 1);
+    __uint(type, BPF_MAP_TYPE_ARRAY);
+    __uint(key_size, sizeof(u32));
+    __uint(value_size, sizeof(sampler_id_t));
+    __uint(max_entries, 1);
 } probe_active_sampler_map SEC(".maps");
 
 static const u8 FLAG_SAMPLED = 1;
 
-static __always_inline bool trace_flags_is_sampled(u8 flags)
-{
+static __always_inline bool trace_flags_is_sampled(u8 flags) {
     return ((flags & FLAG_SAMPLED) == FLAG_SAMPLED);
 }
 
-static __always_inline bool is_sampled(struct span_context *ctx)
-{
+static __always_inline bool is_sampled(struct span_context *ctx) {
     return trace_flags_is_sampled(ctx->TraceFlags);
 }
 
 // This value should be in sync with user-space code which configures the sampler
-static const u64 sampling_rate_denominator = ((1ULL<<32) - 1);
+static const u64 sampling_rate_denominator = ((1ULL << 32) - 1);
 
-static __always_inline bool _traceIDRatioSampler_should_sample(u64 sampling_rate_numerator, u8 *trace_id) {
+static __always_inline bool _traceIDRatioSampler_should_sample(u64 sampling_rate_numerator,
+                                                               u8 *trace_id) {
     if (sampling_rate_numerator == 0) {
         return false;
     }
@@ -89,20 +88,25 @@ static __always_inline bool _traceIDRatioSampler_should_sample(u64 sampling_rate
     return (trace_id_num >> 1) < trace_id_upper_bound;
 }
 
-static __always_inline bool traceIDRatioSampler_should_sample(struct sampling_config* config, sampling_parameters_t *params) {
-    return _traceIDRatioSampler_should_sample(config->config_data.sampling_rate_numerator, params->trace_id);
+static __always_inline bool traceIDRatioSampler_should_sample(struct sampling_config *config,
+                                                              sampling_parameters_t *params) {
+    return _traceIDRatioSampler_should_sample(config->config_data.sampling_rate_numerator,
+                                              params->trace_id);
 }
 
-static __always_inline bool alwaysOnSampler_should_sample(struct sampling_config* config, sampling_parameters_t *params) {
+static __always_inline bool alwaysOnSampler_should_sample(struct sampling_config *config,
+                                                          sampling_parameters_t *params) {
     return true;
 }
 
-static __always_inline bool alwaysOffSampler_should_sample(struct sampling_config* config, sampling_parameters_t *params) {
+static __always_inline bool alwaysOffSampler_should_sample(struct sampling_config *config,
+                                                           sampling_parameters_t *params) {
     return false;
 }
 
-static __always_inline bool parentBasedSampler_should_sample(struct sampling_config* config, sampling_parameters_t *params) {
-    sampler_id_t sampler_id; 
+static __always_inline bool parentBasedSampler_should_sample(struct sampling_config *config,
+                                                             sampling_parameters_t *params) {
+    sampler_id_t sampler_id;
     if (params->psc == NULL) {
         sampler_id = config->config_data.parent_based.root;
     } else {
@@ -127,20 +131,21 @@ static __always_inline bool parentBasedSampler_should_sample(struct sampling_con
     }
 
     switch (base_config->type) {
-        case ALWAYS_ON:
-            return alwaysOnSampler_should_sample(base_config, params);
-        case ALWAYS_OFF:
-            return alwaysOffSampler_should_sample(base_config, params);
-        case TRACE_ID_RATIO:
-            return traceIDRatioSampler_should_sample(base_config, params);
-        default:
-            return false;
+    case ALWAYS_ON:
+        return alwaysOnSampler_should_sample(base_config, params);
+    case ALWAYS_OFF:
+        return alwaysOffSampler_should_sample(base_config, params);
+    case TRACE_ID_RATIO:
+        return traceIDRatioSampler_should_sample(base_config, params);
+    default:
+        return false;
     }
 }
 
 static __always_inline bool should_sample(sampling_parameters_t *params) {
     u32 active_sampler_map_key = 0;
-    sampler_id_t *active_sampler_id = bpf_map_lookup_elem(&probe_active_sampler_map, &active_sampler_map_key);
+    sampler_id_t *active_sampler_id =
+        bpf_map_lookup_elem(&probe_active_sampler_map, &active_sampler_map_key);
     if (active_sampler_id == NULL) {
         bpf_printk("No active sampler found\n");
         return false;
@@ -153,16 +158,16 @@ static __always_inline bool should_sample(sampling_parameters_t *params) {
     }
 
     switch (config->type) {
-        case ALWAYS_ON:
-            return alwaysOnSampler_should_sample(config, params);
-        case ALWAYS_OFF:
-            return alwaysOffSampler_should_sample(config, params);
-        case TRACE_ID_RATIO:
-            return traceIDRatioSampler_should_sample(config, params);
-        case PARENT_BASED:
-            return parentBasedSampler_should_sample(config, params);
-        default:
-            return false;
+    case ALWAYS_ON:
+        return alwaysOnSampler_should_sample(config, params);
+    case ALWAYS_OFF:
+        return alwaysOffSampler_should_sample(config, params);
+    case TRACE_ID_RATIO:
+        return traceIDRatioSampler_should_sample(config, params);
+    case PARENT_BASED:
+        return parentBasedSampler_should_sample(config, params);
+    default:
+        return false;
     }
 }
 

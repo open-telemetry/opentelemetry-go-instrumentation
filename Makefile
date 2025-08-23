@@ -303,3 +303,16 @@ MARKDOWNIMAGE := $(shell awk '$$4=="markdown" {print $$2}' $(DEPENDENCIES_DOCKER
 .PHONY: markdown-lint
 markdown-lint:
 	docker run --rm -u $(DOCKER_USER) -v "$(CURDIR):$(WORKDIR)" $(MARKDOWNIMAGE) -c $(WORKDIR)/.markdownlint.yaml -p $(WORKDIR)/.markdownlintignore $(WORKDIR)/**/*.md
+
+.PHONY: clang-format
+clang-format:
+	find ./internal -type f -name "*.c" | xargs -P 0 -n 1 clang-format -i
+	find ./internal -type f -name "*.h" | xargs -P 0 -n 1 clang-format -i
+
+.PHONY: install-hooks
+install-hooks:
+	@if [ ! -f .git/hooks/pre-commit ]; then \
+		echo "Installing pre-commit hook..."; \
+		cp hooks/pre-commit .git/hooks/pre-commit && chmod +x .git/hooks/pre-commit; \
+		echo "Pre-commit hook installed."; \
+	fi

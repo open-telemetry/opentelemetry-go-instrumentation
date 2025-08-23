@@ -32,7 +32,8 @@ typedef struct start_span_params {
 static __always_inline void start_span(start_span_params_t *params) {
     long found_parent = -1;
     if (params->get_parent_span_context_fn != NULL) {
-        found_parent = params->get_parent_span_context_fn(params->get_parent_span_context_arg, params->psc);
+        found_parent =
+            params->get_parent_span_context_fn(params->get_parent_span_context_arg, params->psc);
     } else {
         struct span_context *local_psc = get_parent_span_context(params->go_context);
         if (local_psc != NULL) {

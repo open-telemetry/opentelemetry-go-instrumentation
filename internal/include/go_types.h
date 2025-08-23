@@ -12,21 +12,18 @@
  Keep a power of 2 to help with masks */
 #define MAX_SLICE_ARRAY_SIZE 1024
 
-typedef struct go_string
-{
+typedef struct go_string {
     char *str;
     s64 len;
 } go_string_t;
 
-typedef struct go_slice
-{
+typedef struct go_slice {
     void *array;
     s64 len;
     s64 cap;
 } go_slice_t;
 
-typedef struct go_iface
-{
+typedef struct go_iface {
     void *type;
     void *data;
 } go_iface_t;
@@ -36,21 +33,19 @@ typedef struct go_iface
 // a map bucket struct definition with the given key and value types
 // for more details about the structure of a map bucket see:
 // https://github.com/golang/go/blob/639cc0dcc0948dd02c9d5fc12fbed730a21ebebc/src/runtime/map.go#L143
-#define MAP_BUCKET_DEFINITION(key_type, value_type) \
-MAP_BUCKET_TYPE(key_type, value_type) { \
-    char tophash[8]; \
-    key_type keys[8]; \
-    value_type values[8]; \
-    void *overflow; \
-};
+#define MAP_BUCKET_DEFINITION(key_type, value_type)                                                \
+    MAP_BUCKET_TYPE(key_type, value_type) {                                                        \
+        char tophash[8];                                                                           \
+        key_type keys[8];                                                                          \
+        value_type values[8];                                                                      \
+        void *overflow;                                                                            \
+    };
 
-struct slice_array_buff
-{
+struct slice_array_buff {
     unsigned char buff[MAX_SLICE_ARRAY_SIZE];
 };
 
-struct
-{
+struct {
     __uint(type, BPF_MAP_TYPE_PERCPU_ARRAY);
     __type(key, u32);
     __type(value, struct slice_array_buff);
@@ -60,13 +55,11 @@ struct
 // In Go, interfaces are represented as a pair of pointers: a pointer to the
 // interface data, and a pointer to the interface table.
 // See: runtime.iface in https://golang.org/src/runtime/runtime2.go
-static __always_inline void* get_go_interface_instance(void *iface)
-{
-    return (void*)(iface + 8);
+static __always_inline void *get_go_interface_instance(void *iface) {
+    return (void *)(iface + 8);
 }
 
-static __always_inline struct go_string write_user_go_string(char *str, u32 len)
-{
+static __always_inline struct go_string write_user_go_string(char *str, u32 len) {
     // Copy chars to userspace
     struct go_string new_string = {.str = NULL, .len = 0};
     char *addr = write_target_data((void *)str, len);
@@ -88,8 +81,8 @@ static __always_inline struct go_string write_user_go_string(char *str, u32 len)
     return new_string;
 }
 
-static __always_inline void append_item_to_slice(void *new_item, u32 item_size, void *slice_user_ptr)
-{
+static __always_inline void
+append_item_to_slice(void *new_item, u32 item_size, void *slice_user_ptr) {
     // read the slice descriptor
     struct go_slice slice = {0};
     bpf_probe_read(&slice, sizeof(slice), slice_user_ptr);
@@ -97,40 +90,36 @@ static __always_inline void append_item_to_slice(void *new_item, u32 item_size, 
 
     u64 slice_len = slice.len;
     u64 slice_cap = slice.cap;
-    if (slice_len < slice_cap && slice.array != NULL)
-    {
+    if (slice_len < slice_cap && slice.array != NULL) {
         // Room available on current array, append to the underlying array
         res = bpf_probe_write_user(slice.array + (item_size * slice_len), new_item, item_size);
-    }
-    else
-    { 
+    } else {
         // No room on current array - try to copy new one of size item_size * (len + 1)
         u32 alloc_size = item_size * slice_len;
-        if (alloc_size >= MAX_SLICE_ARRAY_SIZE)
-        {
+        if (alloc_size >= MAX_SLICE_ARRAY_SIZE) {
             return;
         }
-    
+
         // Get temporary buffer
         u32 index = 0;
         struct slice_array_buff *map_buff = bpf_map_lookup_elem(&slice_array_buff_map, &index);
-        if (!map_buff)
-        {
+        if (!map_buff) {
             return;
         }
-    
+
         unsigned char *new_slice_array = map_buff->buff;
         // help the verifier
         alloc_size &= (MAX_SLICE_ARRAY_SIZE - 1);
-        if (alloc_size + item_size > MAX_SLICE_ARRAY_SIZE)
-        {
+        if (alloc_size + item_size > MAX_SLICE_ARRAY_SIZE) {
             // No room for new item
             return;
         }
         // Append to buffer
         if (slice.array != NULL) {
             bpf_probe_read_user(new_slice_array, alloc_size, slice.array);
-            bpf_printk("append_item_to_slice: copying %d bytes to new array from address 0x%llx", alloc_size, slice.array);
+            bpf_printk("append_item_to_slice: copying %d bytes to new array from address 0x%llx",
+                       alloc_size,
+                       slice.array);
         }
         copy_byte_arrays(new_item, new_slice_array + alloc_size, item_size);
 
@@ -138,8 +127,7 @@ static __always_inline void append_item_to_slice(void *new_item, u32 item_size, 
         u32 new_array_size = alloc_size + item_size;
 
         void *new_array = write_target_data(new_slice_array, new_array_size);
-        if (new_array == NULL)
-        {
+        if (new_array == NULL) {
             bpf_printk("append_item_to_slice: failed to copy new array to userspace");
             return;
         }
@@ -152,15 +140,14 @@ static __always_inline void append_item_to_slice(void *new_item, u32 item_size, 
     // Update len
     slice.len++;
     long success = bpf_probe_write_user(slice_user_ptr, &slice, sizeof(slice));
-    if (success != 0)
-    {
+    if (success != 0) {
         bpf_printk("append_item_to_slice: failed to update slice in userspace");
         return;
     }
 }
 
-static __always_inline bool get_go_string_from_user_ptr(void *user_str_ptr, char *dst, u64 max_len)
-{
+static __always_inline bool
+get_go_string_from_user_ptr(void *user_str_ptr, char *dst, u64 max_len) {
     if (user_str_ptr == NULL || max_len == 0) {
         return false;
     }
@@ -174,7 +161,7 @@ static __always_inline bool get_go_string_from_user_ptr(void *user_str_ptr, char
 
     u64 size_to_read = user_str.len > max_len ? max_len : user_str.len;
     __builtin_memset(dst, 0, max_len);
-    
+
     success = bpf_probe_read_user(dst, size_to_read, user_str.str);
     if (success != 0) {
         return false;
