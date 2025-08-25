@@ -8,9 +8,9 @@ import (
 	"errors"
 	"fmt"
 	"regexp"
-	"testing" // nolint:depguard  // This is a testing utility package.
+	"testing"
 
-	"github.com/stretchr/testify/assert" // nolint:depguard  // This is a testing utility package.
+	"github.com/stretchr/testify/assert"
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/ptrace"
 )
