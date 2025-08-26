@@ -90,7 +90,7 @@ func TestWithSampler(t *testing.T) {
 		c, err := newInstConfig(context.Background(), []InstrumentationOption{})
 		require.NoError(t, err)
 		sc, err := convertSamplerToConfig(c.sampler)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, sampling.DefaultConfig().Samplers, sc.Samplers)
 		assert.Equal(t, sampling.ParentBasedID, sc.ActiveSampler)
 		conf, ok := sc.Samplers[sampling.ParentBasedID]
@@ -110,7 +110,7 @@ func TestWithSampler(t *testing.T) {
 		c, err := newInstConfig(context.Background(), []InstrumentationOption{WithEnv()})
 		require.NoError(t, err)
 		sc, err := convertSamplerToConfig(c.sampler)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, sampling.ParentBasedID, sc.ActiveSampler)
 		parentBasedConfig, ok := sc.Samplers[sampling.ParentBasedID]
 		assert.True(t, ok)
@@ -146,7 +146,7 @@ func TestWithSampler(t *testing.T) {
 		})
 		require.NoError(t, err)
 		sc, err := convertSamplerToConfig(c.sampler)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, sampling.ParentBasedID, sc.ActiveSampler)
 		parentBasedConfig, ok := sc.Samplers[sampling.ParentBasedID]
 		assert.True(t, ok)

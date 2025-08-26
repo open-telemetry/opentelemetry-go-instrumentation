@@ -307,7 +307,7 @@ func TestRunStoppingByStop(t *testing.T) {
 			return false
 		}
 	}, time.Second, 10*time.Millisecond)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.True(t, p.closed.Load(), "Probe not closed")
 }
 
