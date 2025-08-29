@@ -24,12 +24,12 @@ require (
 	github.com/stretchr/testify v1.11.1
 	github.com/xwb1989/sqlparser v0.0.0-20180606152119-120387863bf2
 	go.opentelemetry.io/collector/pdata v1.38.0
-	go.opentelemetry.io/contrib/detectors/autodetect v0.0.0-20250825150241-b3f0624be7bc
+	go.opentelemetry.io/contrib/detectors/autodetect v0.0.0-20250828235209-7ac87bd923d1
 	go.opentelemetry.io/contrib/exporters/autoexport v0.62.0
-	go.opentelemetry.io/otel v1.37.0
+	go.opentelemetry.io/otel v1.37.1-0.20250826062056-45bb4ba7203a
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp v1.37.0
-	go.opentelemetry.io/otel/sdk v1.37.0
-	go.opentelemetry.io/otel/trace v1.37.0
+	go.opentelemetry.io/otel/sdk v1.37.1-0.20250825143334-4b2bef6dd972
+	go.opentelemetry.io/otel/trace v1.37.1-0.20250825143334-4b2bef6dd972
 	golang.org/x/arch v0.20.0
 	golang.org/x/sys v0.35.0
 	google.golang.org/grpc v1.75.0
@@ -87,7 +87,7 @@ require (
 	github.com/x448/float16 v0.8.4 // indirect
 	go.opentelemetry.io/auto/sdk v1.1.0 // indirect
 	go.opentelemetry.io/contrib/bridges/prometheus v0.62.0 // indirect
-	go.opentelemetry.io/contrib/detectors/aws/ec2/v2 v2.0.0-20250825150241-b3f0624be7bc // indirect
+	go.opentelemetry.io/contrib/detectors/aws/ec2/v2 v2.0.0-20250828123701-38fe9803bfcd // indirect
 	go.opentelemetry.io/contrib/detectors/aws/ecs v1.37.0 // indirect
 	go.opentelemetry.io/contrib/detectors/aws/eks v1.37.0 // indirect
 	go.opentelemetry.io/contrib/detectors/aws/lambda v0.62.0 // indirect
@@ -104,7 +104,7 @@ require (
 	go.opentelemetry.io/otel/exporters/stdout/stdoutmetric v1.37.0 // indirect
 	go.opentelemetry.io/otel/exporters/stdout/stdouttrace v1.37.0 // indirect
 	go.opentelemetry.io/otel/log v0.13.0 // indirect
-	go.opentelemetry.io/otel/metric v1.37.0 // indirect
+	go.opentelemetry.io/otel/metric v1.37.1-0.20250825143334-4b2bef6dd972 // indirect
 	go.opentelemetry.io/otel/sdk/log v0.13.0 // indirect
 	go.opentelemetry.io/otel/sdk/metric v1.37.0 // indirect
 	go.opentelemetry.io/proto/otlp v1.7.1 // indirect
