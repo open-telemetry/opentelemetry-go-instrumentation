@@ -23,6 +23,7 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 - Cache offsets for Go `1.25.0`. ([#2651](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/2651))
 - Cache offsets for `google.golang.org/grpc` `1.75.0`. ([#2686](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/2686))
 - Cache offsets for `github.com/segmentio/kafka-go` `0.4.49`. ([#2699](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/2699))
+- Cache offsets for `go.opentelemetry.io/otel` `v1.38.0`. ([#2726](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/2726))
 
 [resource.Detector]: https://pkg.go.dev/go.opentelemetry.io/otel/sdk/resource#Detector
 [`autodetect` package]: https://pkg.go.dev/go.opentelemetry.io/contrib/detectors/autodetect
