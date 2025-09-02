@@ -45,10 +45,8 @@
 
 #endif
 
-static __always_inline void *get_argument(struct pt_regs *ctx, int index)
-{
-    switch (index)
-    {
+static __always_inline void *get_argument(struct pt_regs *ctx, int index) {
+    switch (index) {
     case 1:
         return (void *)GO_PARAM1(ctx);
     case 2:

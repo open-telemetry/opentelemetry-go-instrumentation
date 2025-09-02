@@ -25,31 +25,30 @@ struct kafka_request_t {
     char consumer_group[MAX_CONSUMER_GROUP_SIZE];
     s64 offset;
     s64 partition;
-}__attribute__((packed));
+} __attribute__((packed));
 
 struct {
-	__uint(type, BPF_MAP_TYPE_HASH);
-	__type(key, void*);
-	__type(value, struct kafka_request_t);
-	__uint(max_entries, MAX_CONCURRENT);
+    __uint(type, BPF_MAP_TYPE_HASH);
+    __type(key, void *);
+    __type(value, struct kafka_request_t);
+    __uint(max_entries, MAX_CONCURRENT);
 } kafka_events SEC(".maps");
 
 struct {
-	__uint(type, BPF_MAP_TYPE_HASH);
-	__type(key, void*);
-	__type(value, void*);
-	__uint(max_entries, MAX_CONCURRENT);
+    __uint(type, BPF_MAP_TYPE_HASH);
+    __type(key, void *);
+    __type(value, void *);
+    __uint(max_entries, MAX_CONCURRENT);
 } goroutine_to_go_context SEC(".maps");
 
 struct {
-	__uint(type, BPF_MAP_TYPE_HASH);
-	__type(key, void*);
-	__type(value, void*);
-	__uint(max_entries, MAX_CONCURRENT);
+    __uint(type, BPF_MAP_TYPE_HASH);
+    __type(key, void *);
+    __type(value, void *);
+    __uint(max_entries, MAX_CONCURRENT);
 } kafka_reader_to_conn SEC(".maps");
 
-struct
-{
+struct {
     __uint(type, BPF_MAP_TYPE_PERCPU_ARRAY);
     __uint(key_size, sizeof(u32));
     __uint(value_size, sizeof(struct kafka_request_t));
@@ -74,7 +73,8 @@ volatile const u64 reader_config_group_id_pos;
 
 #define MAX_HEADERS 20
 
-static __always_inline long extract_span_context_from_headers(void *message, struct span_context *parent_span_context) {
+static __always_inline long
+extract_span_context_from_headers(void *message, struct span_context *parent_span_context) {
     // Read the headers slice descriptor
     void *headers = (void *)(message + message_headers_pos);
     struct go_slice headers_slice = {0};
@@ -125,15 +125,16 @@ int uprobe_FetchMessage(struct pt_regs *ctx) {
     get_Go_context(ctx, 2, 0, true, &go_context);
     void *goroutine = (void *)GOROUTINE(ctx);
     struct kafka_request_t *kafka_request = bpf_map_lookup_elem(&kafka_events, &goroutine);
-    if (kafka_request == NULL)
-    {
+    if (kafka_request == NULL) {
         // The current goroutine has no kafka request,
         // this can happen in the first time FetchMessage is called
         // Save the context for the return probe for in-process context propagation
         goto save_context;
     }
 
-    get_go_string_from_user_ptr((void *)(reader + reader_config_pos + reader_config_group_id_pos), kafka_request->consumer_group, sizeof(kafka_request->consumer_group));
+    get_go_string_from_user_ptr((void *)(reader + reader_config_pos + reader_config_group_id_pos),
+                                kafka_request->consumer_group,
+                                sizeof(kafka_request->consumer_group));
     kafka_request->end_time = bpf_ktime_get_ns();
 
     output_span_event(ctx, kafka_request, sizeof(*kafka_request), &kafka_request->sc);
@@ -156,9 +157,9 @@ int uprobe_FetchMessage_Returns(struct pt_regs *ctx) {
     in a hash map to be read by the entry probe of FetchMessage, which will end this span */
     void *goroutine = (void *)GOROUTINE(ctx);
     u32 map_id = 0;
-    struct kafka_request_t *kafka_request = bpf_map_lookup_elem(&kafka_request_storage_map, &map_id);
-    if (kafka_request == NULL)
-    {
+    struct kafka_request_t *kafka_request =
+        bpf_map_lookup_elem(&kafka_request_storage_map, &map_id);
+    if (kafka_request == NULL) {
         bpf_printk("uuprobe/sendMessage: kafka_request is NULL");
         return 0;
     }
@@ -182,11 +183,16 @@ int uprobe_FetchMessage_Returns(struct pt_regs *ctx) {
 
     // Collecting message attributes
     // topic
-    get_go_string_from_user_ptr((void *)(message + message_topic_pos), kafka_request->topic, sizeof(kafka_request->topic));
+    get_go_string_from_user_ptr(
+        (void *)(message + message_topic_pos), kafka_request->topic, sizeof(kafka_request->topic));
     // partition
-    bpf_probe_read(&kafka_request->partition, sizeof(kafka_request->partition), (void *)(message + message_partition_pos));
+    bpf_probe_read(&kafka_request->partition,
+                   sizeof(kafka_request->partition),
+                   (void *)(message + message_partition_pos));
     // offset
-    bpf_probe_read(&kafka_request->offset, sizeof(kafka_request->offset), (void *)(message + message_offset_pos));
+    bpf_probe_read(&kafka_request->offset,
+                   sizeof(kafka_request->offset),
+                   (void *)(message + message_offset_pos));
     // Key is a byte slice, first read the slice descriptor
     struct go_slice key_slice = {0};
     bpf_probe_read(&key_slice, sizeof(key_slice), (void *)(message + message_key_pos));
@@ -196,7 +202,7 @@ int uprobe_FetchMessage_Returns(struct pt_regs *ctx) {
     bpf_probe_read(kafka_request->key, size_to_read, key_slice.array);
 
     bpf_map_update_elem(&kafka_events, &goroutine, kafka_request, 0);
-    
+
     // We are start tracking the consumer span in the return probe,
     // hence we can't read Go's context directly from the registers as we usually do.
     // Using the goroutine address as a key to the map that contains the context.

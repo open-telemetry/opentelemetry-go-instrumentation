@@ -31,8 +31,8 @@ struct span_description_t {
 };
 
 typedef struct otel_status {
-	u32 code;
-	struct span_description_t description;
+    u32 code;
+    struct span_description_t description;
 } __attribute__((packed)) otel_status_t;
 
 struct span_name_t {
@@ -76,8 +76,7 @@ typedef struct go_tracer_with_scope_attributes {
     go_iface_t scope_attributes;
 } go_tracer_with_scope_attributes_t;
 
-
-typedef void* go_tracer_ptr; 
+typedef void *go_tracer_ptr;
 
 // tracerProvider contains a map of tracers
 MAP_BUCKET_DEFINITION(go_tracer_id_partial_t, go_tracer_ptr)
@@ -85,59 +84,53 @@ MAP_BUCKET_DEFINITION(go_tracer_with_schema_t, go_tracer_ptr)
 MAP_BUCKET_DEFINITION(go_tracer_with_scope_attributes_t, go_tracer_ptr)
 
 struct {
-	__uint(type, BPF_MAP_TYPE_LRU_HASH);
-	__type(key, void*);
-	__type(value, struct otel_span_t);
-	__uint(max_entries, MAX_CONCURRENT);
+    __uint(type, BPF_MAP_TYPE_LRU_HASH);
+    __type(key, void *);
+    __type(value, struct otel_span_t);
+    __uint(max_entries, MAX_CONCURRENT);
 } active_spans_by_span_ptr SEC(".maps");
 
 struct {
-	__uint(type, BPF_MAP_TYPE_HASH);
-	__type(key, void*);
-	__type(value, struct span_name_t);
-	__uint(max_entries, MAX_CONCURRENT);
+    __uint(type, BPF_MAP_TYPE_HASH);
+    __type(key, void *);
+    __type(value, struct span_name_t);
+    __uint(max_entries, MAX_CONCURRENT);
 } span_name_by_context SEC(".maps");
 
 struct {
-	__uint(type, BPF_MAP_TYPE_HASH);
-	__type(key, void*);
-	__type(value, tracer_id_t);
-	__uint(max_entries, MAX_CONCURRENT);
+    __uint(type, BPF_MAP_TYPE_HASH);
+    __type(key, void *);
+    __type(value, tracer_id_t);
+    __uint(max_entries, MAX_CONCURRENT);
 } tracer_id_by_context SEC(".maps");
 
-struct
-{
+struct {
     __uint(type, BPF_MAP_TYPE_PERCPU_ARRAY);
     __uint(key_size, sizeof(u32));
     __uint(value_size, sizeof(struct otel_span_t));
     __uint(max_entries, 2);
 } otel_span_storage_map SEC(".maps");
 
-struct
-{
+struct {
     __uint(type, BPF_MAP_TYPE_PERCPU_ARRAY);
     __uint(key_size, sizeof(u32));
     __uint(value_size, sizeof(MAP_BUCKET_TYPE(go_tracer_with_scope_attributes_t, go_tracer_ptr)));
     __uint(max_entries, 1);
 } golang_mapbucket_storage_map SEC(".maps");
 
-struct
-{
+struct {
     __uint(type, BPF_MAP_TYPE_PERCPU_ARRAY);
     __uint(key_size, sizeof(u32));
     __uint(value_size, sizeof(tracer_id_t));
     __uint(max_entries, 1);
 } tracer_id_storage_map SEC(".maps");
 
-
-struct
-{
-   	__uint(type, BPF_MAP_TYPE_HASH);
-	__type(key, void*);
-	__type(value, tracer_id_t);
-	__uint(max_entries, MAX_TRACERS);
+struct {
+    __uint(type, BPF_MAP_TYPE_HASH);
+    __type(key, void *);
+    __type(value, tracer_id_t);
+    __uint(max_entries, MAX_TRACERS);
 } tracer_ptr_to_id_map SEC(".maps");
-
 
 // Injected in init
 volatile const u64 tracer_delegate_pos;
@@ -151,199 +144,191 @@ volatile const bool tracer_id_contains_scope_attributes;
 
 // read_span_name reads the span name from the provided span_name_ptr and stores the result in
 // span_name.buf.
-static __always_inline void read_span_name(struct span_name_t *span_name, const u64 span_name_len, void *span_name_ptr) {
-    const u64 span_name_size = MAX_SPAN_NAME_LEN < span_name_len ? MAX_SPAN_NAME_LEN : span_name_len;
+static __always_inline void
+read_span_name(struct span_name_t *span_name, const u64 span_name_len, void *span_name_ptr) {
+    const u64 span_name_size =
+        MAX_SPAN_NAME_LEN < span_name_len ? MAX_SPAN_NAME_LEN : span_name_len;
     bpf_probe_read(span_name->buf, span_name_size, span_name_ptr);
 }
 
-static __always_inline long fill_partial_tracer_id_from_tracers_map(void *tracers_map, go_tracer_ptr tracer, tracer_id_t *tracer_id) {
+static __always_inline long fill_partial_tracer_id_from_tracers_map(void *tracers_map,
+                                                                    go_tracer_ptr tracer,
+                                                                    tracer_id_t *tracer_id) {
     u64 tracers_count = 0;
     long res = 0;
     res = bpf_probe_read(&tracers_count, sizeof(tracers_count), tracers_map);
-    if (res < 0)
-    {
+    if (res < 0) {
         return -1;
     }
-    if (tracers_count == 0)
-    {
+    if (tracers_count == 0) {
         return -1;
     }
     unsigned char log_2_bucket_count;
     res = bpf_probe_read(&log_2_bucket_count, sizeof(log_2_bucket_count), tracers_map + 9);
-    if (res < 0)
-    {
+    if (res < 0) {
         return -1;
     }
     u64 bucket_count = 1 << log_2_bucket_count;
     void *buckets_array;
-    res = bpf_probe_read(&buckets_array, sizeof(buckets_array), (void*)(tracers_map + buckets_ptr_pos));
-    if (res < 0)
-    {
+    res = bpf_probe_read(
+        &buckets_array, sizeof(buckets_array), (void *)(tracers_map + buckets_ptr_pos));
+    if (res < 0) {
         return -1;
     }
     u32 map_id = 0;
-    MAP_BUCKET_TYPE(go_tracer_id_partial_t, go_tracer_ptr) *map_bucket = bpf_map_lookup_elem(&golang_mapbucket_storage_map, &map_id);
-    if (!map_bucket)
-    {
+    MAP_BUCKET_TYPE(go_tracer_id_partial_t, go_tracer_ptr) *map_bucket =
+        bpf_map_lookup_elem(&golang_mapbucket_storage_map, &map_id);
+    if (!map_bucket) {
         return -1;
     }
 
-    for (u64 j = 0; j < MAX_BUCKETS; j++)
-    {
-        if (j >= bucket_count)
-        {
+    for (u64 j = 0; j < MAX_BUCKETS; j++) {
+        if (j >= bucket_count) {
             break;
         }
-        res = bpf_probe_read(map_bucket, sizeof(MAP_BUCKET_TYPE(go_tracer_id_partial_t, go_tracer_ptr)), buckets_array + (j * sizeof(MAP_BUCKET_TYPE(go_tracer_id_partial_t, go_tracer_ptr))));
-        if (res < 0)
-        {
+        res = bpf_probe_read(
+            map_bucket,
+            sizeof(MAP_BUCKET_TYPE(go_tracer_id_partial_t, go_tracer_ptr)),
+            buckets_array + (j * sizeof(MAP_BUCKET_TYPE(go_tracer_id_partial_t, go_tracer_ptr))));
+        if (res < 0) {
             continue;
         }
-        for (u64 i = 0; i < 8; i++)
-        {
-            if (map_bucket->tophash[i] == 0)
-            {
+        for (u64 i = 0; i < 8; i++) {
+            if (map_bucket->tophash[i] == 0) {
                 continue;
             }
-            if (map_bucket->values[i] == NULL)
-            {
+            if (map_bucket->values[i] == NULL) {
                 continue;
             }
-            if (map_bucket->values[i] != tracer)
-            {
+            if (map_bucket->values[i] != tracer) {
                 continue;
             }
-            get_go_string_from_user_ptr(&map_bucket->keys[i].version, tracer_id->version, MAX_TRACER_VERSION_LEN);
+            get_go_string_from_user_ptr(
+                &map_bucket->keys[i].version, tracer_id->version, MAX_TRACER_VERSION_LEN);
             return 0;
         }
     }
     return 0;
 }
 
-static __always_inline long fill_tracer_id_with_schema_from_tracers_map(void *tracers_map, go_tracer_ptr tracer, tracer_id_t *tracer_id) {
+static __always_inline long fill_tracer_id_with_schema_from_tracers_map(void *tracers_map,
+                                                                        go_tracer_ptr tracer,
+                                                                        tracer_id_t *tracer_id) {
     u64 tracers_count = 0;
     long res = 0;
     res = bpf_probe_read(&tracers_count, sizeof(tracers_count), tracers_map);
-    if (res < 0)
-    {
+    if (res < 0) {
         return -1;
     }
-    if (tracers_count == 0)
-    {
+    if (tracers_count == 0) {
         return -1;
     }
     unsigned char log_2_bucket_count;
     res = bpf_probe_read(&log_2_bucket_count, sizeof(log_2_bucket_count), tracers_map + 9);
-    if (res < 0)
-    {
+    if (res < 0) {
         return -1;
     }
     u64 bucket_count = 1 << log_2_bucket_count;
     void *buckets_array;
-    res = bpf_probe_read(&buckets_array, sizeof(buckets_array), (void*)(tracers_map + buckets_ptr_pos));
-    if (res < 0)
-    {
+    res = bpf_probe_read(
+        &buckets_array, sizeof(buckets_array), (void *)(tracers_map + buckets_ptr_pos));
+    if (res < 0) {
         return -1;
     }
     u32 map_id = 0;
-    MAP_BUCKET_TYPE(go_tracer_with_schema_t, go_tracer_ptr) *map_bucket = bpf_map_lookup_elem(&golang_mapbucket_storage_map, &map_id);
-    if (!map_bucket)
-    {
+    MAP_BUCKET_TYPE(go_tracer_with_schema_t, go_tracer_ptr) *map_bucket =
+        bpf_map_lookup_elem(&golang_mapbucket_storage_map, &map_id);
+    if (!map_bucket) {
         return -1;
     }
 
-    for (u64 j = 0; j < MAX_BUCKETS; j++)
-    {
-        if (j >= bucket_count)
-        {
+    for (u64 j = 0; j < MAX_BUCKETS; j++) {
+        if (j >= bucket_count) {
             break;
         }
-        res = bpf_probe_read(map_bucket, sizeof(MAP_BUCKET_TYPE(go_tracer_with_schema_t, go_tracer_ptr)), buckets_array + (j * sizeof(MAP_BUCKET_TYPE(go_tracer_with_schema_t, go_tracer_ptr))));
-        if (res < 0)
-        {
+        res = bpf_probe_read(
+            map_bucket,
+            sizeof(MAP_BUCKET_TYPE(go_tracer_with_schema_t, go_tracer_ptr)),
+            buckets_array + (j * sizeof(MAP_BUCKET_TYPE(go_tracer_with_schema_t, go_tracer_ptr))));
+        if (res < 0) {
             continue;
         }
-        for (u64 i = 0; i < 8; i++)
-        {
-            if (map_bucket->tophash[i] == 0)
-            {
+        for (u64 i = 0; i < 8; i++) {
+            if (map_bucket->tophash[i] == 0) {
                 continue;
             }
-            if (map_bucket->values[i] == NULL)
-            {
+            if (map_bucket->values[i] == NULL) {
                 continue;
             }
-            if (map_bucket->values[i] != tracer)
-            {
+            if (map_bucket->values[i] != tracer) {
                 continue;
             }
-            get_go_string_from_user_ptr(&map_bucket->keys[i].version, tracer_id->version, MAX_TRACER_VERSION_LEN);
-            get_go_string_from_user_ptr(&map_bucket->keys[i].schema_url, tracer_id->schema_url, MAX_TRACER_SCHEMA_URL_LEN);
+            get_go_string_from_user_ptr(
+                &map_bucket->keys[i].version, tracer_id->version, MAX_TRACER_VERSION_LEN);
+            get_go_string_from_user_ptr(
+                &map_bucket->keys[i].schema_url, tracer_id->schema_url, MAX_TRACER_SCHEMA_URL_LEN);
             return 0;
         }
     }
     return 0;
 }
 
-static __always_inline long fill_tracer_id_with_scope_attributes_from_tracers_map(void *tracers_map, go_tracer_ptr tracer, tracer_id_t *tracer_id) {
+static __always_inline long fill_tracer_id_with_scope_attributes_from_tracers_map(
+    void *tracers_map, go_tracer_ptr tracer, tracer_id_t *tracer_id) {
     u64 tracers_count = 0;
     long res = 0;
     res = bpf_probe_read(&tracers_count, sizeof(tracers_count), tracers_map);
-    if (res < 0)
-    {
+    if (res < 0) {
         return -1;
     }
-    if (tracers_count == 0)
-    {
+    if (tracers_count == 0) {
         return -1;
     }
     unsigned char log_2_bucket_count;
     res = bpf_probe_read(&log_2_bucket_count, sizeof(log_2_bucket_count), tracers_map + 9);
-    if (res < 0)
-    {
+    if (res < 0) {
         return -1;
     }
     u64 bucket_count = 1 << log_2_bucket_count;
     void *buckets_array;
-    res = bpf_probe_read(&buckets_array, sizeof(buckets_array), (void*)(tracers_map + buckets_ptr_pos));
-    if (res < 0)
-    {
+    res = bpf_probe_read(
+        &buckets_array, sizeof(buckets_array), (void *)(tracers_map + buckets_ptr_pos));
+    if (res < 0) {
         return -1;
     }
     u32 map_id = 0;
-    MAP_BUCKET_TYPE(go_tracer_with_scope_attributes_t, go_tracer_ptr) *map_bucket = bpf_map_lookup_elem(&golang_mapbucket_storage_map, &map_id);
-    if (!map_bucket)
-    {
+    MAP_BUCKET_TYPE(go_tracer_with_scope_attributes_t, go_tracer_ptr) *map_bucket =
+        bpf_map_lookup_elem(&golang_mapbucket_storage_map, &map_id);
+    if (!map_bucket) {
         return -1;
     }
 
-    for (u64 j = 0; j < MAX_BUCKETS; j++)
-    {
-        if (j >= bucket_count)
-        {
+    for (u64 j = 0; j < MAX_BUCKETS; j++) {
+        if (j >= bucket_count) {
             break;
         }
-        res = bpf_probe_read(map_bucket, sizeof(MAP_BUCKET_TYPE(go_tracer_with_scope_attributes_t, go_tracer_ptr)), buckets_array + (j * sizeof(MAP_BUCKET_TYPE(go_tracer_with_scope_attributes_t, go_tracer_ptr))));
-        if (res < 0)
-        {
+        res = bpf_probe_read(
+            map_bucket,
+            sizeof(MAP_BUCKET_TYPE(go_tracer_with_scope_attributes_t, go_tracer_ptr)),
+            buckets_array +
+                (j * sizeof(MAP_BUCKET_TYPE(go_tracer_with_scope_attributes_t, go_tracer_ptr))));
+        if (res < 0) {
             continue;
         }
-        for (u64 i = 0; i < 8; i++)
-        {
-            if (map_bucket->tophash[i] == 0)
-            {
+        for (u64 i = 0; i < 8; i++) {
+            if (map_bucket->tophash[i] == 0) {
                 continue;
             }
-            if (map_bucket->values[i] == NULL)
-            {
+            if (map_bucket->values[i] == NULL) {
                 continue;
             }
-            if (map_bucket->values[i] != tracer)
-            {
+            if (map_bucket->values[i] != tracer) {
                 continue;
             }
-            get_go_string_from_user_ptr(&map_bucket->keys[i].version, tracer_id->version, MAX_TRACER_VERSION_LEN);
-            get_go_string_from_user_ptr(&map_bucket->keys[i].schema_url, tracer_id->schema_url, MAX_TRACER_SCHEMA_URL_LEN);
+            get_go_string_from_user_ptr(
+                &map_bucket->keys[i].version, tracer_id->version, MAX_TRACER_VERSION_LEN);
+            get_go_string_from_user_ptr(
+                &map_bucket->keys[i].schema_url, tracer_id->schema_url, MAX_TRACER_SCHEMA_URL_LEN);
             return 0;
         }
     }
@@ -358,19 +343,22 @@ static __always_inline long fill_tracer_id(tracer_id_t *tracer_id, go_tracer_ptr
         return 0;
     }
 
-    if (!get_go_string_from_user_ptr((void*)(tracer + tracer_name_pos), tracer_id->name, MAX_TRACER_NAME_LEN)) {
+    if (!get_go_string_from_user_ptr(
+            (void *)(tracer + tracer_name_pos), tracer_id->name, MAX_TRACER_NAME_LEN)) {
         return -1;
     }
 
     long res = 0;
     void *tracer_provider = NULL;
-    res = bpf_probe_read(&tracer_provider, sizeof(tracer_provider), (void*)(tracer + tracer_provider_pos));
+    res = bpf_probe_read(
+        &tracer_provider, sizeof(tracer_provider), (void *)(tracer + tracer_provider_pos));
     if (res < 0) {
         return res;
     }
 
     void *tracers_map = NULL;
-    res = bpf_probe_read(&tracers_map, sizeof(tracers_map), (void*)(tracer_provider + tracer_provider_tracers_pos));
+    res = bpf_probe_read(
+        &tracers_map, sizeof(tracers_map), (void *)(tracer_provider + tracer_provider_tracers_pos));
     if (res < 0) {
         return res;
     }
@@ -381,7 +369,8 @@ static __always_inline long fill_tracer_id(tracer_id_t *tracer_id, go_tracer_ptr
             // version of otel-go is 1.32.0 or higher
             // we don't collect the scope attributes, but we need to take their presence into account,
             // when parsing the map bucket
-            res = fill_tracer_id_with_scope_attributes_from_tracers_map(tracers_map, tracer, tracer_id);
+            res = fill_tracer_id_with_scope_attributes_from_tracers_map(
+                tracers_map, tracer, tracer_id);
         } else {
             res = fill_tracer_id_with_schema_from_tracers_map(tracers_map, tracer, tracer_id);
         }
@@ -423,7 +412,8 @@ int uprobe_newStart(struct pt_regs *ctx) {
 
     // Signal this uprobe should be unloaded.
     struct control_t ctrl = {1};
-    return bpf_perf_event_output(ctx, &events, BPF_F_CURRENT_CPU, (void *)(&ctrl), sizeof(struct control_t));
+    return bpf_perf_event_output(
+        ctx, &events, BPF_F_CURRENT_CPU, (void *)(&ctrl), sizeof(struct control_t));
 }
 
 // This instrumentation attaches uprobe to the following function:
@@ -433,7 +423,7 @@ SEC("uprobe/Start")
 int uprobe_Start(struct pt_regs *ctx) {
     void *tracer_ptr = get_argument(ctx, 1);
     void *delegate_ptr = NULL;
-    bpf_probe_read(&delegate_ptr, sizeof(delegate_ptr), (void*)(tracer_ptr + tracer_delegate_pos));
+    bpf_probe_read(&delegate_ptr, sizeof(delegate_ptr), (void *)(tracer_ptr + tracer_delegate_pos));
     if (delegate_ptr != NULL) {
         // Delegate is set, so we should not instrument this call
         return 0;
@@ -476,7 +466,7 @@ int uprobe_Start_Returns(struct pt_regs *ctx) {
     get_Go_context(ctx, 1, 0, true, &go_context);
 
     void *key = (void *)GOROUTINE(ctx);
-    struct span_name_t *span_name = bpf_map_lookup_elem(&span_name_by_context, &key); 
+    struct span_name_t *span_name = bpf_map_lookup_elem(&span_name_by_context, &key);
     if (span_name == NULL) {
         return 0;
     }
@@ -533,7 +523,8 @@ done_without_tracer_id:
 SEC("uprobe/SetAttributes")
 int uprobe_SetAttributes(struct pt_regs *ctx) {
     void *non_recording_span_ptr = get_argument(ctx, 1);
-    struct otel_span_t *span = bpf_map_lookup_elem(&active_spans_by_span_ptr, &non_recording_span_ptr);
+    struct otel_span_t *span =
+        bpf_map_lookup_elem(&active_spans_by_span_ptr, &non_recording_span_ptr);
     if (span == NULL) {
         return 0;
     }
@@ -553,7 +544,8 @@ int uprobe_SetAttributes(struct pt_regs *ctx) {
 SEC("uprobe/SetName")
 int uprobe_SetName(struct pt_regs *ctx) {
     void *non_recording_span_ptr = get_argument(ctx, 1);
-    struct otel_span_t *span = bpf_map_lookup_elem(&active_spans_by_span_ptr, &non_recording_span_ptr);
+    struct otel_span_t *span =
+        bpf_map_lookup_elem(&active_spans_by_span_ptr, &non_recording_span_ptr);
     if (span == NULL) {
         return 0;
     }
@@ -574,7 +566,7 @@ int uprobe_SetName(struct pt_regs *ctx) {
     read_span_name(&span_name, span_name_len, span_name_ptr);
     span->span_name = span_name;
     bpf_map_update_elem(&active_spans_by_span_ptr, &non_recording_span_ptr, span, 0);
-    
+
     return 0;
 }
 
@@ -583,7 +575,8 @@ int uprobe_SetName(struct pt_regs *ctx) {
 SEC("uprobe/SetStatus")
 int uprobe_SetStatus(struct pt_regs *ctx) {
     void *non_recording_span_ptr = get_argument(ctx, 1);
-    struct otel_span_t *span = bpf_map_lookup_elem(&active_spans_by_span_ptr, &non_recording_span_ptr);
+    struct otel_span_t *span =
+        bpf_map_lookup_elem(&active_spans_by_span_ptr, &non_recording_span_ptr);
     if (span == NULL) {
         return 0;
     }
@@ -599,7 +592,8 @@ int uprobe_SetStatus(struct pt_regs *ctx) {
 
     // Getting span description
     u64 description_len = (u64)get_argument(ctx, 4);
-    u64 description_size = MAX_STATUS_DESCRIPTION_LEN < description_len ? MAX_STATUS_DESCRIPTION_LEN : description_len;
+    u64 description_size =
+        MAX_STATUS_DESCRIPTION_LEN < description_len ? MAX_STATUS_DESCRIPTION_LEN : description_len;
     bpf_probe_read(description.buf, description_size, description_ptr);
 
     otel_status_t status = {0};
@@ -617,7 +611,8 @@ int uprobe_SetStatus(struct pt_regs *ctx) {
 SEC("uprobe/End")
 int uprobe_End(struct pt_regs *ctx) {
     void *non_recording_span_ptr = get_argument(ctx, 1);
-    struct otel_span_t *span = bpf_map_lookup_elem(&active_spans_by_span_ptr, &non_recording_span_ptr);
+    struct otel_span_t *span =
+        bpf_map_lookup_elem(&active_spans_by_span_ptr, &non_recording_span_ptr);
     if (span == NULL) {
         return 0;
     }
