@@ -6,7 +6,7 @@ require (
 	github.com/Masterminds/semver/v3 v3.4.0
 	github.com/docker/docker v28.3.3+incompatible
 	github.com/golangci/golangci-lint/v2 v2.3.1
-	github.com/google/go-licenses/v2 v2.0.0-alpha.1
+	github.com/google/go-licenses/v2 v2.0.0
 	go.opentelemetry.io/auto v0.22.1
 	go.opentelemetry.io/build-tools/crosslink v0.26.2
 	go.opentelemetry.io/build-tools/dbotconf v0.26.2
