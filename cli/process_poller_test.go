@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 type entry struct {
@@ -80,12 +81,12 @@ func TestProcessPollerPoll(t *testing.T) {
 
 	pp := ProcessPoller{BinPath: appPath}
 	pid, err := pp.Poll(ctx)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, appPathPID, pid)
 
 	pp.BinPath = altPath
 	pid, err = pp.Poll(ctx)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, altPathPID, pid)
 
 	pp.Interval = time.Millisecond
@@ -93,6 +94,6 @@ func TestProcessPollerPoll(t *testing.T) {
 	ctx, cancel := context.WithTimeout(ctx, time.Second)
 	defer cancel()
 	pid, err = pp.Poll(ctx)
-	assert.ErrorIs(t, err, context.DeadlineExceeded)
+	assert.ErrorIs(t, err, context.DeadlineExceeded) //nolint:testifylint // Continue on failure.
 	assert.Zero(t, pid)
 }

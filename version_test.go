@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v3"
 )
 
@@ -24,18 +25,12 @@ func TestVersionSemver(t *testing.T) {
 
 func TestVersionMatchesYaml(t *testing.T) {
 	versionYaml, err := os.ReadFile("versions.yaml")
-	if err != nil {
-		t.Fatalf("Couldn't read versions.yaml file: %e", err)
-		return
-	}
+	require.NoError(t, err, "Couldn't read versions.yaml file")
 
 	var versionInfo map[string]interface{}
 
 	err = yaml.Unmarshal(versionYaml, &versionInfo)
-	if err != nil {
-		t.Fatalf("Couldn't parse version.yaml: %e", err)
-		return
-	}
+	require.NoError(t, err, "Couldn't parse version.yaml")
 
 	// incredibad, but it's where the intended version is declared at the moment
 	expectedVersion := versionInfo["module-sets"].(map[string]interface{})["auto"].(map[string]interface{})["version"]
