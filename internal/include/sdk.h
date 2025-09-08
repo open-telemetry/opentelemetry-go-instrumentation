@@ -25,7 +25,7 @@ struct otel_span_t {
 
 struct {
     __uint(type, BPF_MAP_TYPE_HASH);
-    __type(key, void*);
+    __type(key, void *);
     __type(value, struct otel_span_t);
     __uint(max_entries, MAX_CONCURRENT);
 } active_spans_by_span_ptr SEC(".maps");
@@ -59,6 +59,5 @@ static __always_inline long write_span_context(void *go_sc, struct span_context 
 
     return 0;
 }
-
 
 #endif // SDK_H

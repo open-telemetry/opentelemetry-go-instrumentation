@@ -22,7 +22,8 @@ type TCPAddr struct {
 const volatile u64 TCPAddr_IP_offset;
 const volatile u64 TCPAddr_Port_offset;
 
-static __always_inline long get_tcp_net_addr_from_tcp_addr(struct pt_regs *ctx, net_addr_t *addr, void* tcpAddr_ptr) {
+static __always_inline long
+get_tcp_net_addr_from_tcp_addr(struct pt_regs *ctx, net_addr_t *addr, void *tcpAddr_ptr) {
     go_slice_t ip;
     long res = bpf_probe_read_user(&ip, sizeof(ip), (void *)(tcpAddr_ptr + TCPAddr_IP_offset));
     if (res != 0) {
@@ -46,7 +47,8 @@ static __always_inline long get_tcp_net_addr_from_tcp_addr(struct pt_regs *ctx, 
         return res;
     }
 
-    res = bpf_probe_read_user(&addr->port, sizeof(addr->port), (void *)(tcpAddr_ptr + TCPAddr_Port_offset));
+    res = bpf_probe_read_user(
+        &addr->port, sizeof(addr->port), (void *)(tcpAddr_ptr + TCPAddr_Port_offset));
     if (res != 0) {
         bpf_printk("failed to read port");
     }

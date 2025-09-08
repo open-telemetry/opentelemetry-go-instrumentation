@@ -38,17 +38,16 @@ struct kafka_request_t {
     struct message_attributes_t msgs[MAX_BATCH_SIZE];
     char global_topic[MAX_TOPIC_SIZE];
     u64 valid_messages;
-}__attribute__((packed));
+} __attribute__((packed));
 
 struct {
-	__uint(type, BPF_MAP_TYPE_HASH);
-	__type(key, void*);
-	__type(value, struct kafka_request_t);
-	__uint(max_entries, MAX_CONCURRENT);
+    __uint(type, BPF_MAP_TYPE_HASH);
+    __type(key, void *);
+    __type(value, struct kafka_request_t);
+    __uint(max_entries, MAX_CONCURRENT);
 } kafka_events SEC(".maps");
 
-struct
-{
+struct {
     __uint(type, BPF_MAP_TYPE_PERCPU_ARRAY);
     __uint(key_size, sizeof(u32));
     __uint(value_size, sizeof(struct kafka_request_t));
@@ -70,7 +69,8 @@ volatile const u64 message_time_pos;
 volatile const u64 writer_topic_pos;
 
 #ifndef NO_HEADER_PROPAGATION
-static __always_inline int build_contxet_header(struct kafka_header_t *header, struct span_context *span_ctx) {
+static __always_inline int build_contxet_header(struct kafka_header_t *header,
+                                                struct span_context *span_ctx) {
     if (header == NULL || span_ctx == NULL) {
         bpf_printk("build_contxt_header: Invalid arguments");
         return -1;
@@ -111,10 +111,12 @@ static __always_inline int inject_kafka_header(void *message, struct kafka_heade
 }
 #endif
 
-static __always_inline long collect_kafka_attributes(void *message, struct message_attributes_t *attrs, bool collect_topic) {
+static __always_inline long
+collect_kafka_attributes(void *message, struct message_attributes_t *attrs, bool collect_topic) {
     if (collect_topic) {
         // Topic might be globally set for a writer, or per message
-        get_go_string_from_user_ptr((void *)(message + message_topic_pos), attrs->topic, sizeof(attrs->topic));
+        get_go_string_from_user_ptr(
+            (void *)(message + message_topic_pos), attrs->topic, sizeof(attrs->topic));
     }
 
     // Key is a byte slice, first read the slice
@@ -140,16 +142,15 @@ int uprobe_WriteMessages(struct pt_regs *ctx) {
     void *key = (void *)GOROUTINE(ctx);
 
     void *kafka_request_ptr = bpf_map_lookup_elem(&kafka_events, &key);
-    if (kafka_request_ptr != NULL)
-    {
+    if (kafka_request_ptr != NULL) {
         bpf_printk("uprobe/WriteMessages already tracked with the current context");
         return 0;
     }
 
     u32 zero_id = 0;
-    struct kafka_request_t *zero_kafka_request = bpf_map_lookup_elem(&kafka_request_storage_map, &zero_id);
-    if (zero_kafka_request == NULL)
-    {
+    struct kafka_request_t *zero_kafka_request =
+        bpf_map_lookup_elem(&kafka_request_storage_map, &zero_id);
+    if (zero_kafka_request == NULL) {
         bpf_printk("uuprobe/WriteMessages: zero_kafka_request is NULL");
         return 0;
     }
@@ -158,7 +159,8 @@ int uprobe_WriteMessages(struct pt_regs *ctx) {
     // Zero the span we are about to build, eBPF doesn't support memset of large structs (more than 1024 bytes)
     bpf_map_update_elem(&kafka_request_storage_map, &actual_id, zero_kafka_request, BPF_ANY);
     // Get a pointer to the zeroed span
-    struct kafka_request_t *kafka_request = bpf_map_lookup_elem(&kafka_request_storage_map, &actual_id);
+    struct kafka_request_t *kafka_request =
+        bpf_map_lookup_elem(&kafka_request_storage_map, &actual_id);
     if (kafka_request == NULL) {
         bpf_printk("uprobe/WriteMessages: Failed to get kafka_request");
         return 0;
@@ -177,7 +179,9 @@ int uprobe_WriteMessages(struct pt_regs *ctx) {
     start_span(&start_span_params);
 
     // Try to get a global topic from Writer
-    bool global_topic = get_go_string_from_user_ptr((void *)(writer + writer_topic_pos), kafka_request->global_topic, sizeof(kafka_request->global_topic));
+    bool global_topic = get_go_string_from_user_ptr((void *)(writer + writer_topic_pos),
+                                                    kafka_request->global_topic,
+                                                    sizeof(kafka_request->global_topic));
 
     void *msg_ptr = msgs_array;
     struct kafka_header_t header = {0};
@@ -203,7 +207,9 @@ int uprobe_WriteMessages(struct pt_regs *ctx) {
             // Copy the trace id and trace flags from the first message. This means the sampling decision is done on the first message,
             // and all the messages in the batch will have the same trace id and trace flags.
             kafka_request->msgs[i].sc.TraceFlags = kafka_request->msgs[0].sc.TraceFlags;
-            __builtin_memcpy(kafka_request->msgs[i].sc.TraceID, kafka_request->msgs[0].sc.TraceID, TRACE_ID_SIZE);
+            __builtin_memcpy(kafka_request->msgs[i].sc.TraceID,
+                             kafka_request->msgs[0].sc.TraceID,
+                             TRACE_ID_SIZE);
         }
 
 #ifndef NO_HEADER_PROPAGATION
@@ -218,7 +224,6 @@ int uprobe_WriteMessages(struct pt_regs *ctx) {
         kafka_request->valid_messages++;
         msg_ptr = msg_ptr + msg_size;
     }
-
 
     bpf_map_update_elem(&kafka_events, &key, kafka_request, 0);
     // don't need to start tracking the span, as we don't have a context to propagate locally
