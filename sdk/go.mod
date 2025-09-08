@@ -3,9 +3,9 @@ module go.opentelemetry.io/auto/sdk
 go 1.23.0
 
 require (
-	github.com/stretchr/testify v1.10.0
-	go.opentelemetry.io/otel v1.37.0
-	go.opentelemetry.io/otel/trace v1.37.0
+	github.com/stretchr/testify v1.11.1
+	go.opentelemetry.io/otel v1.38.0
+	go.opentelemetry.io/otel/trace v1.38.0
 )
 
 require (

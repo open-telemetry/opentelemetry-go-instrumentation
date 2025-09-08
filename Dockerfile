@@ -1,4 +1,4 @@
-FROM --platform=$BUILDPLATFORM golang:1.25.0-bookworm@sha256:74908ad827a5849c557eeca81d46263acf788ead606102d83466f499f83e35b1 AS base
+FROM --platform=$BUILDPLATFORM golang:1.25.1-bookworm@sha256:6ad9415c04f1cdb7888141cb247cabb28fa74fcc597034494c65d5bc783246a0 AS base
 
 RUN apt-get update && apt-get install -y curl clang gcc llvm make libbpf-dev
 
@@ -31,6 +31,6 @@ RUN --mount=type=cache,target=/root/.cache/go-build \
 	go generate ./... \
 	&& go build -o otel-go-instrumentation ./cli/...
 
-FROM gcr.io/distroless/base-debian12@sha256:4f6e739881403e7d50f52a4e574c4e3c88266031fd555303ee2f1ba262523d6a
+FROM gcr.io/distroless/base-debian12@sha256:d605e138bb398428779e5ab490a6bbeeabfd2551bd919578b1044718e5c30798
 COPY --from=builder /usr/src/go.opentelemetry.io/auto/otel-go-instrumentation /
 CMD ["/otel-go-instrumentation"]
