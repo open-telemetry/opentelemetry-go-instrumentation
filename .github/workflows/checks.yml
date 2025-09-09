@@ -9,9 +9,6 @@ on:
 permissions:
   contents: read
 
-env:
-  GO_VERSION: "~1.24.0"
-
 jobs:
   lint:
     strategy:
@@ -22,7 +19,7 @@ jobs:
       - name: Install Go
         uses: actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00 # v6
         with:
-          go-version: ${{ env.GO_VERSION }}
+          go-version: stable
           check-latest: true
           cache-dependency-path: "**/go.sum"
       - name: Checkout Repo
@@ -56,7 +53,7 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00 # v6
         with:
-          go-version: ${{ env.GO_VERSION }}
+          go-version: stable
           check-latest: true
           cache-dependency-path: "**/go.sum"
       - name: Install build dependencies
@@ -164,7 +161,7 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00 # v6
         with:
-          go-version: ${{ env.GO_VERSION }}
+          go-version: stable
           check-latest: true
           cache-dependency-path: "**/go.sum"
       - name: Install build dependencies
@@ -185,7 +182,7 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00 # v6
         with:
-          go-version: ${{ env.GO_VERSION }}
+          go-version: stable
           check-latest: true
           cache-dependency-path: "**/go.sum"
       - name: Update offsets
