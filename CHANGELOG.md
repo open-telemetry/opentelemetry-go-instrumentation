@@ -8,6 +8,12 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 
 ## [Unreleased]
 
+<!-- markdownlint-disable MD028 -->
+> [!NOTE]  
+> This is the last release version that will support building the auto-instrumentation CLI using Go 1.23.
+> The next release will require development to be done using Go >= 1.24.
+<!-- markdownlint-enable MD028 -->
+
 ### Added
 
 - Cache offsets for `golang.org/x/net` `0.42.0`. ([#2503](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/2503))
