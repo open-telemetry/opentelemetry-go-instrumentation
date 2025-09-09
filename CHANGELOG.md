@@ -31,6 +31,10 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 [resource.Detector]: https://pkg.go.dev/go.opentelemetry.io/otel/sdk/resource#Detector
 [`autodetect` package]: https://pkg.go.dev/go.opentelemetry.io/contrib/detectors/autodetect
 
+### Changed
+
+- Upgrade `go.opentelemetry.io/auto` semconv to `v1.37.0`. ([#2763](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/2763))
+
 ### Fixed
 
 - Add `telemetry.distro.version` resource attribute to the `otelsdk` handler. ([#2383](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/2383))
