@@ -15,7 +15,7 @@ import (
 	"go.opentelemetry.io/contrib/detectors/autodetect"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/resource"
-	semconv "go.opentelemetry.io/otel/semconv/v1.30.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.37.0"
 )
 
 func TestWithServiceName(t *testing.T) {
