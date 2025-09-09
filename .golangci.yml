@@ -46,8 +46,7 @@ linters:
         non-tests:
           files:
             - '!$test'
-            - '!**/*test/*.go'
-            - '!**/testutils/*.go'
+            - '!**/test/**/*.go'
           deny:
             - pkg: testing
             - pkg: github.com/stretchr/testify
@@ -227,7 +226,6 @@ linters:
       disable:
         - float-compare
         - go-require
-        - require-error
   exclusions:
     generated: lax
     presets:
