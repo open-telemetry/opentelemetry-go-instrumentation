@@ -9,7 +9,6 @@ permissions:
   contents: read
 
 env:
-  go_version: '~1.23'
   CGO_ENABLED: '0'
 
 jobs:
@@ -31,7 +30,7 @@ jobs:
           - name: Set up Go
             uses: actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00 # v6
             with:
-              go-version: '${{ env.go_version }}'
+              go-version: stable
           - name: make docker-generate
             run: make docker-generate
           - name: verify output
