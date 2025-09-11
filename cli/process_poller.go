@@ -37,15 +37,7 @@ func (pp *ProcessPoller) interval() time.Duration {
 	return pp.Interval
 }
 
-var discardLogger = slog.New(discardHandler{})
-
-// Replace with slog.DiscardHandler when Go 1.23 support is dropped.
-type discardHandler struct{}
-
-func (dh discardHandler) Enabled(context.Context, slog.Level) bool  { return false }
-func (dh discardHandler) Handle(context.Context, slog.Record) error { return nil }
-func (dh discardHandler) WithAttrs(attrs []slog.Attr) slog.Handler  { return dh }
-func (dh discardHandler) WithGroup(name string) slog.Handler        { return dh }
+var discardLogger = slog.New(slog.DiscardHandler)
 
 func (pp *ProcessPoller) logger() *slog.Logger {
 	if pp.Logger != nil {
