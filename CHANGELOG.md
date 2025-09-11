@@ -11,7 +11,7 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 ### Removed
 
 - Build support for [Go 1.23] has been removed.
-  Use Go >= 1.24 to develop and build the project. (TBD)
+  Use Go >= 1.24 to develop and build the project. ([#2799](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/2799))
 
 ## [v0.23.0/v1.2.0] - 2025-09-10
 
