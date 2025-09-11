@@ -8,8 +8,10 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 
 ## [Unreleased]
 
+## [v0.23.0/v1.2.0] - 2025-09-10
+
 <!-- markdownlint-disable MD028 -->
-> [!NOTE]  
+> [!NOTE]
 > This is the last release version that will support building the auto-instrumentation CLI using Go 1.23.
 > The next release will require development to be done using Go >= 1.24.
 <!-- markdownlint-enable MD028 -->
@@ -44,6 +46,7 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 ### Changed
 
 - Upgrade `go.opentelemetry.io/auto` semconv to `v1.37.0`. ([#2763](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/2763))
+- Upgrade `go.opentelemetry.io/auto/sdk` semconv to `v1.37.0`. ([#2763](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/2763))
 
 ### Fixed
 
@@ -715,7 +718,8 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 
 This is the first release of OpenTelemetry Go Automatic Instrumentation.
 
-[Unreleased]: https://github.com/open-telemetry/opentelemetry-go-instrumentation/compare/v0.22.1...HEAD
+[Unreleased]: https://github.com/open-telemetry/opentelemetry-go-instrumentation/compare/v0.23.0...HEAD
+[v0.23.0/v1.2.0]: https://github.com/open-telemetry/opentelemetry-go-instrumentation/releases/tag/v0.23.0
 [v0.22.1]: https://github.com/open-telemetry/opentelemetry-go-instrumentation/releases/tag/v0.22.1
 [v0.22.0]: https://github.com/open-telemetry/opentelemetry-go-instrumentation/releases/tag/v0.22.0
 [v0.21.0]: https://github.com/open-telemetry/opentelemetry-go-instrumentation/releases/tag/v0.21.0

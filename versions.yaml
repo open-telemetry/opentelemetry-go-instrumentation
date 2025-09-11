@@ -3,11 +3,11 @@
 
 module-sets:
   auto:
-    version: v0.22.1
+    version: v0.23.0
     modules:
       - go.opentelemetry.io/auto
   sdk:
-    version: v1.1.0
+    version: v1.2.0
     modules:
       - go.opentelemetry.io/auto/sdk
 excluded-modules:
@@ -24,3 +24,4 @@ modules:
   go.opentelemetry.io/auto:
     version-refs:
       - ./internal/pkg/instrumentation/version.go
+
