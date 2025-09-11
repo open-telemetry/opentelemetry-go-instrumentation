@@ -7,7 +7,7 @@ require (
 	github.com/docker/docker v28.4.0+incompatible
 	github.com/golangci/golangci-lint/v2 v2.3.1
 	github.com/google/go-licenses/v2 v2.0.1
-	go.opentelemetry.io/auto v0.22.1
+	go.opentelemetry.io/auto v0.23.0
 	go.opentelemetry.io/build-tools/crosslink v0.26.2
 	go.opentelemetry.io/build-tools/dbotconf v0.26.2
 	go.opentelemetry.io/build-tools/multimod v0.26.2
@@ -239,7 +239,7 @@ require (
 	go.augendre.info/arangolint v0.2.0 // indirect
 	go.augendre.info/fatcontext v0.8.1 // indirect
 	go.opencensus.io v0.24.0 // indirect
-	go.opentelemetry.io/auto/sdk v1.1.0 // indirect
+	go.opentelemetry.io/auto/sdk v1.2.0 // indirect
 	go.opentelemetry.io/build-tools v0.27.0 // indirect
 	go.opentelemetry.io/collector/pdata v1.38.0 // indirect
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.63.0 // indirect
