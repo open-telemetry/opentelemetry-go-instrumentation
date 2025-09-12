@@ -8,6 +8,10 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 
 ## [Unreleased]
 
+### Added
+
+- Support for the 386 architecture. ([#2801](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/2801))
+
 ## [v0.23.0/v1.2.0] - 2025-09-10
 
 <!-- markdownlint-disable MD028 -->
