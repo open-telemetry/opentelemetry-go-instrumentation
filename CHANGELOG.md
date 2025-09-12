@@ -8,6 +8,10 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 
 ## [Unreleased]
 
+### Fixed
+
+- Fix compilation errors on 386 architecture. ([#2802](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/2802))
+
 ## [v0.23.0/v1.2.0] - 2025-09-10
 
 <!-- markdownlint-disable MD028 -->
