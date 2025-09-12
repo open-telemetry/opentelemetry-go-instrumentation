@@ -217,7 +217,7 @@ type shutdownExporter struct {
 // ExportSpans handles export of spans by storing them in memory.
 func (e *shutdownExporter) ExportSpans(_ context.Context, spans []sdktrace.ReadOnlySpan) error {
 	n := len(spans)
-	if n < 0 || n > math.MaxUint32 {
+	if n < 0 || n > math.MaxInt {
 		return fmt.Errorf("invalid span length: %d", n)
 	}
 	e.exported.Add(uint32(n)) //nolint:gosec  // Bound checked
