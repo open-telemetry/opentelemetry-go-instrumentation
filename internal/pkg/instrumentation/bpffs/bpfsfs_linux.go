@@ -6,6 +6,7 @@ package bpffs
 
 import (
 	"fmt"
+	"math"
 	"os"
 
 	"golang.org/x/sys/unix"
@@ -46,7 +47,11 @@ func isBPFFSMounted() bool {
 		return false
 	}
 
-	return uint32(stat.Type) == unix.BPF_FS_MAGIC
+	t := stat.Type
+	if t < 0 || t > math.MaxInt {
+		return false
+	}
+	return uint32(t) == unix.BPF_FS_MAGIC //nolint:gosec  // Bounds checked.
 }
 
 // Cleanup removes the BPF file-system for the given target.
