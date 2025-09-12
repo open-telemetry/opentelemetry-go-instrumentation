@@ -46,7 +46,7 @@ func isBPFFSMounted() bool {
 		return false
 	}
 
-	return stat.Type == unix.BPF_FS_MAGIC
+	return uint32(stat.Type) == unix.BPF_FS_MAGIC
 }
 
 // Cleanup removes the BPF file-system for the given target.
