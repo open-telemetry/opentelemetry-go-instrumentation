@@ -117,7 +117,7 @@ jobs:
 
           # Stream test output to stdout and save to file for jq
           go test -v -run='^TestIntegration' | tee "$tmpfile"
-          
+
           # Fail if any "skip" action occurs under TestIntegration/
           go tool test2json < "$tmpfile" | jq -e '
             select(
@@ -129,13 +129,19 @@ jobs:
                 exit 1
             }
           rm "$tmpfile"
-          
+
   compatibility-test:
     strategy:
       matrix:
         go-version: ["stable", "oldstable"]
-        os: [ubuntu-latest, ubuntu-22.04-arm]
-    runs-on: ${{ matrix.os }}
+        platform:
+          - os: ubuntu-latest
+            arch: "386"
+          - os: ubuntu-latest
+            arch: amd64
+          - os: ubuntu-22.04-arm
+            arch: arm64
+    runs-on: ${{ matrix.platform.os }}
     steps:
       - name: Checkout Repo
         uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5
@@ -148,6 +154,8 @@ jobs:
       - name: Install build dependencies
         run: sudo apt-get update && sudo apt-get install -y clang llvm
       - name: Run tests
+        env:
+          GOARCH: ${{ matrix.platform.arch }}
         run: make test
       - name: Run eBPF verification tests
         run: sudo --preserve-env=PATH make test-ebpf
