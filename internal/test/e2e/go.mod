@@ -1,6 +1,6 @@
 module go.opentelemetry.io/auto/internal/test/e2e
 
-go 1.23.8
+go 1.24.0
 
 require (
 	github.com/cilium/ebpf v0.19.0
