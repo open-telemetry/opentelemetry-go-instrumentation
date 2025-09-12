@@ -1,8 +1,8 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-//go:build amd64
-// +build amd64
+//go:build 386
+// +build 386
 
 package binary
 
@@ -13,14 +13,13 @@ import (
 )
 
 func findRetInstructions(data []byte) ([]uint64, error) {
-	nInt := len(data)
-	if nInt < 0 {
-		return nil, fmt.Errorf("invalid data length: %d", nInt)
+	n := len(data)
+	if n < 0 {
+		return nil, fmt.Errorf("invalid data length: %d", n)
 	}
-	n := uint64(nInt)
 
 	var returnOffsets []uint64
-	var index uint64
+	var index int
 	for index < n {
 		instruction, err := x86asm.Decode(data[index:], 64)
 		if err != nil {
@@ -28,10 +27,10 @@ func findRetInstructions(data []byte) ([]uint64, error) {
 		}
 
 		if instruction.Op == x86asm.RET {
-			returnOffsets = append(returnOffsets, index)
+			returnOffsets = append(returnOffsets, uint64(index))
 		}
 
-		index += uint64(max(0, instruction.Len)) //nolint:gosec  // Underflow handled.
+		index += max(0, instruction.Len)
 	}
 
 	return returnOffsets, nil
