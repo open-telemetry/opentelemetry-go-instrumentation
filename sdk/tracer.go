@@ -64,6 +64,8 @@ func (t *tracer) start(
 // start is used for testing.
 var start = func(context.Context, *span, *trace.SpanContext, *bool, *trace.SpanContext) {}
 
+var intToUint32Bound = min(math.MaxInt, math.MaxUint32)
+
 func (t tracer) traces(
 	name string,
 	cfg trace.SpanConfig,
@@ -85,12 +87,14 @@ func (t tracer) traces(
 	if limit := maxSpan.Links; limit == 0 {
 		n := len(links)
 		if n > 0 {
-			span.DroppedLinks = uint32(min(n, math.MaxUint32)) //nolint:gosec  // Bounds checked.
+			bounded := max(min(n, intToUint32Bound), 0)
+			span.DroppedLinks = uint32(bounded) //nolint:gosec  // Bounds checked.
 		}
 	} else {
 		if limit > 0 {
 			n := max(len(links)-limit, 0)
-			span.DroppedLinks = uint32(min(n, math.MaxUint32)) //nolint:gosec  // Bounds checked.
+			bounded := min(n, intToUint32Bound)
+			span.DroppedLinks = uint32(bounded) //nolint:gosec  // Bounds checked.
 			links = links[n:]
 		}
 		span.Links = convLinks(links)
