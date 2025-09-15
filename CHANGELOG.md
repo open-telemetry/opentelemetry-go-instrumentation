@@ -8,14 +8,16 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 
 ## [Unreleased]
 
-### Fixed
-
-- Fix `uint32` bounding on 32 bit architectures in the `go.opentelemetry.io/auto/sdk` module. ([#2810](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/2810))
-
 ### Removed
 
 - Build support for [Go 1.23] has been removed.
   Use Go >= 1.24 to develop and build the project. ([#2799](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/2799))
+
+## [`go.opentelemetry.io/auto/sdk` v1.2.1] - 2025-09-15
+
+### Fixed
+
+- Fix `uint32` bounding on 32 bit architectures in the `go.opentelemetry.io/auto/sdk` module. ([#2810](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/2810))
 
 ## [v0.23.0/v1.2.0] - 2025-09-10
 
@@ -727,7 +729,8 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 
 This is the first release of OpenTelemetry Go Automatic Instrumentation.
 
-[Unreleased]: https://github.com/open-telemetry/opentelemetry-go-instrumentation/compare/v0.23.0...HEAD
+[Unreleased]: https://github.com/open-telemetry/opentelemetry-go-instrumentation/compare/sdk/v1.2.1...HEAD
+[`go.opentelemetry.io/auto/sdk` v1.2.1]: https://github.com/open-telemetry/opentelemetry-go-instrumentation/releases/tag/sdk/v1.2.1
 [v0.23.0/v1.2.0]: https://github.com/open-telemetry/opentelemetry-go-instrumentation/releases/tag/v0.23.0
 [v0.22.1]: https://github.com/open-telemetry/opentelemetry-go-instrumentation/releases/tag/v0.22.1
 [v0.22.0]: https://github.com/open-telemetry/opentelemetry-go-instrumentation/releases/tag/v0.22.0
