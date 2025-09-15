@@ -8,6 +8,10 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 
 ## [Unreleased]
 
+### Fixed
+
+- Fix `uint32` bounding on 32 bit architectures in the `go.opentelemetry.io/auto/sdk` module. ([#2810](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/2810))
+
 ### Removed
 
 - Build support for [Go 1.23] has been removed.
