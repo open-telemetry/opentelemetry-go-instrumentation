@@ -2,7 +2,7 @@ name: Checks
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
   pull_request:
   workflow_dispatch:
 
@@ -13,7 +13,7 @@ jobs:
   lint:
     strategy:
       matrix:
-        os: [ ubuntu-latest, ubuntu-22.04-arm]
+        os: [ubuntu-latest, ubuntu-22.04-arm]
     runs-on: ${{ matrix.os }}
     steps:
       - name: Install Go
@@ -117,7 +117,7 @@ jobs:
 
           # Stream test output to stdout and save to file for jq
           go test -v -run='^TestIntegration' | tee "$tmpfile"
-          
+
           # Fail if any "skip" action occurs under TestIntegration/
           go tool test2json < "$tmpfile" | jq -e '
             select(
@@ -129,7 +129,38 @@ jobs:
                 exit 1
             }
           rm "$tmpfile"
-          
+
+  sdk-compatibility-test:
+    strategy:
+      matrix:
+        go-version: ["stable", "oldstable"]
+        platform:
+          - os: ubuntu-latest
+            arch: "386"
+          - os: ubuntu-latest
+            arch: amd64
+          - os: ubuntu-22.04-arm
+            arch: arm64
+          - os: macos-13
+            arch: amd64
+          - os: macos-latest
+            arch: arm64
+          - os: windows-latest
+            arch: "386"
+          - os: windows-latest
+            arch: amd64
+    runs-on: ${{ matrix.platform.os }}
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5
+      - uses: actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00 # v6
+        with:
+          go-version: ${{ matrix.go-version }}
+          check-latest: true
+          cache-dependency-path: "**/go.sum"
+      - name: Test sdk module
+        env:
+          GOARCH: ${{ matrix.platform.arch }}
+        run: cd sdk && go test -v ./...
   compatibility-test:
     strategy:
       matrix:
