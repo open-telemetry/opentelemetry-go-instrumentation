@@ -5,15 +5,14 @@
 package probe
 
 import (
-	"bytes"
 	"context"
-	"encoding/binary"
 	"errors"
 	"fmt"
 	"io"
 	"log/slog"
 	"os"
 	"sync/atomic"
+	"unsafe"
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/cilium/ebpf"
@@ -303,9 +302,11 @@ func (i *Base[BPFObj, BPFEvent]) read() (*BPFEvent, error) {
 	if i.ProcessRecord != nil {
 		event, err = i.ProcessRecord(record)
 	} else {
-		event = new(BPFEvent)
-		buf := bytes.NewReader(record.RawSample)
-		err = binary.Read(buf, binary.LittleEndian, event)
+		var zero BPFEvent
+		if len(record.RawSample) < int(unsafe.Sizeof(zero)) {
+			return nil, fmt.Errorf("record size %d too small for event size %d", len(record.RawSample), unsafe.Sizeof(zero))
+		}
+		event = (*BPFEvent)(unsafe.Pointer(&record.RawSample[0]))
 	}
 
 	if err != nil {
