@@ -35,7 +35,7 @@ func ServerAddressPortAttributes(host []byte) (addr, port attribute.KeyValue) {
 	if hostString != "" {
 		addr = semconv.ServerAddress(hostString)
 	}
-	return
+	return addr, port
 }
 
 func NetPeerAddressPortAttributes(host []byte) (addr, port attribute.KeyValue) {
@@ -54,7 +54,7 @@ func NetPeerAddressPortAttributes(host []byte) (addr, port attribute.KeyValue) {
 	if hostString != "" {
 		addr = semconv.NetworkPeerAddress(hostString)
 	}
-	return
+	return addr, port
 }
 
 var (
@@ -90,5 +90,5 @@ func ParsePattern(s string) (path string, err error) {
 	}
 	path = rest[i:]
 	err = nil
-	return
+	return path, err
 }
