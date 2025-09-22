@@ -614,8 +614,10 @@ go.opentelemetry.io/build-tools/dbotconf v0.28.0 h1:KjJfzRPoJpj6IKDF32BP+vZKUEvu
 go.opentelemetry.io/build-tools/dbotconf v0.28.0/go.mod h1:gylaS8J6tHXL2kwruqaqd03ZfYP10kq36lAd4SyWuwM=
 go.opentelemetry.io/build-tools/multimod v0.28.0 h1:Y2/MVvw99ktJ3pPNdXRBP+WIhDaddzoYsgtxz0FbCAM=
 go.opentelemetry.io/build-tools/multimod v0.28.0/go.mod h1:yhNMNDcbbg1GtdkGb6hrayb3lMCCxfQTOLg/NeD+yXk=
-go.opentelemetry.io/collector/pdata v1.38.0 h1:94LzVKMQM8R7RFJ8Z1+sL51IkI90TDfTc/ipH3mPUro=
-go.opentelemetry.io/collector/pdata v1.38.0/go.mod h1:DSvnwj37IKyQj2hpB97cGITyauR8tvAauJ6/gsxg8mg=
+go.opentelemetry.io/collector/featuregate v1.42.0 h1:uCVwumVBVex46DsG/fvgiTGuf9f53bALra7vGyKaqFI=
+go.opentelemetry.io/collector/featuregate v1.42.0/go.mod h1:d0tiRzVYrytB6LkcYgz2ESFTv7OktRPQe0QEQcPt1L4=
+go.opentelemetry.io/collector/pdata v1.42.0 h1:XEzisp/SNfKDcY4aRU6qrHeLzGypRUdYHjbBqkDFOO4=
+go.opentelemetry.io/collector/pdata v1.42.0/go.mod h1:nnOmgf+RI/D5xYWgFPZ5nKuhf2E0Qy9Nx/mxoTvIq3k=
 go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.63.0 h1:RbKq8BG0FI8OiXhBfcRtqqHcZcka+gU3cskNuf05R18=
 go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.63.0/go.mod h1:h06DGIukJOevXaj/xrNjhi/2098RZzcLTbc0jDAUbsg=
 go.opentelemetry.io/otel v1.38.0 h1:RkfdswUDRimDg0m2Az18RKOsnI8UDzppJAtj01/Ymk8=
@@ -634,6 +636,12 @@ go.opentelemetry.io/otel/trace v1.38.0 h1:Fxk5bKrDZJUH+AMyyIXGcFAPah0oRcT+LuNtJr
 go.opentelemetry.io/otel/trace v1.38.0/go.mod h1:j1P9ivuFsTceSWe1oY+EeW3sc+Pp42sO++GHkg4wwhs=
 go.opentelemetry.io/proto/otlp v1.8.0 h1:fRAZQDcAFHySxpJ1TwlA1cJ4tvcrw7nXl9xWWC8N5CE=
 go.opentelemetry.io/proto/otlp v1.8.0/go.mod h1:tIeYOeNBU4cvmPqpaji1P+KbB4Oloai8wN4rWzRrFF0=
+go.opentelemetry.io/proto/slim/otlp v1.8.0 h1:afcLwp2XOeCbGrjufT1qWyruFt+6C9g5SOuymrSPUXQ=
+go.opentelemetry.io/proto/slim/otlp v1.8.0/go.mod h1:Yaa5fjYm1SMCq0hG0x/87wV1MP9H5xDuG/1+AhvBcsI=
+go.opentelemetry.io/proto/slim/otlp/collector/profiles/v1development v0.1.0 h1:Uc+elixz922LHx5colXGi1ORbsW8DTIGM+gg+D9V7HE=
+go.opentelemetry.io/proto/slim/otlp/collector/profiles/v1development v0.1.0/go.mod h1:VyU6dTWBWv6h9w/+DYgSZAPMabWbPTFTuxp25sM8+s0=
+go.opentelemetry.io/proto/slim/otlp/profiles/v1development v0.1.0 h1:i8YpvWGm/Uq1koL//bnbJ/26eV3OrKWm09+rDYo7keU=
+go.opentelemetry.io/proto/slim/otlp/profiles/v1development v0.1.0/go.mod h1:pQ70xHY/ZVxNUBPn+qUWPl8nwai87eWdqL3M37lNi9A=
 go.uber.org/automaxprocs v1.6.0 h1:O3y2/QNTOdbF+e/dpXNNW7Rx2hZ4sTIPyybbxyNqTUs=
 go.uber.org/automaxprocs v1.6.0/go.mod h1:ifeIMSnPZuznNm6jmdzmU3/bfk01Fe2fotchwEFJ8r8=
 go.uber.org/goleak v1.3.0 h1:2K3zAYmnTNqV73imy9J1T3WC+gmCePx2hEGkimedGto=
