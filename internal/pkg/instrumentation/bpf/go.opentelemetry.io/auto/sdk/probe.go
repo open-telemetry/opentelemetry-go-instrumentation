@@ -120,19 +120,19 @@ func (c *converter) processFn(
 	traces, err := m.UnmarshalTraces(e.SpanData[:e.Size])
 	if err != nil {
 		c.logger.Error("failed to unmarshal span data", "error", err)
-		return
+		return scope, url, spans
 	}
 
 	rs := traces.ResourceSpans()
 	if rs.Len() == 0 {
 		c.logger.Error("empty ResourceSpans")
-		return
+		return scope, url, spans
 	}
 
 	ss := rs.At(0).ScopeSpans()
 	if ss.Len() == 0 {
 		c.logger.Error("empty ScopeSpans")
-		return
+		return scope, url, spans
 	}
 	s := ss.At(0)
 
