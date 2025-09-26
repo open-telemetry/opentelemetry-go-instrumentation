@@ -17,9 +17,10 @@ import (
 	"path/filepath"
 	"runtime"
 	"syscall"
-	"testing" // nolint:depguard  // This is a testing utility package.
+	"testing"
 
 	"github.com/cilium/ebpf/rlimit"
+	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/collector/pdata/ptrace"
 
 	"go.opentelemetry.io/auto"
@@ -68,9 +69,7 @@ func compile(t *testing.T, ctx context.Context, pkgPath string) string {
 	cmd.Dir = pkgPath
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
-	if err := cmd.Run(); err != nil {
-		t.Fatalf("Failed to compile binary: %v", err)
-	}
+	require.NoError(t, cmd.Run(), "Failed to compile binary")
 
 	return binaryPath
 }
@@ -127,9 +126,7 @@ func run(t *testing.T, ctx context.Context, binPath, endpoint string) {
 	cmd.Stderr = os.Stderr
 
 	t.Log("Starting target")
-	if err := cmd.Start(); err != nil {
-		t.Fatalf("Failed to start target: %v", err)
-	}
+	require.NoError(t, cmd.Start(), "Failed to start target")
 
 	t.Setenv("OTEL_SERVICE_NAME", "sample-app")
 	t.Setenv("OTEL_EXPORTER_OTLP_ENDPOINT", endpoint)
@@ -144,14 +141,10 @@ func run(t *testing.T, ctx context.Context, binPath, endpoint string) {
 		auto.WithLogger(NewTestLogger(t)),
 		auto.WithEnv(),
 	)
-	if err != nil {
-		t.Fatalf("Failed to create auto-instrumentation: %v", err)
-	}
+	require.NoError(t, err, "Failed to create auto-instrumentation")
 
 	t.Log("Loading")
-	if err = inst.Load(ctx); err != nil {
-		t.Fatalf("Failed to load auto-instrumentation: %v", err)
-	}
+	require.NoError(t, inst.Load(ctx), "Failed to load auto-instrumentation")
 
 	t.Log("Running")
 	runCh := make(chan error, 1)
@@ -162,9 +155,7 @@ func run(t *testing.T, ctx context.Context, binPath, endpoint string) {
 
 	var sig os.Signal = syscall.SIGCONT
 	t.Log("Sending signal to target")
-	if err := cmd.Process.Signal(sig); err != nil {
-		t.Fatalf("Failed to send signal to target: %v", err)
-	}
+	require.NoError(t, cmd.Process.Signal(sig), "Failed to send signal to target")
 	t.Log("Sent signal to target")
 
 	doneCh := make(chan error, 1)
@@ -176,23 +167,17 @@ func run(t *testing.T, ctx context.Context, binPath, endpoint string) {
 			case <-ctx.Done():
 				t.Fatal("Context ended")
 			case err := <-runCh:
-				if err != nil {
-					t.Fatalf("Failed to run: %v", err)
-				}
+				require.NoError(t, err, "Failed to run")
 				// Do not return. Wait for doneCh.
 			case <-doneCh:
-				if err != nil {
-					t.Fatalf("Application failed: %v", err)
-				}
+				require.NoError(t, err, "Application failed")
 				return
 			}
 		}
 	}()
 
 	t.Log("Closing instrumentation")
-	if err := inst.Close(); err != nil {
-		t.Fatalf("Failed to close auto-instrumentation: %v", err)
-	}
+	require.NoError(t, inst.Close(), "Failed to close auto-instrumentation")
 }
 
 // testLogger is an slog.Handler that logs to testing.T.

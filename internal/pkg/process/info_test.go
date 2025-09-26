@@ -86,7 +86,7 @@ func TestInfoAlloc(t *testing.T) {
 		wg.Wait()
 
 		a, err := i.Alloc(logger)
-		assert.ErrorIs(t, err, assert.AnError)
+		assert.ErrorIs(t, err, assert.AnError) //nolint:testifylint // Continue on failure.
 		assert.Equal(t, uint64(goroutines+1), a.StartAddr, "expected increment per error response")
 	})
 
@@ -106,7 +106,7 @@ func TestInfoAlloc(t *testing.T) {
 		wg.Wait()
 
 		a, err := i.Alloc(logger)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, uint64(1), a.StartAddr, "allocate not called once")
 	})
 }

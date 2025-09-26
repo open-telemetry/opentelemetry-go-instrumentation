@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 const (
@@ -51,13 +52,13 @@ func TestFindPID(t *testing.T) {
 	t.Run("PID", func(t *testing.T) {
 		const pid = 4
 		got, err := findPID(ctx, discardLogger, pid, appPath)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, int(pid), got)
 	})
 
 	t.Run("BinPath", func(t *testing.T) {
 		got, err := findPID(ctx, discardLogger, -1, appPath)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, appPathPID, got)
 
 		got, err = findPID(ctx, discardLogger, -1, missingPath)
@@ -68,7 +69,7 @@ func TestFindPID(t *testing.T) {
 	t.Run("OTEL_GO_AUTO_TARGET_PID", func(t *testing.T) {
 		t.Setenv(envTargetPIDKey, "2000")
 		got, err := findPID(ctx, discardLogger, -1, "")
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, int(2000), got)
 
 		t.Setenv(envTargetPIDKey, "invalid")
@@ -79,7 +80,7 @@ func TestFindPID(t *testing.T) {
 	t.Run("OTEL_GO_AUTO_TARGET_EXE", func(t *testing.T) {
 		t.Setenv(envTargetExeKey, appPath)
 		got, err := findPID(ctx, discardLogger, -1, "")
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, appPathPID, got)
 	})
 
@@ -89,21 +90,21 @@ func TestFindPID(t *testing.T) {
 
 		const pid = 4
 		got, err := findPID(ctx, discardLogger, pid, appPath)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, int(pid), got)
 
 		got, err = findPID(ctx, discardLogger, -1, appPath)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, appPathPID, got)
 
 		got, err = findPID(ctx, discardLogger, -1, "")
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, 2000, got)
 
 		os.Unsetenv(envTargetPIDKey)
 
 		got, err = findPID(ctx, discardLogger, -1, "")
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, altPathPID, got)
 	})
 }
