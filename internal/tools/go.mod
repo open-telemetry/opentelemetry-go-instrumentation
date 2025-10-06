@@ -8,9 +8,9 @@ require (
 	github.com/golangci/golangci-lint/v2 v2.5.0
 	github.com/google/go-licenses/v2 v2.0.1
 	go.opentelemetry.io/auto v0.23.0
-	go.opentelemetry.io/build-tools/crosslink v0.28.0
-	go.opentelemetry.io/build-tools/dbotconf v0.28.0
-	go.opentelemetry.io/build-tools/multimod v0.28.0
+	go.opentelemetry.io/build-tools/crosslink v0.28.1
+	go.opentelemetry.io/build-tools/dbotconf v0.28.1
+	go.opentelemetry.io/build-tools/multimod v0.28.1
 	golang.org/x/sync v0.17.0
 )
 
@@ -48,7 +48,7 @@ require (
 	github.com/bkielbasa/cyclop v1.2.3 // indirect
 	github.com/blizzy78/varnamelen v0.8.0 // indirect
 	github.com/bombsimon/wsl/v4 v4.7.0 // indirect
-	github.com/bombsimon/wsl/v5 v5.2.0 // indirect
+	github.com/bombsimon/wsl/v5 v5.3.0 // indirect
 	github.com/breml/bidichk v0.3.3 // indirect
 	github.com/breml/errchkjson v0.4.1 // indirect
 	github.com/butuzov/ireturn v0.4.0 // indirect
@@ -244,7 +244,7 @@ require (
 	go.augendre.info/fatcontext v0.9.0 // indirect
 	go.opencensus.io v0.24.0 // indirect
 	go.opentelemetry.io/auto/sdk v1.2.1 // indirect
-	go.opentelemetry.io/build-tools v0.28.0 // indirect
+	go.opentelemetry.io/build-tools v0.28.1 // indirect
 	go.opentelemetry.io/collector/featuregate v1.42.0 // indirect
 	go.opentelemetry.io/collector/pdata v1.42.0 // indirect
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.63.0 // indirect
