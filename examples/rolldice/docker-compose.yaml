@@ -7,12 +7,12 @@ services:
   jaeger:
     image: jaegertracing/jaeger:2.11.0@sha256:b585df1b6299bbbd16bf7c679da30389349736e4b6bc8f4f500142a75bf26ca8
     ports:
-      - "16686:16686"   # Web HTTP
+      - "16686:16686" # Web HTTP
     restart: unless-stopped
   user:
     build:
-      context: ./user/
-      dockerfile: ./Dockerfile
+      context: ../../
+      dockerfile: ./examples/rolldice/user/Dockerfile
     pid: "host"
     ports:
       - "8082:8082"

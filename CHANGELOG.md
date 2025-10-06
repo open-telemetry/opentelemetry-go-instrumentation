@@ -22,6 +22,7 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 ### Fixed
 
 - Fix `uint32` bounding on 32 bit architectures in the `go.opentelemetry.io/auto/sdk` module. ([#2810](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/2810))
+- Fix `go.opentelemetry.io/auto/examples/rolldice` build. ([#2894](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/2894))
 
 ## [v0.23.0/v1.2.0] - 2025-09-10
 
