@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 //go:build arm64
-// +build arm64
 
 package binary
 
