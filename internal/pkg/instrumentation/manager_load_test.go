@@ -43,11 +43,11 @@ func TestLoadProbes(t *testing.T) {
 	pid := process.ID(id)
 
 	info, err := process.NewInfo(pid, make(map[string]interface{}))
-	if info == nil {
+	if info == nil { //nolint:staticcheck  // nil-ness beign tested
 		t.Fatalf("failed to create process.Info: %v", err)
 	}
 	// Reset Info module information.
-	info.Modules = make(map[string]*semver.Version)
+	info.Modules = make(map[string]*semver.Version) //nolint:staticcheck  // nil checked above
 
 	ver := kernel.Version()
 	require.NotNil(t, ver)
