@@ -33,7 +33,7 @@ func version() *semver.Version {
 		} else {
 			// Note that we're assuming N.N.N here.
 			// If we see anything else, we are likely to mis-parse it.
-			values[vi] = value
+			values[vi] = value //nolint:gosec  // bound checked below
 			vi++
 			if vi >= len(values) {
 				break
