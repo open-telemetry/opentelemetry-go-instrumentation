@@ -267,8 +267,8 @@ github.com/yuin/goldmark v1.1.27/go.mod h1:3hX8gzYuyVAZsxl0MRgGTJEmQBFcNTphYh9de
 github.com/yuin/goldmark v1.2.1/go.mod h1:3hX8gzYuyVAZsxl0MRgGTJEmQBFcNTphYh9decYSb74=
 go.opentelemetry.io/collector/featuregate v1.44.0 h1:/GeGhTD8f+FNWS7C4w1Dj0Ui9Jp4v2WAdlXyW1p3uG8=
 go.opentelemetry.io/collector/featuregate v1.44.0/go.mod h1:d0tiRzVYrytB6LkcYgz2ESFTv7OktRPQe0QEQcPt1L4=
-go.opentelemetry.io/collector/pdata v1.43.0 h1:zVkj2hcjiMLwX+QDDNwb7iTh3LBjNXKv2qPSgj1Rzb4=
-go.opentelemetry.io/collector/pdata v1.43.0/go.mod h1:KsJzdDG9e5BaHlmYr0sqdSEKeEiSfKzoF+rdWU7J//w=
+go.opentelemetry.io/collector/pdata v1.44.0 h1:q/EfWDDKrSaf4hjTIzyPeg1ZcCRg1Uj7VTFnGfNVdk8=
+go.opentelemetry.io/collector/pdata v1.44.0/go.mod h1:LnsjYysFc3AwMVh6KGNlkGKJUF2ReuWxtD9Hb3lSMZk=
 go.opentelemetry.io/contrib/bridges/prometheus v0.63.0 h1:/Rij/t18Y7rUayNg7Id6rPrEnHgorxYabm2E6wUdPP4=
 go.opentelemetry.io/contrib/bridges/prometheus v0.63.0/go.mod h1:AdyDPn6pkbkt2w01n3BubRVk7xAsCRq1Yg1mpfyA/0E=
 go.opentelemetry.io/contrib/detectors/autodetect v0.10.0 h1:vZ0jhtR5UYCMEUqtQAz0UBFLlM7YomI6e5qYnRXK22U=
