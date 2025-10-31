@@ -609,8 +609,8 @@ go.augendre.info/fatcontext v0.9.0 h1:Gt5jGD4Zcj8CDMVzjOJITlSb9cEch54hjRRlN3qDoj
 go.augendre.info/fatcontext v0.9.0/go.mod h1:L94brOAT1OOUNue6ph/2HnwxoNlds9aXDF2FcUntbNw=
 go.opencensus.io v0.24.0 h1:y73uSU6J157QMP2kn2r30vwW1A2W2WFwSCGnAVxeaD0=
 go.opencensus.io v0.24.0/go.mod h1:vNK8G9p7aAivkbmorf4v+7Hgx+Zs0yY+0fOtgBfjQKo=
-go.opentelemetry.io/build-tools v0.28.1 h1:kqUxg8kpeOZ0wHXLmX2WmpqbeIVLkufZLcjTexi8cak=
-go.opentelemetry.io/build-tools v0.28.1/go.mod h1:3hSt/hRgbNM6phYzQ/CeGsTbfSKBkvXg8WtSZLNkxeQ=
+go.opentelemetry.io/build-tools v0.29.0 h1:dG1zmHKYTMsP0zGT34+32/U+YR+lcJ8kka7Lc4RAoT4=
+go.opentelemetry.io/build-tools v0.29.0/go.mod h1:jTzBit47RqVApCwStu9qw2TfGqR2Fhu5jinLHqfhghQ=
 go.opentelemetry.io/build-tools/crosslink v0.28.1 h1:9J8UFw8Py610SWLKRHyX1Lqfkman98xCxF8tEp9iKqc=
 go.opentelemetry.io/build-tools/crosslink v0.28.1/go.mod h1:yi6HtVnoKb4iCzFxqgjv3El/MU9AXbiUljQwxYYcfbU=
 go.opentelemetry.io/build-tools/dbotconf v0.28.1 h1:AomAh0JWnNvMRE4y4lMb+B8Zf4xdm+QwDHYb+lC2gbQ=
