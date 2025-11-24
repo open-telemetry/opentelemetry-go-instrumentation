@@ -5,13 +5,13 @@ go 1.24.0
 require (
 	github.com/Masterminds/semver/v3 v3.4.0
 	github.com/docker/docker v28.5.2+incompatible
-	github.com/golangci/golangci-lint/v2 v2.6.0
+	github.com/golangci/golangci-lint/v2 v2.6.2
 	github.com/google/go-licenses/v2 v2.0.1
 	go.opentelemetry.io/auto v0.23.0
 	go.opentelemetry.io/build-tools/crosslink v0.29.0
 	go.opentelemetry.io/build-tools/dbotconf v0.29.0
 	go.opentelemetry.io/build-tools/multimod v0.29.0
-	golang.org/x/sync v0.17.0
+	golang.org/x/sync v0.18.0
 )
 
 require (
