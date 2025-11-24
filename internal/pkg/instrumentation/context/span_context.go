@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 // Package context contains tracing types used among probes.
-package context
+package context // nolint:revive  // Internal package name.
 
 import "go.opentelemetry.io/otel/trace"
 
