@@ -23,7 +23,7 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/stretchr/testify v1.11.1
 	github.com/xwb1989/sqlparser v0.0.0-20180606152119-120387863bf2
-	go.opentelemetry.io/collector/pdata v1.44.0
+	go.opentelemetry.io/collector/pdata v1.46.0
 	go.opentelemetry.io/contrib/detectors/autodetect v0.10.0
 	go.opentelemetry.io/contrib/exporters/autoexport v0.63.0
 	go.opentelemetry.io/otel v1.38.0
