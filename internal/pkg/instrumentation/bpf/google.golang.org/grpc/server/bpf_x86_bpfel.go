@@ -91,6 +91,7 @@ type bpfProgramSpecs struct {
 	UprobeServerHandleStream         *ebpf.ProgramSpec `ebpf:"uprobe_server_handleStream"`
 	UprobeServerHandleStream2        *ebpf.ProgramSpec `ebpf:"uprobe_server_handleStream2"`
 	UprobeServerHandleStream2Returns *ebpf.ProgramSpec `ebpf:"uprobe_server_handleStream2_Returns"`
+	UprobeServerHandleStream3        *ebpf.ProgramSpec `ebpf:"uprobe_server_handleStream3"`
 	UprobeServerHandleStreamReturns  *ebpf.ProgramSpec `ebpf:"uprobe_server_handleStream_Returns"`
 }
 
@@ -215,6 +216,7 @@ type bpfPrograms struct {
 	UprobeServerHandleStream         *ebpf.Program `ebpf:"uprobe_server_handleStream"`
 	UprobeServerHandleStream2        *ebpf.Program `ebpf:"uprobe_server_handleStream2"`
 	UprobeServerHandleStream2Returns *ebpf.Program `ebpf:"uprobe_server_handleStream2_Returns"`
+	UprobeServerHandleStream3        *ebpf.Program `ebpf:"uprobe_server_handleStream3"`
 	UprobeServerHandleStreamReturns  *ebpf.Program `ebpf:"uprobe_server_handleStream_Returns"`
 }
 
@@ -226,6 +228,7 @@ func (p *bpfPrograms) Close() error {
 		p.UprobeServerHandleStream,
 		p.UprobeServerHandleStream2,
 		p.UprobeServerHandleStream2Returns,
+		p.UprobeServerHandleStream3,
 		p.UprobeServerHandleStreamReturns,
 	)
 }

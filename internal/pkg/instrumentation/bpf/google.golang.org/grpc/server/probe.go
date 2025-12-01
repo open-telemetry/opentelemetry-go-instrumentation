@@ -41,6 +41,9 @@ var (
 	// handleStream methods changed to accept a *transport.ServerStream instead
 	// of a *transport.Stream.
 	serverStreamVersion = semver.New(1, 69, 0, "", "")
+	// embeddedStreamVersion is the version *transport.ServerStream embeds a
+	// Stream instead of a *Stream.
+	embeddedStreamVersion = semver.New(1, 77, 0, "", "")
 )
 
 // New returns a new [probe.Probe].
@@ -194,8 +197,26 @@ func New(logger *slog.Logger, ver string) probe.Probe {
 					PackageConstraints: []probe.PackageConstraints{
 						{
 							Package: "google.golang.org/grpc",
+							Constraints: must(semver.NewConstraint(
+								fmt.Sprintf(
+									"> %s, < %s",
+									serverStreamVersion,
+									embeddedStreamVersion,
+								),
+							)),
+							FailureMode: probe.FailureModeIgnore,
+						},
+					},
+				},
+				{
+					Sym:         "google.golang.org/grpc.(*Server).handleStream",
+					EntryProbe:  "uprobe_server_handleStream3",
+					ReturnProbe: "uprobe_server_handleStream_Returns",
+					PackageConstraints: []probe.PackageConstraints{
+						{
+							Package: "google.golang.org/grpc",
 							Constraints: must(
-								semver.NewConstraint(">= " + serverStreamVersion.String()),
+								semver.NewConstraint(">= " + embeddedStreamVersion.String()),
 							),
 							FailureMode: probe.FailureModeIgnore,
 						},
