@@ -312,7 +312,8 @@ int uprobe_server_handleStream3(struct pt_regs *ctx) {
     // Stream is embedded in ServerStream.
     void *stream_pos = get_argument(ctx, server_stream_pos);
     if (stream_pos == NULL) {
-        bpf_printk("grpc:server:uprobe/server_handleStream3: failed to get ServerStream.Stream arg");
+        bpf_printk(
+            "grpc:server:uprobe/server_handleStream3: failed to get ServerStream.Stream arg");
         return -1;
     }
 
