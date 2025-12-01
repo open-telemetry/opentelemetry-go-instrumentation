@@ -226,7 +226,7 @@ UPROBE_RETURN(server_handleStream, struct grpc_request_t, grpc_events)
 // func (s *Server) handleStream(t transport.ServerTransport, stream *transport.ServerStream)
 // https://github.com/grpc/grpc-go/blob/317271b232677b7869576a49855b01b9f4775d67/server.go#L1735
 //
-// This is only compatible with versions > 1.69.0 of the Server.
+// This is only compatible with versions > 1.69.0 and < 1.77.0 of the Server.
 SEC("uprobe/server_handleStream2")
 int uprobe_server_handleStream2(struct pt_regs *ctx) {
     u64 server_stream_pos = 4;
@@ -299,6 +299,40 @@ lookup:
     stop_tracking_span(&event->sc, &event->psc);
     bpf_map_delete_elem(&grpc_events, &key);
     return 0;
+}
+
+// This instrumentation attaches uprobe to the following function:
+// func (s *Server) handleStream(t transport.ServerTransport, stream *transport.ServerStream)
+// https://github.com/grpc/grpc-go/blob/805b1f88c5fb9419e3837c72e1deb9c2ec677ffe/server.go#L1767
+//
+// This is only compatible with versions >= 1.77.0 of the Server.
+SEC("uprobe/server_handleStream3")
+int uprobe_server_handleStream3(struct pt_regs *ctx) {
+    u64 server_stream_pos = 4;
+    // Stream is embedded in ServerStream.
+    void *stream_pos = get_argument(ctx, server_stream_pos);
+    if (stream_pos == NULL) {
+        bpf_printk("grpc:server:uprobe/server_handleStream3: failed to get ServerStream.Stream arg");
+        return -1;
+    }
+
+    struct go_iface go_context = {0};
+    long rc = bpf_probe_read_user(
+        &go_context.type, sizeof(go_context.type), (void *)(stream_pos + stream_ctx_pos));
+    if (rc != 0) {
+        bpf_printk("grpc:server:uprobe/server_handleStream3: failed to read context type");
+        return -2;
+    }
+
+    rc = bpf_probe_read_user(&go_context.data,
+                             sizeof(go_context.data),
+                             get_go_interface_instance(stream_pos + stream_ctx_pos));
+    if (rc != 0) {
+        bpf_printk("grpc:server:uprobe/server_handleStream3: failed to read context data");
+        return -3;
+    }
+
+    return handleStream(ctx, stream_pos, &go_context);
 }
 
 // func (d *http2Server) operateHeader(frame *http2.MetaHeadersFrame) error
