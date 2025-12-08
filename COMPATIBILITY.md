@@ -7,7 +7,7 @@ Auto-instrumentation can be configured to capture the telemetry sent to the
 
 Supported versions of [`otel`]:
 
-- `v0.14.0` to `v1.38.0`
+- `v0.14.0` to `v1.39.0`
 
 **Note**: Versions of `go.opentelemetry.io/otel < v1.33.0` are not supported
 when using Go >= `1.24`. See [this issue] for details.
