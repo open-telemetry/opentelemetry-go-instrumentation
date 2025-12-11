@@ -27,6 +27,7 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 - Cache offsets for Go `1.25.5`. ([#3078](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/3078))
 - Cache offsets for `go.opentelemetry.io/otel` `v1.39.0`. ([#3101](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/3101))
 - Cache offsets for `golang.org/x/net` `0.48.0`. ([#3105](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/3105))
+- Cache offsets for `google.golang.org/grpc` `1.79.0-dev`. ([#3122](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/3122))
 
 ### Removed
 
