@@ -304,7 +304,11 @@ func (i *Base[BPFObj, BPFEvent]) read() (*BPFEvent, error) {
 	} else {
 		var zero BPFEvent
 		if len(record.RawSample) < int(unsafe.Sizeof(zero)) {
-			return nil, fmt.Errorf("record size %d too small for event size %d", len(record.RawSample), unsafe.Sizeof(zero))
+			return nil, fmt.Errorf(
+				"record size %d too small for event size %d",
+				len(record.RawSample),
+				unsafe.Sizeof(zero),
+			)
 		}
 		event = (*BPFEvent)(unsafe.Pointer(&record.RawSample[0]))
 	}
