@@ -122,10 +122,10 @@ func main() {
 
 	s := NewServer()
 	mux := setupHandler(s)
-	if err := http.ListenAndServe(
+	if err := http.ListenAndServe( //nolint:gosec // Non-timeout HTTP server.
 		port,
 		mux,
-	); err != nil { //nolint:gosec // Non-timeout HTTP server.
+	); err != nil {
 		slog.Error("error running server", "error", err)
 	}
 }
