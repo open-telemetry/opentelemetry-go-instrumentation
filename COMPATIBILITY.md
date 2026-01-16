@@ -30,7 +30,7 @@ Tracing instrumentation is provided for the following Go libraries.
 
 Supported version ranges:
 
-- `go1.19` to `go1.25.5`
+- `go1.19` to `go1.25.6`
 
 ### github.com/segmentio/kafka-go
 
@@ -38,7 +38,7 @@ Supported version ranges:
 
 Supported version ranges:
 
-- `v0.4.1` to `v0.4.48`
+- `v0.4.1` to `v0.4.50`
 
 ### google.golang.org/grpc
 
@@ -54,4 +54,4 @@ Supported version ranges:
 
 Supported version ranges:
 
-- `go1.19` to `go1.25.5`
+- `go1.19` to `go1.25.6`
