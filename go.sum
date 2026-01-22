@@ -176,8 +176,8 @@ github.com/xwb1989/sqlparser v0.0.0-20180606152119-120387863bf2 h1:zzrxE1FKn5ryB
 github.com/xwb1989/sqlparser v0.0.0-20180606152119-120387863bf2/go.mod h1:hzfGeIUDq/j97IG+FhNqkowIyEcD88LrW6fyU3K3WqY=
 github.com/yuin/goldmark v1.1.27/go.mod h1:3hX8gzYuyVAZsxl0MRgGTJEmQBFcNTphYh9decYSb74=
 github.com/yuin/goldmark v1.2.1/go.mod h1:3hX8gzYuyVAZsxl0MRgGTJEmQBFcNTphYh9decYSb74=
-go.opentelemetry.io/collector/featuregate v1.49.0 h1:4UfnqTvSvm6GkeD/w39LYLPmnZDfk4f+grkWuyl0NPU=
-go.opentelemetry.io/collector/featuregate v1.49.0/go.mod h1:/1bclXgP91pISaEeNulRxzzmzMTm4I5Xih2SnI4HRSo=
+go.opentelemetry.io/collector/featuregate v1.50.0 h1:nROGw8VpLuc2/PExnL6ammUpr2y7pozpbwgae6zU4s0=
+go.opentelemetry.io/collector/featuregate v1.50.0/go.mod h1:/1bclXgP91pISaEeNulRxzzmzMTm4I5Xih2SnI4HRSo=
 go.opentelemetry.io/collector/internal/testutil v0.143.0 h1:rp3vIsOhXg/H3YXuStdggGTLuU+Udf1BdDIF/I7+Tyk=
 go.opentelemetry.io/collector/internal/testutil v0.143.0/go.mod h1:YAD9EAkwh/l5asZNbEBEUCqEjoL1OKMjAMoPjPqH76c=
 go.opentelemetry.io/collector/pdata v1.49.0 h1:h6V3rdLNxweI3K8B5SZzjMiVdsPPBB1TPAWwZkCtGZE=
