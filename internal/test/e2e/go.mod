@@ -114,16 +114,16 @@ require (
 	github.com/x448/float16 v0.8.4 // indirect
 	github.com/xwb1989/sqlparser v0.0.0-20180606152119-120387863bf2 // indirect
 	go.opentelemetry.io/collector/featuregate v1.51.0 // indirect
-	go.opentelemetry.io/contrib/bridges/prometheus v0.64.0 // indirect
-	go.opentelemetry.io/contrib/detectors/autodetect v0.11.0 // indirect
-	go.opentelemetry.io/contrib/detectors/aws/ec2/v2 v2.1.0 // indirect
-	go.opentelemetry.io/contrib/detectors/aws/ecs v1.39.0 // indirect
-	go.opentelemetry.io/contrib/detectors/aws/eks v1.39.0 // indirect
-	go.opentelemetry.io/contrib/detectors/aws/lambda v0.64.0 // indirect
-	go.opentelemetry.io/contrib/detectors/azure/azurevm v0.11.0 // indirect
-	go.opentelemetry.io/contrib/detectors/gcp v1.39.0 // indirect
-	go.opentelemetry.io/contrib/exporters/autoexport v0.64.0 // indirect
-	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.64.0 // indirect
+	go.opentelemetry.io/contrib/bridges/prometheus v0.65.0 // indirect
+	go.opentelemetry.io/contrib/detectors/autodetect v0.12.0 // indirect
+	go.opentelemetry.io/contrib/detectors/aws/ec2/v2 v2.2.0 // indirect
+	go.opentelemetry.io/contrib/detectors/aws/ecs v1.40.0 // indirect
+	go.opentelemetry.io/contrib/detectors/aws/eks v1.40.0 // indirect
+	go.opentelemetry.io/contrib/detectors/aws/lambda v0.65.0 // indirect
+	go.opentelemetry.io/contrib/detectors/azure/azurevm v0.12.0 // indirect
+	go.opentelemetry.io/contrib/detectors/gcp v1.40.0 // indirect
+	go.opentelemetry.io/contrib/exporters/autoexport v0.65.0 // indirect
+	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.65.0 // indirect
 	go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc v0.16.0 // indirect
 	go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp v0.16.0 // indirect
 	go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc v1.40.0 // indirect
