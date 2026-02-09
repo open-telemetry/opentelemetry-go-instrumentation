@@ -5,7 +5,7 @@ networks:
 
 services:
   jaeger:
-    image: jaegertracing/jaeger:2.15.0@sha256:a5221e8464fe7c3d77c9fb368dfc24771bfb02bf136f00b23ba374f1eac9c2bf
+    image: jaegertracing/jaeger:2.15.1@sha256:a7dd965687d45507072676db81e6903706ba334dfc92f0c248125cfd9a70c483
     ports:
       - "16686:16686" # Web HTTP
     restart: unless-stopped
