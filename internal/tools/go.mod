@@ -1,6 +1,6 @@
 module go.opentelemetry.io/auto/internal/tools
 
-go 1.24.0
+go 1.25.0
 
 require (
 	github.com/Masterminds/semver/v3 v3.4.0
@@ -271,7 +271,7 @@ require (
 	gopkg.in/warnings.v0 v0.1.2 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	gotest.tools/v3 v3.5.2 // indirect
-	honnef.co/go/tools v0.6.1 // indirect
+	honnef.co/go/tools v0.7.0 // indirect
 	k8s.io/klog/v2 v2.130.1 // indirect
 	mvdan.cc/gofumpt v0.9.2 // indirect
 	mvdan.cc/unparam v0.0.0-20251027182757-5beb8c8f8f15 // indirect
