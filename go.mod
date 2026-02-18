@@ -1,6 +1,6 @@
 module go.opentelemetry.io/auto
 
-go 1.24.0
+go 1.25.0
 
 retract (
 	v0.6.5 // Contains retractions only.
@@ -23,7 +23,7 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/stretchr/testify v1.11.1
 	github.com/xwb1989/sqlparser v0.0.0-20180606152119-120387863bf2
-	go.opentelemetry.io/collector/pdata v1.51.0
+	go.opentelemetry.io/collector/pdata v1.52.0
 	go.opentelemetry.io/contrib/detectors/autodetect v0.12.0
 	go.opentelemetry.io/contrib/exporters/autoexport v0.65.0
 	go.opentelemetry.io/otel v1.40.0
@@ -93,7 +93,7 @@ require (
 	github.com/prometheus/procfs v0.19.2 // indirect
 	github.com/x448/float16 v0.8.4 // indirect
 	go.opentelemetry.io/auto/sdk v1.2.1 // indirect
-	go.opentelemetry.io/collector/featuregate v1.51.0 // indirect
+	go.opentelemetry.io/collector/featuregate v1.52.0 // indirect
 	go.opentelemetry.io/contrib/bridges/prometheus v0.65.0 // indirect
 	go.opentelemetry.io/contrib/detectors/aws/ec2/v2 v2.2.0 // indirect
 	go.opentelemetry.io/contrib/detectors/aws/ecs v1.40.0 // indirect
