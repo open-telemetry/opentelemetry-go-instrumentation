@@ -47,7 +47,7 @@ func NewRenderer(l *slog.Logger, src string, f fs.FS) Renderer {
 //
 // All src will be rendered in the same file-tree with the same names (except
 // for any ".tmpl" suffixes) as found in the Renderer's fs.FS.
-func (r Renderer) Render(dest string, data interface{}) error {
+func (r Renderer) Render(dest string, data any) error {
 	r.log.Debug("rendering...", "src", r.src, "dest", dest, "data", data)
 
 	tmpls, err := template.ParseFS(r.fs, r.src)

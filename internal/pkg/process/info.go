@@ -75,7 +75,7 @@ func (i *Info) alloc(logger *slog.Logger) (*Allocation, error) {
 //
 // A partial Info and error may be returned for dependencies that cannot be
 // parsed.
-func NewInfo(id ID, relevantFuncs map[string]interface{}) (*Info, error) {
+func NewInfo(id ID, relevantFuncs map[string]any) (*Info, error) {
 	elfF, err := elf.Open(id.ExePath())
 	if err != nil {
 		return nil, err
@@ -170,7 +170,7 @@ func findModules(goVer *semver.Version, deps []*debug.Module) (map[string]*semve
 	return out, err
 }
 
-func findFunctions(elfF *elf.File, relevantFuncs map[string]interface{}) ([]*binary.Func, error) {
+func findFunctions(elfF *elf.File, relevantFuncs map[string]any) ([]*binary.Func, error) {
 	found, err := binary.FindFunctionsUnStripped(elfF, relevantFuncs)
 	if err != nil {
 		if !errors.Is(err, elf.ErrNoSymbols) {

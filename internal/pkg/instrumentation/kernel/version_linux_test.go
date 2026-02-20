@@ -43,7 +43,6 @@ func TestVersion(t *testing.T) {
 		},
 	}
 	for name, tt := range tests {
-		tt := tt
 		t.Run(name, func(t *testing.T) {
 			oldUnameFn := unameFn
 			unameFn = tt.unameFn
