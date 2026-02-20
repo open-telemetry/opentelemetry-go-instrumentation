@@ -32,7 +32,7 @@ func TestTracerProviderConcurrentSafe(t *testing.T) {
 			defer close(done)
 
 			var wg sync.WaitGroup
-			for i := 0; i < goroutines; i++ {
+			for i := range goroutines {
 				wg.Add(1)
 				go func(name, version string) {
 					defer wg.Done()

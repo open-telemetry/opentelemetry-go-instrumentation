@@ -938,7 +938,7 @@ func TestSpanConcurrentSafe(t *testing.T) {
 			defer close(done)
 
 			var wg sync.WaitGroup
-			for i := 0; i < nGoroutine; i++ {
+			for i := range nGoroutine {
 				wg.Add(1)
 				go func(n int) {
 					defer wg.Done()
@@ -971,7 +971,7 @@ func TestSpanConcurrentSafe(t *testing.T) {
 			ctx := context.Background()
 
 			var wg sync.WaitGroup
-			for i := 0; i < nSpans; i++ {
+			for i := range nSpans {
 				wg.Add(1)
 				go func(n int) {
 					defer wg.Done()
@@ -991,7 +991,7 @@ func TestSpanConcurrentSafe(t *testing.T) {
 			defer close(done)
 
 			var wg sync.WaitGroup
-			for i := 0; i < nTracers; i++ {
+			for i := range nTracers {
 				wg.Add(1)
 				go func(n int) {
 					defer wg.Done()

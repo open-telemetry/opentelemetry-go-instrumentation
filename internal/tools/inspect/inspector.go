@@ -233,7 +233,7 @@ func (i *Inspector) do(ctx context.Context, j job) (out []result, err error) {
 
 func (i *Inspector) logResult(r result) {
 	msg := "offset "
-	kv := []interface{}{"version", r.Version, "id", r.StructField}
+	kv := []any{"version", r.Version, "id", r.StructField}
 	if !r.Valid {
 		msg += "not found"
 	} else {
