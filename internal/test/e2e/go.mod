@@ -1,6 +1,6 @@
 module go.opentelemetry.io/auto/internal/test/e2e
 
-go 1.24.0
+go 1.25.0
 
 require (
 	github.com/cilium/ebpf v0.20.0
@@ -147,7 +147,7 @@ require (
 	go.yaml.in/yaml/v3 v3.0.4 // indirect
 	golang.org/x/arch v0.24.0 // indirect
 	golang.org/x/crypto v0.48.0 // indirect
-	golang.org/x/net v0.50.0 // indirect
+	golang.org/x/net v0.51.0 // indirect
 	golang.org/x/oauth2 v0.35.0 // indirect
 	golang.org/x/sys v0.41.0 // indirect
 	golang.org/x/term v0.40.0 // indirect
