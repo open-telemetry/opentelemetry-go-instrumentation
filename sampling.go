@@ -5,6 +5,7 @@ package auto
 
 import (
 	"errors"
+	"maps"
 	"strconv"
 	"strings"
 
@@ -160,9 +161,7 @@ func (p ParentBasedSampler) convert() (*sampling.Config, error) {
 	}
 	if rootSampler != nil {
 		pbc.Root = rootSampler.ActiveSampler
-		for id, config := range rootSampler.Samplers {
-			samplers[id] = config
-		}
+		maps.Copy(samplers, rootSampler.Samplers)
 	}
 
 	remoteSampledSampler, err := convertSamplerToConfig(p.RemoteSampled)
@@ -171,9 +170,7 @@ func (p ParentBasedSampler) convert() (*sampling.Config, error) {
 	}
 	if remoteSampledSampler != nil {
 		pbc.RemoteSampled = remoteSampledSampler.ActiveSampler
-		for id, config := range remoteSampledSampler.Samplers {
-			samplers[id] = config
-		}
+		maps.Copy(samplers, remoteSampledSampler.Samplers)
 	}
 
 	remoteNotSampledSampler, err := convertSamplerToConfig(p.RemoteNotSampled)
@@ -182,9 +179,7 @@ func (p ParentBasedSampler) convert() (*sampling.Config, error) {
 	}
 	if remoteNotSampledSampler != nil {
 		pbc.RemoteNotSampled = remoteNotSampledSampler.ActiveSampler
-		for id, config := range remoteNotSampledSampler.Samplers {
-			samplers[id] = config
-		}
+		maps.Copy(samplers, remoteNotSampledSampler.Samplers)
 	}
 
 	localSampledSamplers, err := convertSamplerToConfig(p.LocalSampled)
@@ -193,9 +188,7 @@ func (p ParentBasedSampler) convert() (*sampling.Config, error) {
 	}
 	if localSampledSamplers != nil {
 		pbc.LocalSampled = localSampledSamplers.ActiveSampler
-		for id, config := range localSampledSamplers.Samplers {
-			samplers[id] = config
-		}
+		maps.Copy(samplers, localSampledSamplers.Samplers)
 	}
 
 	localNotSampledSampler, err := convertSamplerToConfig(p.LocalNotSampled)
@@ -204,9 +197,7 @@ func (p ParentBasedSampler) convert() (*sampling.Config, error) {
 	}
 	if localNotSampledSampler != nil {
 		pbc.LocalNotSampled = localNotSampledSampler.ActiveSampler
-		for id, config := range localNotSampledSampler.Samplers {
-			samplers[id] = config
-		}
+		maps.Copy(samplers, localNotSampledSampler.Samplers)
 	}
 
 	samplers[sampling.ParentBasedID] = sampling.SamplerConfig{

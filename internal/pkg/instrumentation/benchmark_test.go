@@ -16,7 +16,7 @@ import (
 
 func benchmarkFilterUnusedProbes(b *testing.B, count int) {
 	fnNames := make([]string, count)
-	for i := 0; i < count; i++ {
+	for i := range count {
 		fnNames[i] = strconv.Itoa(i)
 	}
 
@@ -47,7 +47,7 @@ func benchmarkValidateProbeDependents(b *testing.B, count int) {
 
 	syms := make([]probe.FunctionSymbol, count)
 
-	for i := 0; i < count; i++ {
+	for i := range count {
 		syms[i] = probe.FunctionSymbol{
 			Symbol:    strconv.Itoa(i),
 			DependsOn: nil,

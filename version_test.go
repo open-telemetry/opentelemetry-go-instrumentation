@@ -29,7 +29,7 @@ func TestVersionMatchesYaml(t *testing.T) {
 		return
 	}
 
-	var versionInfo map[string]interface{}
+	var versionInfo map[string]any
 
 	err = yaml.Unmarshal(versionYaml, &versionInfo)
 	if err != nil {
@@ -38,6 +38,6 @@ func TestVersionMatchesYaml(t *testing.T) {
 	}
 
 	// incredibad, but it's where the intended version is declared at the moment
-	expectedVersion := versionInfo["module-sets"].(map[string]interface{})["auto"].(map[string]interface{})["version"]
+	expectedVersion := versionInfo["module-sets"].(map[string]any)["auto"].(map[string]any)["version"]
 	assert.Equal(t, expectedVersion, Version(), "Build version should match versions.yaml.")
 }
