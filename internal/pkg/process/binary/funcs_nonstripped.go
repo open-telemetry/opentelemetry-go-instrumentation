@@ -12,7 +12,7 @@ import (
 
 func FindFunctionsUnStripped(
 	elfF *elf.File,
-	relevantFuncs map[string]interface{},
+	relevantFuncs map[string]any,
 ) ([]*Func, error) {
 	symbols, err := elfF.Symbols()
 	if err != nil {

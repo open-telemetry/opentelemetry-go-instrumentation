@@ -12,7 +12,7 @@ import (
 	"math"
 )
 
-func FindFunctionsStripped(elfF *elf.File, relevantFuncs map[string]interface{}) ([]*Func, error) {
+func FindFunctionsStripped(elfF *elf.File, relevantFuncs map[string]any) ([]*Func, error) {
 	var sec *elf.Section
 	if sec = elfF.Section(".gopclntab"); sec == nil {
 		return nil, fmt.Errorf("%s section not found in target binary", ".gopclntab")

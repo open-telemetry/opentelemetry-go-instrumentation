@@ -42,7 +42,7 @@ func TestLoadProbes(t *testing.T) {
 	id := setupTestModule(t)
 	pid := process.ID(id)
 
-	info, err := process.NewInfo(pid, make(map[string]interface{}))
+	info, err := process.NewInfo(pid, make(map[string]any))
 	if info == nil { //nolint:staticcheck  // nil-ness beign tested
 		t.Fatalf("failed to create process.Info: %v", err)
 	}

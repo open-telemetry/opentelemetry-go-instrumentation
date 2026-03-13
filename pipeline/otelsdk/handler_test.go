@@ -243,7 +243,7 @@ func TestTraceHandlerShutdown(t *testing.T) {
 	handler, err := NewTraceHandler(ctx, WithTraceExporter(exp))
 	require.NoError(t, err)
 
-	for i := 0; i < nSpan; i++ {
+	for i := range nSpan {
 		scope := pcommon.NewInstrumentationScope()
 		scope.SetName("test")
 
@@ -267,7 +267,7 @@ func TestControllerTraceConcurrentSafe(t *testing.T) {
 	const goroutines = 10
 
 	var wg sync.WaitGroup
-	for n := 0; n < goroutines; n++ {
+	for n := range goroutines {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
