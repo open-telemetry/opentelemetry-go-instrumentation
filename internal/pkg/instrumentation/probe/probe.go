@@ -257,7 +257,7 @@ func (i *Base[BPFObj, BPFEvent]) buildEBPFCollection(
 	spec *ebpf.CollectionSpec,
 ) (*ebpf.Collection, error) {
 	obj := new(BPFObj)
-	if c, ok := (interface{}(obj)).(io.Closer); ok {
+	if c, ok := (any(obj)).(io.Closer); ok {
 		i.closers = append(i.closers, c)
 	}
 
@@ -660,7 +660,7 @@ func (c AllocationConst) InjectOption(info *process.Info) (inject.Option, error)
 // and should be used instead where applicable.
 type KeyValConst struct {
 	Key string
-	Val interface{}
+	Val any
 }
 
 // InjectOption returns the appropriately configured [inject.WithKeyValue].

@@ -18,6 +18,7 @@ linters:
     - gosec
     - govet
     - ineffassign
+    - modernize
     - misspell
     - perfsprint
     - revive

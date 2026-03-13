@@ -11,6 +11,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"maps"
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/cilium/ebpf"
@@ -78,8 +79,8 @@ func Constants(spec *ebpf.CollectionSpec, opts ...Option) error {
 	return nil
 }
 
-func newConsts(opts []Option) (map[string]interface{}, error) {
-	consts := make(map[string]interface{})
+func newConsts(opts []Option) (map[string]any, error) {
+	consts := make(map[string]any)
 	var err error
 	for _, o := range opts {
 		err = errors.Join(err, o.apply(consts))
@@ -89,15 +90,13 @@ func newConsts(opts []Option) (map[string]interface{}, error) {
 
 // Option configures key-values to be injected into an [ebpf.CollectionSpec].
 type Option interface {
-	apply(map[string]interface{}) error
+	apply(map[string]any) error
 }
 
-type option map[string]interface{}
+type option map[string]any
 
-func (o option) apply(m map[string]interface{}) error {
-	for key, val := range o {
-		m[key] = val
-	}
+func (o option) apply(m map[string]any) error {
+	maps.Copy(m, o)
 	return nil
 }
 
@@ -105,7 +104,7 @@ type errOpt struct {
 	err error
 }
 
-func (o errOpt) apply(map[string]interface{}) error {
+func (o errOpt) apply(map[string]any) error {
 	return o.err
 }
 
@@ -120,7 +119,7 @@ func WithAllocation(alloc process.Allocation) Option {
 }
 
 // WithKeyValue returns an option that will set key to value.
-func WithKeyValue(key string, value interface{}) Option {
+func WithKeyValue(key string, value any) Option {
 	return option{key: value}
 }
 
