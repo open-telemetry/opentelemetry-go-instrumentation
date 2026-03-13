@@ -1,6 +1,6 @@
 module go.opentelemetry.io/auto/internal/tools
 
-go 1.24.0
+go 1.25.0
 
 require (
 	github.com/Masterminds/semver/v3 v3.4.0
@@ -163,7 +163,7 @@ require (
 	github.com/mattn/go-colorable v0.1.14 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/mattn/go-runewidth v0.0.20 // indirect
-	github.com/mgechev/revive v1.13.0 // indirect
+	github.com/mgechev/revive v1.15.0 // indirect
 	github.com/mitchellh/go-homedir v1.1.0 // indirect
 	github.com/moby/docker-image-spec v1.3.1 // indirect
 	github.com/moby/sys/atomicwriter v0.1.0 // indirect
