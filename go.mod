@@ -1,6 +1,6 @@
 module go.opentelemetry.io/auto
 
-go 1.24.0
+go 1.25.0
 
 retract (
 	v0.6.5 // Contains retractions only.
@@ -90,7 +90,7 @@ require (
 	github.com/prometheus/client_model v0.6.2 // indirect
 	github.com/prometheus/common v0.67.5 // indirect
 	github.com/prometheus/otlptranslator v1.0.0 // indirect
-	github.com/prometheus/procfs v0.19.2 // indirect
+	github.com/prometheus/procfs v0.20.1 // indirect
 	github.com/x448/float16 v0.8.4 // indirect
 	go.opentelemetry.io/auto/sdk v1.2.1 // indirect
 	go.opentelemetry.io/collector/featuregate v1.51.0 // indirect
