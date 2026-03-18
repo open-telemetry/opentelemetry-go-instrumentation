@@ -85,7 +85,7 @@ func newApp(ctx context.Context, l *slog.Logger, j job) (*app, error) {
 	return a, nil
 }
 
-// GetOffset returnst the struct field offset for sf. It uses the DWARF data
+// GetOffset returns the struct field offset for sf. It uses the DWARF data
 // of the app's built binary to find this value.
 func (a *app) GetOffset(id structfield.ID) (uint64, bool) {
 	a.log.Debug("analyzing binary...", "id", id, "binary", a.exec)

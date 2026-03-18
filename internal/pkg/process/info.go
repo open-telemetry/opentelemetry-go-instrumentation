@@ -108,16 +108,24 @@ func goVer(raw string) (*semver.Version, error) {
 		return goDevVer(raw)
 	}
 	raw = strings.TrimPrefix(raw, "go")
+	raw = stripGoExperimentSuffix(raw)
 
-	// Handle local modified versions of Go.
-	raw = strings.TrimSuffix(raw, "+")
+	return semver.NewVersion(raw)
+}
 
-	// Trims GOEXPERIMENT version suffix if present.
+func stripGoExperimentSuffix(raw string) string {
+	// Trim GOEXPERIMENT suffixes used in Go version strings.
+	// Historically this appeared as " X:...", and newer toolchains can emit
+	// it as "-X:..." (for example, "go1.26.0-X:boringcrypto").
 	if idx := strings.Index(raw, " X:"); idx > 0 {
 		raw = raw[:idx]
 	}
+	if idx := strings.Index(raw, "-X:"); idx > 0 {
+		raw = raw[:idx]
+	}
 
-	return semver.NewVersion(raw)
+	// Handle local modified versions of Go.
+	return strings.TrimSuffix(raw, "+")
 }
 
 var devVerRE = regexp.MustCompile(`devel \+([a-f0-9]+) `)
