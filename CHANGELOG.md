@@ -52,6 +52,10 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 - Cache offsets for Go `1.26.0`. ([#3365](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/3365))
 - Cache offsets for Go `1.26.1`. ([#3365](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/3365))
 
+### Fixed
+
+- Parse Go versions that include `GOEXPERIMENT` suffixes such as `-X:boringcrypto`. ([#3390](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/3390))
+
 ### Removed
 
 - Build support for [Go 1.23] has been removed.
