@@ -791,9 +791,9 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 
 This is the first release of OpenTelemetry Go Automatic Instrumentation.
 
-[Unreleased]: https://github.com/open-telemetry/opentelemetry-go-instrumentation/compare/sdk/v1.2.1...HEAD
-[`go.opentelemetry.io/auto/sdk` v1.2.1]: https://github.com/open-telemetry/opentelemetry-go-instrumentation/releases/tag/sdk/v1.2.1
+[Unreleased]: https://github.com/open-telemetry/opentelemetry-go-instrumentation/compare/v0.24.0...HEAD
 [v0.24.0/v1.2.0]: https://github.com/open-telemetry/opentelemetry-go-instrumentation/releases/tag/v0.24.0
+[`go.opentelemetry.io/auto/sdk` v1.2.1]: https://github.com/open-telemetry/opentelemetry-go-instrumentation/releases/tag/sdk/v1.2.1
 [v0.23.0/v1.2.0]: https://github.com/open-telemetry/opentelemetry-go-instrumentation/releases/tag/v0.23.0
 [v0.22.1]: https://github.com/open-telemetry/opentelemetry-go-instrumentation/releases/tag/v0.22.1
 [v0.22.0]: https://github.com/open-telemetry/opentelemetry-go-instrumentation/releases/tag/v0.22.0
