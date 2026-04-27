@@ -9,5 +9,5 @@ const (
 	// Name is used for `telemetry.distro.name` resource attribute.
 	Name = "opentelemetry-go-instrumentation"
 	// Version is the current release version of OpenTelemetry Go auto-instrumentation in use.
-	Version = "v0.23.0"
+	Version = "v0.24.0"
 )

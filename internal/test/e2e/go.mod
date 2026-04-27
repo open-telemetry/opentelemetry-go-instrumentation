@@ -10,7 +10,7 @@ require (
 	github.com/mattn/go-sqlite3 v1.14.41
 	github.com/segmentio/kafka-go v0.4.50
 	github.com/stretchr/testify v1.11.1
-	go.opentelemetry.io/auto v0.23.0
+	go.opentelemetry.io/auto v0.24.0
 	go.opentelemetry.io/auto/sdk v1.2.1
 	go.opentelemetry.io/collector/pdata v1.51.0
 	go.opentelemetry.io/otel v1.40.0
