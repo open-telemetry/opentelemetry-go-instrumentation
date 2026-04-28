@@ -57,7 +57,7 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 
 ### Changed
 
-- The `clang-format` `make` target now runs inside a pinned Docker image to ensure a consistent `clang-format` version across contributors and CI. ([#3472](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/3472))
+- `clang-format` now runs inside a pinned Docker image in the `make clang-format` target, the `clang-format-check` CI workflow, and the local pre-commit hook to ensure a consistent `clang-format` version across contributors and CI. ([#3472](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/3472))
 
 ### Removed
 
