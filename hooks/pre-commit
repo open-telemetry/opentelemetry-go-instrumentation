@@ -1,15 +1,23 @@
 #!/bin/bash
 
-# Format all staged C/C++ files
+# Format all staged C/C++ files using the clang-format docker image pinned in
+# dependencies.Dockerfile so the version stays consistent with the
+# `make clang-format` target and the clang-format CI workflow.
 files=$(git diff --cached --name-only --diff-filter=ACM | grep -E '\.(c|cpp|h)$')
 
 if [ -n "$files" ]; then
     echo "Running clang-format on:"
     echo "$files"
 
-    # Run clang-format on the staged files
+    repo_root=$(git rev-parse --show-toplevel)
+    image=$(awk '$4=="clang-format" {print $2}' "$repo_root/dependencies.Dockerfile")
+
+    # Run clang-format on all staged files in a single container invocation.
+    docker run --rm -u "$(id -u):$(id -g)" -v "$repo_root:/workdir" -w /workdir "$image" \
+        clang-format -i $files
+
+    # Re-add formatted files to staging.
     for file in $files; do
-        clang-format -i "$file"
-        git add "$file"  # Re-add formatted files to staging
+        git add "$file"
     done
 fi

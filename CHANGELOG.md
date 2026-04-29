@@ -69,6 +69,10 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 - Cache offsets for `google.golang.org/grpc` `1.80.0`. ([#3402](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/3402))
 - Cache offsets for `go.opentelemetry.io/otel` `v1.43.0`. ([#3430](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/3430))
 
+### Changed
+
+- `clang-format` now runs inside a pinned Docker image in the `make clang-format` target, the `clang-format-check` CI workflow, and the local pre-commit hook to ensure a consistent `clang-format` version across contributors and CI. ([#3472](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/3472))
+
 ### Removed
 
 - Build support for [Go 1.23] has been removed.
