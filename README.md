@@ -61,7 +61,6 @@ See the [contributing documentation](./CONTRIBUTING.md).
 - [Eden Federman](https://github.com/edeNFed), Maintainer
 - [Robert Pająk](https://github.com/pellared), Approver
 
-
 For more information about the emeritus role, see the
 [community repository](https://github.com/open-telemetry/community/blob/main/guides/contributor/membership.md#emeritus-maintainerapprovertriager).
 
