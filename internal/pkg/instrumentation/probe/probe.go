@@ -182,7 +182,8 @@ func (i *Base[BPFObj, BPFEvent]) loadUprobes(exec *link.Executable, info *proces
 	for _, up := range i.Uprobes {
 		var skip bool
 		for _, pc := range up.PackageConstraints {
-			if pc.Constraints.Check(info.Modules[pc.Package]) {
+			pkgVer := info.Modules[pc.Package]
+			if pc.Constraints.Check(&pkgVer) {
 				continue
 			}
 
@@ -527,7 +528,7 @@ func (c StructFieldConst) InjectOption(info *process.Info) (inject.Option, error
 		return nil, fmt.Errorf("unknown module: %s", c.ID.ModPath)
 	}
 
-	off, ok := inject.GetOffset(c.ID, ver)
+	off, ok := inject.GetOffset(c.ID, &ver)
 	if !ok || !off.Valid {
 		if c.logger != nil {
 			c.logger.Info(

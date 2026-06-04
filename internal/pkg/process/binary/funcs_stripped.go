@@ -12,7 +12,7 @@ import (
 	"math"
 )
 
-func FindFunctionsStripped(elfF *elf.File, relevantFuncs map[string]any) ([]*Func, error) {
+func FindFunctionsStripped(elfF *elf.File, relevantFuncs map[string]any) ([]Func, error) {
 	var sec *elf.Section
 	if sec = elfF.Section(".gopclntab"); sec == nil {
 		return nil, fmt.Errorf("%s section not found in target binary", ".gopclntab")
@@ -51,7 +51,7 @@ func FindFunctionsStripped(elfF *elf.File, relevantFuncs map[string]any) ([]*Fun
 		return nil, err
 	}
 
-	var result []*Func
+	var result []Func
 	for _, f := range symTab.Funcs {
 		if _, exists := relevantFuncs[f.Name]; exists {
 			start, returns, err := findFuncOffsetStripped(&f, elfF)
@@ -59,13 +59,11 @@ func FindFunctionsStripped(elfF *elf.File, relevantFuncs map[string]any) ([]*Fun
 				return nil, err
 			}
 
-			function := &Func{
+			result = append(result, Func{
 				Name:          f.Name,
 				Offset:        start,
 				ReturnOffsets: returns,
-			}
-
-			result = append(result, function)
+			})
 		}
 	}
 

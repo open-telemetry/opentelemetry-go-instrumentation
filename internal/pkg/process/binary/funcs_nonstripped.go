@@ -13,13 +13,13 @@ import (
 func FindFunctionsUnStripped(
 	elfF *elf.File,
 	relevantFuncs map[string]any,
-) ([]*Func, error) {
+) ([]Func, error) {
 	symbols, err := elfF.Symbols()
 	if err != nil {
 		return nil, err
 	}
 
-	var result []*Func
+	var result []Func
 	for _, f := range symbols {
 		_, exists := relevantFuncs[f.Name]
 		if !exists {
@@ -35,13 +35,11 @@ func FindFunctionsUnStripped(
 			return nil, err
 		}
 
-		function := &Func{
+		result = append(result, Func{
 			Name:          f.Name,
 			Offset:        offset,
 			ReturnOffsets: returns,
-		}
-
-		result = append(result, function)
+		})
 	}
 
 	return result, nil

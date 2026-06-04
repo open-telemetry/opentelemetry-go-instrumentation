@@ -22,14 +22,14 @@ import (
 // Info are the details about a target process.
 type Info struct {
 	ID        ID
-	Functions []*binary.Func
+	Functions []binary.Func
 	// GoVersion is the semantic version of Go run by the target process.
 	//
 	// Experimental and build information included in the version is dropped.
 	// If a development version of Go is used, the commit hash will be included
 	// in the metadata of the version.
-	GoVersion *semver.Version
-	Modules   map[string]*semver.Version
+	GoVersion semver.Version
+	Modules   map[string]semver.Version
 
 	aDone atomic.Bool
 	aMu   sync.Mutex
@@ -89,10 +89,11 @@ func NewInfo(id ID, relevantFuncs map[string]any) (*Info, error) {
 		return nil, err
 	}
 
-	result.GoVersion, err = goVer(bi.GoVersion)
+	gv, err := goVer(bi.GoVersion)
 	if err != nil {
 		return nil, err
 	}
+	result.GoVersion = *gv
 
 	result.Functions, err = findFunctions(elfF, relevantFuncs)
 	if err != nil {
@@ -143,11 +144,11 @@ const develModVer = "(devel)"
 
 // VerDevel is the placeholder version used for modules that use the
 // development version "(devel)".
-var VerDevel = semver.MustParse("0.0.0-dev")
+var VerDevel = *semver.MustParse("0.0.0-dev")
 
-func findModules(goVer *semver.Version, deps []*debug.Module) (map[string]*semver.Version, error) {
+func findModules(goVer semver.Version, deps []*debug.Module) (map[string]semver.Version, error) {
 	var err error
-	out := make(map[string]*semver.Version, len(deps)+1)
+	out := make(map[string]semver.Version, len(deps)+1)
 	for _, dep := range deps {
 		if dep.Version == develModVer {
 			// dep.Version is not a parsable semantic version. Do not error.
@@ -164,13 +165,13 @@ func findModules(goVer *semver.Version, deps []*debug.Module) (map[string]*semve
 			)
 			continue
 		}
-		out[dep.Path] = depVersion
+		out[dep.Path] = *depVersion
 	}
 	out["std"] = goVer
 	return out, err
 }
 
-func findFunctions(elfF *elf.File, relevantFuncs map[string]any) ([]*binary.Func, error) {
+func findFunctions(elfF *elf.File, relevantFuncs map[string]any) ([]binary.Func, error) {
 	found, err := binary.FindFunctionsUnStripped(elfF, relevantFuncs)
 	if err != nil {
 		if !errors.Is(err, elf.ErrNoSymbols) {
