@@ -5,4 +5,4 @@
 
 package kernel
 
-func cpuCount() (int, error) { return 0, nil }
+func cpuCount() (uint64, error) { return 0, nil }
