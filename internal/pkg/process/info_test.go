@@ -76,12 +76,10 @@ func TestInfoAlloc(t *testing.T) {
 		i := new(Info)
 		var wg sync.WaitGroup
 		for range goroutines {
-			wg.Add(1)
-			go func() {
-				defer wg.Done()
+			wg.Go(func() {
 				_, err := i.Alloc(logger)
 				assert.ErrorIs(t, err, assert.AnError)
-			}()
+			})
 		}
 		wg.Wait()
 
@@ -96,12 +94,10 @@ func TestInfoAlloc(t *testing.T) {
 		i := new(Info)
 		var wg sync.WaitGroup
 		for range goroutines {
-			wg.Add(1)
-			go func() {
-				defer wg.Done()
+			wg.Go(func() {
 				_, err := i.Alloc(logger)
 				assert.NoError(t, err)
-			}()
+			})
 		}
 		wg.Wait()
 

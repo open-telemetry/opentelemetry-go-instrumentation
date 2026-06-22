@@ -268,10 +268,7 @@ func TestControllerTraceConcurrentSafe(t *testing.T) {
 
 	var wg sync.WaitGroup
 	for n := range goroutines {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-
+		wg.Go(func() {
 			scope := pcommon.NewInstrumentationScope()
 			scope.SetName(fmt.Sprintf("tracer-%d", n%(goroutines/2)))
 			scope.SetVersion("v1")
@@ -281,7 +278,7 @@ func TestControllerTraceConcurrentSafe(t *testing.T) {
 			span.SetTraceID(pcommon.TraceID{0x1})
 			span.SetSpanID(pcommon.SpanID{0x1})
 			handler.HandleTrace(scope, "url", spans)
-		}()
+		})
 	}
 
 	wg.Wait()
