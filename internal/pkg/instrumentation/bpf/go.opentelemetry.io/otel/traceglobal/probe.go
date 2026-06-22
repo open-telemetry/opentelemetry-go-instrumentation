@@ -98,7 +98,7 @@ func New(logger *slog.Logger) probe.Probe {
 				probe.AllocationConst{},
 				probe.KeyValConst{
 					Key: "attr_type_invalid",
-					Val: uint64(attribute.INVALID),
+					Val: uint64(attribute.EMPTY),
 				},
 				probe.KeyValConst{
 					Key: "attr_type_bool",
