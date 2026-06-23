@@ -267,18 +267,27 @@ func (h *TraceHandler) links(links ptrace.SpanLinkSlice) []trace.Link {
 		if err != nil {
 			h.logger.Error("failed to parse link tracestate", "error", err, "tracestate", raw)
 		}
+		flags := traceFlags(l.Flags())
 
 		out[i] = trace.Link{
 			SpanContext: trace.NewSpanContext(trace.SpanContextConfig{
 				TraceID:    trace.TraceID(l.TraceID()),
 				SpanID:     trace.SpanID(l.SpanID()),
-				TraceFlags: trace.TraceFlags(l.Flags()),
+				TraceFlags: flags,
 				TraceState: ts,
 			}),
 			Attributes: attrs(l.Attributes()),
 		}
 	}
 	return out
+}
+
+func traceFlags(flags uint32) trace.TraceFlags {
+	const maxTraceFlags = 0xff
+	if flags > maxTraceFlags {
+		return 0
+	}
+	return trace.TraceFlags(flags) //nolint:gosec  // Bound checked.
 }
 
 func status(stat ptrace.Status) (codes.Code, string) {

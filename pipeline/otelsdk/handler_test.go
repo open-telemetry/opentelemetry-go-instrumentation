@@ -4,10 +4,11 @@
 package otelsdk
 
 import (
+	"cmp"
 	"context"
 	"fmt"
 	"math"
-	"sort"
+	"slices"
 	"strconv"
 	"sync"
 	"sync/atomic"
@@ -56,9 +57,7 @@ var (
 			attribute.Float64Slice("float64.slice", []float64{-2., .0832, 43e12}),
 			attribute.StringSlice("string.slice", []string{"x", "y", "z"}),
 		}
-		sort.Slice(out, func(i, j int) bool {
-			return out[i].Key < out[j].Key
-		})
+		sortAttrs(out)
 		return out
 	}()
 )
@@ -171,25 +170,25 @@ func TestTraceHandlerHandleTrace(t *testing.T) {
 
 	for i, span := range got {
 		// Span contexts get modified by exporter, update expected with output.
-		want[i].SpanContext = span.SpanContext
+		want[i].SpanContext = span.SpanContext //nolint:gosec  // got and want lengths checked above.
 
-		sort.Slice(span.Attributes, func(i, j int) bool {
-			return span.Attributes[i].Key < span.Attributes[j].Key
-		})
+		sortAttrs(span.Attributes)
 
 		for _, link := range span.Links {
-			sort.Slice(link.Attributes, func(i, j int) bool {
-				return link.Attributes[i].Key < link.Attributes[j].Key
-			})
+			sortAttrs(link.Attributes)
 		}
 
 		for _, e := range span.Events {
-			sort.Slice(e.Attributes, func(i, j int) bool {
-				return e.Attributes[i].Key < e.Attributes[j].Key
-			})
+			sortAttrs(e.Attributes)
 		}
 	}
 	assert.Equal(t, want, got)
+}
+
+func sortAttrs(attrs []attribute.KeyValue) {
+	slices.SortFunc(attrs, func(a, b attribute.KeyValue) int {
+		return cmp.Compare(a.Key, b.Key)
+	})
 }
 
 type exporter struct {
