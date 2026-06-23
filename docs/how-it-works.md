@@ -6,7 +6,7 @@ We aim to bring the automatic instrumentation experience found in languages like
 
 - No code changes required - any Go application can be instrumented without modifying the source code.
 - Support wide range of Go applications - instrumentation is supported for Go version 1.12 and above. In addition, a common practice for Go applications is to shrink the binary size by stripping debug symbols via `go build -ldflags "-s -w"`. This instrumentation works for stripped binaries as well.
-- Configuration is done via `OTEL_*` environment variables according to [OpenTelemetry Environment Variable Specification](https://opentelemetry.io/docs/reference/specification/sdk-environment-variables/#general-sdk-configuration).
+- Configuration is done via `OTEL_*` environment variables according to [OpenTelemetry Environment Variable Specification](https://opentelemetry.io/docs/specs/otel/configuration/sdk-environment-variables/#general-sdk-configuration).
   **In order to inject instrumentation into your process, set the `OTEL_GO_AUTO_TARGET_EXE` environment variable to the path of the target executable. This is not a part of the OTEL specification mentioned above.**
 - Instrumented libraries follow the [OpenTelemetry specification](https://github.com/open-telemetry/opentelemetry-specification) and semantic conventions to produce standard OpenTelemetry data.
 
@@ -20,7 +20,7 @@ Fortunately, the Linux kernel provides a mechanism to attach user-defined code t
 The Go auto-instrumentation agent runs as a single binary that analyzes a target Go process (the application you want to instrument) and attaches eBPF programs to hooks in the target process. To do this, the agent starts three objects internally:
 
 * A process `Analyzer`, which finds the target process and detects library functions that the agent can auto-instrument.
-* An OpenTelemetry `Controller`, which uses the [OpenTelemetry Go SDK](https://opentelemetry.io/docs/languages/go/) to export telemetry data.
+* An OpenTelemetry `Controller`, which uses the [OpenTelemetry Go SDK](https://pkg.go.dev/go.opentelemetry.io/otel/sdk) to export telemetry data.
 * An Instrumentation `Manager`, which coordinates sending events received from eBPF programs to the OpenTelemetry `Controller`.
 
 The agent uses the [Cilium eBPF libraries for Go](https://github.com/cilium/ebpf) to do much of the fundamental eBPF handling such as loading programs and reading events.
