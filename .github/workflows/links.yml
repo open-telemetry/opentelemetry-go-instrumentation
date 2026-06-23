@@ -34,6 +34,8 @@ jobs:
             --verbose
             --no-progress
             --max-concurrency 5
+            --max-retries 6
+            --retry-wait-time 2
             --cache
             --max-cache-age 1d
             --cache-exclude-status 300..=599
