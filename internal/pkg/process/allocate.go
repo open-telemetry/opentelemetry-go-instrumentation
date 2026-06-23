@@ -45,7 +45,8 @@ func allocate(logger *slog.Logger, id ID) (*Allocation, error) {
 		"Requesting memory allocation",
 		"size", mapSize,
 		"page size", pagesize,
-		"cpu count", nCPU)
+		"cpu count", nCPU,
+	)
 
 	addr, err := remoteAllocate(logger, id, mapSize)
 	if err != nil {
