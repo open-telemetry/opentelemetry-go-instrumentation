@@ -129,6 +129,7 @@ func (b *builder) pullImage(ctx context.Context) error {
 			Username: username,
 			Password: password,
 		}
+		//nolint:gosec // Docker requires registry credentials serialized as a RegistryAuth payload.
 		encodedJSON, err := json.Marshal(authConfig)
 		if err != nil {
 			panic(err)

@@ -219,14 +219,13 @@ func processFn(e *event) ptrace.SpanSlice {
 
 	// https://www.rfc-editor.org/rfc/rfc9110.html#name-status-codes
 	const maxStatus = 599
-	if e.StatusCode > maxStatus {
-		e.StatusCode = 0
+	statusCode := 0
+	if e.StatusCode <= maxStatus {
+		statusCode = int(e.StatusCode)
 	}
 	attrs := []attribute.KeyValue{
 		semconv.HTTPRequestMethodKey.String(method),
-		semconv.HTTPResponseStatusCodeKey.Int(
-			int(e.StatusCode),
-		), //nolint:gosec  // Bound checked.
+		semconv.HTTPResponseStatusCodeKey.Int(statusCode),
 	}
 
 	if path != "" {
@@ -287,7 +286,7 @@ func processFn(e *event) ptrace.SpanSlice {
 
 	pdataconv.Attributes(span.Attributes(), attrs...)
 
-	if e.StatusCode >= 400 && e.StatusCode < 600 {
+	if statusCode >= 400 && statusCode < 600 {
 		span.Status().SetCode(ptrace.StatusCodeError)
 	}
 
