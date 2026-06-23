@@ -30,15 +30,15 @@ func TestWithAllocationDetails(t *testing.T) {
 	require.Contains(t, got, keyEndAddr)
 
 	v := got[keyTotalCPUs]
-	require.IsType(t, *(new(uint64)), v)
+	require.IsType(t, uint64(0), v)
 	assert.Equal(t, nCPU, v.(uint64))
 
 	v = got[keyStartAddr]
-	require.IsType(t, *(new(uint64)), v)
+	require.IsType(t, uint64(0), v)
 	assert.Equal(t, start, v.(uint64))
 
 	v = got[keyEndAddr]
-	require.IsType(t, *(new(uint64)), v)
+	require.IsType(t, uint64(0), v)
 	assert.Equal(t, end, v.(uint64))
 }
 
@@ -62,7 +62,7 @@ func TestWithOffset(t *testing.T) {
 	require.Contains(t, got, name)
 
 	v := got[name]
-	require.IsType(t, *(new(uint64)), v)
+	require.IsType(t, uint64(0), v)
 	assert.Equal(t, off, v.(uint64))
 
 	// Failed look-ups need to be returned as an error.

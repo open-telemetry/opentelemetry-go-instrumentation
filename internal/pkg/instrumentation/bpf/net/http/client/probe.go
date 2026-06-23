@@ -53,7 +53,8 @@ func New(logger *slog.Logger, version string) probe.Probe {
 	// If the kernel supports context propagation, we enable the
 	// probe which writes the data in the outgoing buffer.
 	if kernel.SupportsContextPropagation() {
-		uprobes = append(uprobes,
+		uprobes = append(
+			uprobes,
 			&probe.Uprobe{
 				Sym:        "net/http.Header.writeSubset",
 				EntryProbe: "uprobe_writeSubset",

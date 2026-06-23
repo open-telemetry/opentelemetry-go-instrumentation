@@ -21,7 +21,7 @@ import (
 func TestWithServiceName(t *testing.T) {
 	const name = "test_serviceName"
 
-	c, err := newConfig(context.Background(), []Option{WithServiceName((name))})
+	c, err := newConfig(context.Background(), []Option{WithServiceName(name)})
 	require.NoError(t, err)
 
 	assert.Contains(t, c.resAttrs, semconv.ServiceName(defaultServiceName()))
