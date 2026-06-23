@@ -31,6 +31,10 @@ func TestGoVer(t *testing.T) {
 			want: semver.MustParse("1.20.1"),
 		},
 		{
+			in:   "go1.26.0-X:boringcrypto",
+			want: semver.MustParse("1.26.0"),
+		},
+		{
 			in:   "go1.18+",
 			want: semver.MustParse("1.18"),
 		},
