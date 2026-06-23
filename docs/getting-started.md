@@ -64,7 +64,7 @@ To instrument a containerized application, follow these steps:
        - /proc:/host/proc
    ```
 
-   For more environment variables, refer to the [OpenTelemetry SDK configuration documentation](https://opentelemetry.io/docs/languages/sdk-configuration/).
+   For more environment variables, refer to the [OpenTelemetry SDK environment variable specification](https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/configuration/sdk-environment-variables.md#general-sdk-configuration).
 
 3. **Start the instrumentation** by running:
 
