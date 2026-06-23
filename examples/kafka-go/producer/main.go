@@ -44,7 +44,8 @@ func (s *server) producerHandler(wrt http.ResponseWriter, req *http.Request) {
 		Value: body,
 	}
 	msgs := []kafka.Message{msg1, msg2}
-	err = s.kafkaWriter.WriteMessages(req.Context(),
+	err = s.kafkaWriter.WriteMessages(
+		req.Context(),
 		msgs...,
 	)
 	if err != nil {
