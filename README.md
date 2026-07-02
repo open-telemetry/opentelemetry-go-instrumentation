@@ -2,9 +2,23 @@
 
 [![PkgGoDev](https://pkg.go.dev/badge/go.opentelemetry.io/auto)](https://pkg.go.dev/go.opentelemetry.io/auto)
 
-This repository provides [OpenTelemetry] tracing instrumentation for [Go] libraries using [eBPF].
+> [!WARNING]
+> **This project is deprecated**
+>
+> **OpenTelemetry Go Automatic Instrumentation is no longer actively maintained.**
+> End users and vendors should migrate to [OpenTelemetry eBPF Instrumentation (OBI)](https://opentelemetry.io/docs/zero-code/obi), the upstream OpenTelemetry project for zero-code, eBPF-based application observability.
+>
+> **Migrate to OBI**
+>
+> - [Documentation](https://opentelemetry.io/docs/zero-code/obi)
+> - [GitHub repository](https://github.com/open-telemetry/opentelemetry-ebpf-instrumentation)
+> - [CNCF Slack `#otel-ebpf-instrumentation`](https://cloud-native.slack.com/archives/C06DQ7S2YEP) ([join CNCF Slack](https://slack.cncf.io))
+>
+> If you are migrating from this project, we encourage you to share feedback, opinions, and feature gaps in the OBI [GitHub Discussions](https://github.com/open-telemetry/opentelemetry-ebpf-instrumentation/discussions) or on Slack so they can inform the OBI roadmap.
+> Due to limited maintainer bandwidth, there are **no official plans to provide zero-change migrations** from this project to OBI,
+> but any contributions toward this goal are welcome.
 
-:construction: This project is currently work in progress.
+This repository provides [OpenTelemetry] tracing instrumentation for [Go] libraries using [eBPF].
 
 ## Compatibility
 
