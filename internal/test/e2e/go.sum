@@ -260,10 +260,10 @@ github.com/xwb1989/sqlparser v0.0.0-20180606152119-120387863bf2 h1:zzrxE1FKn5ryB
 github.com/xwb1989/sqlparser v0.0.0-20180606152119-120387863bf2/go.mod h1:hzfGeIUDq/j97IG+FhNqkowIyEcD88LrW6fyU3K3WqY=
 go.opentelemetry.io/collector/featuregate v1.62.0 h1:pYY7RlulSCTOS9mFWxasMLwYJCfNXHtnOkZlv3jg/V4=
 go.opentelemetry.io/collector/featuregate v1.62.0/go.mod h1:4ga1QBMPEejXXmpyJS8lmaRpknJ3Lb9Bvk6e420bUFU=
-go.opentelemetry.io/collector/internal/testutil v0.155.0 h1:ExZ3lqM1e1Y83AAXKr6Xsw20v4LHW6GZ8VeLLQHiOrA=
-go.opentelemetry.io/collector/internal/testutil v0.155.0/go.mod h1:Jkjs6rkqs973LqgZ0Fe3zrokQRKULYXPIf4HuqStiEE=
-go.opentelemetry.io/collector/pdata v1.61.0 h1:EVfGB/9dcyMXhMsZ5kzKeGFJj8QWqvmZjgg4RMjnRhE=
-go.opentelemetry.io/collector/pdata v1.61.0/go.mod h1:qYEsyeIJ9tWHb2jSR5HQ9/VmbCGVca+G+ZDAB8dFCMc=
+go.opentelemetry.io/collector/internal/testutil v0.156.0 h1:Nu02vhHA2UQ3Yjyjisk3N24HHxwvw7PQiTz9O1PuiUY=
+go.opentelemetry.io/collector/internal/testutil v0.156.0/go.mod h1:Jkjs6rkqs973LqgZ0Fe3zrokQRKULYXPIf4HuqStiEE=
+go.opentelemetry.io/collector/pdata v1.62.0 h1:xGdwl2Cs5Rq5nKs0nYvAxm3Qq20HcySVAmUElATS8Es=
+go.opentelemetry.io/collector/pdata v1.62.0/go.mod h1:WFy5R6XGpz2Q4MaekeEm+qc4GY5V3+BhQIwGPkp+fj0=
 go.opentelemetry.io/contrib/bridges/prometheus v0.69.0 h1:saQoWg5845Q8TojpqeVStS7zGwVZ6bc5W2PJavTPiBM=
 go.opentelemetry.io/contrib/bridges/prometheus v0.69.0/go.mod h1:AAaS6xs5AyqMdR3Ir0nSWK+QudL2XM8Vbw5INzUxNc8=
 go.opentelemetry.io/contrib/detectors/autodetect v0.16.0 h1:uF7TKa07qGFLcpVa1hT4Ekqy0OInl7LwATVxaZUIMdg=
