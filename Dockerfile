@@ -31,6 +31,6 @@ RUN --mount=type=cache,target=/root/.cache/go-build \
 	go generate ./... \
 	&& go build -o otel-go-instrumentation ./cli/...
 
-FROM gcr.io/distroless/base-debian12@sha256:9c05cfd65f41c93a909ea67eb05b920a3b838780ea55df5421d48295d98ff957
+FROM gcr.io/distroless/base-debian12@sha256:348dac1808083ccc3366399d6db835875b4eaf7c9b694783f5a3f353c4b58a28
 COPY --from=builder /usr/src/go.opentelemetry.io/auto/otel-go-instrumentation /
 CMD ["/otel-go-instrumentation"]
