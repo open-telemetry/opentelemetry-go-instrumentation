@@ -5018,6 +5018,33 @@
             ]
           },
           {
+            "struct": "clientHeaders",
+            "fields": [
+              {
+                "field": "hf",
+                "offsets": [
+                  {
+                    "offset": 8,
+                    "versions": [
+                      "1.82.1"
+                    ]
+                  }
+                ]
+              },
+              {
+                "field": "streamID",
+                "offsets": [
+                  {
+                    "offset": 0,
+                    "versions": [
+                      "1.82.1"
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
             "struct": "http2Server",
             "fields": [
               {

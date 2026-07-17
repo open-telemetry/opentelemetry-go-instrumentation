@@ -201,7 +201,7 @@ func New(logger *slog.Logger, version string) probe.Probe {
 					EntryProbe: "uprobe_LoopyWriter_HeaderHandler",
 					PackageConstraints: []probe.PackageConstraints{
 						{
-							Package:     pkg,
+							Package: pkg,
 							Constraints: must(semver.NewConstraint("< " + clientHeadersVersion.String())),
 							FailureMode: probe.FailureModeIgnore,
 						},
@@ -212,7 +212,7 @@ func New(logger *slog.Logger, version string) probe.Probe {
 					EntryProbe: "uprobe_LoopyWriter_HeaderHandler",
 					PackageConstraints: []probe.PackageConstraints{
 						{
-							Package:     pkg,
+							Package: pkg,
 							Constraints: must(semver.NewConstraint(">= " + clientHeadersVersion.String())),
 							FailureMode: probe.FailureModeIgnore,
 						},
