@@ -46,7 +46,7 @@ Supported version ranges:
 
 Supported version ranges:
 
-- `v1.14.0` to `v1.82.0`
+- `v1.14.0` to `v1.82.1`
 
 ### net/http
 
