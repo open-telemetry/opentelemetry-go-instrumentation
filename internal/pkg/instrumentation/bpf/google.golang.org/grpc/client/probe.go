@@ -40,6 +40,9 @@ const (
 var (
 	writeStatus           = false
 	writeStatusMinVersion = semver.New(1, 40, 0, "", "")
+	// clientHeadersVersion is the gRPC version that replaced headerFrame with
+	// clientHeaders and headerHandler with clientHeaderHandler.
+	clientHeadersVersion = semver.New(1, 82, 1, "", "")
 )
 
 type writeStatusConst struct{}
@@ -86,23 +89,53 @@ func New(logger *slog.Logger, version string) probe.Probe {
 						"nextID",
 					),
 				},
-				probe.StructFieldConst{
-					Key: "headerFrame_hf_pos",
-					ID: structfield.NewID(
-						"google.golang.org/grpc",
-						"google.golang.org/grpc/internal/transport",
-						"headerFrame",
-						"hf",
-					),
+				probe.StructFieldConstMaxVersion{
+					StructField: probe.StructFieldConst{
+						Key: "headerFrame_hf_pos",
+						ID: structfield.NewID(
+							"google.golang.org/grpc",
+							"google.golang.org/grpc/internal/transport",
+							"headerFrame",
+							"hf",
+						),
+					},
+					MaxVersion: clientHeadersVersion,
 				},
-				probe.StructFieldConst{
-					Key: "headerFrame_streamid_pos",
-					ID: structfield.NewID(
-						"google.golang.org/grpc",
-						"google.golang.org/grpc/internal/transport",
-						"headerFrame",
-						"streamID",
-					),
+				probe.StructFieldConstMaxVersion{
+					StructField: probe.StructFieldConst{
+						Key: "headerFrame_streamid_pos",
+						ID: structfield.NewID(
+							"google.golang.org/grpc",
+							"google.golang.org/grpc/internal/transport",
+							"headerFrame",
+							"streamID",
+						),
+					},
+					MaxVersion: clientHeadersVersion,
+				},
+				probe.StructFieldConstMinVersion{
+					StructField: probe.StructFieldConst{
+						Key: "headerFrame_hf_pos",
+						ID: structfield.NewID(
+							"google.golang.org/grpc",
+							"google.golang.org/grpc/internal/transport",
+							"clientHeaders",
+							"hf",
+						),
+					},
+					MinVersion: clientHeadersVersion,
+				},
+				probe.StructFieldConstMinVersion{
+					StructField: probe.StructFieldConst{
+						Key: "headerFrame_streamid_pos",
+						ID: structfield.NewID(
+							"google.golang.org/grpc",
+							"google.golang.org/grpc/internal/transport",
+							"clientHeaders",
+							"streamID",
+						),
+					},
+					MinVersion: clientHeadersVersion,
 				},
 				probe.StructFieldConstMinVersion{
 					StructField: probe.StructFieldConst{
@@ -166,6 +199,24 @@ func New(logger *slog.Logger, version string) probe.Probe {
 				{
 					Sym:        "google.golang.org/grpc/internal/transport.(*loopyWriter).headerHandler",
 					EntryProbe: "uprobe_LoopyWriter_HeaderHandler",
+					PackageConstraints: []probe.PackageConstraints{
+						{
+							Package:     pkg,
+							Constraints: must(semver.NewConstraint("< " + clientHeadersVersion.String())),
+							FailureMode: probe.FailureModeIgnore,
+						},
+					},
+				},
+				{
+					Sym:        "google.golang.org/grpc/internal/transport.(*loopyWriter).clientHeaderHandler",
+					EntryProbe: "uprobe_LoopyWriter_HeaderHandler",
+					PackageConstraints: []probe.PackageConstraints{
+						{
+							Package:     pkg,
+							Constraints: must(semver.NewConstraint(">= " + clientHeadersVersion.String())),
+							FailureMode: probe.FailureModeIgnore,
+						},
+					},
 				},
 			},
 			SpecFn: verifyAndLoadBpf,
@@ -174,6 +225,13 @@ func New(logger *slog.Logger, version string) probe.Probe {
 		SchemaURL: semconv.SchemaURL,
 		ProcessFn: processFn,
 	}
+}
+
+func must(c *semver.Constraints, err error) *semver.Constraints {
+	if err != nil {
+		panic(err)
+	}
+	return c
 }
 
 func verifyAndLoadBpf() (*ebpf.CollectionSpec, error) {

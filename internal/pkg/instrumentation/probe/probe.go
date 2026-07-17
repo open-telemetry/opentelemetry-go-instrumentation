@@ -102,6 +102,9 @@ func (i *Base[BPFObj, BPFEvent]) Manifest() Manifest {
 		if sfc, ok := cnst.(StructFieldConstMinVersion); ok {
 			structFieldIDs = append(structFieldIDs, sfc.StructField.ID)
 		}
+		if sfc, ok := cnst.(StructFieldConstMaxVersion); ok {
+			structFieldIDs = append(structFieldIDs, sfc.StructField.ID)
+		}
 	}
 
 	symbols := make([]FunctionSymbol, 0, len(i.Uprobes))
