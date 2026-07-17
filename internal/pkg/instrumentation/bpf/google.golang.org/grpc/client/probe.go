@@ -202,7 +202,9 @@ func New(logger *slog.Logger, version string) probe.Probe {
 					PackageConstraints: []probe.PackageConstraints{
 						{
 							Package: pkg,
-							Constraints: must(semver.NewConstraint("< " + clientHeadersVersion.String())),
+							Constraints: must(
+								semver.NewConstraint("< " + clientHeadersVersion.String()),
+							),
 							FailureMode: probe.FailureModeIgnore,
 						},
 					},
@@ -213,7 +215,9 @@ func New(logger *slog.Logger, version string) probe.Probe {
 					PackageConstraints: []probe.PackageConstraints{
 						{
 							Package: pkg,
-							Constraints: must(semver.NewConstraint(">= " + clientHeadersVersion.String())),
+							Constraints: must(
+								semver.NewConstraint(">= " + clientHeadersVersion.String()),
+							),
 							FailureMode: probe.FailureModeIgnore,
 						},
 					},
