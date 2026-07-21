@@ -260,8 +260,8 @@ github.com/xdg-go/stringprep v1.0.4 h1:XLI/Ng3O1Atzq0oBs3TWm+5ZVgkq2aqdlvP9JtoZ6
 github.com/xdg-go/stringprep v1.0.4/go.mod h1:mPGuuIYwz7CmR2bT9j4GbQqutWS1zV24gijq1dTyGkM=
 github.com/xwb1989/sqlparser v0.0.0-20180606152119-120387863bf2 h1:zzrxE1FKn5ryBNl9eKOeqQ58Y/Qpo3Q9QNxKHX5uzzQ=
 github.com/xwb1989/sqlparser v0.0.0-20180606152119-120387863bf2/go.mod h1:hzfGeIUDq/j97IG+FhNqkowIyEcD88LrW6fyU3K3WqY=
-go.opentelemetry.io/collector/featuregate v1.62.0 h1:pYY7RlulSCTOS9mFWxasMLwYJCfNXHtnOkZlv3jg/V4=
-go.opentelemetry.io/collector/featuregate v1.62.0/go.mod h1:4ga1QBMPEejXXmpyJS8lmaRpknJ3Lb9Bvk6e420bUFU=
+go.opentelemetry.io/collector/featuregate v1.63.0 h1:6EWX1C5AtmIh8hFH97DwK6R7R8Jk3fTLxAUfZPXGutY=
+go.opentelemetry.io/collector/featuregate v1.63.0/go.mod h1:4ga1QBMPEejXXmpyJS8lmaRpknJ3Lb9Bvk6e420bUFU=
 go.opentelemetry.io/collector/internal/testutil v0.156.0 h1:Nu02vhHA2UQ3Yjyjisk3N24HHxwvw7PQiTz9O1PuiUY=
 go.opentelemetry.io/collector/internal/testutil v0.156.0/go.mod h1:Jkjs6rkqs973LqgZ0Fe3zrokQRKULYXPIf4HuqStiEE=
 go.opentelemetry.io/collector/pdata v1.62.0 h1:xGdwl2Cs5Rq5nKs0nYvAxm3Qq20HcySVAmUElATS8Es=
