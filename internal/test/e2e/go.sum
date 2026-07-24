@@ -370,10 +370,10 @@ google.golang.org/genproto/googleapis/api v0.0.0-20260723164925-7274b71286bd h1:
 google.golang.org/genproto/googleapis/api v0.0.0-20260723164925-7274b71286bd/go.mod h1:1brfde68Npq6+WA75c1EHWPijZEG1kMus61ygPZfn4A=
 google.golang.org/genproto/googleapis/rpc v0.0.0-20260723164925-7274b71286bd h1:kPm/AOyXSYAcNdY53xxeI0SJa5xuS+Z5op/stkZMTcA=
 google.golang.org/genproto/googleapis/rpc v0.0.0-20260723164925-7274b71286bd/go.mod h1:4Hqkh8ycfw05ld/3BWL7rJOSfebL2Q+DVDeRgYgxUU8=
-google.golang.org/grpc v1.82.0 h1:vguDnZUPjE26w09A63VoxZPnvPjB5Riyc0mkXPFmAIU=
-google.golang.org/grpc v1.82.0/go.mod h1:yzTZ1TB1Z3SG+LIYaI+WiE8D5+PZ3ArnrSp8zF3+/ZA=
-google.golang.org/grpc/examples v0.0.0-20260717170606-75f3c0bb2866 h1:74f28e8Wmy3BEplkSH0YdgRpTLn7eJufATMLwsDqCVg=
-google.golang.org/grpc/examples v0.0.0-20260717170606-75f3c0bb2866/go.mod h1:Fgm3Q0MFOx7KB6YbgprLb5U+9lMSZum5Da71E+6V67c=
+google.golang.org/grpc v1.82.1 h1:NnAxzGRA0677vCa4BUkOAnO5+FfQqVl9iUXeD0IqcGE=
+google.golang.org/grpc v1.82.1/go.mod h1:yzTZ1TB1Z3SG+LIYaI+WiE8D5+PZ3ArnrSp8zF3+/ZA=
+google.golang.org/grpc/examples v0.0.0-20260724094440-2cc55737ec5c h1:b3rxkc0kcBHI6uJjsBLMeityYC/d8CUpMobjA/mq0N4=
+google.golang.org/grpc/examples v0.0.0-20260724094440-2cc55737ec5c/go.mod h1:Ql7sxJY5VnLpfPM7Insx9uuyf0DTiD9CnMO3WTSU3Dc=
 google.golang.org/protobuf v1.36.11 h1:fV6ZwhNocDyBLK0dj+fg8ektcVegBBuEolpbTQyBNVE=
 google.golang.org/protobuf v1.36.11/go.mod h1:HTf+CrKn2C3g5S8VImy6tdcUvCska2kB7j23XfzDpco=
 gopkg.in/check.v1 v0.0.0-20161208181325-20d25e280405/go.mod h1:Co6ibVJAznAaIkqp8huTwlJQCZ016jof/cbN4VW5Yz0=
