@@ -11,7 +11,7 @@ permissions:
 jobs:
   updateOffsets:
     permissions:
-      contents: write # required for pushing changes
+      contents: read # pushing is done with the app token, not GITHUB_TOKEN
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
