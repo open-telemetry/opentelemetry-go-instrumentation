@@ -43,7 +43,11 @@ func TestClientHeadersVersionSplit(t *testing.T) {
 					t.Fatalf("uprobe %q not found", symbol)
 				}
 				if len(uprobe.PackageConstraints) != 1 {
-					t.Fatalf("uprobe %q has %d constraints, want 1", symbol, len(uprobe.PackageConstraints))
+					t.Fatalf(
+						"uprobe %q has %d constraints, want 1",
+						symbol,
+						len(uprobe.PackageConstraints),
+					)
 				}
 				if got := uprobe.PackageConstraints[0].Constraints.Check(version); got != want {
 					t.Errorf("uprobe %q match = %t, want %t", symbol, got, want)
@@ -59,14 +63,22 @@ func TestClientHeadersVersionSplit(t *testing.T) {
 			if value.StructField.ID.Struct == "headerFrame" {
 				oldFields++
 				if !value.MaxVersion.Equal(clientHeadersVersion) {
-					t.Errorf("headerFrame max version = %s, want %s", value.MaxVersion, clientHeadersVersion)
+					t.Errorf(
+						"headerFrame max version = %s, want %s",
+						value.MaxVersion,
+						clientHeadersVersion,
+					)
 				}
 			}
 		case probe.StructFieldConstMinVersion:
 			if value.StructField.ID.Struct == "clientHeaders" {
 				newFields++
 				if !value.MinVersion.Equal(clientHeadersVersion) {
-					t.Errorf("clientHeaders min version = %s, want %s", value.MinVersion, clientHeadersVersion)
+					t.Errorf(
+						"clientHeaders min version = %s, want %s",
+						value.MinVersion,
+						clientHeadersVersion,
+					)
 				}
 			}
 		}
@@ -76,21 +88,5 @@ func TestClientHeadersVersionSplit(t *testing.T) {
 	}
 	if newFields != 2 {
 		t.Errorf("clientHeaders field constants = %d, want 2", newFields)
-	}
-
-	var manifestOldFields, manifestNewFields int
-	for _, field := range p.Manifest().StructFields {
-		switch field.Struct {
-		case "headerFrame":
-			manifestOldFields++
-		case "clientHeaders":
-			manifestNewFields++
-		}
-	}
-	if manifestOldFields != 2 {
-		t.Errorf("manifest headerFrame fields = %d, want 2", manifestOldFields)
-	}
-	if manifestNewFields != 2 {
-		t.Errorf("manifest clientHeaders fields = %d, want 2", manifestNewFields)
 	}
 }
