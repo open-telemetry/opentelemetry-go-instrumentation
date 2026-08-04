@@ -41,6 +41,32 @@ type bpf_no_tpSpanContext struct {
 	Padding    [7]uint8
 }
 
+// Names of all BPF objects in the ELF.
+//
+// Used for safe lookups in a Collection or CollectionSpec.
+const (
+	bpf_no_tpMapAllocMap                    = "alloc_map"
+	bpf_no_tpMapEvents                      = "events"
+	bpf_no_tpMapGoContextToSc               = "go_context_to_sc"
+	bpf_no_tpMapKafkaEvents                 = "kafka_events"
+	bpf_no_tpMapKafkaRequestStorageMap      = "kafka_request_storage_map"
+	bpf_no_tpMapProbeActiveSamplerMap       = "probe_active_sampler_map"
+	bpf_no_tpMapSamplersConfigMap           = "samplers_config_map"
+	bpf_no_tpMapSliceArrayBuffMap           = "slice_array_buff_map"
+	bpf_no_tpMapTrackedSpansBySc            = "tracked_spans_by_sc"
+	bpf_no_tpProgUprobeWriteMessages        = "uprobe_WriteMessages"
+	bpf_no_tpProgUprobeWriteMessagesReturns = "uprobe_WriteMessages_Returns"
+	bpf_no_tpVarEndAddr                     = "end_addr"
+	bpf_no_tpVarHex                         = "hex"
+	bpf_no_tpVarMessageHeadersPos           = "message_headers_pos"
+	bpf_no_tpVarMessageKeyPos               = "message_key_pos"
+	bpf_no_tpVarMessageTimePos              = "message_time_pos"
+	bpf_no_tpVarMessageTopicPos             = "message_topic_pos"
+	bpf_no_tpVarStartAddr                   = "start_addr"
+	bpf_no_tpVarTotalCpus                   = "total_cpus"
+	bpf_no_tpVarWriterTopicPos              = "writer_topic_pos"
+)
+
 // loadBpf_no_tp returns the embedded CollectionSpec for bpf_no_tp.
 func loadBpf_no_tp() (*ebpf.CollectionSpec, error) {
 	reader := bytes.NewReader(_Bpf_no_tpBytes)
@@ -61,7 +87,7 @@ func loadBpf_no_tp() (*ebpf.CollectionSpec, error) {
 //	*bpf_no_tpMaps
 //
 // See ebpf.CollectionSpec.LoadAndAssign documentation for details.
-func loadBpf_no_tpObjects(obj interface{}, opts *ebpf.CollectionOptions) error {
+func loadBpf_no_tpObjects(obj any, opts *ebpf.CollectionOptions) error {
 	spec, err := loadBpf_no_tp()
 	if err != nil {
 		return err

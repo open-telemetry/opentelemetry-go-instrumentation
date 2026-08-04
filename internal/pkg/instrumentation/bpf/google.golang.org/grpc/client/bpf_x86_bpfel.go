@@ -38,6 +38,38 @@ type bpfSpanContext struct {
 	Padding    [7]uint8
 }
 
+// Names of all BPF objects in the ELF.
+//
+// Used for safe lookups in a Collection or CollectionSpec.
+const (
+	bpfMapAllocMap                        = "alloc_map"
+	bpfMapEvents                          = "events"
+	bpfMapGoContextToSc                   = "go_context_to_sc"
+	bpfMapGrpcEvents                      = "grpc_events"
+	bpfMapProbeActiveSamplerMap           = "probe_active_sampler_map"
+	bpfMapSamplersConfigMap               = "samplers_config_map"
+	bpfMapSliceArrayBuffMap               = "slice_array_buff_map"
+	bpfMapStreamidToSpanContexts          = "streamid_to_span_contexts"
+	bpfMapTrackedSpansBySc                = "tracked_spans_by_sc"
+	bpfProgUprobeClientConnInvoke         = "uprobe_ClientConn_Invoke"
+	bpfProgUprobeClientConnInvokeReturns  = "uprobe_ClientConn_Invoke_Returns"
+	bpfProgUprobeLoopyWriterHeaderHandler = "uprobe_LoopyWriter_HeaderHandler"
+	bpfProgUprobeHttp2ClientNewStream     = "uprobe_http2Client_NewStream"
+	bpfVarClientconnTargetPtrPos          = "clientconn_target_ptr_pos"
+	bpfVarEndAddr                         = "end_addr"
+	bpfVarErrorStatusPos                  = "error_status_pos"
+	bpfVarHeaderFrameHfPos                = "headerFrame_hf_pos"
+	bpfVarHeaderFrameStreamidPos          = "headerFrame_streamid_pos"
+	bpfVarHex                             = "hex"
+	bpfVarHttpclientNextidPos             = "httpclient_nextid_pos"
+	bpfVarStartAddr                       = "start_addr"
+	bpfVarStatusCodePos                   = "status_code_pos"
+	bpfVarStatusMessagePos                = "status_message_pos"
+	bpfVarStatusS_pos                     = "status_s_pos"
+	bpfVarTotalCpus                       = "total_cpus"
+	bpfVarWriteStatusSupported            = "write_status_supported"
+)
+
 // loadBpf returns the embedded CollectionSpec for bpf.
 func loadBpf() (*ebpf.CollectionSpec, error) {
 	reader := bytes.NewReader(_BpfBytes)
@@ -58,7 +90,7 @@ func loadBpf() (*ebpf.CollectionSpec, error) {
 //	*bpfMaps
 //
 // See ebpf.CollectionSpec.LoadAndAssign documentation for details.
-func loadBpfObjects(obj interface{}, opts *ebpf.CollectionOptions) error {
+func loadBpfObjects(obj any, opts *ebpf.CollectionOptions) error {
 	spec, err := loadBpf()
 	if err != nil {
 		return err
