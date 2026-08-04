@@ -49,6 +49,50 @@ type bpfSpanContext struct {
 	Padding    [7]uint8
 }
 
+// Names of all BPF objects in the ELF.
+//
+// Used for safe lookups in a Collection or CollectionSpec.
+const (
+	bpfMapAllocMap                         = "alloc_map"
+	bpfMapEvents                           = "events"
+	bpfMapGoContextToSc                    = "go_context_to_sc"
+	bpfMapHttpClientUprobeStorageMap       = "http_client_uprobe_storage_map"
+	bpfMapHttpEvents                       = "http_events"
+	bpfMapHttpHeaders                      = "http_headers"
+	bpfMapProbeActiveSamplerMap            = "probe_active_sampler_map"
+	bpfMapSamplersConfigMap                = "samplers_config_map"
+	bpfMapSliceArrayBuffMap                = "slice_array_buff_map"
+	bpfMapTrackedSpansBySc                 = "tracked_spans_by_sc"
+	bpfProgUprobeTransportRoundTrip        = "uprobe_Transport_roundTrip"
+	bpfProgUprobeTransportRoundTripReturns = "uprobe_Transport_roundTrip_Returns"
+	bpfProgUprobeWriteSubset               = "uprobe_writeSubset"
+	bpfVarCtxPtrPos                        = "ctx_ptr_pos"
+	bpfVarEndAddr                          = "end_addr"
+	bpfVarForceQueryPos                    = "force_query_pos"
+	bpfVarFragmentPos                      = "fragment_pos"
+	bpfVarHeadersPtrPos                    = "headers_ptr_pos"
+	bpfVarHex                              = "hex"
+	bpfVarIoWriterBufPtrPos                = "io_writer_buf_ptr_pos"
+	bpfVarIoWriterN_pos                    = "io_writer_n_pos"
+	bpfVarMethodPtrPos                     = "method_ptr_pos"
+	bpfVarOmitHostPos                      = "omit_host_pos"
+	bpfVarOpaquePos                        = "opaque_pos"
+	bpfVarPathPtrPos                       = "path_ptr_pos"
+	bpfVarRawFragmentPos                   = "raw_fragment_pos"
+	bpfVarRawPathPos                       = "raw_path_pos"
+	bpfVarRawQueryPos                      = "raw_query_pos"
+	bpfVarRequestHostPos                   = "request_host_pos"
+	bpfVarRequestProtoPos                  = "request_proto_pos"
+	bpfVarSchemePos                        = "scheme_pos"
+	bpfVarStartAddr                        = "start_addr"
+	bpfVarStatusCodePos                    = "status_code_pos"
+	bpfVarTotalCpus                        = "total_cpus"
+	bpfVarUrlHostPos                       = "url_host_pos"
+	bpfVarUrlPtrPos                        = "url_ptr_pos"
+	bpfVarUserPtrPos                       = "user_ptr_pos"
+	bpfVarUsernamePos                      = "username_pos"
+)
+
 // loadBpf returns the embedded CollectionSpec for bpf.
 func loadBpf() (*ebpf.CollectionSpec, error) {
 	reader := bytes.NewReader(_BpfBytes)
@@ -69,7 +113,7 @@ func loadBpf() (*ebpf.CollectionSpec, error) {
 //	*bpfMaps
 //
 // See ebpf.CollectionSpec.LoadAndAssign documentation for details.
-func loadBpfObjects(obj interface{}, opts *ebpf.CollectionOptions) error {
+func loadBpfObjects(obj any, opts *ebpf.CollectionOptions) error {
 	spec, err := loadBpf()
 	if err != nil {
 		return err

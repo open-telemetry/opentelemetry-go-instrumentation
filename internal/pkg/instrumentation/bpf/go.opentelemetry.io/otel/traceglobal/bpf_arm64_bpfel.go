@@ -70,6 +70,54 @@ type bpfTracerIdT struct {
 	SchemaUrl [128]int8
 }
 
+// Names of all BPF objects in the ELF.
+//
+// Used for safe lookups in a Collection or CollectionSpec.
+const (
+	bpfMapActiveSpansBySpanPtr            = "active_spans_by_span_ptr"
+	bpfMapAllocMap                        = "alloc_map"
+	bpfMapEvents                          = "events"
+	bpfMapGoContextToSc                   = "go_context_to_sc"
+	bpfMapGolangMapbucketStorageMap       = "golang_mapbucket_storage_map"
+	bpfMapOtelSpanStorageMap              = "otel_span_storage_map"
+	bpfMapProbeActiveSamplerMap           = "probe_active_sampler_map"
+	bpfMapSamplersConfigMap               = "samplers_config_map"
+	bpfMapSliceArrayBuffMap               = "slice_array_buff_map"
+	bpfMapSpanNameByContext               = "span_name_by_context"
+	bpfMapTracerIdByContext               = "tracer_id_by_context"
+	bpfMapTracerIdStorageMap              = "tracer_id_storage_map"
+	bpfMapTracerPtrToIdMap                = "tracer_ptr_to_id_map"
+	bpfMapTrackedSpansBySc                = "tracked_spans_by_sc"
+	bpfProgUprobeEnd                      = "uprobe_End"
+	bpfProgUprobeSetAttributes            = "uprobe_SetAttributes"
+	bpfProgUprobeSetName                  = "uprobe_SetName"
+	bpfProgUprobeSetStatus                = "uprobe_SetStatus"
+	bpfProgUprobeStart                    = "uprobe_Start"
+	bpfProgUprobeStartReturns             = "uprobe_Start_Returns"
+	bpfProgUprobeNewStart                 = "uprobe_newStart"
+	bpfVarAttrTypeBool                    = "attr_type_bool"
+	bpfVarAttrTypeBoolslice               = "attr_type_boolslice"
+	bpfVarAttrTypeFloat64                 = "attr_type_float64"
+	bpfVarAttrTypeFloat64slice            = "attr_type_float64slice"
+	bpfVarAttrTypeInt64                   = "attr_type_int64"
+	bpfVarAttrTypeInt64slice              = "attr_type_int64slice"
+	bpfVarAttrTypeInvalid                 = "attr_type_invalid"
+	bpfVarAttrTypeString                  = "attr_type_string"
+	bpfVarAttrTypeStringslice             = "attr_type_stringslice"
+	bpfVarBucketsPtrPos                   = "buckets_ptr_pos"
+	bpfVarEndAddr                         = "end_addr"
+	bpfVarHex                             = "hex"
+	bpfVarStartAddr                       = "start_addr"
+	bpfVarTotalCpus                       = "total_cpus"
+	bpfVarTracerDelegatePos               = "tracer_delegate_pos"
+	bpfVarTracerIdContainsSchemaURL       = "tracer_id_contains_schemaURL"
+	bpfVarTracerIdContainsScopeAttributes = "tracer_id_contains_scope_attributes"
+	bpfVarTracerNamePos                   = "tracer_name_pos"
+	bpfVarTracerProviderPos               = "tracer_provider_pos"
+	bpfVarTracerProviderTracersPos        = "tracer_provider_tracers_pos"
+	bpfVarWroteFlag                       = "wrote_flag"
+)
+
 // loadBpf returns the embedded CollectionSpec for bpf.
 func loadBpf() (*ebpf.CollectionSpec, error) {
 	reader := bytes.NewReader(_BpfBytes)
@@ -90,7 +138,7 @@ func loadBpf() (*ebpf.CollectionSpec, error) {
 //	*bpfMaps
 //
 // See ebpf.CollectionSpec.LoadAndAssign documentation for details.
-func loadBpfObjects(obj interface{}, opts *ebpf.CollectionOptions) error {
+func loadBpfObjects(obj any, opts *ebpf.CollectionOptions) error {
 	spec, err := loadBpf()
 	if err != nil {
 		return err
