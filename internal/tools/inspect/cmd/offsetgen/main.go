@@ -182,6 +182,20 @@ func manifests() ([]inspect.Manifest, error) {
 					"headerFrame",
 					"hf",
 				),
+				// headerFrame was split into clientHeaders and serverHeaders in
+				// grpc 1.82.1. Only the client side is instrumented.
+				structfield.NewID(
+					"google.golang.org/grpc",
+					"google.golang.org/grpc/internal/transport",
+					"clientHeaders",
+					"streamID",
+				),
+				structfield.NewID(
+					"google.golang.org/grpc",
+					"google.golang.org/grpc/internal/transport",
+					"clientHeaders",
+					"hf",
+				),
 				structfield.NewID(
 					"google.golang.org/grpc",
 					"google.golang.org/grpc/internal/status",

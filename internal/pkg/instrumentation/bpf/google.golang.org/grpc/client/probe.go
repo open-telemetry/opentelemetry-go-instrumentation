@@ -42,6 +42,65 @@ var (
 	writeStatusMinVersion = semver.New(1, 40, 0, "", "")
 )
 
+// headerOffsetConst is a [probe.Const] for a struct field offset that more than
+// one struct declares. The offset is resolved from the first ID with a valid
+// offset for the instrumented version of grpc.
+//
+// grpc 1.82.1 split internal/transport.headerFrame into clientHeaders and
+// serverHeaders. Both declare streamID and hf identically, so the offsets are
+// interchangeable and only the struct they are read from differs. The struct is
+// selected from the recorded offsets, not a version boundary: 1.83.0-dev and
+// 1.84.0-dev sort above 1.82.1 but still declare headerFrame.
+type headerOffsetConst struct {
+	Key string
+	IDs []structfield.ID
+
+	logger *slog.Logger
+}
+
+// SetLogger sets the Logger for headerOffsetConst operations.
+func (c headerOffsetConst) SetLogger(l *slog.Logger) probe.Const {
+	c.logger = l
+	return c
+}
+
+// StructFieldIDs returns the struct field IDs an offset is resolved from.
+func (c headerOffsetConst) StructFieldIDs() []structfield.ID {
+	return c.IDs
+}
+
+// InjectOption returns the [inject.Option] for the first ID with a valid
+// offset for the version of grpc used. If no ID has one, an error is returned.
+func (c headerOffsetConst) InjectOption(info *process.Info) (inject.Option, error) {
+	ver, ok := info.Modules[pkg]
+	if !ok {
+		return nil, fmt.Errorf("unknown module: %s", pkg)
+	}
+
+	for _, id := range c.IDs {
+		if off, ok := inject.GetOffset(id, ver); ok && off.Valid {
+			if c.logger != nil {
+				c.logger.Debug("Offset found", "key", c.Key, "id", id, "offset", off.Offset)
+			}
+			return inject.WithKeyValue(c.Key, off.Offset), nil
+		}
+	}
+
+	// No cached offset for any ID. Fall back to analyzing the binary itself.
+	for _, id := range c.IDs {
+		if c.logger != nil {
+			c.logger.Info("Offset not cached, analyzing directly", "key", c.Key, "id", id)
+		}
+
+		off, err := inject.FindOffset(id, info)
+		if err == nil && off.Valid {
+			return inject.WithKeyValue(c.Key, off.Offset), nil
+		}
+	}
+
+	return nil, fmt.Errorf("failed to find valid offset for %q in any of %v", c.Key, c.IDs)
+}
+
 type writeStatusConst struct{}
 
 func (w writeStatusConst) InjectOption(info *process.Info) (inject.Option, error) {
@@ -86,23 +145,39 @@ func New(logger *slog.Logger, version string) probe.Probe {
 						"nextID",
 					),
 				},
-				probe.StructFieldConst{
+				headerOffsetConst{
 					Key: "headerFrame_hf_pos",
-					ID: structfield.NewID(
-						"google.golang.org/grpc",
-						"google.golang.org/grpc/internal/transport",
-						"headerFrame",
-						"hf",
-					),
+					IDs: []structfield.ID{
+						structfield.NewID(
+							"google.golang.org/grpc",
+							"google.golang.org/grpc/internal/transport",
+							"headerFrame",
+							"hf",
+						),
+						structfield.NewID(
+							"google.golang.org/grpc",
+							"google.golang.org/grpc/internal/transport",
+							"clientHeaders",
+							"hf",
+						),
+					},
 				},
-				probe.StructFieldConst{
+				headerOffsetConst{
 					Key: "headerFrame_streamid_pos",
-					ID: structfield.NewID(
-						"google.golang.org/grpc",
-						"google.golang.org/grpc/internal/transport",
-						"headerFrame",
-						"streamID",
-					),
+					IDs: []structfield.ID{
+						structfield.NewID(
+							"google.golang.org/grpc",
+							"google.golang.org/grpc/internal/transport",
+							"headerFrame",
+							"streamID",
+						),
+						structfield.NewID(
+							"google.golang.org/grpc",
+							"google.golang.org/grpc/internal/transport",
+							"clientHeaders",
+							"streamID",
+						),
+					},
 				},
 				probe.StructFieldConstMinVersion{
 					StructField: probe.StructFieldConst{
@@ -163,9 +238,19 @@ func New(logger *slog.Logger, version string) probe.Probe {
 					Sym:        "google.golang.org/grpc/internal/transport.(*http2Client).NewStream",
 					EntryProbe: "uprobe_http2Client_NewStream",
 				},
+				// grpc 1.82.1 split (*loopyWriter).headerHandler into
+				// clientHeaderHandler and serverHeaderHandler. Exactly one of
+				// these symbols is present in any given binary, so the one that
+				// does not resolve is ignored rather than failing the load.
 				{
-					Sym:        "google.golang.org/grpc/internal/transport.(*loopyWriter).headerHandler",
-					EntryProbe: "uprobe_LoopyWriter_HeaderHandler",
+					Sym:         "google.golang.org/grpc/internal/transport.(*loopyWriter).headerHandler",
+					EntryProbe:  "uprobe_LoopyWriter_HeaderHandler",
+					FailureMode: probe.FailureModeIgnore,
+				},
+				{
+					Sym:         "google.golang.org/grpc/internal/transport.(*loopyWriter).clientHeaderHandler",
+					EntryProbe:  "uprobe_LoopyWriter_HeaderHandler",
+					FailureMode: probe.FailureModeIgnore,
 				},
 			},
 			SpecFn: verifyAndLoadBpf,

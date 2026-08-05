@@ -35,6 +35,13 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 
 ### Fixed
 
+- The `google.golang.org/grpc` client probe no longer fails to load for `google.golang.org/grpc` `1.82.1` and above.
+  That release removed `internal/transport.headerFrame` and `(*loopyWriter).headerHandler`, splitting them into
+  `clientHeaders`/`serverHeaders` and `clientHeaderHandler`/`serverHeaderHandler`. The probe now resolves its header
+  offsets from whichever of `headerFrame` and `clientHeaders` the instrumented version declares, and instruments whichever
+  of `headerHandler` and `clientHeaderHandler` it defines. Previously the failure to load this probe stopped all other
+  probes from being loaded. ([#3744](https://github.com/open-telemetry/opentelemetry-go-instrumentation/issues/3744))
+
 ## [v0.24.0/v1.2.0] - 2026-04-22
 
 <!-- markdownlint-disable MD028 -->

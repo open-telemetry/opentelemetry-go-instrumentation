@@ -102,6 +102,9 @@ func (i *Base[BPFObj, BPFEvent]) Manifest() Manifest {
 		if sfc, ok := cnst.(StructFieldConstMinVersion); ok {
 			structFieldIDs = append(structFieldIDs, sfc.StructField.ID)
 		}
+		if sfc, ok := cnst.(structFieldIDer); ok {
+			structFieldIDs = append(structFieldIDs, sfc.StructFieldIDs()...)
+		}
 	}
 
 	symbols := make([]FunctionSymbol, 0, len(i.Uprobes))
@@ -499,6 +502,13 @@ type Const interface {
 
 type setLogger interface {
 	SetLogger(*slog.Logger) Const
+}
+
+// structFieldIDer is implemented by a [Const] resolving struct field offsets
+// for IDs that cannot be determined from its type. [Base.Manifest] includes the
+// returned IDs in the [Manifest] it describes a probe with.
+type structFieldIDer interface {
+	StructFieldIDs() []structfield.ID
 }
 
 // StructFieldConst is a [Const] for a struct field offset. These struct field
