@@ -40,7 +40,7 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
   `clientHeaders`/`serverHeaders` and `clientHeaderHandler`/`serverHeaderHandler`. The probe now resolves its header
   offsets from whichever of `headerFrame` and `clientHeaders` the instrumented version declares, and instruments whichever
   of `headerHandler` and `clientHeaderHandler` it defines. Previously the failure to load this probe stopped all other
-  probes from being loaded. ([#3744](https://github.com/open-telemetry/opentelemetry-go-instrumentation/issues/3744))
+  probes from being loaded. ([#3749](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/3749))
 
 ## [v0.24.0/v1.2.0] - 2026-04-22
 
