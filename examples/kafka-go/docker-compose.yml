@@ -127,8 +127,8 @@ services:
     ports:
       - "16686:16686"
       - "14268:14268"
-    environment:
-      - LOG_LEVEL=debug
+    command:
+      - "--set=service.telemetry.logs.level=debug"
     deploy:
       resources:
         limits:

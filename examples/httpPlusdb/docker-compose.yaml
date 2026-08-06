@@ -42,8 +42,8 @@ services:
       - "16686:16686"
       - "14268:14268"
       - "4318:4318"
-    environment:
-      - LOG_LEVEL=debug
+    command:
+      - "--set=service.telemetry.logs.level=debug"
     deploy:
       resources:
         limits:
