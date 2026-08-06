@@ -178,3 +178,8 @@ func GetOffset(id structfield.ID, ver *semver.Version) (structfield.OffsetKey, b
 func GetLatestOffset(id structfield.ID) (structfield.OffsetKey, *semver.Version) {
 	return offsets.GetLatestOffset(id)
 }
+
+// GetLatestStableOffset returns the latest stable offset known for id.
+func GetLatestStableOffset(id structfield.ID) (structfield.OffsetKey, *semver.Version) {
+	return offsets.GetLatestStableOffset(id)
+}
