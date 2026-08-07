@@ -114,16 +114,21 @@ require (
 	github.com/x448/float16 v0.8.4 // indirect
 	github.com/xwb1989/sqlparser v0.0.0-20180606152119-120387863bf2 // indirect
 	go.opentelemetry.io/collector/featuregate v1.64.0 // indirect
-	go.opentelemetry.io/contrib/bridges/prometheus v0.69.0 // indirect
-	go.opentelemetry.io/contrib/detectors/autodetect v0.16.0 // indirect
-	go.opentelemetry.io/contrib/detectors/aws/ec2/v2 v2.5.1 // indirect
-	go.opentelemetry.io/contrib/detectors/aws/ecs v1.44.0 // indirect
-	go.opentelemetry.io/contrib/detectors/aws/eks v1.44.0 // indirect
-	go.opentelemetry.io/contrib/detectors/aws/lambda v0.69.0 // indirect
-	go.opentelemetry.io/contrib/detectors/azure/azurevm v0.16.0 // indirect
-	go.opentelemetry.io/contrib/detectors/gcp v1.44.0 // indirect
-	go.opentelemetry.io/contrib/detectors/hetzner v0.16.0 // indirect
-	go.opentelemetry.io/contrib/exporters/autoexport v0.69.0 // indirect
+	go.opentelemetry.io/contrib/bridges/prometheus v0.70.0 // indirect
+	go.opentelemetry.io/contrib/detectors/autodetect v0.17.0 // indirect
+	go.opentelemetry.io/contrib/detectors/aws/ec2/v2 v2.5.2 // indirect
+	go.opentelemetry.io/contrib/detectors/aws/ecs v1.45.0 // indirect
+	go.opentelemetry.io/contrib/detectors/aws/eks v1.45.0 // indirect
+	go.opentelemetry.io/contrib/detectors/aws/elasticbeanstalk v0.17.0 // indirect
+	go.opentelemetry.io/contrib/detectors/aws/lambda v0.70.0 // indirect
+	go.opentelemetry.io/contrib/detectors/azure/azurecontainerapps v0.17.0 // indirect
+	go.opentelemetry.io/contrib/detectors/azure/azurevm v0.17.0 // indirect
+	go.opentelemetry.io/contrib/detectors/gcp v1.45.0 // indirect
+	go.opentelemetry.io/contrib/detectors/hetzner v0.17.0 // indirect
+	go.opentelemetry.io/contrib/detectors/ibmcloud/vpc v0.17.0 // indirect
+	go.opentelemetry.io/contrib/detectors/k8sapi v0.17.0 // indirect
+	go.opentelemetry.io/contrib/detectors/vultr v0.17.0 // indirect
+	go.opentelemetry.io/contrib/exporters/autoexport v0.70.0 // indirect
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.70.0 // indirect
 	go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc v0.21.0 // indirect
 	go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp v0.21.0 // indirect
@@ -156,7 +161,7 @@ require (
 	golang.org/x/time v0.15.0 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20260807164820-c8921c73eeea // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20260807164820-c8921c73eeea // indirect
-	google.golang.org/protobuf v1.36.11 // indirect
+	google.golang.org/protobuf v1.36.12-0.20260120151049-f2248ac996af // indirect
 	gopkg.in/evanphx/json-patch.v4 v4.13.0 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
