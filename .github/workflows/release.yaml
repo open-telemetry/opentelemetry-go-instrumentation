@@ -15,6 +15,8 @@ jobs:
       IMAGE_NAME: autoinstrumentation-go
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
 
       - name: Log in to Docker Hub
         uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
