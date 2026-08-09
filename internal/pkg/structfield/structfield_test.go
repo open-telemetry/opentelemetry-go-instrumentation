@@ -147,3 +147,20 @@ func TestGetLatestOffsetFromIndex(t *testing.T) {
 	assert.Equal(t, v120, ver, "invalid version for ClientConn.target")
 	assert.Equal(t, OffsetKey{Offset: 0, Valid: true}, off, "invalid value for ClientConn.target")
 }
+
+func TestGetLatestStableOffsetFromIndex(t *testing.T) {
+	id := NewID("std", "net/http", "Request", "Method")
+	stable := semver.New(1, 3, 0, "", "")
+	prerelease := semver.New(1, 4, 0, "dev", "")
+
+	offsets := NewOffsets()
+	offsets.Put(stable, OffsetKey{Offset: 1, Valid: true})
+	offsets.Put(prerelease, OffsetKey{Offset: 2, Valid: true})
+
+	idx := NewIndex()
+	idx.Put(id, offsets)
+
+	off, ver := idx.GetLatestStableOffset(id)
+	assert.Equal(t, stable, ver, "invalid stable version for Request.Method")
+	assert.Equal(t, OffsetKey{Offset: 1, Valid: true}, off, "invalid stable offset")
+}

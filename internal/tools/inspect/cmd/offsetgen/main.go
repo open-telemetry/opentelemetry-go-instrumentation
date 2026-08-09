@@ -15,6 +15,8 @@ import (
 	"os/signal"
 	"runtime"
 
+	"github.com/Masterminds/semver/v3"
+
 	"go.opentelemetry.io/auto/internal/pkg/structfield"
 	"go.opentelemetry.io/auto/internal/tools/inspect"
 )
@@ -22,7 +24,8 @@ import (
 const (
 	defaultOutputFile = "offset_results.json"
 
-	minGoVersion = "1.19"
+	minGoVersion                = "1.19"
+	grpcClientHeadersMinVersion = "1.82.1"
 )
 
 var (
@@ -58,6 +61,17 @@ func manifests() ([]inspect.Manifest, error) {
 	grpcVers, err := PkgVersions("google.golang.org/grpc")
 	if err != nil {
 		return nil, fmt.Errorf("failed to get \"google.golang.org/grpc\" versions: %w", err)
+	}
+	grpcClientHeadersVersion := semver.MustParse(grpcClientHeadersMinVersion)
+	var grpcHeaderFrameVers, grpcClientHeadersVers []*semver.Version
+	for _, version := range grpcVers {
+		// gRPC's published development tags continue to use headerFrame even
+		// when their numeric version sorts after the stable type split.
+		if version.Prerelease() != "" || version.LessThan(grpcClientHeadersVersion) {
+			grpcHeaderFrameVers = append(grpcHeaderFrameVers, version)
+		} else {
+			grpcClientHeadersVers = append(grpcClientHeadersVers, version)
+		}
 	}
 
 	xNetVers, err := PkgVersions("golang.org/x/net")
@@ -172,18 +186,6 @@ func manifests() ([]inspect.Manifest, error) {
 				),
 				structfield.NewID(
 					"google.golang.org/grpc",
-					"google.golang.org/grpc/internal/transport",
-					"headerFrame",
-					"streamID",
-				),
-				structfield.NewID(
-					"google.golang.org/grpc",
-					"google.golang.org/grpc/internal/transport",
-					"headerFrame",
-					"hf",
-				),
-				structfield.NewID(
-					"google.golang.org/grpc",
 					"google.golang.org/grpc/internal/status",
 					"Error",
 					"s",
@@ -217,6 +219,46 @@ func manifests() ([]inspect.Manifest, error) {
 					"google.golang.org/grpc/peer",
 					"Peer",
 					"LocalAddr",
+				),
+			},
+		},
+		{
+			Application: inspect.Application{
+				Renderer: ren("templates/google.golang.org/grpc/*.tmpl"),
+				Versions: grpcHeaderFrameVers,
+			},
+			StructFields: []structfield.ID{
+				structfield.NewID(
+					"google.golang.org/grpc",
+					"google.golang.org/grpc/internal/transport",
+					"headerFrame",
+					"streamID",
+				),
+				structfield.NewID(
+					"google.golang.org/grpc",
+					"google.golang.org/grpc/internal/transport",
+					"headerFrame",
+					"hf",
+				),
+			},
+		},
+		{
+			Application: inspect.Application{
+				Renderer: ren("templates/google.golang.org/grpc/*.tmpl"),
+				Versions: grpcClientHeadersVers,
+			},
+			StructFields: []structfield.ID{
+				structfield.NewID(
+					"google.golang.org/grpc",
+					"google.golang.org/grpc/internal/transport",
+					"clientHeaders",
+					"streamID",
+				),
+				structfield.NewID(
+					"google.golang.org/grpc",
+					"google.golang.org/grpc/internal/transport",
+					"clientHeaders",
+					"hf",
 				),
 			},
 		},

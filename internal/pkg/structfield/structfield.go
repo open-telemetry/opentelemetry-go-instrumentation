@@ -100,6 +100,20 @@ func (i *Index) GetLatestOffset(id ID) (OffsetKey, *semver.Version) {
 	return off, &ver.Version
 }
 
+// GetLatestStableOffset returns the latest known offset value and stable
+// version for id contained in i.
+func (i *Index) GetLatestStableOffset(id ID) (OffsetKey, *semver.Version) {
+	i.dataMu.RLock()
+	defer i.dataMu.RUnlock()
+
+	offs, ok := i.get(id)
+	if !ok {
+		return OffsetKey{}, nil
+	}
+	off, ver := offs.getLatestStable()
+	return off, &ver.Version
+}
+
 func (i *Index) getOffset(id ID, ver *semver.Version) (OffsetKey, bool) {
 	offs, ok := i.get(id)
 	if !ok {
@@ -299,6 +313,24 @@ func (o *Offsets) getLatest() (OffsetKey, verKey) {
 	val := OffsetKey{}
 	for verKey, ov := range o.values {
 		if verKey.GreaterThan(latestVersion) && ov.offset.Valid {
+			latestVersion = verKey
+			val = ov.offset
+		}
+	}
+
+	return val, latestVersion
+}
+
+// getLatestStable returns the latest known offset value and stable version.
+func (o *Offsets) getLatestStable() (OffsetKey, verKey) {
+	o.mu.RLock()
+	defer o.mu.RUnlock()
+
+	latestVersion := verKey{}
+	val := OffsetKey{}
+	for verKey, ov := range o.values {
+		if verKey.Prerelease() == "" &&
+			verKey.GreaterThan(latestVersion) && ov.offset.Valid {
 			latestVersion = verKey
 			val = ov.offset
 		}

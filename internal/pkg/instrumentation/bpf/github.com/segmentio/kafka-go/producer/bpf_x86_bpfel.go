@@ -41,6 +41,32 @@ type bpfSpanContext struct {
 	Padding    [7]uint8
 }
 
+// Names of all BPF objects in the ELF.
+//
+// Used for safe lookups in a Collection or CollectionSpec.
+const (
+	bpfMapAllocMap                    = "alloc_map"
+	bpfMapEvents                      = "events"
+	bpfMapGoContextToSc               = "go_context_to_sc"
+	bpfMapKafkaEvents                 = "kafka_events"
+	bpfMapKafkaRequestStorageMap      = "kafka_request_storage_map"
+	bpfMapProbeActiveSamplerMap       = "probe_active_sampler_map"
+	bpfMapSamplersConfigMap           = "samplers_config_map"
+	bpfMapSliceArrayBuffMap           = "slice_array_buff_map"
+	bpfMapTrackedSpansBySc            = "tracked_spans_by_sc"
+	bpfProgUprobeWriteMessages        = "uprobe_WriteMessages"
+	bpfProgUprobeWriteMessagesReturns = "uprobe_WriteMessages_Returns"
+	bpfVarEndAddr                     = "end_addr"
+	bpfVarHex                         = "hex"
+	bpfVarMessageHeadersPos           = "message_headers_pos"
+	bpfVarMessageKeyPos               = "message_key_pos"
+	bpfVarMessageTimePos              = "message_time_pos"
+	bpfVarMessageTopicPos             = "message_topic_pos"
+	bpfVarStartAddr                   = "start_addr"
+	bpfVarTotalCpus                   = "total_cpus"
+	bpfVarWriterTopicPos              = "writer_topic_pos"
+)
+
 // loadBpf returns the embedded CollectionSpec for bpf.
 func loadBpf() (*ebpf.CollectionSpec, error) {
 	reader := bytes.NewReader(_BpfBytes)
@@ -61,7 +87,7 @@ func loadBpf() (*ebpf.CollectionSpec, error) {
 //	*bpfMaps
 //
 // See ebpf.CollectionSpec.LoadAndAssign documentation for details.
-func loadBpfObjects(obj interface{}, opts *ebpf.CollectionOptions) error {
+func loadBpfObjects(obj any, opts *ebpf.CollectionOptions) error {
 	spec, err := loadBpf()
 	if err != nil {
 		return err

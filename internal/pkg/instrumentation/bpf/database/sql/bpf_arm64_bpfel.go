@@ -35,6 +35,29 @@ type bpfSqlRequestT struct {
 	Query     [256]int8
 }
 
+// Names of all BPF objects in the ELF.
+//
+// Used for safe lookups in a Collection or CollectionSpec.
+const (
+	bpfMapAllocMap                 = "alloc_map"
+	bpfMapEvents                   = "events"
+	bpfMapGoContextToSc            = "go_context_to_sc"
+	bpfMapProbeActiveSamplerMap    = "probe_active_sampler_map"
+	bpfMapSamplersConfigMap        = "samplers_config_map"
+	bpfMapSliceArrayBuffMap        = "slice_array_buff_map"
+	bpfMapSqlEvents                = "sql_events"
+	bpfMapTrackedSpansBySc         = "tracked_spans_by_sc"
+	bpfProgUprobeExecDC            = "uprobe_execDC"
+	bpfProgUprobeExecDC_Returns    = "uprobe_execDC_Returns"
+	bpfProgUprobeQueryDC           = "uprobe_queryDC"
+	bpfProgUprobeQueryDC_Returns   = "uprobe_queryDC_Returns"
+	bpfVarEndAddr                  = "end_addr"
+	bpfVarHex                      = "hex"
+	bpfVarShouldIncludeDbStatement = "should_include_db_statement"
+	bpfVarStartAddr                = "start_addr"
+	bpfVarTotalCpus                = "total_cpus"
+)
+
 // loadBpf returns the embedded CollectionSpec for bpf.
 func loadBpf() (*ebpf.CollectionSpec, error) {
 	reader := bytes.NewReader(_BpfBytes)
@@ -55,7 +78,7 @@ func loadBpf() (*ebpf.CollectionSpec, error) {
 //	*bpfMaps
 //
 // See ebpf.CollectionSpec.LoadAndAssign documentation for details.
-func loadBpfObjects(obj interface{}, opts *ebpf.CollectionOptions) error {
+func loadBpfObjects(obj any, opts *ebpf.CollectionOptions) error {
 	spec, err := loadBpf()
 	if err != nil {
 		return err

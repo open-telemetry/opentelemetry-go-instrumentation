@@ -70,7 +70,7 @@ func TestLoadProbes(t *testing.T) {
 		manifest := p.Manifest()
 		fields := manifest.StructFields
 		for _, f := range fields {
-			_, ver := inject.GetLatestOffset(f)
+			_, ver := inject.GetLatestStableOffset(f)
 			if ver != nil {
 				info.Modules[f.PkgPath] = ver
 				info.Modules[f.ModPath] = ver

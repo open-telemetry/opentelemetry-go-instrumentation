@@ -45,6 +45,47 @@ type bpfUprobeDataT struct {
 	RespPtr uint64
 }
 
+// Names of all BPF objects in the ELF.
+//
+// Used for safe lookups in a Collection or CollectionSpec.
+const (
+	bpfMapAllocMap                                            = "alloc_map"
+	bpfMapEvents                                              = "events"
+	bpfMapGoContextToSc                                       = "go_context_to_sc"
+	bpfMapGolangMapbucketStorageMap                           = "golang_mapbucket_storage_map"
+	bpfMapHttpServerContextHeaders                            = "http_server_context_headers"
+	bpfMapHttpServerUprobeStorageMap                          = "http_server_uprobe_storage_map"
+	bpfMapHttpServerUprobes                                   = "http_server_uprobes"
+	bpfMapProbeActiveSamplerMap                               = "probe_active_sampler_map"
+	bpfMapSamplersConfigMap                                   = "samplers_config_map"
+	bpfMapSliceArrayBuffMap                                   = "slice_array_buff_map"
+	bpfMapTrackedSpansBySc                                    = "tracked_spans_by_sc"
+	bpfProgUprobeServerHandlerServeHTTP                       = "uprobe_serverHandler_ServeHTTP"
+	bpfProgUprobeServerHandlerServeHTTP_Returns               = "uprobe_serverHandler_ServeHTTP_Returns"
+	bpfProgUprobeTextprotoReaderReadContinuedLineSliceReturns = "uprobe_textproto_Reader_readContinuedLineSlice_Returns"
+	bpfVarBucketsPtrPos                                       = "buckets_ptr_pos"
+	bpfVarCtxPtrPos                                           = "ctx_ptr_pos"
+	bpfVarEndAddr                                             = "end_addr"
+	bpfVarHeadersPtrPos                                       = "headers_ptr_pos"
+	bpfVarHex                                                 = "hex"
+	bpfVarHostPos                                             = "host_pos"
+	bpfVarMethodPtrPos                                        = "method_ptr_pos"
+	bpfVarPatStrPos                                           = "pat_str_pos"
+	bpfVarPathPtrPos                                          = "path_ptr_pos"
+	bpfVarPatternPathPublicSupported                          = "pattern_path_public_supported"
+	bpfVarPatternPathSupported                                = "pattern_path_supported"
+	bpfVarProtoPos                                            = "proto_pos"
+	bpfVarRemoteAddrPos                                       = "remote_addr_pos"
+	bpfVarReqPatPos                                           = "req_pat_pos"
+	bpfVarReqPatternPos                                       = "req_pattern_pos"
+	bpfVarReqPtrPos                                           = "req_ptr_pos"
+	bpfVarStartAddr                                           = "start_addr"
+	bpfVarStatusCodePos                                       = "status_code_pos"
+	bpfVarSwissMapsUsed                                       = "swiss_maps_used"
+	bpfVarTotalCpus                                           = "total_cpus"
+	bpfVarUrlPtrPos                                           = "url_ptr_pos"
+)
+
 // loadBpf returns the embedded CollectionSpec for bpf.
 func loadBpf() (*ebpf.CollectionSpec, error) {
 	reader := bytes.NewReader(_BpfBytes)
@@ -65,7 +106,7 @@ func loadBpf() (*ebpf.CollectionSpec, error) {
 //	*bpfMaps
 //
 // See ebpf.CollectionSpec.LoadAndAssign documentation for details.
-func loadBpfObjects(obj interface{}, opts *ebpf.CollectionOptions) error {
+func loadBpfObjects(obj any, opts *ebpf.CollectionOptions) error {
 	spec, err := loadBpf()
 	if err != nil {
 		return err

@@ -43,6 +43,48 @@ type bpfSpanContext struct {
 	Padding    [7]uint8
 }
 
+// Names of all BPF objects in the ELF.
+//
+// Used for safe lookups in a Collection or CollectionSpec.
+const (
+	bpfMapAllocMap                          = "alloc_map"
+	bpfMapEvents                            = "events"
+	bpfMapGoContextToSc                     = "go_context_to_sc"
+	bpfMapGrpcEvents                        = "grpc_events"
+	bpfMapGrpcStorageMap                    = "grpc_storage_map"
+	bpfMapProbeActiveSamplerMap             = "probe_active_sampler_map"
+	bpfMapSamplersConfigMap                 = "samplers_config_map"
+	bpfMapSliceArrayBuffMap                 = "slice_array_buff_map"
+	bpfMapStreamidToGrpcEvents              = "streamid_to_grpc_events"
+	bpfMapTrackedSpansBySc                  = "tracked_spans_by_sc"
+	bpfProgUprobeHttp2ServerWriteStatus     = "uprobe_http2Server_WriteStatus"
+	bpfProgUprobeHttp2ServerWriteStatus2    = "uprobe_http2Server_WriteStatus2"
+	bpfProgUprobeHttp2ServerOperateHeader   = "uprobe_http2Server_operateHeader"
+	bpfProgUprobeServerHandleStream         = "uprobe_server_handleStream"
+	bpfProgUprobeServerHandleStream2        = "uprobe_server_handleStream2"
+	bpfProgUprobeServerHandleStream2Returns = "uprobe_server_handleStream2_Returns"
+	bpfProgUprobeServerHandleStream3        = "uprobe_server_handleStream3"
+	bpfProgUprobeServerHandleStreamReturns  = "uprobe_server_handleStream_Returns"
+	bpfVarTCPAddrIP_offset                  = "TCPAddr_IP_offset"
+	bpfVarTCPAddrPortOffset                 = "TCPAddr_Port_offset"
+	bpfVarEndAddr                           = "end_addr"
+	bpfVarFrameFieldsPos                    = "frame_fields_pos"
+	bpfVarFrameStreamIdPod                  = "frame_stream_id_pod"
+	bpfVarHex                               = "hex"
+	bpfVarHttp2serverPeerPos                = "http2server_peer_pos"
+	bpfVarIsNewFramePos                     = "is_new_frame_pos"
+	bpfVarPeerLocalAddrPos                  = "peer_local_addr_pos"
+	bpfVarServerAddrSupported               = "server_addr_supported"
+	bpfVarServerStreamStreamPos             = "server_stream_stream_pos"
+	bpfVarStartAddr                         = "start_addr"
+	bpfVarStatusCodePos                     = "status_code_pos"
+	bpfVarStatusS_pos                       = "status_s_pos"
+	bpfVarStreamCtxPos                      = "stream_ctx_pos"
+	bpfVarStreamIdPos                       = "stream_id_pos"
+	bpfVarStreamMethodPtrPos                = "stream_method_ptr_pos"
+	bpfVarTotalCpus                         = "total_cpus"
+)
+
 // loadBpf returns the embedded CollectionSpec for bpf.
 func loadBpf() (*ebpf.CollectionSpec, error) {
 	reader := bytes.NewReader(_BpfBytes)
@@ -63,7 +105,7 @@ func loadBpf() (*ebpf.CollectionSpec, error) {
 //	*bpfMaps
 //
 // See ebpf.CollectionSpec.LoadAndAssign documentation for details.
-func loadBpfObjects(obj interface{}, opts *ebpf.CollectionOptions) error {
+func loadBpfObjects(obj any, opts *ebpf.CollectionOptions) error {
 	spec, err := loadBpf()
 	if err != nil {
 		return err

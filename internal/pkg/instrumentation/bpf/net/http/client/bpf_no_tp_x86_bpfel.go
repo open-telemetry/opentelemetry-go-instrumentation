@@ -49,6 +49,50 @@ type bpf_no_tpSpanContext struct {
 	Padding    [7]uint8
 }
 
+// Names of all BPF objects in the ELF.
+//
+// Used for safe lookups in a Collection or CollectionSpec.
+const (
+	bpf_no_tpMapAllocMap                         = "alloc_map"
+	bpf_no_tpMapEvents                           = "events"
+	bpf_no_tpMapGoContextToSc                    = "go_context_to_sc"
+	bpf_no_tpMapHttpClientUprobeStorageMap       = "http_client_uprobe_storage_map"
+	bpf_no_tpMapHttpEvents                       = "http_events"
+	bpf_no_tpMapHttpHeaders                      = "http_headers"
+	bpf_no_tpMapProbeActiveSamplerMap            = "probe_active_sampler_map"
+	bpf_no_tpMapSamplersConfigMap                = "samplers_config_map"
+	bpf_no_tpMapSliceArrayBuffMap                = "slice_array_buff_map"
+	bpf_no_tpMapTrackedSpansBySc                 = "tracked_spans_by_sc"
+	bpf_no_tpProgUprobeTransportRoundTrip        = "uprobe_Transport_roundTrip"
+	bpf_no_tpProgUprobeTransportRoundTripReturns = "uprobe_Transport_roundTrip_Returns"
+	bpf_no_tpProgUprobeWriteSubset               = "uprobe_writeSubset"
+	bpf_no_tpVarCtxPtrPos                        = "ctx_ptr_pos"
+	bpf_no_tpVarEndAddr                          = "end_addr"
+	bpf_no_tpVarForceQueryPos                    = "force_query_pos"
+	bpf_no_tpVarFragmentPos                      = "fragment_pos"
+	bpf_no_tpVarHeadersPtrPos                    = "headers_ptr_pos"
+	bpf_no_tpVarHex                              = "hex"
+	bpf_no_tpVarIoWriterBufPtrPos                = "io_writer_buf_ptr_pos"
+	bpf_no_tpVarIoWriterN_pos                    = "io_writer_n_pos"
+	bpf_no_tpVarMethodPtrPos                     = "method_ptr_pos"
+	bpf_no_tpVarOmitHostPos                      = "omit_host_pos"
+	bpf_no_tpVarOpaquePos                        = "opaque_pos"
+	bpf_no_tpVarPathPtrPos                       = "path_ptr_pos"
+	bpf_no_tpVarRawFragmentPos                   = "raw_fragment_pos"
+	bpf_no_tpVarRawPathPos                       = "raw_path_pos"
+	bpf_no_tpVarRawQueryPos                      = "raw_query_pos"
+	bpf_no_tpVarRequestHostPos                   = "request_host_pos"
+	bpf_no_tpVarRequestProtoPos                  = "request_proto_pos"
+	bpf_no_tpVarSchemePos                        = "scheme_pos"
+	bpf_no_tpVarStartAddr                        = "start_addr"
+	bpf_no_tpVarStatusCodePos                    = "status_code_pos"
+	bpf_no_tpVarTotalCpus                        = "total_cpus"
+	bpf_no_tpVarUrlHostPos                       = "url_host_pos"
+	bpf_no_tpVarUrlPtrPos                        = "url_ptr_pos"
+	bpf_no_tpVarUserPtrPos                       = "user_ptr_pos"
+	bpf_no_tpVarUsernamePos                      = "username_pos"
+)
+
 // loadBpf_no_tp returns the embedded CollectionSpec for bpf_no_tp.
 func loadBpf_no_tp() (*ebpf.CollectionSpec, error) {
 	reader := bytes.NewReader(_Bpf_no_tpBytes)
@@ -69,7 +113,7 @@ func loadBpf_no_tp() (*ebpf.CollectionSpec, error) {
 //	*bpf_no_tpMaps
 //
 // See ebpf.CollectionSpec.LoadAndAssign documentation for details.
-func loadBpf_no_tpObjects(obj interface{}, opts *ebpf.CollectionOptions) error {
+func loadBpf_no_tpObjects(obj any, opts *ebpf.CollectionOptions) error {
 	spec, err := loadBpf_no_tp()
 	if err != nil {
 		return err
