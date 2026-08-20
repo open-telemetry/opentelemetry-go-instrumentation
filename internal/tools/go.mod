@@ -1,6 +1,6 @@
 module go.opentelemetry.io/auto/internal/tools
 
-go 1.25.8
+go 1.26.0
 
 require (
 	github.com/Masterminds/semver/v3 v3.5.0
@@ -274,7 +274,7 @@ require (
 	honnef.co/go/tools v0.7.0 // indirect
 	k8s.io/klog/v2 v2.140.0 // indirect
 	mvdan.cc/gofumpt v0.11.0 // indirect
-	mvdan.cc/unparam v0.0.0-20260813220802-35700344e60f // indirect
+	mvdan.cc/unparam v0.0.0-20260820064413-a201bf8e0538 // indirect
 )
 
 replace go.opentelemetry.io/auto => ../../
