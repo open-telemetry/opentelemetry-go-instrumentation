@@ -274,7 +274,7 @@ require (
 	honnef.co/go/tools v0.8.0 // indirect
 	k8s.io/klog/v2 v2.140.0 // indirect
 	mvdan.cc/gofumpt v0.11.0 // indirect
-	mvdan.cc/unparam v0.0.0-20260818115549-3f964bcb5673 // indirect
+	mvdan.cc/unparam v0.0.0-20260823230713-2fa3d841b0c8 // indirect
 )
 
 replace go.opentelemetry.io/auto => ../../
