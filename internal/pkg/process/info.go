@@ -149,18 +149,30 @@ func findModules(goVer *semver.Version, deps []*debug.Module) (map[string]*semve
 	var err error
 	out := make(map[string]*semver.Version, len(deps)+1)
 	for _, dep := range deps {
-		if dep.Version == develModVer {
-			// dep.Version is not a parsable semantic version. Do not error.
+		// A replace directive swaps in different code than the required
+		// version. The required version remains in dep.Version while the
+		// replacement is kept in dep.Replace, and the replacement is what
+		// is actually linked into the binary. Prefer its version so probes
+		// match the code that is really running. Directory replacements
+		// carry no usable version ("(devel)" or empty) and fall back to the
+		// required version.
+		ver := dep.Version
+		if r := dep.Replace; r != nil && r.Version != "" && r.Version != develModVer {
+			ver = r.Version
+		}
+
+		if ver == develModVer {
+			// ver is not a parsable semantic version. Do not error.
 			// Instead, use VerDevel to signal this development version state.
 			out[dep.Path] = VerDevel
 			continue
 		}
 
-		depVersion, e := semver.NewVersion(dep.Version)
+		depVersion, e := semver.NewVersion(ver)
 		if e != nil {
 			err = errors.Join(
 				err,
-				fmt.Errorf("invalid dependency version %s (%s): %w", dep.Path, dep.Version, e),
+				fmt.Errorf("invalid dependency version %s (%s): %w", dep.Path, ver, e),
 			)
 			continue
 		}
