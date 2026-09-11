@@ -1,4 +1,4 @@
-FROM golang:1.27.0@sha256:0ecdc2a9f6156af6451080bfe3d8382a662fcc4e209608c6f919e643453514c1
+FROM golang:1.27.0@sha256:4013ae0f9e7994f8535c58c811f8f863fbed38b72e0d51e6592156f758d66146
 WORKDIR /usr/src/go.opentelemetry.io/auto/examples/rolldice/user
 # Use the local SDK copy.
 COPY ./sdk /usr/src/go.opentelemetry.io/auto/sdk
