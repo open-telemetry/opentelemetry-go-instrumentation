@@ -38,6 +38,8 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 
 ### Fixed
 
+- Fix `FindFunctionsStripped` for binaries built with Go 1.26 and later, which no longer store `textStart` in the `.gopclntab` header. The start of the Go text segment is now read from `runtime.firstmoduledata`, fixing the `overflow in offset to read in the text section` error on amd64 and silently wrong function offsets on arm64 for stripped binaries. ([#3870](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/3870))
+
 ## [v0.24.0/v1.2.0] - 2026-04-22
 
 <!-- markdownlint-disable MD028 -->
