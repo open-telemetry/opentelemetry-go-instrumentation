@@ -23,6 +23,8 @@ Tracing instrumentation is provided for the following Go libraries.
 - [`github.com/segmentio/kafka-go`](#githubcomsegmentiokafka-go)
 - [`google.golang.org/grpc`](#googlegolangorggrpc)
 - [`net/http`](#nethttp)
+- [`github.com/gorilla/mux`](#githubcomgorillamux)
+- [`github.com/gin-gonic/gin`](#githubcomgin-gonicgin)
 
 ### database/sql
 
@@ -31,6 +33,22 @@ Tracing instrumentation is provided for the following Go libraries.
 Supported version ranges:
 
 - `go1.19` to `go1.27.0`
+
+### github.com/gorilla/mux
+
+[Package documentation](https://pkg.go.dev/github.com/gorilla/mux)
+
+Gorilla Mux applications are supported through the instrumented `net/http`
+request path. Validate the application's Mux version in its integration tests
+when upgrading the router dependency.
+
+### github.com/gin-gonic/gin
+
+[Package documentation](https://pkg.go.dev/github.com/gin-gonic/gin)
+
+Gin applications are supported through the instrumented HTTP server path.
+Validate the application's Gin version and middleware order in integration
+tests when upgrading.
 
 ### github.com/segmentio/kafka-go
 
