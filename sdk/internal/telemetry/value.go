@@ -343,9 +343,18 @@ func (v *Value) MarshalJSON() ([]byte, error) {
 			Value string `json:"intValue"`
 		}{strconv.FormatInt(int64(v.num), 10)}) //nolint:gosec  // Raw value conv.
 	case ValueKindFloat64:
+		value := v.asFloat64()
+		switch {
+		case math.IsNaN(value):
+			return []byte(`{"doubleValue":"NaN"}`), nil
+		case math.IsInf(value, 1):
+			return []byte(`{"doubleValue":"Infinity"}`), nil
+		case math.IsInf(value, -1):
+			return []byte(`{"doubleValue":"-Infinity"}`), nil
+		}
 		return json.Marshal(struct {
 			Value float64 `json:"doubleValue"`
-		}{v.asFloat64()})
+		}{value})
 	case ValueKindBool:
 		return json.Marshal(struct {
 			Value bool `json:"boolValue"`
@@ -418,9 +427,15 @@ func (v *Value) UnmarshalJSON(data []byte) error {
 			err = decoder.Decode(&val)
 			*v = Int64Value(val.Int64())
 		case "doubleValue", "double_value":
-			var val float64
-			err = decoder.Decode(&val)
-			*v = Float64Value(val)
+			var raw json.RawMessage
+			err = decoder.Decode(&raw)
+			if err == nil {
+				var val float64
+				val, err = unmarshalFloat64(raw)
+				if err == nil {
+					*v = Float64Value(val)
+				}
+			}
 		case "bytesValue", "bytes_value":
 			var val64 string
 			if err := decoder.Decode(&val64); err != nil {
@@ -447,4 +462,27 @@ func (v *Value) UnmarshalJSON(data []byte) error {
 
 	// Only unknown fields. Return nil without unmarshaling any value.
 	return nil
+}
+
+func unmarshalFloat64(data json.RawMessage) (float64, error) {
+	if len(data) > 0 && data[0] == '"' {
+		var value string
+		if err := json.Unmarshal(data, &value); err != nil {
+			return 0, err
+		}
+		switch value {
+		case "NaN":
+			return math.NaN(), nil
+		case "Infinity":
+			return math.Inf(1), nil
+		case "-Infinity":
+			return math.Inf(-1), nil
+		default:
+			return 0, fmt.Errorf("invalid double value %q", value)
+		}
+	}
+
+	var value float64
+	err := json.Unmarshal(data, &value)
+	return value, err
 }
