@@ -38,6 +38,8 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 
 ### Fixed
 
+- Encode non-finite floating-point attribute values in OTLP JSON. ([#3875](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/3875))
+
 ## [v0.24.0/v1.2.0] - 2026-04-22
 
 <!-- markdownlint-disable MD028 -->
