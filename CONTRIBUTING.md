@@ -25,7 +25,7 @@ OpenTelemetry standards and strives to be compatible with that ecosystem.
 
 This project is expected to be wrapped into some runnable executable that will
 further extend the functionality and ergonomics of the project. The `auto/cli`
-package is an example of a wrapping executable and is not apart of this scope.
+package is an example of a wrapping executable and is not a part of this scope.
 
 ### What this project is not
 
@@ -206,7 +206,7 @@ Any [Maintainer] can merge the PR once the above criteria have been met.
 [^2]: A qualified approval is a GitHub Pull Request review with "Approve"
   status from an OpenTelemetry Go [Approver] or [Maintainer].
 
-## Appovers and Maintainers
+## Approvers and Maintainers
 
 ### Maintainers
 
