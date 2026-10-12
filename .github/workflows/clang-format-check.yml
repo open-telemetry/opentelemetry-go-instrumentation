@@ -19,9 +19,6 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
-      - name: Install Clang-Format
-        run: sudo apt-get install clang-format-19
-
       - name: Check Clang Format
         run: |
           # Check for modified C/C++ files
@@ -31,8 +28,12 @@ jobs:
             exit 0
           fi
 
-          # Run clang-format and check for changes
-          clang-format-19 -i $files
+          # Run clang-format from the docker image pinned in dependencies.Dockerfile
+          # to keep the version consistent with `make clang-format` and the
+          # local pre-commit hook.
+          image=$(awk '$4=="clang-format" {print $2}' dependencies.Dockerfile)
+          docker run --rm -u "$(id -u):$(id -g)" -v "$PWD:/workdir" -w /workdir "$image" \
+            clang-format -i $files
           if ! git diff --exit-code $files; then
             echo "Error: Some files are not formatted correctly. Please run clang-format on the modified files or use the provided pre-commit hook."
             exit 1
