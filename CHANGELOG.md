@@ -41,6 +41,10 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 - Cache offsets for Go `1.26.9`. ([#3884](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/3884))
 - Cache offsets for Go `1.27.2`. ([#3884](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/3884))
 
+### Changed
+
+- Upgrade `go.opentelemetry.io/auto/sdk` semconv to `v1.43.0`. ([#3914](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/3914))
+
 ### Removed
 
 ### Fixed
