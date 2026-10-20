@@ -7,6 +7,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"math"
 	"strconv"
 	"sync"
 	"testing"
@@ -322,6 +323,39 @@ func TestSpanEnd(t *testing.T) {
 			test.Eval(t, spans[0].EndTime)
 		})
 	}
+}
+
+func TestSpanEndWithNonFiniteFloatAttributes(t *testing.T) {
+	orig := ended
+	t.Cleanup(func() { ended = orig })
+
+	var buf []byte
+	ended = func(b []byte) { buf = append([]byte(nil), b...) }
+
+	s := spanBuilder{}.Build()
+	s.SetAttributes(
+		attribute.Float64("nan", math.NaN()),
+		attribute.Float64("positive_infinity", math.Inf(1)),
+		attribute.Float64("negative_infinity", math.Inf(-1)),
+	)
+	s.End()
+
+	require.NotEmpty(t, buf, "span data should be emitted")
+	var traces telemetry.Traces
+	require.NoError(t, json.Unmarshal(buf, &traces))
+	require.Len(t, traces.ResourceSpans, 1)
+	require.Len(t, traces.ResourceSpans[0].ScopeSpans, 1)
+	require.Len(t, traces.ResourceSpans[0].ScopeSpans[0].Spans, 1)
+	attrs := traces.ResourceSpans[0].ScopeSpans[0].Spans[0].Attrs
+	require.Len(t, attrs, 3)
+
+	values := make(map[string]float64, len(attrs))
+	for _, attr := range attrs {
+		values[attr.Key] = attr.Value.AsFloat64()
+	}
+	assert.True(t, math.IsNaN(values["nan"]))
+	assert.Equal(t, math.Inf(1), values["positive_infinity"])
+	assert.Equal(t, math.Inf(-1), values["negative_infinity"])
 }
 
 func TestSpanNilUnsampledGuards(t *testing.T) {
