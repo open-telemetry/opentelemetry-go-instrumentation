@@ -8,5 +8,5 @@ require github.com/stretchr/testify v1.12.1 // indirect
 
 require (
 	github.com/klauspost/compress v1.19.2 // indirect
-	github.com/pierrec/lz4/v4 v4.1.29 // indirect
+	github.com/pierrec/lz4/v4 v4.1.33 // indirect
 )
