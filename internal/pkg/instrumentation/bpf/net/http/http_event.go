@@ -24,7 +24,10 @@ func ServerAddressPortAttributes(host []byte) (addr, port attribute.KeyValue) {
 	var e error
 	hostString := unix.ByteSliceToString(host)
 
-	if strings.Contains(hostString, ":") {
+	if strings.HasPrefix(hostString, "[") && strings.HasSuffix(hostString, "]") {
+		// IPv6 host without a port, e.g. "[::1]".
+		hostString = hostString[1 : len(hostString)-1]
+	} else if strings.Contains(hostString, ":") {
 		if hostString, portString, e = net.SplitHostPort(hostString); e == nil {
 			if portI, err := strconv.Atoi(portString); err == nil {
 				port = semconv.ServerPort(portI)
