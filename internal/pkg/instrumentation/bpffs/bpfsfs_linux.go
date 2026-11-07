@@ -46,7 +46,8 @@ func isBPFFSMounted() bool {
 		return false
 	}
 
-	return stat.Type == unix.BPF_FS_MAGIC
+	// Statfs_t.Type is int32 on 32-bit architectures.
+	return uint32(stat.Type) == unix.BPF_FS_MAGIC //nolint:gosec // f_type is a 32-bit magic.
 }
 
 // Cleanup removes the BPF file-system for the given target.
