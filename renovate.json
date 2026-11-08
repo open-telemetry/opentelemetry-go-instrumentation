@@ -11,7 +11,8 @@
     "dependencies"
   ],
   "postUpdateOptions": [
-    "gomodTidy"
+    "gomodTidyAll",
+    "gomodUpdateImportPaths"
   ],
   "packageRules": [
     {
@@ -21,7 +22,16 @@
       "matchDepTypes": [
         "indirect"
       ],
+      "abandonmentThreshold": "50 years",
       "enabled": true
+    },
+    {
+      "matchManagers": ["gomod"],
+      "matchDepTypes": ["indirect"],
+      "matchUpdateTypes": [
+        "major"
+      ],
+      "enabled": false
     },
     {
       "matchManagers": [
