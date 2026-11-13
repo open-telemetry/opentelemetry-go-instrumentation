@@ -12,7 +12,9 @@
 char __license[] SEC("license") = "Dual MIT/GPL";
 
 #define MAX_SIZE 100
-#define MAX_CONCURRENT 50
+// Raised from 50: when grpc_events fills (e.g. missed uretprobes leave stale
+// goroutine keys), subsequent server spans are dropped silently.
+#define MAX_CONCURRENT 1024
 #define MAX_HEADERS 20
 #define MAX_HEADER_STRING 50
 
@@ -94,8 +96,9 @@ handleStream(struct pt_regs *ctx, void *stream_ptr, struct go_iface *go_context)
     void *key = (void *)GOROUTINE(ctx);
     void *grpcReq_event_ptr = bpf_map_lookup_elem(&grpc_events, &key);
     if (grpcReq_event_ptr != NULL) {
-        bpf_printk("grpc:server:handleStream: event already tracked");
-        return 0;
+        // Stale entry from a missed uretprobe / goroutine ID reuse.
+        bpf_printk("grpc:server:handleStream: replacing stale tracked event");
+        bpf_map_delete_elem(&grpc_events, &key);
     }
 
     // Get parent context if exists
@@ -108,6 +111,7 @@ handleStream(struct pt_regs *ctx, void *stream_ptr, struct go_iface *go_context)
     }
 
     struct grpc_request_t *grpcReq = bpf_map_lookup_elem(&streamid_to_grpc_events, &stream_id);
+    u8 had_streamid = 0;
     if (grpcReq == NULL) {
         // No parent span context, generate new span context
         u32 zero = 0;
@@ -116,6 +120,8 @@ handleStream(struct pt_regs *ctx, void *stream_ptr, struct go_iface *go_context)
             bpf_printk("grpc:server:handleStream: failed to get grpcReq");
             return 0;
         }
+    } else {
+        had_streamid = 1;
     }
 
     grpcReq->start_time = bpf_ktime_get_ns();
@@ -158,7 +164,14 @@ handleStream(struct pt_regs *ctx, void *stream_ptr, struct go_iface *go_context)
     rc = bpf_map_update_elem(&grpc_events, &key, grpcReq, 0);
     if (rc != 0) {
         bpf_printk("grpc:server:handleStream: failed to update event");
+        if (had_streamid) {
+            bpf_map_delete_elem(&streamid_to_grpc_events, &stream_id);
+        }
         return -4;
+    }
+    // Free operateHeaders slot; otherwise streamid_to_grpc_events leaks.
+    if (had_streamid) {
+        bpf_map_delete_elem(&streamid_to_grpc_events, &stream_id);
     }
     start_tracking_span(go_context->data, &grpcReq->sc);
 
