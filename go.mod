@@ -1,6 +1,6 @@
 module go.opentelemetry.io/auto
 
-go 1.25.0
+go 1.26.0
 
 retract (
 	v0.6.5 // Contains retractions only.
@@ -26,10 +26,10 @@ require (
 	go.opentelemetry.io/collector/pdata v1.65.0
 	go.opentelemetry.io/contrib/detectors/autodetect v0.18.0
 	go.opentelemetry.io/contrib/exporters/autoexport v0.71.0
-	go.opentelemetry.io/otel v1.46.0
+	go.opentelemetry.io/otel v1.47.0
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp v1.46.0
 	go.opentelemetry.io/otel/sdk v1.46.0
-	go.opentelemetry.io/otel/trace v1.46.0
+	go.opentelemetry.io/otel/trace v1.47.0
 	golang.org/x/arch v0.30.0
 	golang.org/x/sys v0.47.0
 	google.golang.org/grpc v1.83.2
@@ -130,8 +130,8 @@ require (
 	go.opentelemetry.io/otel/exporters/stdout/stdoutlog v0.22.0 // indirect
 	go.opentelemetry.io/otel/exporters/stdout/stdoutmetric v1.46.0 // indirect
 	go.opentelemetry.io/otel/exporters/stdout/stdouttrace v1.46.0 // indirect
-	go.opentelemetry.io/otel/log v0.22.0 // indirect
-	go.opentelemetry.io/otel/metric v1.46.0 // indirect
+	go.opentelemetry.io/otel/log v1.47.0 // indirect
+	go.opentelemetry.io/otel/metric v1.47.0 // indirect
 	go.opentelemetry.io/otel/sdk/log v0.22.0 // indirect
 	go.opentelemetry.io/otel/sdk/metric v1.46.0 // indirect
 	go.opentelemetry.io/proto/otlp v1.11.0 // indirect
