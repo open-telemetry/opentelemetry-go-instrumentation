@@ -1,3 +1,6 @@
+// Deprecated: This module is no longer actively maintained. Use OpenTelemetry
+// eBPF Instrumentation (OBI) instead:
+// https://github.com/open-telemetry/opentelemetry-ebpf-instrumentation
 module go.opentelemetry.io/auto
 
 go 1.25.0
