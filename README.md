@@ -12,6 +12,7 @@
 >
 > **Migrate to OBI**
 >
+> - [Migration guide](MIGRATION.md)
 > - [Documentation](https://opentelemetry.io/docs/zero-code/obi)
 > - [GitHub repository](https://github.com/open-telemetry/opentelemetry-ebpf-instrumentation)
 > - [CNCF Slack `#otel-ebpf-instrumentation`](https://cloud-native.slack.com/archives/C06DQ7S2YEP) ([join CNCF Slack](https://slack.cncf.io))

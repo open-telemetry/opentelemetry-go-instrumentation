@@ -27,7 +27,8 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 ### Deprecated
 
 - The `go.opentelemetry.io/auto` module is deprecated and no longer actively maintained.
-  Use [OpenTelemetry eBPF Instrumentation (OBI)](https://github.com/open-telemetry/opentelemetry-ebpf-instrumentation) instead. ([#3592](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/3592))
+  Use [OpenTelemetry eBPF Instrumentation (OBI)](https://github.com/open-telemetry/opentelemetry-ebpf-instrumentation) instead.
+  See the [migration guide](MIGRATION.md). ([#3592](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/3592))
 
 ### Removed
 
