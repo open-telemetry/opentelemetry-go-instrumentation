@@ -24,6 +24,11 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 - Cache offsets for Go `1.26.3`. ([#3480](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/3480))
 - Cache offsets for Go `1.26.4`. ([#3480](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/3480))
 
+### Deprecated
+
+- The `go.opentelemetry.io/auto` module is deprecated and no longer actively maintained.
+  Use [OpenTelemetry eBPF Instrumentation (OBI)](https://github.com/open-telemetry/opentelemetry-ebpf-instrumentation) instead. ([#3592](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/3592))
+
 ### Removed
 
 ### Fixed

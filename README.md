@@ -3,10 +3,12 @@
 [![PkgGoDev](https://pkg.go.dev/badge/go.opentelemetry.io/auto)](https://pkg.go.dev/go.opentelemetry.io/auto)
 
 > [!WARNING]
-> **This project is deprecated**
+> **This project is being merged with OpenTelemetry eBPF Instrumentation (OBI)**
 >
-> **OpenTelemetry Go Automatic Instrumentation is no longer actively maintained.**
-> End users and vendors should migrate to [OpenTelemetry eBPF Instrumentation (OBI)](https://opentelemetry.io/docs/zero-code/obi), the upstream OpenTelemetry project for zero-code, eBPF-based application observability.
+> **OpenTelemetry Go Automatic Instrumentation is being merged with [OBI](https://opentelemetry.io/docs/zero-code/obi) and this repository is no longer actively maintained.**
+> OBI is the upstream OpenTelemetry project for zero-code, eBPF-based application observability.
+>
+> Current users of OpenTelemetry Go Automatic Instrumentation can expect existing releases to keep working, but end users and vendors should move to OBI for continued support and maintenance.
 >
 > **Migrate to OBI**
 >
@@ -14,7 +16,8 @@
 > - [GitHub repository](https://github.com/open-telemetry/opentelemetry-ebpf-instrumentation)
 > - [CNCF Slack `#otel-ebpf-instrumentation`](https://cloud-native.slack.com/archives/C06DQ7S2YEP) ([join CNCF Slack](https://slack.cncf.io))
 >
-> If you are migrating from this project, we encourage you to share feedback, opinions, and feature gaps in the OBI [GitHub Discussions](https://github.com/open-telemetry/opentelemetry-ebpf-instrumentation/discussions) or on Slack so they can inform the OBI roadmap.
+> If you face issues or feature gaps while migrating from this project, [open an issue](https://github.com/open-telemetry/opentelemetry-ebpf-instrumentation/issues/new/choose) in the OBI repository describing your scenario, what you are doing, and the outcome you expect.
+> Feedback and opinions are also welcome in the OBI [GitHub Discussions](https://github.com/open-telemetry/opentelemetry-ebpf-instrumentation/discussions) or on Slack so they can inform the OBI roadmap.
 > Due to limited maintainer bandwidth, there are **no official plans to provide zero-change migrations** from this project to OBI,
 > but any contributions toward this goal are welcome.
 
