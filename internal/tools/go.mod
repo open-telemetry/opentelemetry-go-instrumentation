@@ -7,7 +7,7 @@ require (
 	github.com/docker/docker v28.5.2+incompatible
 	github.com/golangci/golangci-lint/v2 v2.13.1
 	github.com/google/go-licenses/v2 v2.0.1
-	go.opentelemetry.io/auto v0.24.0
+	go.opentelemetry.io/auto v0.25.0
 	go.opentelemetry.io/build-tools/crosslink v0.30.0
 	go.opentelemetry.io/build-tools/dbotconf v0.30.0
 	go.opentelemetry.io/build-tools/multimod v0.30.0
