@@ -11,7 +11,7 @@ require (
 	github.com/segmentio/kafka-go v0.4.51
 	github.com/stretchr/testify v1.12.1
 	go.opentelemetry.io/auto v0.24.0
-	go.opentelemetry.io/auto/sdk v1.2.1
+	go.opentelemetry.io/auto/sdk v1.2.2
 	go.opentelemetry.io/collector/pdata v1.65.0
 	go.opentelemetry.io/otel v1.46.0
 	go.opentelemetry.io/otel/trace v1.46.0
