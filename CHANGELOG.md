@@ -61,6 +61,8 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
   Use [OpenTelemetry eBPF Instrumentation (OBI)](https://github.com/open-telemetry/opentelemetry-ebpf-instrumentation) instead.
   See the [migration guide](MIGRATION.md). ([#3592](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/3592))
 
+- Encode non-finite floating-point attribute values in OTLP JSON. ([#3875](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/3875))
+
 ## [v0.24.0/v1.2.0] - 2026-04-22
 
 <!-- markdownlint-disable MD028 -->
