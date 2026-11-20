@@ -8,6 +8,15 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 
 ## [Unreleased]
 
+## [v0.25.0/v1.2.2] - 2026-11-19
+
+<!-- markdownlint-disable MD028 -->
+> [!WARNING]
+> The `go.opentelemetry.io/auto` module is deprecated and no longer actively maintained.
+> Use [OpenTelemetry eBPF Instrumentation (OBI)](https://github.com/open-telemetry/opentelemetry-ebpf-instrumentation) instead.
+> See the [migration guide](MIGRATION.md).
+<!-- markdownlint-enable MD028 -->
+
 ### Added
 
 - Cache offsets for `github.com/segmentio/kafka-go` `0.4.51`. ([#3480](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/3480))
@@ -41,15 +50,16 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 - Cache offsets for Go `1.26.9`. ([#3884](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/3884))
 - Cache offsets for Go `1.27.2`. ([#3884](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/3884))
 
+### Changed
+
+- The `go.opentelemetry.io/auto` and `go.opentelemetry.io/auto/sdk` modules now require Go >= 1.25. ([#3445](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/3445))
+- Upgrade `go.opentelemetry.io/otel` to `v1.46.0` in the `go.opentelemetry.io/auto/sdk` module.
+
 ### Deprecated
 
 - The `go.opentelemetry.io/auto` module is deprecated and no longer actively maintained.
   Use [OpenTelemetry eBPF Instrumentation (OBI)](https://github.com/open-telemetry/opentelemetry-ebpf-instrumentation) instead.
   See the [migration guide](MIGRATION.md). ([#3592](https://github.com/open-telemetry/opentelemetry-go-instrumentation/pull/3592))
-
-### Removed
-
-### Fixed
 
 ## [v0.24.0/v1.2.0] - 2026-04-22
 
@@ -828,7 +838,8 @@ OpenTelemetry Go Automatic Instrumentation adheres to [Semantic Versioning](http
 
 This is the first release of OpenTelemetry Go Automatic Instrumentation.
 
-[Unreleased]: https://github.com/open-telemetry/opentelemetry-go-instrumentation/compare/v0.24.0...HEAD
+[Unreleased]: https://github.com/open-telemetry/opentelemetry-go-instrumentation/compare/v0.25.0...HEAD
+[v0.25.0/v1.2.2]: https://github.com/open-telemetry/opentelemetry-go-instrumentation/releases/tag/v0.25.0
 [v0.24.0/v1.2.0]: https://github.com/open-telemetry/opentelemetry-go-instrumentation/releases/tag/v0.24.0
 [`go.opentelemetry.io/auto/sdk` v1.2.1]: https://github.com/open-telemetry/opentelemetry-go-instrumentation/releases/tag/sdk/v1.2.1
 [v0.23.0/v1.2.0]: https://github.com/open-telemetry/opentelemetry-go-instrumentation/releases/tag/v0.23.0

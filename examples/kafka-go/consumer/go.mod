@@ -14,7 +14,7 @@ require (
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/klauspost/compress v1.19.2 // indirect
 	github.com/pierrec/lz4/v4 v4.1.33 // indirect
-	go.opentelemetry.io/auto/sdk v1.2.1 // indirect
+	go.opentelemetry.io/auto/sdk v1.2.2 // indirect
 	go.opentelemetry.io/otel/metric v1.46.0 // indirect
 )
 
