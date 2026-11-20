@@ -5,6 +5,7 @@ package process
 
 import (
 	"log/slog"
+	"runtime/debug"
 	"sync"
 	"testing"
 
@@ -12,6 +13,50 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+func TestFindModules(t *testing.T) {
+	deps := []*debug.Module{
+		{
+			Path: "google.golang.org/grpc",
+			// The linked code comes from a replace directive; probes need
+			// the replacement version, not the required one.
+			Version: "v1.82.1",
+			Replace: &debug.Module{
+				Path:    "google.golang.org/grpc",
+				Version: "v1.65.0",
+			},
+		},
+		{
+			Path:    "example.com/fork",
+			Version: "v1.0.0",
+			Replace: &debug.Module{
+				Path:    "github.com/example/fork",
+				Version: "v1.1.0",
+			},
+		},
+		{
+			// Directory replacements have no version; keep the required one.
+			Path:    "example.com/dir",
+			Version: "v1.2.3",
+			Replace: &debug.Module{
+				Path:    "/local/dir",
+				Version: "(devel)",
+			},
+		},
+		{Path: "example.com/normal", Version: "v2.0.0"},
+		{Path: "example.com/devel", Version: "(devel)"},
+	}
+
+	m, err := findModules(semver.MustParse("1.26.4"), deps)
+	require.NoError(t, err)
+
+	assert.Equal(t, semver.MustParse("v1.65.0"), m["google.golang.org/grpc"])
+	assert.Equal(t, semver.MustParse("v1.1.0"), m["example.com/fork"])
+	assert.Equal(t, semver.MustParse("v1.2.3"), m["example.com/dir"])
+	assert.Equal(t, semver.MustParse("v2.0.0"), m["example.com/normal"])
+	assert.Equal(t, VerDevel, m["example.com/devel"])
+	assert.Equal(t, semver.MustParse("1.26.4"), m["std"])
+}
 
 func TestGoVer(t *testing.T) {
 	tests := []struct {
