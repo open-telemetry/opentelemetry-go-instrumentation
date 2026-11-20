@@ -814,5 +814,5 @@ k8s.io/klog/v2 v2.140.0 h1:Tf+J3AH7xnUzZyVVXhTgGhEKnFqye14aadWv7bzXdzc=
 k8s.io/klog/v2 v2.140.0/go.mod h1:o+/RWfJ6PwpnFn7OyAG3QnO47BFsymfEfrz6XyYSSp0=
 mvdan.cc/gofumpt v0.11.0 h1:0H01XB95PnN2QgCSR9ELdZyTlJqNZ7181B0BTMh5VZc=
 mvdan.cc/gofumpt v0.11.0/go.mod h1:BeT5wCsOJt6J9zT2MZIOGszjUHzFkn1/l9g6xAzqsXo=
-mvdan.cc/unparam v0.0.0-20261011093844-7a2c2c0b7aa6 h1:BPYbCqDxFpG6SoLzbiU5hVn8kHW89plTWGddjT3OD7I=
-mvdan.cc/unparam v0.0.0-20261011093844-7a2c2c0b7aa6/go.mod h1:BEImwwhtsPZ0eyZhBtvrirFOvbQ7HmEnmfdFl3tz9M0=
+mvdan.cc/unparam v0.0.0-20261102141913-394cd0a56cd5 h1:+w/oD0+NrvT39TwXLC5ElQte8LwPcFuTWdbJ+98LeAE=
+mvdan.cc/unparam v0.0.0-20261102141913-394cd0a56cd5/go.mod h1:BEImwwhtsPZ0eyZhBtvrirFOvbQ7HmEnmfdFl3tz9M0=
