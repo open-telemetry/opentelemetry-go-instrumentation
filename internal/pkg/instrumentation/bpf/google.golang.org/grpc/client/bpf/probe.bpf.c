@@ -42,6 +42,22 @@ struct {
     __uint(max_entries, MAX_CONCURRENT);
 } streamid_to_span_contexts SEC(".maps");
 
+// Per-stream storage for traceparent header strings
+// Stored in BPF maps to ensure data persists until gRPC finishes encoding
+struct {
+    __uint(type, BPF_MAP_TYPE_HASH);
+    __type(key, u32);
+    __type(value, char[W3C_KEY_LENGTH]);
+    __uint(max_entries, MAX_CONCURRENT);
+} traceparent_keys SEC(".maps");
+
+struct {
+    __uint(type, BPF_MAP_TYPE_HASH);
+    __type(key, u32);
+    __type(value, char[SPAN_CONTEXT_STRING_SIZE]);
+    __uint(max_entries, MAX_CONCURRENT);
+} traceparent_values SEC(".maps");
+
 // Injected in init
 volatile const u64 clientconn_target_ptr_pos;
 volatile const u64 httpclient_nextid_pos;
@@ -180,24 +196,48 @@ int uprobe_LoopyWriter_HeaderHandler(struct pt_regs *ctx) {
     struct span_context current_span_context = {};
     bpf_probe_read(&current_span_context, sizeof(current_span_context), sc_ptr);
 
-    char tp_key[11] = "traceparent";
-    struct go_string key_str = write_user_go_string(tp_key, sizeof(tp_key));
-    if (key_str.len == 0) {
+    // Store traceparent key and value in BPF maps for persistence
+    char tp_key[W3C_KEY_LENGTH] = "traceparent";
+    bpf_map_update_elem(&traceparent_keys, &stream_id, tp_key, BPF_ANY);
+    
+    char tp_value[SPAN_CONTEXT_STRING_SIZE];
+    span_context_to_w3c_string(&current_span_context, tp_value);
+    bpf_map_update_elem(&traceparent_values, &stream_id, tp_value, BPF_ANY);
+    
+    // Get pointers to the persistent BPF map storage
+    char *key_storage = bpf_map_lookup_elem(&traceparent_keys, &stream_id);
+    char *val_storage = bpf_map_lookup_elem(&traceparent_values, &stream_id);
+    
+    if (key_storage == NULL || val_storage == NULL) {
+        bpf_printk("failed to lookup traceparent storage");
+        goto done;
+    }
+
+    // Copy strings to userspace from BPF map storage
+    void *key_ptr = write_target_data(key_storage, W3C_KEY_LENGTH);
+    if (key_ptr == NULL) {
         bpf_printk("key write failed, aborting ebpf probe");
         goto done;
     }
 
-    // Write headers
-    char val[SPAN_CONTEXT_STRING_SIZE];
-    span_context_to_w3c_string(&current_span_context, val);
-    struct go_string val_str = write_user_go_string(val, sizeof(val));
-    if (val_str.len == 0) {
+    void *val_ptr = write_target_data(val_storage, SPAN_CONTEXT_STRING_SIZE);
+    if (val_ptr == NULL) {
         bpf_printk("val write failed, aborting ebpf probe");
         goto done;
     }
-    struct hpack_header_field hf = {};
-    hf.name = key_str;
-    hf.value = val_str;
+
+    // Build hpack header field
+    struct hpack_header_field hf = {
+        .name = {
+            .str = key_ptr,
+            .len = W3C_KEY_LENGTH,
+        },
+        .value = {
+            .str = val_ptr,
+            .len = SPAN_CONTEXT_STRING_SIZE,
+        },
+        .sensitive = false,
+    };
     append_item_to_slice(&hf, sizeof(hf), (void *)(headerFrame_ptr + (headerFrame_hf_pos)));
 done:
     bpf_map_delete_elem(&streamid_to_span_contexts, &stream_id);
